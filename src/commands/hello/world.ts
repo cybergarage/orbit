@@ -1,3 +1,6 @@
+// Copyright (c) 2026 The Scribemuse Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import {Command} from '@oclif/core'
 
 export default class World extends Command {
