@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from "node:assert";
-import {Agent} from "@src/lib/agent/agent.js";
+import {Agent} from "@src/lib/agent.js";
 
 describe("Agent", function () {
   describe("#chat()", function () {

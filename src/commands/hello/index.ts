@@ -3,7 +3,7 @@
 
 import {Command} from '@oclif/core'
 
-import {Agent} from '../../lib/agent/agent.js'
+import {Agent} from '../../lib/agent.js'
 
 export default class Hello extends Command {
   static description = 'Say hello'
