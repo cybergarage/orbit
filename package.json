@@ -27,6 +27,7 @@
     "eslint-config-prettier": "^10",
     "mocha": "^10",
     "oclif": "^4",
+    "prettier": "^3.8.1",
     "shx": "^0.3.3",
     "sinon": "^21.0.2",
     "ts-node": "^10",
@@ -67,6 +68,7 @@
     "build": "shx rm -rf dist && tsc -b",
     "headers:apply": "node ./bin/headers.js --write",
     "headers:check": "node ./bin/headers.js",
+    "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint",
     "postpack": "shx rm -f oclif.manifest.json",
     "posttest": "npm run lint",
@@ -74,5 +76,6 @@
     "test": "mocha --forbid-only \"test/**/*.test.ts\"",
     "version": "oclif readme && git add README.md"
   },
-  "types": "dist/index.d.ts"
+  "types": "dist/index.d.ts",
+  "prettier": "@oclif/prettier-config"
 }
