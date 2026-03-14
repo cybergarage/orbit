@@ -13,8 +13,8 @@ export default class Hello extends Command {
   ]
 
   async run(): Promise<void> {
-    const agent = new Agent();
-    const response = await agent.chat("hello");
-    this.log(response);
+    const agent = new Agent()
+    const response = await agent.chat('hello')
+    this.log(response)
   }
 }
