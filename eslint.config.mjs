@@ -10,14 +10,4 @@ export default [
   includeIgnoreFile(gitignorePath),
   ...oclif,
   prettier,
-  {
-    rules: {
-      'perfectionist/sort-imports': 'off',
-      'perfectionist/sort-named-imports': 'off',
-      'perfectionist/sort-named-exports': 'off',
-      'perfectionist/sort-exports': 'off',
-      'perfectionist/sort-objects': 'off',
-      'perfectionist/sort-union-types': 'off',
-    },
-  },
 ]

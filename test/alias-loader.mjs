@@ -14,4 +14,4 @@ export async function resolve(specifier, context, defaultResolve) {
   return tsNodeEsm.resolve(specifier, context, defaultResolve);
 }
 
-export const load = tsNodeEsm.load;
+export const {load} = tsNodeEsm;
