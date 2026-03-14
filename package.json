@@ -70,7 +70,7 @@
     "headers:apply": "node ./bin/headers.js --write",
     "headers:check": "node ./bin/headers.js",
     "format": "prettier --write \"src/**/*.ts\"",
-    "lint": "eslint",
+    "lint": "eslint --fix",
     "postpack": "shx rm -f oclif.manifest.json",
     "prepack": "oclif manifest && oclif readme",
     "pretest": "npm run format && npm run lint",
