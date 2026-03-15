@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {Args, Command} from '@oclif/core'
+import process from 'node:process'
 
 import {Agent} from '../lib/agent.js'
+import {loadContext} from '../lib/context.js'
 
 export default class Exec extends Command {
   static args = {
@@ -20,7 +22,8 @@ export default class Exec extends Command {
 
   async run(): Promise<void> {
     const {args} = await this.parse(Exec)
-    const agent = new Agent()
+    const {text: systemPrompt} = await loadContext(process.cwd())
+    const agent = new Agent(systemPrompt || undefined)
     const response = await agent.chat(args.prompt)
     this.log(response)
   }
