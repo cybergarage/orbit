@@ -4,8 +4,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import {APP_NAME} from './app'
-import {findWorkspaceRoot} from './workspace'
+import {APP_NAME} from './app.js'
+import {findWorkspaceRoot} from './workspace.js'
 
 export type ContextSource =
   | {file: string; kind: 'compat'}
