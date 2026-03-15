@@ -29,7 +29,3 @@ export async function findWorkspaceRoot(startDir: string): Promise<string> {
 
   return path.resolve(startDir)
 }
-
-export function workspaceDir(workspaceRoot: string): string {
-  return path.join(workspaceRoot, DOT_APP_NAME)
-}
