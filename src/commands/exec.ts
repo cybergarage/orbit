@@ -9,8 +9,8 @@ import {Agent} from '../lib/agent.js'
 import {loadContext} from '../lib/context.js'
 
 const LANG_INSTRUCTIONS: Record<string, string> = {
-  en: 'Respond in English.',
-  ja: 'Respond in Japanese.',
+  en: 'IMPORTANT: You MUST respond in English only. Do not use any other language, regardless of the language used in the rest of this prompt or in the user message.',
+  ja: 'IMPORTANT: You MUST respond in Japanese only. Do not use any other language, regardless of the language used in the rest of this prompt or in the user message.',
 }
 
 export default class Exec extends Command {
@@ -22,14 +22,8 @@ export default class Exec extends Command {
   }
   static description = 'Send a prompt to the agent and print the response'
   static examples = [
-    `<%= config.bin %> <%= command.id %> "Write a haiku about TypeScript"
-`,
-    `echo "Write a haiku about TypeScript" | <%= config.bin %> <%= command.id %>
-`,
-    `<%= config.bin %> <%= command.id %> --lang ja "TypeScriptとは何ですか？"
-`,
-    `<%= config.bin %> <%= command.id %> --lang en "TypeScriptとは何ですか？"
-`,
+    `<%= config.bin %> <%= command.id %> "Write a haiku about TypeScript"`,
+    `echo "Write a haiku about TypeScript" | <%= config.bin %> <%= command.id %>`,
   ]
   static flags = {
     lang: Flags.string({
@@ -56,7 +50,8 @@ export default class Exec extends Command {
 
     let systemPrompt = contextText || ''
     if (langInstruction) {
-      systemPrompt = systemPrompt ? `${systemPrompt}\n\n${langInstruction}` : langInstruction
+      systemPrompt = systemPrompt ? `${langInstruction}\n\n${systemPrompt}` : langInstruction
+      prompt = `${langInstruction}\n\n${prompt}`
     }
 
     const agent = new Agent(systemPrompt || undefined)
