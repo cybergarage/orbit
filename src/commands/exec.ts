@@ -1,16 +1,37 @@
 // Copyright (c) 2026 The Scribemuse Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {Args, Command, Flags} from '@oclif/core'
+import {Args, Command} from '@oclif/core'
 import {readFileSync} from 'node:fs'
 import process from 'node:process'
 
-import {createAgent, type Provider} from '../lib/agent.js'
+import {type ChatMessage, createAgent, type Provider} from '../lib/agent.js'
+import {agentFlags, type AgentOptions, buildSystemPrompt} from '../lib/chat.js'
 import {loadContext} from '../lib/context.js'
 
-const LANG_INSTRUCTIONS: Record<string, string> = {
-  en: 'IMPORTANT: You MUST respond in English only. Do not use any other language, regardless of the language used in the rest of this prompt or in the user message.',
-  ja: 'IMPORTANT: You MUST respond in Japanese only. Do not use any other language, regardless of the language used in the rest of this prompt or in the user message.',
+export async function runExecCommand(
+  options: AgentOptions & {prompt?: string},
+  stdin = process.stdin,
+  cwd = process.cwd(),
+  deps: {
+    agentFactory?: typeof createAgent
+    contextLoader?: typeof loadContext
+  } = {},
+): Promise<string> {
+  let {prompt} = options
+  if (!prompt) {
+    if (stdin.isTTY) {
+      throw new Error('No prompt provided. Pass a prompt as an argument or via stdin.')
+    }
+
+    prompt = readFileSync(stdin.fd, 'utf8').trim()
+  }
+
+  const {text: contextText} = await (deps.contextLoader ?? loadContext)(cwd)
+  const systemPrompt = buildSystemPrompt(contextText, options.lang)
+  const agent = (deps.agentFactory ?? createAgent)(options.provider as Provider, options.model, systemPrompt)
+  const messages: ChatMessage[] = [{content: prompt, role: 'user'}]
+  return agent.chat(messages)
 }
 
 export default class Exec extends Command {
@@ -26,45 +47,16 @@ export default class Exec extends Command {
     `echo "Write a haiku about TypeScript" | <%= config.bin %> <%= command.id %>`,
   ]
   static flags = {
-    lang: Flags.string({
-      description: 'Output language',
-      options: ['en', 'ja'],
-      required: false,
-    }),
-    model: Flags.string({
-      description: 'Model name (overrides provider default)',
-      required: false,
-    }),
-    provider: Flags.string({
-      default: 'ollama',
-      description: 'LLM provider',
-      options: ['ollama', 'anthropic', 'openai'],
-    }),
+    ...agentFlags,
   }
 
   async run(): Promise<void> {
     const {args, flags} = await this.parse(Exec)
-
-    let {prompt} = args
-    if (!prompt) {
-      if (process.stdin.isTTY) {
-        this.error('No prompt provided. Pass a prompt as an argument or via stdin.')
-      }
-
-      prompt = readFileSync(process.stdin.fd, 'utf8').trim()
+    try {
+      const response = await runExecCommand({...flags, prompt: args.prompt} as AgentOptions & {prompt?: string})
+      this.log(response)
+    } catch (error) {
+      this.error(error instanceof Error ? error.message : 'Exec command failed.')
     }
-
-    const {text: contextText} = await loadContext(process.cwd())
-    const langInstruction = flags.lang ? LANG_INSTRUCTIONS[flags.lang] : null
-
-    let systemPrompt = contextText || ''
-    if (langInstruction) {
-      systemPrompt = systemPrompt ? `${langInstruction}\n\n${systemPrompt}` : langInstruction
-      prompt = `${langInstruction}\n\n${prompt}`
-    }
-
-    const agent = createAgent(flags.provider as Provider, flags.model, systemPrompt || undefined)
-    const response = await agent.chat(prompt)
-    this.log(response)
   }
 }

@@ -1,1 +1,1 @@
-{"root":["./src/index.ts","./src/commands/exec.ts","./src/lib/agent.ts","./src/lib/app.ts","./src/lib/context.ts","./src/lib/workspace.ts"],"version":"5.9.3"}
+{"root":["./src/index.ts","./src/commands/_interactive.ts","./src/commands/exec.ts","./src/lib/agent.ts","./src/lib/app.ts","./src/lib/chat.ts","./src/lib/context.ts","./src/lib/interactive.tsx","./src/lib/workspace.ts"],"version":"5.9.3"}

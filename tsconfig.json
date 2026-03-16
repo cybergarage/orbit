@@ -2,6 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "declaration": true,
+    "jsx": "react-jsx",
     "module": "Node16",
     "outDir": "dist",
     "paths": {

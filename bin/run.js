@@ -2,4 +2,6 @@
 
 import {execute} from '@oclif/core'
 
-await execute({dir: import.meta.url})
+import {normalizeCliArgs} from './args.js'
+
+await execute({args: normalizeCliArgs(process.argv.slice(2)), dir: import.meta.url})
