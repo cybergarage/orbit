@@ -8,11 +8,13 @@
   },
   "bugs": "https://github.com/cybergarage/scribemuse/issues",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@oclif/core": "^4",
     "@oclif/plugin-help": "^6",
     "@oclif/plugin-plugins": "^5",
     "env-paths": "^4.0.0",
-    "ollama": "^0.6.3"
+    "ollama": "^0.6.3",
+    "openai": "^6.29.0"
   },
   "devDependencies": {
     "@eslint/compat": "^1",

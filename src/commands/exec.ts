@@ -5,7 +5,7 @@ import {Args, Command, Flags} from '@oclif/core'
 import {readFileSync} from 'node:fs'
 import process from 'node:process'
 
-import {Agent} from '../lib/agent.js'
+import {createAgent, type Provider} from '../lib/agent.js'
 import {loadContext} from '../lib/context.js'
 
 const LANG_INSTRUCTIONS: Record<string, string> = {
@@ -31,6 +31,15 @@ export default class Exec extends Command {
       options: ['en', 'ja'],
       required: false,
     }),
+    model: Flags.string({
+      description: 'Model name (overrides provider default)',
+      required: false,
+    }),
+    provider: Flags.string({
+      default: 'ollama',
+      description: 'LLM provider',
+      options: ['ollama', 'anthropic', 'openai'],
+    }),
   }
 
   async run(): Promise<void> {
@@ -54,7 +63,7 @@ export default class Exec extends Command {
       prompt = `${langInstruction}\n\n${prompt}`
     }
 
-    const agent = new Agent(systemPrompt || undefined)
+    const agent = createAgent(flags.provider as Provider, flags.model, systemPrompt || undefined)
     const response = await agent.chat(prompt)
     this.log(response)
   }
