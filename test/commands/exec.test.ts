@@ -6,6 +6,7 @@ import {expect} from 'chai'
 import type {Agent, ChatMessage} from '../../src/lib/agent.js'
 
 import {runExecCommand} from '../../src/commands/exec.js'
+import {resolveAgentOptions} from '../../src/lib/chat.js'
 
 describe('runExecCommand', () => {
   it('builds a single user message and includes the language instruction in the system prompt', async () => {
@@ -34,5 +35,40 @@ describe('runExecCommand', () => {
           'IMPORTANT: You MUST respond in Japanese only. Do not use any other language, regardless of the language used in the rest of this prompt or in the user message.\n\nWorkspace instructions',
       },
     ])
+  })
+
+  it('uses workspace provider and model when CLI values are omitted', async () => {
+    const calls: {model: string | undefined; provider: string | undefined}[] = []
+
+    await runExecCommand(
+      {prompt: 'hello'},
+      undefined,
+      '/tmp/workspace',
+      {
+        agentFactory: (provider, model): Agent => ({
+          async chat() {
+            calls.push({model, provider})
+            return 'ok'
+          },
+        }),
+        contextLoader: async () => ({source: {kind: 'none'} as const, text: ''}),
+        settingsLoader: async () => ({model: 'claude-sonnet', provider: 'anthropic'}),
+      },
+    )
+
+    expect(calls).to.deep.equal([{model: 'claude-sonnet', provider: 'anthropic'}])
+  })
+
+  it('keeps CLI provider and model ahead of workspace settings', () => {
+    expect(
+      resolveAgentOptions(
+        {model: 'cli-model', provider: 'openai'},
+        {model: 'workspace-model', provider: 'ollama'},
+      ),
+    ).to.deep.equal({
+      lang: undefined,
+      model: 'cli-model',
+      provider: 'openai',
+    })
   })
 })

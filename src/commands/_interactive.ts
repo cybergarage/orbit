@@ -4,10 +4,11 @@
 import {Command} from '@oclif/core'
 import process from 'node:process'
 
-import {createAgent, type Provider} from '../lib/agent.js'
-import {agentFlags, type AgentOptions, buildSystemPrompt} from '../lib/chat.js'
+import {createAgent} from '../lib/agent.js'
+import {agentFlags, type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../lib/chat.js'
 import {loadContext} from '../lib/context.js'
 import {runInteractiveSession} from '../lib/interactive.js'
+import {loadWorkspaceSettings} from '../lib/settings.js'
 
 export async function runInteractiveCommand(
   options: AgentOptions,
@@ -15,15 +16,17 @@ export async function runInteractiveCommand(
   deps: {
     agentFactory?: typeof createAgent
     contextLoader?: typeof loadContext
+    settingsLoader?: typeof loadWorkspaceSettings
   } = {},
 ): Promise<void> {
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     throw new Error('Interactive mode requires a TTY.')
   }
 
+  const resolvedOptions = await resolveWorkspaceAgentOptions(options, process.cwd(), deps.settingsLoader)
   const {text: contextText} = await (deps.contextLoader ?? loadContext)(process.cwd())
-  const systemPrompt = buildSystemPrompt(contextText, options.lang)
-  const agent = (deps.agentFactory ?? createAgent)(options.provider as Provider, options.model, systemPrompt)
+  const systemPrompt = buildSystemPrompt(contextText, resolvedOptions.lang)
+  const agent = (deps.agentFactory ?? createAgent)(resolvedOptions.provider, resolvedOptions.model, systemPrompt)
   await sessionRunner({agent})
 }
 
@@ -36,9 +39,19 @@ export default class Interactive extends Command {
     const {flags} = await this.parse(Interactive)
 
     try {
-      await runInteractiveCommand(flags as AgentOptions)
+      await runInteractiveCommand(toAgentOptions(flags))
     } catch (error) {
       this.error(error instanceof Error ? error.message : 'Interactive mode failed.')
     }
+  }
+}
+
+function toAgentOptions(flags: {lang?: string; model?: string; provider?: string}): AgentOptions {
+  return {
+    ...(flags.lang ? {lang: flags.lang} : {}),
+    ...(flags.model ? {model: flags.model} : {}),
+    ...(flags.provider === 'anthropic' || flags.provider === 'ollama' || flags.provider === 'openai'
+      ? {provider: flags.provider}
+      : {}),
   }
 }

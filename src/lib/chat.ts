@@ -5,6 +5,8 @@ import {Flags} from '@oclif/core'
 
 import type {Provider} from './agent.js'
 
+import {loadWorkspaceSettings, type WorkspaceSettings} from './settings.js'
+
 export const LANG_INSTRUCTIONS: Record<string, string> = {
   en: 'IMPORTANT: You MUST respond in English only. Do not use any other language, regardless of the language used in the rest of this prompt or in the user message.',
   ja: 'IMPORTANT: You MUST respond in Japanese only. Do not use any other language, regardless of the language used in the rest of this prompt or in the user message.',
@@ -17,20 +19,32 @@ export const agentFlags = {
     required: false,
   }),
   model: Flags.string({
-    description: 'Model name (overrides provider default)',
+    description: 'Model name (overrides workspace setting and provider default)',
     required: false,
   }),
   provider: Flags.string({
-    default: 'ollama',
-    description: 'LLM provider',
+    description: 'LLM provider (overrides workspace setting)',
     options: ['ollama', 'anthropic', 'openai'],
+    required: false,
   }),
 }
 
 export interface AgentOptions {
   lang?: string
   model?: string
+  provider?: Provider
+}
+
+export interface ResolvedAgentOptions {
+  lang?: string
+  model?: string
   provider: Provider
+}
+
+export interface AgentFlagOptions {
+  lang?: string
+  model?: string
+  provider?: Provider
 }
 
 export function buildSystemPrompt(contextText: string, lang?: string): string | undefined {
@@ -39,4 +53,21 @@ export function buildSystemPrompt(contextText: string, lang?: string): string | 
   if (!contextText) return langInstruction
   if (!langInstruction) return contextText
   return `${langInstruction}\n\n${contextText}`
+}
+
+export function resolveAgentOptions(options: AgentOptions, settings: WorkspaceSettings = {}): ResolvedAgentOptions {
+  return {
+    lang: options.lang,
+    model: options.model ?? settings.model,
+    provider: options.provider ?? settings.provider ?? 'ollama',
+  }
+}
+
+export async function resolveWorkspaceAgentOptions(
+  options: AgentOptions,
+  cwd: string,
+  settingsLoader: typeof loadWorkspaceSettings = loadWorkspaceSettings,
+): Promise<ResolvedAgentOptions> {
+  const settings = await settingsLoader(cwd)
+  return resolveAgentOptions(options, settings)
 }
