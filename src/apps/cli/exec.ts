@@ -6,9 +6,10 @@ import {readFileSync} from 'node:fs'
 import process from 'node:process'
 
 import {type ChatMessage, createAgent} from '../../core/agent.js'
-import {agentFlags, type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../../core/chat.js'
+import {type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadContext} from '../../core/context.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
+import {agentFlags, toAgentOptions} from './flags.js'
 
 export async function runExecCommand(
   options: AgentOptions & {prompt?: string},
@@ -61,15 +62,5 @@ export default class Exec extends Command {
     } catch (error) {
       this.error(error instanceof Error ? error.message : 'Exec command failed.')
     }
-  }
-}
-
-function toAgentOptions(flags: {lang?: string; model?: string; provider?: string}): AgentOptions {
-  return {
-    ...(flags.lang ? {lang: flags.lang} : {}),
-    ...(flags.model ? {model: flags.model} : {}),
-    ...(flags.provider === 'anthropic' || flags.provider === 'ollama' || flags.provider === 'openai'
-      ? {provider: flags.provider}
-      : {}),
   }
 }

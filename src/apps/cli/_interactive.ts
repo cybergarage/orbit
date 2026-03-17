@@ -5,10 +5,11 @@ import {Command} from '@oclif/core'
 import process from 'node:process'
 
 import {createAgent, type Provider} from '../../core/agent.js'
-import {agentFlags, type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../../core/chat.js'
+import {type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadContext} from '../../core/context.js'
 import {runInteractiveSession} from '../../core/interactive.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
+import {agentFlags, toAgentOptions} from './flags.js'
 
 export async function runInteractiveCommand(
   options: AgentOptions,
@@ -48,15 +49,5 @@ export default class Interactive extends Command {
     } catch (error) {
       this.error(error instanceof Error ? error.message : 'Interactive mode failed.')
     }
-  }
-}
-
-function toAgentOptions(flags: {lang?: string; model?: string; provider?: string}): AgentOptions {
-  return {
-    ...(flags.lang ? {lang: flags.lang} : {}),
-    ...(flags.model ? {model: flags.model} : {}),
-    ...(flags.provider === 'anthropic' || flags.provider === 'ollama' || flags.provider === 'openai'
-      ? {provider: flags.provider}
-      : {}),
   }
 }
