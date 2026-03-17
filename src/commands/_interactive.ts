@@ -4,7 +4,7 @@
 import {Command} from '@oclif/core'
 import process from 'node:process'
 
-import {createAgent} from '../lib/agent.js'
+import {createAgent, type Provider} from '../lib/agent.js'
 import {agentFlags, type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../lib/chat.js'
 import {loadContext} from '../lib/context.js'
 import {runInteractiveSession} from '../lib/interactive.js'
@@ -26,8 +26,13 @@ export async function runInteractiveCommand(
   const resolvedOptions = await resolveWorkspaceAgentOptions(options, process.cwd(), deps.settingsLoader)
   const {text: contextText} = await (deps.contextLoader ?? loadContext)(process.cwd())
   const systemPrompt = buildSystemPrompt(contextText, resolvedOptions.lang)
-  const agent = (deps.agentFactory ?? createAgent)(resolvedOptions.provider, resolvedOptions.model, systemPrompt)
-  await sessionRunner({agent})
+  const agentFactory = deps.agentFactory ?? createAgent
+  await sessionRunner({
+    createAgent: (provider: Provider, model: string, prompt?: string) => agentFactory(provider, model, prompt),
+    initialModel: resolvedOptions.model,
+    initialProvider: resolvedOptions.provider,
+    systemPrompt,
+  })
 }
 
 export default class Interactive extends Command {

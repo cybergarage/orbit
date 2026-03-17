@@ -3,8 +3,7 @@
 
 import {Flags} from '@oclif/core'
 
-import type {Provider} from './agent.js'
-
+import {DEFAULT_MODELS, type Provider} from './agent.js'
 import {loadWorkspaceSettings, type WorkspaceSettings} from './settings.js'
 
 export const LANG_INSTRUCTIONS: Record<string, string> = {
@@ -37,7 +36,7 @@ export interface AgentOptions {
 
 export interface ResolvedAgentOptions {
   lang?: string
-  model?: string
+  model: string
   provider: Provider
 }
 
@@ -56,10 +55,12 @@ export function buildSystemPrompt(contextText: string, lang?: string): string | 
 }
 
 export function resolveAgentOptions(options: AgentOptions, settings: WorkspaceSettings = {}): ResolvedAgentOptions {
+  const provider = options.provider ?? settings.provider ?? 'ollama'
+
   return {
     lang: options.lang,
-    model: options.model ?? settings.model,
-    provider: options.provider ?? settings.provider ?? 'ollama',
+    model: options.model ?? settings.model ?? DEFAULT_MODELS[provider],
+    provider,
   }
 }
 
