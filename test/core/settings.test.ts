@@ -6,7 +6,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import {loadWorkspaceSettings} from '../../src/lib/settings.js'
+import {loadWorkspaceSettings} from '../../src/core/settings.js'
 
 describe('loadWorkspaceSettings', () => {
   it('prefers .scribemuse/settings.json over workspace settings.json', async () => {

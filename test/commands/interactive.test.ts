@@ -3,7 +3,7 @@
 
 import {expect} from 'chai'
 
-import type {Agent} from '../../src/lib/agent.js'
+import type {Agent} from '../../src/core/agent.js'
 
 import {runInteractiveCommand} from '../../src/commands/_interactive.js'
 

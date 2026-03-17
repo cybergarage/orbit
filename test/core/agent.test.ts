@@ -3,7 +3,7 @@
 
 import {expect} from 'chai'
 
-import {splitSystemPrompt} from '../../src/lib/agent.js'
+import {splitSystemPrompt} from '../../src/core/agent.js'
 
 describe('splitSystemPrompt', () => {
   it('collects system messages and leaves visible history intact', () => {

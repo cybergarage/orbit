@@ -3,13 +3,13 @@
 
 import {expect} from 'chai'
 
-import type {Agent} from '../../src/lib/agent.js'
+import type {Agent} from '../../src/core/agent.js'
 
 import {
   createInitialInteractiveState,
   handleModelCommand,
   submitInteractiveInput,
-} from '../../src/lib/interactive.js'
+} from '../../src/core/interactive.js'
 
 describe('interactive helpers', () => {
   it('starts with an empty session state', () => {

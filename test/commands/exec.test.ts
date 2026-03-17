@@ -3,10 +3,10 @@
 
 import {expect} from 'chai'
 
-import type {Agent, ChatMessage} from '../../src/lib/agent.js'
+import type {Agent, ChatMessage} from '../../src/core/agent.js'
 
 import {runExecCommand} from '../../src/commands/exec.js'
-import {resolveAgentOptions} from '../../src/lib/chat.js'
+import {resolveAgentOptions} from '../../src/core/chat.js'
 
 describe('runExecCommand', () => {
   it('builds a single user message and includes the language instruction in the system prompt', async () => {
