@@ -62,10 +62,10 @@ DESCRIPTION
 
 EXAMPLES
   $ scribemuse hello friend --from oclif
-  hello friend from oclif! (./src/commands/hello/index.ts)
+  hello friend from oclif! (./src/apps/cli/hello/index.ts)
 ```
 
-_See code: [src/commands/hello/index.ts](https://github.com/cybergarage/scribemuse/blob/v0.0.0/src/commands/hello/index.ts)_
+_See code: [src/apps/cli/hello/index.ts](https://github.com/cybergarage/scribemuse/blob/v0.0.0/src/apps/cli/hello/index.ts)_
 
 ## `scribemuse hello world`
 
@@ -80,10 +80,10 @@ DESCRIPTION
 
 EXAMPLES
   $ scribemuse hello world
-  hello world! (./src/commands/hello/world.ts)
+  hello world! (./src/apps/cli/hello/world.ts)
 ```
 
-_See code: [src/commands/hello/world.ts](https://github.com/cybergarage/scribemuse/blob/v0.0.0/src/commands/hello/world.ts)_
+_See code: [src/apps/cli/hello/world.ts](https://github.com/cybergarage/scribemuse/blob/v0.0.0/src/apps/cli/hello/world.ts)_
 
 ## `scribemuse help [COMMAND]`
 

@@ -5,10 +5,10 @@ import {Args, Command} from '@oclif/core'
 import {readFileSync} from 'node:fs'
 import process from 'node:process'
 
-import {type ChatMessage, createAgent} from '../core/agent.js'
-import {agentFlags, type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../core/chat.js'
-import {loadContext} from '../core/context.js'
-import {loadWorkspaceSettings} from '../core/settings.js'
+import {type ChatMessage, createAgent} from '../../core/agent.js'
+import {agentFlags, type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../../core/chat.js'
+import {loadContext} from '../../core/context.js'
+import {loadWorkspaceSettings} from '../../core/settings.js'
 
 export async function runExecCommand(
   options: AgentOptions & {prompt?: string},

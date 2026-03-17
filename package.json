@@ -57,7 +57,7 @@
   "oclif": {
     "bin": "scribemuse",
     "dirname": "scribemuse",
-    "commands": "./dist/commands",
+    "commands": "./dist/apps/cli",
     "plugins": [
       "@oclif/plugin-help",
       "@oclif/plugin-plugins"

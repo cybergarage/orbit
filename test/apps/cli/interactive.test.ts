@@ -3,9 +3,9 @@
 
 import {expect} from 'chai'
 
-import type {Agent} from '../../src/core/agent.js'
+import type {Agent} from '../../../src/core/agent.js'
 
-import {runInteractiveCommand} from '../../src/commands/_interactive.js'
+import {runInteractiveCommand} from '../../../src/apps/cli/_interactive.js'
 
 describe('runInteractiveCommand', () => {
   it('uses resolved workspace settings for the interactive session', async () => {
