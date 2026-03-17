@@ -1,1 +1,1 @@
-export function normalizeCliArgs(argv: string[]): string[]
+export function normalizeCliArgs(argv: string[], stdinIsTTY?: boolean): string[]

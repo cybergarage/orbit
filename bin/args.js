@@ -1,5 +1,6 @@
-export function normalizeCliArgs(argv) {
-  if (argv.length === 0) return ['_interactive']
+export function normalizeCliArgs(argv, stdinIsTTY) {
+  const defaultCommand = stdinIsTTY === true ? '_interactive' : 'exec'
+  if (argv.length === 0) return [defaultCommand]
 
   const standaloneFlags = new Set(['--help', '--version', '-h', '-v'])
   if (argv.some((arg) => standaloneFlags.has(arg))) return argv
@@ -19,5 +20,5 @@ export function normalizeCliArgs(argv) {
     if (flagsWithValues.has(arg)) expectsValue = true
   }
 
-  return ['_interactive', ...argv]
+  return [defaultCommand, ...argv]
 }
