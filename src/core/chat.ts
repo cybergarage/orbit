@@ -1,7 +1,7 @@
 // Copyright (c) 2026 The Scribemuse Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {DEFAULT_MODELS, type Provider} from './models/agent.js'
+import {DEFAULT_MODELS, type Provider} from './models/index.js'
 import {loadWorkspaceSettings, type WorkspaceSettings} from './settings.js'
 
 export const LANG_INSTRUCTIONS: Record<string, string> = {

@@ -3,7 +3,7 @@
 
 import {expect} from 'chai'
 
-import type {Agent, ChatMessage} from '../../../src/core/models/agent.js'
+import type {Agent, ChatMessage} from '../../../src/core/models/index.js'
 
 import {runExecCommand} from '../../../src/apps/cli/exec.js'
 import {resolveAgentOptions} from '../../../src/core/chat.js'

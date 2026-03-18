@@ -7,7 +7,7 @@ import process from 'node:process'
 
 import {type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadContext} from '../../core/context.js'
-import {type ChatMessage, createAgent} from '../../core/models/agent.js'
+import {type ChatMessage, createAgent} from '../../core/models/index.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from './flags.js'
 

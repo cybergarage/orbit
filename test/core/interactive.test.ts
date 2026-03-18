@@ -3,7 +3,7 @@
 
 import {expect} from 'chai'
 
-import type {Agent} from '../../src/core/models/agent.js'
+import type {Agent} from '../../src/core/models/index.js'
 
 import {
   createInitialInteractiveState,

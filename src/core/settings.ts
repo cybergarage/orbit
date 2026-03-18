@@ -4,7 +4,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import type {Provider} from './models/agent.js'
+import type {Provider} from './models/index.js'
 
 import {findWorkspaceRoot} from './workspace.js'
 

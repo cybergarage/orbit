@@ -4,7 +4,7 @@
 import {Box, render, Text, useApp, useInput} from 'ink'
 import {useState} from 'react'
 
-import type {Agent, ChatMessage, Provider} from './models/agent.js'
+import type {Agent, ChatMessage, Provider} from './models/index.js'
 
 export interface InteractiveSessionOptions {
   createAgent: InteractiveAgentFactory
