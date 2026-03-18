@@ -3,7 +3,8 @@
 
 import {Anthropic} from '@anthropic-ai/sdk'
 
-import {type Agent, type ChatMessage, splitSystemPrompt} from '../agent.js'
+import {type Agent, type ChatMessage} from '../agent.js'
+import {splitSystemPrompt} from '../prompt.js'
 
 export class AnthropicAgent implements Agent {
   private readonly client = new Anthropic()
