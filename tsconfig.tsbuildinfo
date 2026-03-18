@@ -1,1 +1,1 @@
-{"root":["./src/index.ts","./src/apps/cli/_interactive.ts","./src/apps/cli/exec.ts","./src/core/agent.ts","./src/core/app.ts","./src/core/chat.ts","./src/core/context.ts","./src/core/interactive.tsx","./src/core/settings.ts","./src/core/workspace.ts"],"version":"5.9.3"}
+{"root":["./src/index.ts","./src/apps/cli/_interactive.ts","./src/apps/cli/exec.ts","./src/apps/cli/flags.ts","./src/core/app.ts","./src/core/chat.ts","./src/core/context.ts","./src/core/interactive.tsx","./src/core/settings.ts","./src/core/workspace.ts","./src/core/models/agent.ts"],"version":"5.9.3"}

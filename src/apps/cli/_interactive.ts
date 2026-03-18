@@ -4,10 +4,10 @@
 import {Command} from '@oclif/core'
 import process from 'node:process'
 
-import {createAgent, type Provider} from '../../core/agent.js'
 import {type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadContext} from '../../core/context.js'
 import {runInteractiveSession} from '../../core/interactive.js'
+import {createAgent, type Provider} from '../../core/models/agent.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from './flags.js'
 
