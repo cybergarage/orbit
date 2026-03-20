@@ -5,6 +5,7 @@ import {Anthropic} from '@anthropic-ai/sdk'
 
 import type {Model} from '../model.js'
 import type {Prompt} from '../prompt.js'
+import type {Provider} from '../provider.js'
 
 import {splitSystemPrompt} from '../prompt.js'
 
@@ -12,6 +13,14 @@ export class AnthropicAgent implements Model {
   private readonly client = new Anthropic()
 
   constructor(private readonly model: string) {}
+
+  getModel(): string {
+    return this.model
+  }
+
+  getProvider(): Provider {
+    return 'anthropic'
+  }
 
   async prompt(messages: Prompt[]): Promise<string> {
     const {messages: chatMessages, systemPrompt} = splitSystemPrompt(messages)

@@ -18,6 +18,12 @@ describe('runExecCommand', () => {
       '/tmp/workspace',
       {
         agentFactory: (provider, model): Agent => ({
+          getModel() {
+            return model ?? ''
+          },
+          getProvider() {
+            return provider ?? 'ollama'
+          },
           async prompt(messages) {
             calls.push({messages, model, provider})
             return 'mocked response'
@@ -53,6 +59,12 @@ describe('runExecCommand', () => {
       '/tmp/workspace',
       {
         agentFactory: (provider, model): Agent => ({
+          getModel() {
+            return model ?? ''
+          },
+          getProvider() {
+            return provider ?? 'ollama'
+          },
           async prompt() {
             calls.push({model, provider})
             return 'ok'

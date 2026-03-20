@@ -3,9 +3,25 @@
 
 import {expect} from 'chai'
 
-import {getProvider, getRoles, splitSystemPrompt} from '../../src/core/models/index.js'
+import {DEFAULT_MODELS, getModel, getProvider, getRoles, splitSystemPrompt} from '../../src/core/models/index.js'
 
 describe('model helpers', () => {
+  describe('model metadata', () => {
+    it('returns the provider default model when no model is specified', () => {
+      const model = getModel('ollama')
+
+      expect(model.getProvider()).to.equal('ollama')
+      expect(model.getModel()).to.equal(DEFAULT_MODELS.ollama)
+    })
+
+    it('returns the explicitly requested provider and model', () => {
+      const model = getModel('anthropic', 'claude-custom')
+
+      expect(model.getProvider()).to.equal('anthropic')
+      expect(model.getModel()).to.equal('claude-custom')
+    })
+  })
+
   describe('getProvider', () => {
     it('returns all defined providers in a stable order', () => {
       expect(getProvider()).to.deep.equal(['anthropic', 'ollama', 'openai'])

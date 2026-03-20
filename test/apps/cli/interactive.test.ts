@@ -32,6 +32,12 @@ describe('runInteractiveCommand', () => {
           agentFactory(provider, model): Agent {
             calls.push({model, provider})
             return {
+              getModel() {
+                return model ?? ''
+              },
+              getProvider() {
+                return provider ?? 'ollama'
+              },
               async prompt() {
                 return 'ok'
               },

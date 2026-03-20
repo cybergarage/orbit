@@ -5,11 +5,20 @@ import {OpenAI} from 'openai'
 
 import type {Model} from '../model.js'
 import type {Prompt} from '../prompt.js'
+import type {Provider} from '../provider.js'
 
 export class OpenAIAgent implements Model {
   private readonly client = new OpenAI()
 
   constructor(private readonly model: string) {}
+
+  getModel(): string {
+    return this.model
+  }
+
+  getProvider(): Provider {
+    return 'openai'
+  }
 
   async prompt(messages: Prompt[]): Promise<string> {
     const response = await this.client.chat.completions.create({

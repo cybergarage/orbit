@@ -11,6 +11,22 @@ import {
   submitInteractiveInput,
 } from '../../src/core/interactive.js'
 
+function createMockAgent(
+  promptImpl: Agent['prompt'],
+  provider: 'anthropic' | 'ollama' | 'openai' = 'ollama',
+  model = 'llama3.1',
+): Agent {
+  return {
+    getModel() {
+      return model
+    },
+    getProvider() {
+      return provider
+    },
+    prompt: promptImpl,
+  }
+}
+
 describe('interactive helpers', () => {
   it('starts with an empty session state', () => {
     expect(createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'})).to.deep.equal({
@@ -23,11 +39,7 @@ describe('interactive helpers', () => {
   })
 
   it('appends user and assistant messages while keeping prior history', async () => {
-    const agent: Agent = {
-      async prompt(messages) {
-        return `reply:${messages.length}`
-      },
-    }
+    const agent = createMockAgent(async (messages) => `reply:${messages.length}`)
     const agentFactory = () => agent
 
     const first = await submitInteractiveInput(
@@ -51,11 +63,9 @@ describe('interactive helpers', () => {
 
   it('ignores exit commands and empty input', async () => {
     const initial = createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'})
-    const agent: Agent = {
-      async prompt() {
-        throw new Error('should not be called')
-      },
-    }
+    const agent = createMockAgent(async () => {
+      throw new Error('should not be called')
+    })
     const agentFactory = () => agent
 
     expect(await submitInteractiveInput(agentFactory, initial, '   ')).to.equal(initial)
@@ -88,12 +98,11 @@ describe('interactive helpers', () => {
 
   it('reports invalid /model syntax as an assistant message without calling the agent', async () => {
     let callCount = 0
-    const agentFactory = (): Agent => ({
-      async prompt() {
+    const agentFactory = (): Agent =>
+      createMockAgent(async () => {
         callCount++
         return 'should not run'
-      },
-    })
+      })
 
     const nextState = await submitInteractiveInput(
       agentFactory,
@@ -109,12 +118,11 @@ describe('interactive helpers', () => {
 
   it('uses the switched provider and model for subsequent chat requests', async () => {
     const calls: {messages: string[]; model: string; provider: string}[] = []
-    const agentFactory = (provider: 'anthropic' | 'ollama' | 'openai', model: string): Agent => ({
-      async prompt(messages) {
+    const agentFactory = (provider: 'anthropic' | 'ollama' | 'openai', model: string): Agent =>
+      createMockAgent(async (messages) => {
         calls.push({messages: messages.map((message) => message.content), model, provider})
         return `reply:${provider}:${model}`
-      },
-    })
+      }, provider, model)
 
     const switched = await submitInteractiveInput(
       agentFactory,
@@ -139,12 +147,11 @@ describe('interactive helpers', () => {
 
   it('prepends the system prompt only to the outgoing request', async () => {
     const calls: string[][] = []
-    const agentFactory = (): Agent => ({
-      async prompt(messages) {
+    const agentFactory = (): Agent =>
+      createMockAgent(async (messages) => {
         calls.push(messages.map((message) => `${message.role}:${message.content}`))
         return 'reply'
-      },
-    })
+      })
 
     const nextState = await submitInteractiveInput(
       agentFactory,
