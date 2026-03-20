@@ -3,21 +3,29 @@
 
 import {expect} from 'chai'
 
-import {splitSystemPrompt} from '../../src/core/models/index.js'
+import {getProvider, splitSystemPrompt} from '../../src/core/models/index.js'
 
-describe('splitSystemPrompt', () => {
-  it('collects system messages and leaves visible history intact', () => {
-    const result = splitSystemPrompt([
-      {content: 'Japanese only', role: 'system'},
-      {content: 'Workspace context', role: 'system'},
-      {content: 'Hello', role: 'user'},
-      {content: 'Hi there', role: 'assistant'},
-    ])
+describe('model helpers', () => {
+  describe('getProvider', () => {
+    it('returns all defined providers in a stable order', () => {
+      expect(getProvider()).to.deep.equal(['anthropic', 'ollama', 'openai'])
+    })
+  })
 
-    expect(result.systemPrompt).to.equal('Japanese only\n\nWorkspace context')
-    expect(result.messages).to.deep.equal([
-      {content: 'Hello', role: 'user'},
-      {content: 'Hi there', role: 'assistant'},
-    ])
+  describe('splitSystemPrompt', () => {
+    it('collects system messages and leaves visible history intact', () => {
+      const result = splitSystemPrompt([
+        {content: 'Japanese only', role: 'system'},
+        {content: 'Workspace context', role: 'system'},
+        {content: 'Hello', role: 'user'},
+        {content: 'Hi there', role: 'assistant'},
+      ])
+
+      expect(result.systemPrompt).to.equal('Japanese only\n\nWorkspace context')
+      expect(result.messages).to.deep.equal([
+        {content: 'Hello', role: 'user'},
+        {content: 'Hi there', role: 'assistant'},
+      ])
+    })
   })
 })

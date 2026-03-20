@@ -4,8 +4,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import type {Provider} from './models/index.js'
-
+import {getProvider, isProvider, type Provider} from './models/index.js'
 import {findWorkspaceRoot} from './workspace.js'
 
 export interface WorkspaceSettings {
@@ -21,10 +20,6 @@ async function readIfExists(file: string): Promise<string | undefined> {
     if (err.code === 'ENOENT') return undefined
     throw error
   }
-}
-
-function isProvider(value: unknown): value is Provider {
-  return value === 'anthropic' || value === 'ollama' || value === 'openai'
 }
 
 export async function loadWorkspaceSettings(startDir: string): Promise<WorkspaceSettings> {
@@ -52,9 +47,10 @@ export async function loadWorkspaceSettings(startDir: string): Promise<Workspace
     const settings = parsed as Record<string, unknown>
     const {provider} = settings
     const {model} = settings
+    const providerOptions = getProvider().join(', ')
 
     if (provider !== undefined && !isProvider(provider)) {
-      throw new Error(`Invalid workspace settings in ${file}: provider must be one of anthropic, ollama, openai.`)
+      throw new Error(`Invalid workspace settings in ${file}: provider must be one of ${providerOptions}.`)
     }
 
     if (model !== undefined && typeof model !== 'string') {

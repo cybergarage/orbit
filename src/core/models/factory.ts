@@ -1,10 +1,12 @@
 // Copyright (c) 2026 The Scribemuse Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import type {Agent} from './agent.js'
+import type {Provider} from './provider.js'
+
 import {AnthropicAgent} from './adapters/anthropic.js'
 import {OllamaAgent} from './adapters/ollama.js'
 import {OpenAIAgent} from './adapters/openai.js'
-import type {Agent, Provider} from './agent.js'
 
 export const DEFAULT_MODELS: Record<Provider, string> = {
   anthropic: 'claude-opus-4-6',

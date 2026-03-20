@@ -5,6 +5,8 @@ import {Flags} from '@oclif/core'
 
 import type {AgentOptions} from '../../core/chat.js'
 
+import {getProvider, isProvider} from '../../core/models/index.js'
+
 export const agentFlags = {
   lang: Flags.string({
     description: 'Output language',
@@ -17,7 +19,7 @@ export const agentFlags = {
   }),
   provider: Flags.string({
     description: 'LLM provider (overrides workspace setting)',
-    options: ['ollama', 'anthropic', 'openai'],
+    options: getProvider(),
     required: false,
   }),
 }
@@ -26,8 +28,6 @@ export function toAgentOptions(flags: {lang?: string; model?: string; provider?:
   return {
     ...(flags.lang ? {lang: flags.lang} : {}),
     ...(flags.model ? {model: flags.model} : {}),
-    ...(flags.provider === 'anthropic' || flags.provider === 'ollama' || flags.provider === 'openai'
-      ? {provider: flags.provider}
-      : {}),
+    ...(isProvider(flags.provider) ? {provider: flags.provider} : {}),
   }
 }

@@ -4,7 +4,7 @@
 import {Box, render, Text, useApp, useInput} from 'ink'
 import {useState} from 'react'
 
-import type {Agent, ChatMessage, Provider} from './models/index.js'
+import {type Agent, type ChatMessage, isProvider, type Provider} from './models/index.js'
 
 export interface InteractiveSessionOptions {
   createAgent: InteractiveAgentFactory
@@ -120,7 +120,7 @@ export function formatProviderModel(provider: Provider, model: string): string {
 }
 
 function parseProvider(value: string): Provider | undefined {
-  if (value === 'anthropic' || value === 'ollama' || value === 'openai') {
+  if (isProvider(value)) {
     return value
   }
 }

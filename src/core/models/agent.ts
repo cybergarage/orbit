@@ -1,7 +1,6 @@
 // Copyright (c) 2026 The Scribemuse Authors
 // SPDX-License-Identifier: Apache-2.0
 
-export type Provider = 'anthropic' | 'ollama' | 'openai'
 export type ChatRole = 'assistant' | 'system' | 'user'
 
 export interface ChatMessage {
