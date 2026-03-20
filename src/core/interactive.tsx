@@ -4,7 +4,7 @@
 import {Box, render, Text, useApp, useInput} from 'ink'
 import {useState} from 'react'
 
-import {type Agent, type ChatMessage, isProvider, type Provider} from './models/index.js'
+import {type Agent, isProvider, type Prompt, type Provider} from './models/index.js'
 
 export interface InteractiveSessionOptions {
   createAgent: InteractiveAgentFactory
@@ -20,7 +20,7 @@ export interface InteractiveAgentFactory {
 export interface InteractiveState {
   input: string
   isLoading: boolean
-  messages: ChatMessage[]
+  messages: Prompt[]
   model: string
   provider: Provider
   systemPrompt?: string
@@ -60,9 +60,9 @@ export async function submitInteractiveInput(
     }
   }
 
-  const requestMessages = [...state.messages, {content: input, role: 'user'} as ChatMessage]
+  const requestMessages = [...state.messages, {content: input, role: 'user'} as Prompt]
   const agent = createAgent(state.provider, state.model, state.systemPrompt)
-  const reply = await agent.chat(requestMessages)
+  const reply = await agent.prompt(requestMessages)
 
   return {
     ...state,
@@ -160,7 +160,7 @@ function InteractiveApp({createAgent, initialModel, initialProvider, systemPromp
         return
       }
 
-      const nextMessages = [...state.messages, {content: nextInput, role: 'user'} as ChatMessage]
+      const nextMessages = [...state.messages, {content: nextInput, role: 'user'} as Prompt]
       setState({
         ...state,
         input: '',
@@ -171,7 +171,7 @@ function InteractiveApp({createAgent, initialModel, initialProvider, systemPromp
       const agent = createAgent(state.provider, state.model, state.systemPrompt)
 
       agent
-        .chat(nextMessages)
+        .prompt(nextMessages)
         .then((reply) => {
           setState((currentState) => ({
             ...currentState,

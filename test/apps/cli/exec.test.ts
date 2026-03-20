@@ -3,14 +3,14 @@
 
 import {expect} from 'chai'
 
-import type {Agent, ChatMessage} from '../../../src/core/models/index.js'
+import type {Agent, Prompt} from '../../../src/core/models/index.js'
 
 import {runExecCommand} from '../../../src/apps/cli/exec.js'
 import {resolveAgentOptions} from '../../../src/core/chat.js'
 
 describe('runExecCommand', () => {
   it('builds a single user message and includes the language instruction in the system prompt', async () => {
-    const calls: {messages: ChatMessage[]; systemPrompt?: string}[] = []
+    const calls: {messages: Prompt[]; systemPrompt?: string}[] = []
 
     const response = await runExecCommand(
       {lang: 'ja', model: 'test-model', prompt: 'hello', provider: 'ollama'},
@@ -18,7 +18,7 @@ describe('runExecCommand', () => {
       '/tmp/workspace',
       {
         agentFactory: (_provider, _model, systemPrompt): Agent => ({
-          async chat(messages) {
+          async prompt(messages) {
             calls.push({messages, systemPrompt})
             return 'mocked response'
           },
@@ -46,7 +46,7 @@ describe('runExecCommand', () => {
       '/tmp/workspace',
       {
         agentFactory: (provider, model): Agent => ({
-          async chat() {
+          async prompt() {
             calls.push({model, provider})
             return 'ok'
           },

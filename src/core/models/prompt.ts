@@ -1,9 +1,9 @@
 // Copyright (c) 2026 The Scribemuse Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {ChatMessage} from './agent.js'
+import type {Prompt} from './agent.js'
 
-export function splitSystemPrompt(messages: ChatMessage[]): {messages: ChatMessage[]; systemPrompt?: string} {
+export function splitSystemPrompt(messages: Prompt[]): {messages: Prompt[]; systemPrompt?: string} {
   const systemMessages = messages
     .filter((message) => message.role === 'system')
     .map((message) => message.content.trim())

@@ -3,7 +3,7 @@
 
 import {OpenAI} from 'openai'
 
-import type {Agent, ChatMessage} from '../agent.js'
+import type {Agent, Prompt} from '../agent.js'
 
 export class OpenAIAgent implements Agent {
   private readonly client = new OpenAI()
@@ -13,8 +13,8 @@ export class OpenAIAgent implements Agent {
     private readonly systemPrompt?: string,
   ) {}
 
-  async chat(messages: ChatMessage[]): Promise<string> {
-    const requestMessages: ChatMessage[] = []
+  async prompt(messages: Prompt[]): Promise<string> {
+    const requestMessages: Prompt[] = []
     if (this.systemPrompt) {
       requestMessages.push({content: this.systemPrompt, role: 'system'})
     }

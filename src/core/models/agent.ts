@@ -3,11 +3,11 @@
 
 import type {Role} from './role.js'
 
-export interface ChatMessage {
+export interface Prompt {
   content: string
   role: Role
 }
 
 export interface Agent {
-  chat(messages: ChatMessage[]): Promise<string>
+  prompt(messages: Prompt[]): Promise<string>
 }

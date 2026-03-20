@@ -24,7 +24,7 @@ describe('interactive helpers', () => {
 
   it('appends user and assistant messages while keeping prior history', async () => {
     const agent: Agent = {
-      async chat(messages) {
+      async prompt(messages) {
         return `reply:${messages.length}`
       },
     }
@@ -52,7 +52,7 @@ describe('interactive helpers', () => {
   it('ignores exit commands and empty input', async () => {
     const initial = createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'})
     const agent: Agent = {
-      async chat() {
+      async prompt() {
         throw new Error('should not be called')
       },
     }
@@ -89,7 +89,7 @@ describe('interactive helpers', () => {
   it('reports invalid /model syntax as an assistant message without calling the agent', async () => {
     let callCount = 0
     const agentFactory = (): Agent => ({
-      async chat() {
+      async prompt() {
         callCount++
         return 'should not run'
       },
@@ -110,7 +110,7 @@ describe('interactive helpers', () => {
   it('uses the switched provider and model for subsequent chat requests', async () => {
     const calls: {messages: string[]; model: string; provider: string}[] = []
     const agentFactory = (provider: 'anthropic' | 'ollama' | 'openai', model: string): Agent => ({
-      async chat(messages) {
+      async prompt(messages) {
         calls.push({messages: messages.map((message) => message.content), model, provider})
         return `reply:${provider}:${model}`
       },

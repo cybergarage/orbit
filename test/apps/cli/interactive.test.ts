@@ -32,7 +32,7 @@ describe('runInteractiveCommand', () => {
           agentFactory(provider, model, systemPrompt): Agent {
             calls.push({model, provider, systemPrompt})
             return {
-              async chat() {
+              async prompt() {
                 return 'ok'
               },
             }

@@ -3,7 +3,7 @@
 
 import {Anthropic} from '@anthropic-ai/sdk'
 
-import {type Agent, type ChatMessage} from '../agent.js'
+import {type Agent, type Prompt} from '../agent.js'
 import {splitSystemPrompt} from '../prompt.js'
 
 export class AnthropicAgent implements Agent {
@@ -14,9 +14,9 @@ export class AnthropicAgent implements Agent {
     private readonly systemPrompt?: string,
   ) {}
 
-  async chat(messages: ChatMessage[]): Promise<string> {
+  async prompt(messages: Prompt[]): Promise<string> {
     const requestMessages = this.systemPrompt
-      ? [{content: this.systemPrompt, role: 'system'} as ChatMessage, ...messages]
+      ? [{content: this.systemPrompt, role: 'system'} as Prompt, ...messages]
       : messages
     const {messages: chatMessages, systemPrompt} = splitSystemPrompt(requestMessages)
 
