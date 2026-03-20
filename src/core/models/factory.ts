@@ -1,7 +1,7 @@
 // Copyright (c) 2026 The Scribemuse Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {Agent} from './agent.js'
+import type {Model} from './model.js'
 import type {Provider} from './provider.js'
 
 import {AnthropicAgent} from './adapters/anthropic.js'
@@ -14,7 +14,7 @@ export const DEFAULT_MODELS: Record<Provider, string> = {
   openai: 'gpt-4o',
 }
 
-export function createAgent(provider: Provider = 'ollama', model?: string, systemPrompt?: string): Agent {
+export function getModel(provider: Provider = 'ollama', model?: string, systemPrompt?: string): Model {
   const resolvedModel = model ?? DEFAULT_MODELS[provider]
   switch (provider) {
     case 'anthropic': {

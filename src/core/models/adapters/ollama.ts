@@ -3,10 +3,10 @@
 
 import {Ollama} from 'ollama'
 
-import type {Agent} from '../agent.js'
+import type {Model} from '../model.js'
 import type {Prompt} from '../prompt.js'
 
-export class OllamaAgent implements Agent {
+export class OllamaAgent implements Model {
   private readonly client = new Ollama()
 
   constructor(

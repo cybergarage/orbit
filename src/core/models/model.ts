@@ -3,6 +3,6 @@
 
 import type {Prompt} from './prompt.js'
 
-export interface Agent {
+export interface Model {
   prompt(messages: Prompt[]): Promise<string>
 }

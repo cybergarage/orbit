@@ -7,7 +7,7 @@ import {useState} from 'react'
 import {type Agent, isProvider, type Prompt, type Provider} from './models/index.js'
 
 export interface InteractiveSessionOptions {
-  createAgent: InteractiveAgentFactory
+  getModel: InteractiveAgentFactory
   initialModel: string
   initialProvider: Provider
   systemPrompt?: string
@@ -43,7 +43,7 @@ export function createInitialInteractiveState(
 }
 
 export async function submitInteractiveInput(
-  createAgent: InteractiveAgentFactory,
+  getModel: InteractiveAgentFactory,
   state: InteractiveState,
   rawInput: string,
 ): Promise<InteractiveState> {
@@ -61,7 +61,7 @@ export async function submitInteractiveInput(
   }
 
   const requestMessages = [...state.messages, {content: input, role: 'user'} as Prompt]
-  const agent = createAgent(state.provider, state.model, state.systemPrompt)
+  const agent = getModel(state.provider, state.model, state.systemPrompt)
   const reply = await agent.prompt(requestMessages)
 
   return {
@@ -125,7 +125,7 @@ function parseProvider(value: string): Provider | undefined {
   }
 }
 
-function InteractiveApp({createAgent, initialModel, initialProvider, systemPrompt}: InteractiveSessionOptions) {
+function InteractiveApp({getModel, initialModel, initialProvider, systemPrompt}: InteractiveSessionOptions) {
   const {exit} = useApp()
   const [state, setState] = useState<InteractiveState>(() =>
     createInitialInteractiveState({
@@ -168,7 +168,7 @@ function InteractiveApp({createAgent, initialModel, initialProvider, systemPromp
         messages: nextMessages,
       })
 
-      const agent = createAgent(state.provider, state.model, state.systemPrompt)
+      const agent = getModel(state.provider, state.model, state.systemPrompt)
 
       agent
         .prompt(nextMessages)

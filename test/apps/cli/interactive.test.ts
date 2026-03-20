@@ -26,7 +26,7 @@ describe('runInteractiveCommand', () => {
             initialProvider: options.initialProvider,
             systemPrompt: options.systemPrompt,
           })
-          options.createAgent(options.initialProvider, options.initialModel, options.systemPrompt)
+          options.getModel(options.initialProvider, options.initialModel, options.systemPrompt)
         },
         {
           agentFactory(provider, model, systemPrompt): Agent {

@@ -7,7 +7,7 @@ import process from 'node:process'
 
 import {type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadContext} from '../../core/context.js'
-import {createAgent, type Prompt} from '../../core/models/index.js'
+import {getModel, type Prompt} from '../../core/models/index.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from './flags.js'
 
@@ -16,7 +16,7 @@ export async function runExecCommand(
   stdin = process.stdin,
   cwd = process.cwd(),
   deps: {
-    agentFactory?: typeof createAgent
+    agentFactory?: typeof getModel
     contextLoader?: typeof loadContext
     settingsLoader?: typeof loadWorkspaceSettings
   } = {},
@@ -33,7 +33,7 @@ export async function runExecCommand(
   const resolvedOptions = await resolveWorkspaceAgentOptions(options, cwd, deps.settingsLoader)
   const {text: contextText} = await (deps.contextLoader ?? loadContext)(cwd)
   const systemPrompt = buildSystemPrompt(contextText, resolvedOptions.lang)
-  const agent = (deps.agentFactory ?? createAgent)(resolvedOptions.provider, resolvedOptions.model, systemPrompt)
+  const agent = (deps.agentFactory ?? getModel)(resolvedOptions.provider, resolvedOptions.model, systemPrompt)
   const messages: Prompt[] = [{content: prompt, role: 'user'}]
   return agent.prompt(messages)
 }

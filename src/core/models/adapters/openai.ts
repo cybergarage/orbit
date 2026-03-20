@@ -3,10 +3,10 @@
 
 import {OpenAI} from 'openai'
 
-import type {Agent} from '../agent.js'
+import type {Model} from '../model.js'
 import type {Prompt} from '../prompt.js'
 
-export class OpenAIAgent implements Agent {
+export class OpenAIAgent implements Model {
   private readonly client = new OpenAI()
 
   constructor(

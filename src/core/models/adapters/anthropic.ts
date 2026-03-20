@@ -3,12 +3,12 @@
 
 import {Anthropic} from '@anthropic-ai/sdk'
 
-import type {Agent} from '../agent.js'
+import type {Model} from '../model.js'
 import type {Prompt} from '../prompt.js'
 
 import {splitSystemPrompt} from '../prompt.js'
 
-export class AnthropicAgent implements Agent {
+export class AnthropicAgent implements Model {
   private readonly client = new Anthropic()
 
   constructor(
