@@ -33,8 +33,11 @@ export async function runExecCommand(
   const resolvedOptions = await resolveWorkspaceAgentOptions(options, cwd, deps.settingsLoader)
   const {text: contextText} = await (deps.contextLoader ?? loadContext)(cwd)
   const systemPrompt = buildSystemPrompt(contextText, resolvedOptions.lang)
-  const agent = (deps.agentFactory ?? getModel)(resolvedOptions.provider, resolvedOptions.model, systemPrompt)
-  const messages: Prompt[] = [{content: prompt, role: 'user'}]
+  const agent = (deps.agentFactory ?? getModel)(resolvedOptions.provider, resolvedOptions.model)
+  const messages: Prompt[] = [
+    ...(systemPrompt ? [{content: systemPrompt, role: 'system'} as Prompt] : []),
+    {content: prompt, role: 'user'},
+  ]
   return agent.prompt(messages)
 }
 

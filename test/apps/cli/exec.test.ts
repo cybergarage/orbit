@@ -9,17 +9,17 @@ import {runExecCommand} from '../../../src/apps/cli/exec.js'
 import {resolveAgentOptions} from '../../../src/core/chat.js'
 
 describe('runExecCommand', () => {
-  it('builds a single user message and includes the language instruction in the system prompt', async () => {
-    const calls: {messages: Prompt[]; systemPrompt?: string}[] = []
+  it('builds a system and user message and passes them to model.prompt', async () => {
+    const calls: {messages: Prompt[]; model: string | undefined; provider: string | undefined}[] = []
 
     const response = await runExecCommand(
       {lang: 'ja', model: 'test-model', prompt: 'hello', provider: 'ollama'},
       undefined,
       '/tmp/workspace',
       {
-        agentFactory: (_provider, _model, systemPrompt): Agent => ({
+        agentFactory: (provider, model): Agent => ({
           async prompt(messages) {
-            calls.push({messages, systemPrompt})
+            calls.push({messages, model, provider})
             return 'mocked response'
           },
         }),
@@ -30,9 +30,16 @@ describe('runExecCommand', () => {
     expect(response).to.equal('mocked response')
     expect(calls).to.deep.equal([
       {
-        messages: [{content: 'hello', role: 'user'}],
-        systemPrompt:
-          'IMPORTANT: You MUST respond in Japanese only. Do not use any other language, regardless of the language used in the rest of this prompt or in the user message.\n\nWorkspace instructions',
+        messages: [
+          {
+            content:
+              'IMPORTANT: You MUST respond in Japanese only. Do not use any other language, regardless of the language used in the rest of this prompt or in the user message.\n\nWorkspace instructions',
+            role: 'system',
+          },
+          {content: 'hello', role: 'user'},
+        ],
+        model: 'test-model',
+        provider: 'ollama',
       },
     ])
   })

@@ -9,20 +9,11 @@ import type {Prompt} from '../prompt.js'
 export class OpenAIAgent implements Model {
   private readonly client = new OpenAI()
 
-  constructor(
-    private readonly model: string,
-    private readonly systemPrompt?: string,
-  ) {}
+  constructor(private readonly model: string) {}
 
   async prompt(messages: Prompt[]): Promise<string> {
-    const requestMessages: Prompt[] = []
-    if (this.systemPrompt) {
-      requestMessages.push({content: this.systemPrompt, role: 'system'})
-    }
-
-    requestMessages.push(...messages)
     const response = await this.client.chat.completions.create({
-      messages: requestMessages,
+      messages,
       model: this.model,
     })
 

@@ -14,19 +14,19 @@ export const DEFAULT_MODELS: Record<Provider, string> = {
   openai: 'gpt-4o',
 }
 
-export function getModel(provider: Provider = 'ollama', model?: string, systemPrompt?: string): Model {
+export function getModel(provider: Provider = 'ollama', model?: string): Model {
   const resolvedModel = model ?? DEFAULT_MODELS[provider]
   switch (provider) {
     case 'anthropic': {
-      return new AnthropicAgent(resolvedModel, systemPrompt)
+      return new AnthropicAgent(resolvedModel)
     }
 
     case 'ollama': {
-      return new OllamaAgent(resolvedModel, systemPrompt)
+      return new OllamaAgent(resolvedModel)
     }
 
     case 'openai': {
-      return new OpenAIAgent(resolvedModel, systemPrompt)
+      return new OpenAIAgent(resolvedModel)
     }
   }
 }

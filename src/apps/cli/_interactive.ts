@@ -29,7 +29,7 @@ export async function runInteractiveCommand(
   const systemPrompt = buildSystemPrompt(contextText, resolvedOptions.lang)
   const agentFactory = deps.agentFactory ?? getModel
   await sessionRunner({
-    getModel: (provider: Provider, model: string, prompt?: string) => agentFactory(provider, model, prompt),
+    getModel: (provider: Provider, model: string) => agentFactory(provider, model),
     initialModel: resolvedOptions.model,
     initialProvider: resolvedOptions.provider,
     systemPrompt,

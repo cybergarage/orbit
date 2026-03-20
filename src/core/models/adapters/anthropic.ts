@@ -11,16 +11,10 @@ import {splitSystemPrompt} from '../prompt.js'
 export class AnthropicAgent implements Model {
   private readonly client = new Anthropic()
 
-  constructor(
-    private readonly model: string,
-    private readonly systemPrompt?: string,
-  ) {}
+  constructor(private readonly model: string) {}
 
   async prompt(messages: Prompt[]): Promise<string> {
-    const requestMessages = this.systemPrompt
-      ? [{content: this.systemPrompt, role: 'system'} as Prompt, ...messages]
-      : messages
-    const {messages: chatMessages, systemPrompt} = splitSystemPrompt(requestMessages)
+    const {messages: chatMessages, systemPrompt} = splitSystemPrompt(messages)
 
     const response = await this.client.messages.create({
       // Anthropic's SDK expects snake_case for this field.

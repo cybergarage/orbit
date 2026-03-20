@@ -14,7 +14,7 @@ export interface InteractiveSessionOptions {
 }
 
 export interface InteractiveAgentFactory {
-  (provider: Provider, model: string, systemPrompt?: string): Agent
+  (provider: Provider, model: string): Agent
 }
 
 export interface InteractiveState {
@@ -60,13 +60,17 @@ export async function submitInteractiveInput(
     }
   }
 
-  const requestMessages = [...state.messages, {content: input, role: 'user'} as Prompt]
-  const agent = getModel(state.provider, state.model, state.systemPrompt)
+  const requestMessages = [
+    ...(state.systemPrompt ? [{content: state.systemPrompt, role: 'system'} as Prompt] : []),
+    ...state.messages,
+    {content: input, role: 'user'} as Prompt,
+  ]
+  const agent = getModel(state.provider, state.model)
   const reply = await agent.prompt(requestMessages)
 
   return {
     ...state,
-    messages: [...requestMessages, {content: reply, role: 'assistant'}],
+    messages: [...state.messages, {content: input, role: 'user'}, {content: reply, role: 'assistant'}],
   }
 }
 
@@ -161,6 +165,10 @@ function InteractiveApp({getModel, initialModel, initialProvider, systemPrompt}:
       }
 
       const nextMessages = [...state.messages, {content: nextInput, role: 'user'} as Prompt]
+      const requestMessages = [
+        ...(state.systemPrompt ? [{content: state.systemPrompt, role: 'system'} as Prompt] : []),
+        ...nextMessages,
+      ]
       setState({
         ...state,
         input: '',
@@ -168,10 +176,10 @@ function InteractiveApp({getModel, initialModel, initialProvider, systemPrompt}:
         messages: nextMessages,
       })
 
-      const agent = getModel(state.provider, state.model, state.systemPrompt)
+      const agent = getModel(state.provider, state.model)
 
       agent
-        .prompt(nextMessages)
+        .prompt(requestMessages)
         .then((reply) => {
           setState((currentState) => ({
             ...currentState,

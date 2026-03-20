@@ -136,4 +136,30 @@ describe('interactive helpers', () => {
       {content: 'reply:openai:gpt-4o', role: 'assistant'},
     ])
   })
+
+  it('prepends the system prompt only to the outgoing request', async () => {
+    const calls: string[][] = []
+    const agentFactory = (): Agent => ({
+      async prompt(messages) {
+        calls.push(messages.map((message) => `${message.role}:${message.content}`))
+        return 'reply'
+      },
+    })
+
+    const nextState = await submitInteractiveInput(
+      agentFactory,
+      createInitialInteractiveState({
+        model: 'llama3.1',
+        provider: 'ollama',
+        systemPrompt: 'Workspace rules',
+      }),
+      'hello',
+    )
+
+    expect(calls).to.deep.equal([['system:Workspace rules', 'user:hello']])
+    expect(nextState.messages).to.deep.equal([
+      {content: 'hello', role: 'user'},
+      {content: 'reply', role: 'assistant'},
+    ])
+  })
 })

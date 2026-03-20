@@ -9,20 +9,10 @@ import type {Prompt} from '../prompt.js'
 export class OllamaAgent implements Model {
   private readonly client = new Ollama()
 
-  constructor(
-    private readonly model: string,
-    private readonly systemPrompt?: string,
-  ) {}
+  constructor(private readonly model: string) {}
 
   async prompt(messages: Prompt[]): Promise<string> {
-    const requestMessages: Prompt[] = []
-    if (this.systemPrompt) {
-      requestMessages.push({content: this.systemPrompt, role: 'system'})
-    }
-
-    requestMessages.push(...messages)
-
-    const response = await this.client.chat({messages: requestMessages, model: this.model})
+    const response = await this.client.chat({messages, model: this.model})
     return response.message.content
   }
 }
