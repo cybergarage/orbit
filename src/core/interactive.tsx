@@ -4,17 +4,17 @@
 import {Box, render, Text, useApp, useInput} from 'ink'
 import {useState} from 'react'
 
-import {type Agent, isProvider, type Prompt, type Provider} from './models/index.js'
+import {Agent, type AgentOptions, isProvider, type Prompt, type Provider} from './models/index.js'
 
 export interface InteractiveSessionOptions {
-  getModel: InteractiveAgentFactory
+  agentClass: InteractiveAgentClass
   initialModel: string
   initialProvider: Provider
   systemPrompt?: string
 }
 
-export interface InteractiveAgentFactory {
-  (provider: Provider, model: string): Agent
+export interface InteractiveAgentClass {
+  new (options?: AgentOptions): Agent
 }
 
 export interface InteractiveState {
@@ -43,7 +43,7 @@ export function createInitialInteractiveState(
 }
 
 export async function submitInteractiveInput(
-  getModel: InteractiveAgentFactory,
+  AgentClass: InteractiveAgentClass,
   state: InteractiveState,
   rawInput: string,
 ): Promise<InteractiveState> {
@@ -65,7 +65,12 @@ export async function submitInteractiveInput(
     ...state.messages,
     {content: input, role: 'user'} as Prompt,
   ]
-  const agent = getModel(state.provider, state.model)
+  const agent = new AgentClass({
+    model: {
+      name: state.model,
+      provider: state.provider,
+    },
+  })
   const reply = await agent.prompt(requestMessages)
 
   return {
@@ -129,7 +134,7 @@ function parseProvider(value: string): Provider | undefined {
   }
 }
 
-function InteractiveApp({getModel, initialModel, initialProvider, systemPrompt}: InteractiveSessionOptions) {
+function InteractiveApp({agentClass: AgentClass, initialModel, initialProvider, systemPrompt}: InteractiveSessionOptions) {
   const {exit} = useApp()
   const [state, setState] = useState<InteractiveState>(() =>
     createInitialInteractiveState({
@@ -176,7 +181,12 @@ function InteractiveApp({getModel, initialModel, initialProvider, systemPrompt}:
         messages: nextMessages,
       })
 
-      const agent = getModel(state.provider, state.model)
+      const agent = new AgentClass({
+        model: {
+          name: state.model,
+          provider: state.provider,
+        },
+      })
 
       agent
         .prompt(requestMessages)

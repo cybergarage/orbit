@@ -3,27 +3,54 @@
 
 import {expect} from 'chai'
 
-import type {Agent} from '../../src/core/models/index.js'
+import type {AgentOptions, Model} from '../../src/core/models/index.js'
 
 import {
   createInitialInteractiveState,
   handleModelCommand,
   submitInteractiveInput,
 } from '../../src/core/interactive.js'
+import {Agent} from '../../src/core/models/index.js'
 
 function createMockAgent(
   promptImpl: Agent['prompt'],
-  provider: 'anthropic' | 'ollama' | 'openai' = 'ollama',
-  model = 'llama3.1',
+  options: AgentOptions = {},
 ): Agent {
-  return {
-    getModel() {
-      return model
+  return new Agent({
+    ...options,
+    deps: {
+      createModel: (): Model => ({
+        getModel() {
+          return options.model?.name ?? 'llama3.1'
+        },
+        getProvider() {
+          return options.model?.provider ?? 'ollama'
+        },
+        prompt: promptImpl,
+      }),
     },
-    getProvider() {
-      return provider
-    },
-    prompt: promptImpl,
+  })
+}
+
+class MockAgent extends Agent {
+  constructor(
+    private readonly promptImpl: Agent['prompt'],
+    options: AgentOptions = {},
+  ) {
+    super({
+      ...options,
+      deps: {
+        createModel: (): Model => ({
+          getModel() {
+            return options.model?.name ?? 'llama3.1'
+          },
+          getProvider() {
+            return options.model?.provider ?? 'ollama'
+          },
+          prompt: promptImpl,
+        }),
+      },
+    })
   }
 }
 
@@ -40,14 +67,18 @@ describe('interactive helpers', () => {
 
   it('appends user and assistant messages while keeping prior history', async () => {
     const agent = createMockAgent(async (messages) => `reply:${messages.length}`)
-    const agentFactory = () => agent
+    const AgentCtor = class extends MockAgent {
+      constructor() {
+        super(agent.prompt.bind(agent))
+      }
+    }
 
     const first = await submitInteractiveInput(
-      agentFactory,
+      AgentCtor,
       createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'}),
       'hello',
     )
-    const second = await submitInteractiveInput(agentFactory, first, 'again')
+    const second = await submitInteractiveInput(AgentCtor, first, 'again')
 
     expect(first.messages).to.deep.equal([
       {content: 'hello', role: 'user'},
@@ -63,13 +94,16 @@ describe('interactive helpers', () => {
 
   it('ignores exit commands and empty input', async () => {
     const initial = createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'})
-    const agent = createMockAgent(async () => {
-      throw new Error('should not be called')
-    })
-    const agentFactory = () => agent
+    const AgentCtor = class extends MockAgent {
+      constructor(options: AgentOptions = {}) {
+        super(async () => {
+          throw new Error('should not be called')
+        }, options)
+      }
+    }
 
-    expect(await submitInteractiveInput(agentFactory, initial, '   ')).to.equal(initial)
-    expect(await submitInteractiveInput(agentFactory, initial, '/exit')).to.equal(initial)
+    expect(await submitInteractiveInput(AgentCtor, initial, '   ')).to.equal(initial)
+    expect(await submitInteractiveInput(AgentCtor, initial, '/exit')).to.equal(initial)
   })
 
   it('returns the current provider:model for /model', () => {
@@ -98,14 +132,17 @@ describe('interactive helpers', () => {
 
   it('reports invalid /model syntax as an assistant message without calling the agent', async () => {
     let callCount = 0
-    const agentFactory = (): Agent =>
-      createMockAgent(async () => {
-        callCount++
-        return 'should not run'
-      })
+    const AgentCtor = class extends MockAgent {
+      constructor(options: AgentOptions = {}) {
+        super(async () => {
+          callCount++
+          return 'should not run'
+        }, options)
+      }
+    }
 
     const nextState = await submitInteractiveInput(
-      agentFactory,
+      AgentCtor,
       createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'}),
       '/model invalid',
     )
@@ -118,18 +155,23 @@ describe('interactive helpers', () => {
 
   it('uses the switched provider and model for subsequent chat requests', async () => {
     const calls: {messages: string[]; model: string; provider: string}[] = []
-    const agentFactory = (provider: 'anthropic' | 'ollama' | 'openai', model: string): Agent =>
-      createMockAgent(async (messages) => {
-        calls.push({messages: messages.map((message) => message.content), model, provider})
-        return `reply:${provider}:${model}`
-      }, provider, model)
+    const AgentCtor = class extends MockAgent {
+      constructor(options: AgentOptions = {}) {
+        super(async (messages) => {
+          const provider = options.model?.provider ?? 'ollama'
+          const model = options.model?.name ?? 'llama3.1'
+          calls.push({messages: messages.map((message) => message.content), model, provider})
+          return `reply:${provider}:${model}`
+        }, options)
+      }
+    }
 
     const switched = await submitInteractiveInput(
-      agentFactory,
+      AgentCtor,
       createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'}),
       '/model openai:gpt-4o',
     )
-    const replied = await submitInteractiveInput(agentFactory, switched, 'hello')
+    const replied = await submitInteractiveInput(AgentCtor, switched, 'hello')
 
     expect(calls).to.deep.equal([
       {
@@ -147,14 +189,17 @@ describe('interactive helpers', () => {
 
   it('prepends the system prompt only to the outgoing request', async () => {
     const calls: string[][] = []
-    const agentFactory = (): Agent =>
-      createMockAgent(async (messages) => {
-        calls.push(messages.map((message) => `${message.role}:${message.content}`))
-        return 'reply'
-      })
+    const AgentCtor = class extends MockAgent {
+      constructor(options: AgentOptions = {}) {
+        super(async (messages) => {
+          calls.push(messages.map((message) => `${message.role}:${message.content}`))
+          return 'reply'
+        }, options)
+      }
+    }
 
     const nextState = await submitInteractiveInput(
-      agentFactory,
+      AgentCtor,
       createInitialInteractiveState({
         model: 'llama3.1',
         provider: 'ollama',

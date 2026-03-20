@@ -3,32 +3,44 @@
 
 import {expect} from 'chai'
 
-import type {Agent, Prompt} from '../../../src/core/models/index.js'
+import type {AgentOptions, Model, Prompt} from '../../../src/core/models/index.js'
 
 import {runExecCommand} from '../../../src/apps/cli/exec.js'
 import {resolveAgentOptions} from '../../../src/core/chat.js'
+import {Agent} from '../../../src/core/models/index.js'
 
 describe('runExecCommand', () => {
   it('builds a system and user message and passes them to model.prompt', async () => {
-    const calls: {messages: Prompt[]; model: string | undefined; provider: string | undefined}[] = []
+    const calls: {messages: Prompt[]; options?: AgentOptions}[] = []
+
+    class TestAgent extends Agent {
+      constructor(options: AgentOptions = {}) {
+        super({
+          ...options,
+          deps: {
+            createModel: (): Model => ({
+              getModel() {
+                return options.model?.name ?? ''
+              },
+              getProvider() {
+                return options.model?.provider ?? 'ollama'
+              },
+              async prompt(messages) {
+                calls.push({messages, options})
+                return 'mocked response'
+              },
+            }),
+          },
+        })
+      }
+    }
 
     const response = await runExecCommand(
       {lang: 'ja', model: 'test-model', prompt: 'hello', provider: 'ollama'},
       undefined,
       '/tmp/workspace',
       {
-        agentFactory: (provider, model): Agent => ({
-          getModel() {
-            return model ?? ''
-          },
-          getProvider() {
-            return provider ?? 'ollama'
-          },
-          async prompt(messages) {
-            calls.push({messages, model, provider})
-            return 'mocked response'
-          },
-        }),
+        agentClass: TestAgent,
         contextLoader: async () => ({source: {kind: 'none'} as const, text: 'Workspace instructions'}),
       },
     )
@@ -44,38 +56,62 @@ describe('runExecCommand', () => {
           },
           {content: 'hello', role: 'user'},
         ],
-        model: 'test-model',
-        provider: 'ollama',
+        options: {
+          model: {
+            name: 'test-model',
+            provider: 'ollama',
+          },
+        },
       },
     ])
   })
 
   it('uses workspace provider and model when CLI values are omitted', async () => {
-    const calls: {model: string | undefined; provider: string | undefined}[] = []
+    const calls: {options?: AgentOptions}[] = []
+
+    class TestAgent extends Agent {
+      constructor(options: AgentOptions = {}) {
+        super({
+          ...options,
+          deps: {
+            createModel: (): Model => ({
+              getModel() {
+                return options.model?.name ?? ''
+              },
+              getProvider() {
+                return options.model?.provider ?? 'ollama'
+              },
+              async prompt() {
+                calls.push({options})
+                return 'ok'
+              },
+            }),
+          },
+        })
+      }
+    }
 
     await runExecCommand(
       {prompt: 'hello'},
       undefined,
       '/tmp/workspace',
       {
-        agentFactory: (provider, model): Agent => ({
-          getModel() {
-            return model ?? ''
-          },
-          getProvider() {
-            return provider ?? 'ollama'
-          },
-          async prompt() {
-            calls.push({model, provider})
-            return 'ok'
-          },
-        }),
+        agentClass: TestAgent,
         contextLoader: async () => ({source: {kind: 'none'} as const, text: ''}),
         settingsLoader: async () => ({model: 'claude-sonnet', provider: 'anthropic'}),
       },
     )
 
-    expect(calls).to.deep.equal([{model: 'claude-sonnet', provider: 'anthropic'}])
+    expect(calls).to.deep.equal([
+      {
+        options: {
+          model: {
+            name: 'claude-sonnet',
+            provider: 'anthropic',
+          },
+        },
+      },
+    ])
   })
 
   it('keeps CLI provider and model ahead of workspace settings', () => {

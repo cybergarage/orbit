@@ -3,9 +3,90 @@
 
 import {expect} from 'chai'
 
-import {DEFAULT_MODELS, getModel, getProvider, getRoles, splitSystemPrompt} from '../../src/core/models/index.js'
+import type {AgentOptions, Model, Prompt} from '../../src/core/models/index.js'
+
+import {Agent, DEFAULT_MODELS, getModel, getProvider, getRoles, splitSystemPrompt} from '../../src/core/models/index.js'
 
 describe('model helpers', () => {
+  describe('Agent', () => {
+    it('resolves the default provider and model when options are omitted', async () => {
+      const calls: {messages: Prompt[]; model: string; provider: string}[] = []
+      const agent = new Agent({
+        deps: {
+          createModel: (provider, model): Model => ({
+            getModel() {
+              return model ?? DEFAULT_MODELS[provider ?? 'ollama']
+            },
+            getProvider() {
+              return provider ?? 'ollama'
+            },
+            async prompt(messages) {
+              calls.push({
+                messages,
+                model: model ?? DEFAULT_MODELS[provider ?? 'ollama'],
+                provider: provider ?? 'ollama',
+              })
+              return 'ok'
+            },
+          }),
+        },
+      })
+
+      expect(agent).to.be.instanceOf(Agent)
+      expect(await agent.prompt([{content: 'hello', role: 'user'}])).to.equal('ok')
+      expect(calls).to.deep.equal([
+        {
+          messages: [{content: 'hello', role: 'user'}],
+          model: DEFAULT_MODELS.ollama,
+          provider: 'ollama',
+        },
+      ])
+    })
+
+    it('uses the explicitly requested provider and model', async () => {
+      const calls: {model: string; provider: string}[] = []
+      const agent = new Agent({
+        deps: {
+          createModel: (provider, model): Model => ({
+            getModel() {
+              return model ?? ''
+            },
+            getProvider() {
+              return provider ?? 'ollama'
+            },
+            async prompt() {
+              calls.push({model: model ?? '', provider: provider ?? 'ollama'})
+              return 'ok'
+            },
+          }),
+        },
+        model: {
+          name: 'claude-custom',
+          provider: 'anthropic',
+        },
+      })
+
+      await agent.prompt([{content: 'hello', role: 'user'}])
+      expect(calls).to.deep.equal([{model: 'claude-custom', provider: 'anthropic'}])
+    })
+
+    it('accepts AgentOptions as the constructor type', () => {
+      const options: AgentOptions = {
+        model: {
+          name: 'llama3.1',
+          provider: 'ollama',
+        },
+      }
+
+      expect(options).to.deep.equal({
+        model: {
+          name: 'llama3.1',
+          provider: 'ollama',
+        },
+      })
+    })
+  })
+
   describe('model metadata', () => {
     it('returns the provider default model when no model is specified', () => {
       const model = getModel('ollama')

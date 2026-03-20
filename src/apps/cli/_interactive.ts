@@ -7,15 +7,17 @@ import process from 'node:process'
 import {type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadContext} from '../../core/context.js'
 import {runInteractiveSession} from '../../core/interactive.js'
-import {getModel, type Provider} from '../../core/models/index.js'
+import {Agent} from '../../core/models/index.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from './flags.js'
+
+type AgentClass = typeof Agent
 
 export async function runInteractiveCommand(
   options: AgentOptions,
   sessionRunner: typeof runInteractiveSession = runInteractiveSession,
   deps: {
-    agentFactory?: typeof getModel
+    agentClass?: AgentClass
     contextLoader?: typeof loadContext
     settingsLoader?: typeof loadWorkspaceSettings
   } = {},
@@ -27,9 +29,9 @@ export async function runInteractiveCommand(
   const resolvedOptions = await resolveWorkspaceAgentOptions(options, process.cwd(), deps.settingsLoader)
   const {text: contextText} = await (deps.contextLoader ?? loadContext)(process.cwd())
   const systemPrompt = buildSystemPrompt(contextText, resolvedOptions.lang)
-  const agentFactory = deps.agentFactory ?? getModel
+  const agentClass = deps.agentClass ?? Agent
   await sessionRunner({
-    getModel: (provider: Provider, model: string) => agentFactory(provider, model),
+    agentClass,
     initialModel: resolvedOptions.model,
     initialProvider: resolvedOptions.provider,
     systemPrompt,

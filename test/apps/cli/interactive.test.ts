@@ -3,14 +3,37 @@
 
 import {expect} from 'chai'
 
-import type {Agent} from '../../../src/core/models/index.js'
+import type {AgentOptions, Model} from '../../../src/core/models/index.js'
 
 import {runInteractiveCommand} from '../../../src/apps/cli/_interactive.js'
+import {Agent} from '../../../src/core/models/index.js'
 
 describe('runInteractiveCommand', () => {
   it('uses resolved workspace settings for the interactive session', async () => {
-    const calls: {model: string | undefined; provider: string | undefined}[] = []
+    const calls: {options?: AgentOptions}[] = []
     const sessionCalls: {initialModel: string; initialProvider: string; systemPrompt?: string}[] = []
+
+    class TestAgent extends Agent {
+      constructor(options: AgentOptions = {}) {
+        calls.push({options})
+        super({
+          ...options,
+          deps: {
+            createModel: (): Model => ({
+              getModel() {
+                return options.model?.name ?? ''
+              },
+              getProvider() {
+                return options.model?.provider ?? 'ollama'
+              },
+              async prompt() {
+                return 'ok'
+              },
+            }),
+          },
+        })
+      }
+    }
 
     const previousStdin = process.stdin.isTTY
     const previousStdout = process.stdout.isTTY
@@ -26,23 +49,17 @@ describe('runInteractiveCommand', () => {
             initialProvider: options.initialProvider,
             systemPrompt: options.systemPrompt,
           })
-          options.getModel(options.initialProvider, options.initialModel)
+          const SessionAgent = options.agentClass
+          const agent = new SessionAgent({
+            model: {
+              name: options.initialModel,
+              provider: options.initialProvider,
+            },
+          })
+          expect(agent).to.be.instanceOf(Agent)
         },
         {
-          agentFactory(provider, model): Agent {
-            calls.push({model, provider})
-            return {
-              getModel() {
-                return model ?? ''
-              },
-              getProvider() {
-                return provider ?? 'ollama'
-              },
-              async prompt() {
-                return 'ok'
-              },
-            }
-          },
+          agentClass: TestAgent,
           contextLoader: async () => ({source: {kind: 'none'} as const, text: 'Workspace context'}),
           settingsLoader: async () => ({model: 'workspace-model', provider: 'openai'}),
         },
@@ -62,8 +79,12 @@ describe('runInteractiveCommand', () => {
     ])
     expect(calls).to.deep.equal([
       {
-        model: 'workspace-model',
-        provider: 'openai',
+        options: {
+          model: {
+            name: 'workspace-model',
+            provider: 'openai',
+          },
+        },
       },
     ])
   })
