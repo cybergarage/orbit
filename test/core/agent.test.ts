@@ -3,12 +3,18 @@
 
 import {expect} from 'chai'
 
-import {getProvider, splitSystemPrompt} from '../../src/core/models/index.js'
+import {getProvider, getRoles, splitSystemPrompt} from '../../src/core/models/index.js'
 
 describe('model helpers', () => {
   describe('getProvider', () => {
     it('returns all defined providers in a stable order', () => {
       expect(getProvider()).to.deep.equal(['anthropic', 'ollama', 'openai'])
+    })
+  })
+
+  describe('getRoles', () => {
+    it('returns all defined roles in a stable order', () => {
+      expect(getRoles()).to.deep.equal(['assistant', 'system', 'user'])
     })
   })
 

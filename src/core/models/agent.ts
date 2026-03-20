@@ -1,11 +1,11 @@
 // Copyright (c) 2026 The Scribemuse Authors
 // SPDX-License-Identifier: Apache-2.0
 
-export type ChatRole = 'assistant' | 'system' | 'user'
+import type {Role} from './role.js'
 
 export interface ChatMessage {
   content: string
-  role: ChatRole
+  role: Role
 }
 
 export interface Agent {
