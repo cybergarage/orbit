@@ -3,7 +3,8 @@
 
 import {OpenAI} from 'openai'
 
-import type {Agent, Prompt} from '../agent.js'
+import type {Agent} from '../agent.js'
+import type {Prompt} from '../prompt.js'
 
 export class OpenAIAgent implements Agent {
   private readonly client = new OpenAI()
