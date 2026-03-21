@@ -3,9 +3,17 @@
 
 import {expect} from 'chai'
 
-import type {AgentOptions, Model, Prompt} from '../../src/core/models/index.js'
+import type {AgentOptions, Model, Prompt, SessionOptions} from '../../src/core/models/index.js'
 
-import {Agent, DEFAULT_MODELS, getModel, getProvider, getRoles, splitSystemPrompt} from '../../src/core/models/index.js'
+import {
+  Agent,
+  DEFAULT_MODELS,
+  getModel,
+  getProvider,
+  getRoles,
+  Session,
+  splitSystemPrompt,
+} from '../../src/core/models/index.js'
 
 describe('model helpers', () => {
   describe('Agent', () => {
@@ -84,6 +92,24 @@ describe('model helpers', () => {
           provider: 'ollama',
         },
       })
+    })
+
+    it('creates a new Session instance for each call to newSession', () => {
+      const agent = new Agent()
+      const firstSession = agent.newSession()
+      const secondSession = agent.newSession()
+
+      expect(firstSession).to.be.instanceOf(Session)
+      expect(secondSession).to.be.instanceOf(Session)
+      expect(firstSession).to.not.equal(secondSession)
+    })
+  })
+
+  describe('Session', () => {
+    it('accepts SessionOptions as the constructor type', () => {
+      const options: SessionOptions = {}
+
+      expect(new Session(options)).to.be.instanceOf(Session)
     })
   })
 

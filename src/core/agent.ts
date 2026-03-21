@@ -6,6 +6,7 @@ import type {Prompt} from './models/prompt.js'
 import type {Provider} from './models/provider.js'
 
 import {getModel} from './models/factory.js'
+import {Session} from './session.js'
 
 export interface AgentOptions {
   deps?: {
@@ -23,6 +24,10 @@ export class Agent {
   constructor(options: AgentOptions = {}) {
     const createModel = options.deps?.createModel ?? getModel
     this.model = createModel(options.model?.provider, options.model?.name)
+  }
+
+  newSession(): Session {
+    return new Session()
   }
 
   prompt(messages: Prompt[]): Promise<string> {

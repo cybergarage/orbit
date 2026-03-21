@@ -3,6 +3,8 @@
 
 export {Agent} from '../agent.js'
 export type {AgentOptions} from '../agent.js'
+export {Session} from '../session.js'
+export type {SessionOptions} from '../session.js'
 export {DEFAULT_MODELS, getModel} from './factory.js'
 export type {Model} from './model.js'
 export type {Prompt} from './prompt.js'
