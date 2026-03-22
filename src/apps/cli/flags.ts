@@ -5,7 +5,7 @@ import {Flags} from '@oclif/core'
 
 import type {AgentOptions} from '../../core/chat.js'
 
-import {getProvider, isProvider} from '../../core/models/index.js'
+import {getProvider, isProvider} from '../../core/index.js'
 
 export const agentFlags = {
   lang: Flags.string({

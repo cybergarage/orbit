@@ -1,11 +1,9 @@
 // Copyright (c) 2026 The Scribemuse Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {Model} from './models/model.js'
-import type {Prompt} from './models/prompt.js'
-import type {Provider} from './models/provider.js'
+import type {Model, Prompt, Provider} from './models/index.js'
 
-import {getModel} from './models/factory.js'
+import {getModel} from './models/index.js'
 import {Session} from './session.js'
 
 export interface AgentOptions {
@@ -34,7 +32,7 @@ export class Agent {
     return this.model.prompt(prompts)
   }
 
-  invoke(_session: Session, prompts: Prompt[]): Promise<string> {
+  run(session: Session, prompts: Prompt[]): Promise<string> {
     return this.model.prompt(prompts)
   }
 }

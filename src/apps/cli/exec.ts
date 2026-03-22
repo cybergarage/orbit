@@ -7,7 +7,7 @@ import process from 'node:process'
 
 import {type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadContext} from '../../core/context.js'
-import {Agent, type Prompt} from '../../core/models/index.js'
+import {Agent, type Prompt} from '../../core/index.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from './flags.js'
 
