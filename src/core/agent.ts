@@ -34,7 +34,7 @@ export class Agent {
     return this.model.prompt(prompts)
   }
 
-  run(session: Session, prompts: Prompt[]): Promise<string> {
+  invoke(_session: Session, prompts: Prompt[]): Promise<string> {
     return this.model.prompt(prompts)
   }
 }
