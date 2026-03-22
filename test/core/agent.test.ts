@@ -3,7 +3,13 @@
 
 import {expect} from 'chai'
 
-import type {AgentOptions, Model, Prompt, SessionOptions} from '../../src/core/models/index.js'
+import type {
+  AgentOptions,
+  Model,
+  Prompt,
+  PromptTemplateInput,
+  SessionOptions,
+} from '../../src/core/models/index.js'
 
 import {
   Agent,
@@ -11,6 +17,7 @@ import {
   getModel,
   getProvider,
   getRoles,
+  PromptTemplate,
   Session,
   splitSystemPrompt,
 } from '../../src/core/models/index.js'
@@ -110,6 +117,50 @@ describe('model helpers', () => {
       const options: SessionOptions = {}
 
       expect(new Session(options)).to.be.instanceOf(Session)
+    })
+  })
+
+  describe('PromptTemplate', () => {
+    it('creates an instance from a template string', () => {
+      expect(PromptTemplate.from('Hello {name}')).to.be.instanceOf(PromptTemplate)
+    })
+
+    it('replaces a single placeholder', () => {
+      const template = PromptTemplate.from('Hello {name}')
+
+      expect(template.invoke({name: 'Scribemuse'})).to.equal('Hello Scribemuse')
+    })
+
+    it('replaces multiple placeholders and repeated keys', () => {
+      const template = PromptTemplate.from('{greeting}, {name}! {greeting} again!')
+
+      expect(template.invoke({greeting: 'Hello', name: 'Scribemuse'})).to.equal(
+        'Hello, Scribemuse! Hello again!',
+      )
+    })
+
+    it('stringifies non-string values', () => {
+      const template = PromptTemplate.from('count={count}, ok={ok}, empty={empty}, missing={missing}')
+      const params: PromptTemplateInput = {
+        count: 3,
+        empty: null,
+        missing: undefined,
+        ok: true,
+      }
+
+      expect(template.invoke(params)).to.equal('count=3, ok=true, empty=null, missing=undefined')
+    })
+
+    it('returns the original string when there are no placeholders', () => {
+      const template = PromptTemplate.from('No placeholders here.')
+
+      expect(template.invoke({})).to.equal('No placeholders here.')
+    })
+
+    it('throws when a required parameter is missing', () => {
+      const template = PromptTemplate.from('Hello {name}')
+
+      expect(() => template.invoke({})).to.throw('Missing prompt template parameter: name')
     })
   })
 
