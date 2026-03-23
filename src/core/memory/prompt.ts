@@ -1,16 +1,16 @@
 // Copyright (c) 2026 The Scribemuse Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {Memory, MemoryEntry} from './memory.js'
+import type {Dialogue, Memory} from './memory.js'
 
 export class PromptMemory implements Memory {
-  private readonly entries: MemoryEntry[] = []
+  private readonly entries: Dialogue[] = []
 
-  add(entry: MemoryEntry): void {
+  add(entry: Dialogue): void {
     this.entries.push(entry)
   }
 
-  query(_question: string): MemoryEntry[] {
+  query(_question: string): Dialogue[] {
     return [...this.entries]
   }
 }
