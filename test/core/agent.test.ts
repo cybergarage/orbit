@@ -136,7 +136,9 @@ describe('model helpers', () => {
     })
 
     it('uses the provided memory instance as-is', () => {
-      const entries: Dialogue[] = [{answer: 'Hi', question: 'Hello'}]
+      const entries: Dialogue[] = [
+        {answer: {content: 'Hi', role: 'assistant'}, question: {content: 'Hello', role: 'user'}},
+      ]
       const memory: Memory = {
         add(entry: Dialogue) {
           entries.push(entry)

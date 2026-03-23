@@ -1,9 +1,11 @@
 // Copyright (c) 2026 The Scribemuse Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import type {Prompt} from '../models/prompt.js'
+
 export interface Dialogue {
-  answer: string
-  question: string
+  answer: Prompt
+  question: Prompt
 }
 
 export interface Memory {
