@@ -43,14 +43,17 @@ describe('model helpers', () => {
                 model: model ?? DEFAULT_MODELS[provider ?? 'ollama'],
                 provider: provider ?? 'ollama',
               })
-              return 'ok'
+              return {content: 'ok', role: 'assistant'}
             },
           }),
         },
       })
 
       expect(agent).to.be.instanceOf(Agent)
-      expect(await agent.prompt([{content: 'hello', role: 'user'}])).to.equal('ok')
+      expect(await agent.prompt([{content: 'hello', role: 'user'}])).to.deep.equal({
+        content: 'ok',
+        role: 'assistant',
+      })
       expect(calls).to.deep.equal([
         {
           messages: [{content: 'hello', role: 'user'}],
@@ -73,7 +76,7 @@ describe('model helpers', () => {
             },
             async prompt() {
               calls.push({model: model ?? '', provider: provider ?? 'ollama'})
-              return 'ok'
+              return {content: 'ok', role: 'assistant'}
             },
           }),
         },
@@ -253,7 +256,7 @@ describe('model helpers', () => {
 
   describe('getRoles', () => {
     it('returns all defined roles in a stable order', () => {
-      expect(getRoles()).to.deep.equal(['assistant', 'system', 'user'])
+      expect(getRoles()).to.deep.equal(['assistant', 'system', 'user', 'developer'])
     })
   })
 

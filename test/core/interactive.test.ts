@@ -66,7 +66,10 @@ describe('interactive helpers', () => {
   })
 
   it('appends user and assistant messages while keeping prior history', async () => {
-    const agent = createMockAgent(async (messages) => `reply:${messages.length}`)
+    const agent = createMockAgent(async (messages) => ({
+      content: `reply:${messages.length}`,
+      role: 'assistant',
+    }))
     const AgentCtor = class extends MockAgent {
       constructor() {
         super(agent.prompt.bind(agent))
@@ -136,7 +139,7 @@ describe('interactive helpers', () => {
       constructor(options: AgentOptions = {}) {
         super(async () => {
           callCount++
-          return 'should not run'
+          return {content: 'should not run', role: 'assistant'}
         }, options)
       }
     }
@@ -161,7 +164,7 @@ describe('interactive helpers', () => {
           const provider = options.model?.provider ?? 'ollama'
           const model = options.model?.name ?? 'llama3.1'
           calls.push({messages: messages.map((message) => message.content), model, provider})
-          return `reply:${provider}:${model}`
+          return {content: `reply:${provider}:${model}`, role: 'assistant'}
         }, options)
       }
     }
@@ -193,7 +196,7 @@ describe('interactive helpers', () => {
       constructor(options: AgentOptions = {}) {
         super(async (messages) => {
           calls.push(messages.map((message) => `${message.role}:${message.content}`))
-          return 'reply'
+          return {content: 'reply', role: 'assistant'}
         }, options)
       }
     }

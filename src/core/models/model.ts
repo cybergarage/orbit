@@ -7,5 +7,5 @@ import type {Provider} from './provider.js'
 export interface Model {
   getModel(): string
   getProvider(): Provider
-  prompt(messages: Prompt[]): Promise<string>
+  prompt(messages: Prompt[]): Promise<Prompt>
 }

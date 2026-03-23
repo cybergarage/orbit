@@ -75,7 +75,7 @@ export async function submitInteractiveInput(
 
   return {
     ...state,
-    messages: [...state.messages, {content: input, role: 'user'}, {content: reply, role: 'assistant'}],
+    messages: [...state.messages, {content: input, role: 'user'}, reply],
   }
 }
 
@@ -194,7 +194,7 @@ function InteractiveApp({agentClass: AgentClass, initialModel, initialProvider, 
           setState((currentState) => ({
             ...currentState,
             isLoading: false,
-            messages: [...nextMessages, {content: reply, role: 'assistant'}],
+            messages: [...nextMessages, reply],
           }))
         })
         .catch((error: unknown) => {

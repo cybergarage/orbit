@@ -22,7 +22,7 @@ export class AnthropicAgent implements Model {
     return 'anthropic'
   }
 
-  async prompt(messages: Prompt[]): Promise<string> {
+  async prompt(messages: Prompt[]): Promise<Prompt> {
     const {messages: chatMessages, systemPrompt} = splitSystemPrompt(messages)
 
     const response = await this.client.messages.create({
@@ -38,6 +38,9 @@ export class AnthropicAgent implements Model {
     })
 
     const block = response.content[0]
-    return block.type === 'text' ? block.text : ''
+    return {
+      content: block.type === 'text' ? block.text : '',
+      role: 'assistant',
+    }
   }
 }

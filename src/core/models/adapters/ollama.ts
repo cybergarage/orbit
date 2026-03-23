@@ -20,8 +20,11 @@ export class OllamaAgent implements Model {
     return 'ollama'
   }
 
-  async prompt(messages: Prompt[]): Promise<string> {
+  async prompt(messages: Prompt[]): Promise<Prompt> {
     const response = await this.client.chat({messages, model: this.model})
-    return response.message.content
+    return {
+      content: response.message.content,
+      role: 'assistant',
+    }
   }
 }

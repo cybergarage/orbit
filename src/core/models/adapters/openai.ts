@@ -20,12 +20,15 @@ export class OpenAIAgent implements Model {
     return 'openai'
   }
 
-  async prompt(messages: Prompt[]): Promise<string> {
+  async prompt(messages: Prompt[]): Promise<Prompt> {
     const response = await this.client.chat.completions.create({
       messages,
       model: this.model,
     })
 
-    return response.choices[0]?.message.content ?? ''
+    return {
+      content: response.choices[0]?.message.content ?? '',
+      role: 'assistant',
+    }
   }
 }

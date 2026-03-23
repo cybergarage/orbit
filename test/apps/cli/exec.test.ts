@@ -27,7 +27,7 @@ describe('runExecCommand', () => {
               },
               async prompt(messages) {
                 calls.push({messages, options})
-                return 'mocked response'
+                return {content: 'mocked response', role: 'assistant'}
               },
             }),
           },
@@ -83,7 +83,7 @@ describe('runExecCommand', () => {
               },
               async prompt() {
                 calls.push({options})
-                return 'ok'
+                return {content: 'ok', role: 'assistant'}
               },
             }),
           },

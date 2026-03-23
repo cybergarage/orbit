@@ -46,7 +46,8 @@ export async function runExecCommand(
     ...(systemPrompt ? [{content: systemPrompt, role: 'system'} as Prompt] : []),
     {content: prompt, role: 'user'},
   ]
-  return agent.prompt(messages)
+  const response = await agent.prompt(messages)
+  return response.content
 }
 
 export default class Exec extends Command {

@@ -29,11 +29,11 @@ export class Agent {
     return new Session(options)
   }
 
-  prompt(prompts: Prompt[]): Promise<string> {
+  prompt(prompts: Prompt[]): Promise<Prompt> {
     return this.model.prompt(prompts)
   }
 
-  run(session: Session, prompts: Prompt[]): Promise<string> {
+  run(session: Session, prompts: Prompt[]): Promise<Prompt> {
     return this.model.prompt(prompts)
   }
 }

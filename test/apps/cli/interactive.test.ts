@@ -27,7 +27,7 @@ describe('runInteractiveCommand', () => {
                 return options.model?.provider ?? 'ollama'
               },
               async prompt() {
-                return 'ok'
+                return {content: 'ok', role: 'assistant'}
               },
             }),
           },
