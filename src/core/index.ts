@@ -10,7 +10,7 @@ export type {
   InteractiveState,
   ModelCommandResult,
 } from './interactive.js'
-export type {Memory, MemoryEntry} from './memory/index.js'
+export type {Dialogue, Memory} from './memory/index.js'
 export {PromptMemory} from './memory/index.js'
 export {DEFAULT_MODELS, getModel} from './models/factory.js'
 export type {Model} from './models/model.js'
