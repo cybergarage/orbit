@@ -112,6 +112,36 @@ describe('model helpers', () => {
       expect(secondSession).to.be.instanceOf(Session)
       expect(firstSession).to.not.equal(secondSession)
     })
+
+    it('accepts SessionOptions in newSession and passes through the provided memory', () => {
+      const entries: Dialogue[] = [
+        {answer: {content: 'Hi', role: 'assistant'}, question: {content: 'Hello', role: 'user'}},
+      ]
+      const memory: Memory = {
+        add(entry: Dialogue) {
+          entries.push(entry)
+        },
+        query() {
+          return [...entries]
+        },
+      }
+      const options: SessionOptions = {memory}
+      const agent = new Agent()
+
+      const session = agent.newSession(options)
+
+      expect(session).to.be.instanceOf(Session)
+      expect(session.memory).to.equal(memory)
+      expect(session.memory.query('anything')).to.deep.equal(entries)
+    })
+
+    it('uses PromptMemory by default when newSession is called without options', () => {
+      const agent = new Agent()
+
+      const session = agent.newSession()
+
+      expect(session.memory).to.be.instanceOf(PromptMemory)
+    })
   })
 
   describe('Session', () => {

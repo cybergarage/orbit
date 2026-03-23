@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type {Model, Prompt, Provider} from './models/index.js'
+import type {SessionOptions} from './session.js'
 
 import {getModel} from './models/index.js'
 import {Session} from './session.js'
@@ -24,8 +25,8 @@ export class Agent {
     this.model = createModel(options.model?.provider, options.model?.name)
   }
 
-  newSession(): Session {
-    return new Session()
+  newSession(options: SessionOptions = {}): Session {
+    return new Session(options)
   }
 
   prompt(prompts: Prompt[]): Promise<string> {
