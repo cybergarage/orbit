@@ -3,7 +3,7 @@
 
 import {expect} from 'chai'
 
-import type {Dialogue, Memory} from '../../src/core/index.js'
+import type {Memory} from '../../src/core/index.js'
 import type {
   AgentOptions,
   Model,
@@ -12,7 +12,7 @@ import type {
   SessionOptions,
 } from '../../src/core/models/index.js'
 
-import {PromptMemory} from '../../src/core/index.js'
+import {Dialogue, PromptMemory} from '../../src/core/index.js'
 import {
   Agent,
   DEFAULT_MODELS,
@@ -118,10 +118,7 @@ describe('model helpers', () => {
 
     it('accepts SessionOptions in newSession and passes through the provided memory', () => {
       const entries: Dialogue[] = [
-        {
-          answer: {content: 'Hi', role: 'assistant'},
-          questions: [{content: 'Hello', role: 'user'}],
-        },
+        new Dialogue({content: 'Hi', role: 'assistant'}, [{content: 'Hello', role: 'user'}]),
       ]
       const memory: Memory = {
         add(entry: Dialogue) {
@@ -173,10 +170,7 @@ describe('model helpers', () => {
 
     it('uses the provided memory instance as-is', () => {
       const entries: Dialogue[] = [
-        {
-          answer: {content: 'Hi', role: 'assistant'},
-          questions: [{content: 'Hello', role: 'user'}],
-        },
+        new Dialogue({content: 'Hi', role: 'assistant'}, [{content: 'Hello', role: 'user'}]),
       ]
       const memory: Memory = {
         add(entry: Dialogue) {
