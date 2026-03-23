@@ -5,7 +5,7 @@ import type {Prompt} from '../models/prompt.js'
 
 export interface Dialogue {
   answer: Prompt
-  question: Prompt
+  questions: Prompt[]
 }
 
 export interface Memory {
