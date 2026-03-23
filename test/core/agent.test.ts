@@ -3,6 +3,7 @@
 
 import {expect} from 'chai'
 
+import type {Dialogue, Memory} from '../../src/core/index.js'
 import type {
   AgentOptions,
   Model,
@@ -11,6 +12,7 @@ import type {
   SessionOptions,
 } from '../../src/core/models/index.js'
 
+import {PromptMemory} from '../../src/core/index.js'
 import {
   Agent,
   DEFAULT_MODELS,
@@ -114,9 +116,40 @@ describe('model helpers', () => {
 
   describe('Session', () => {
     it('accepts SessionOptions as the constructor type', () => {
-      const options: SessionOptions = {}
+      const options: SessionOptions = {
+        memory: new PromptMemory(),
+      }
 
       expect(new Session(options)).to.be.instanceOf(Session)
+    })
+
+    it('uses PromptMemory by default when options are omitted', () => {
+      const session = new Session()
+
+      expect(session.memory).to.be.instanceOf(PromptMemory)
+    })
+
+    it('uses PromptMemory by default when memory is not provided', () => {
+      const session = new Session({})
+
+      expect(session.memory).to.be.instanceOf(PromptMemory)
+    })
+
+    it('uses the provided memory instance as-is', () => {
+      const entries: Dialogue[] = [{answer: 'Hi', question: 'Hello'}]
+      const memory: Memory = {
+        add(entry: Dialogue) {
+          entries.push(entry)
+        },
+        query() {
+          return [...entries]
+        },
+      }
+
+      const session = new Session({memory})
+
+      expect(session.memory).to.equal(memory)
+      expect(session.memory.query('anything')).to.deep.equal(entries)
     })
   })
 

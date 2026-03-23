@@ -1,8 +1,20 @@
 // Copyright (c) 2026 The Scribemuse Authors
 // SPDX-License-Identifier: Apache-2.0
 
-export type SessionOptions = Record<string, never>
+import type {Memory} from './memory/index.js'
+
+import {PromptMemory} from './memory/index.js'
+
+export interface SessionOptions {
+  memory?: Memory
+}
 
 export class Session {
-  constructor(public readonly options: SessionOptions = {}) {}
+  public readonly memory: Memory
+  public readonly options: SessionOptions
+
+  constructor(options: SessionOptions = {}) {
+    this.memory = options.memory ?? new PromptMemory()
+    this.options = options
+  }
 }
