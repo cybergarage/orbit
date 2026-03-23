@@ -2,4 +2,4 @@
 // SPDX-License-Identifier: Apache-2.0
 
 export type {Memory, Dialogue as MemoryEntry} from './memory.js'
-export {PromptMemory} from './prompt.js'
+export {PromptMemory} from './adapters/prompt.js'
