@@ -118,7 +118,7 @@ describe('model helpers', () => {
 
     it('accepts SessionOptions in newSession and passes through the provided memory', () => {
       const entries: Dialogue[] = [
-        new Dialogue({content: 'Hi', role: 'assistant'}, [{content: 'Hello', role: 'user'}]),
+        new Dialogue([{content: 'Hello', role: 'user'}], {content: 'Hi', role: 'assistant'}),
       ]
       const memory: Memory = {
         add(entry: Dialogue) {
@@ -170,7 +170,7 @@ describe('model helpers', () => {
 
     it('uses the provided memory instance as-is', () => {
       const entries: Dialogue[] = [
-        new Dialogue({content: 'Hi', role: 'assistant'}, [{content: 'Hello', role: 'user'}]),
+        new Dialogue([{content: 'Hello', role: 'user'}], {content: 'Hi', role: 'assistant'}),
       ]
       const memory: Memory = {
         add(entry: Dialogue) {

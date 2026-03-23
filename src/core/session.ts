@@ -17,4 +17,8 @@ export class Session {
     this.memory = options.memory ?? new PromptMemory()
     this.options = options
   }
+
+  getMemory(): Memory {
+    return this.memory
+  }
 }

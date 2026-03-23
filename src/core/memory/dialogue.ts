@@ -5,7 +5,15 @@ import type {Prompt} from '../models/prompt.js'
 
 export class Dialogue {
   constructor(
-    public readonly answer: Prompt,
     public readonly questions: Prompt[],
+    public readonly answer: Prompt,
   ) {}
+
+  getAnswer(): Prompt {
+    return this.answer
+  }
+
+  getQuestions(): Prompt[] {
+    return this.questions
+  }
 }

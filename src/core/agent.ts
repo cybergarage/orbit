@@ -4,6 +4,7 @@
 import type {Model, Prompt, Provider} from './models/index.js'
 import type {SessionOptions} from './session.js'
 
+import {Dialogue} from './index.js'
 import {getModel} from './models/index.js'
 import {Session} from './session.js'
 
@@ -33,7 +34,9 @@ export class Agent {
     return this.model.prompt(prompts)
   }
 
-  run(session: Session, prompts: Prompt[]): Promise<Prompt> {
-    return this.model.prompt(prompts)
+  async run(session: Session, prompts: Prompt[]): Promise<Prompt> {
+    const answer = await this.model.prompt(prompts)
+    session.getMemory().add(new Dialogue(prompts, answer))
+    return answer
   }
 }
