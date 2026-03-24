@@ -14,6 +14,7 @@
     "@oclif/plugin-plugins": "^5",
     "@types/react": "^19.2.14",
     "env-paths": "^4.0.0",
+    "gpt-tokenizer": "^3.4.0",
     "ink": "^6.8.0",
     "ollama": "^0.6.3",
     "openai": "^6.29.0",
