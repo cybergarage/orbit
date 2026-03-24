@@ -124,6 +124,7 @@ describe('model helpers', () => {
         add(entry: Dialogue) {
           entries.push(entry)
         },
+        compact() {},
         query() {
           return [...entries]
         },
@@ -176,6 +177,7 @@ describe('model helpers', () => {
         add(entry: Dialogue) {
           entries.push(entry)
         },
+        compact() {},
         query() {
           return [...entries]
         },

@@ -5,5 +5,6 @@ import type {Dialogue} from './dialogue.js'
 
 export interface Memory {
   add(entry: Dialogue): void
+  compact(): void
   query(question: string): Dialogue[]
 }

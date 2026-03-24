@@ -16,6 +16,8 @@ export class PromptMemory implements Memory {
     this.entries.push(entry)
   }
 
+  compact(): void {}
+
   query(_question: string): Dialogue[] {
     return [...this.entries]
   }
