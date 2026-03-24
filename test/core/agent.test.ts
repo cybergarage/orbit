@@ -126,7 +126,7 @@ describe('model helpers', () => {
         },
         compact() {},
         query() {
-          return [...entries]
+          return [...entries[0].getQuestions(), entries[0].getAnswer()]
         },
       }
       const options: SessionOptions = {memory}
@@ -136,7 +136,10 @@ describe('model helpers', () => {
 
       expect(session).to.be.instanceOf(Session)
       expect(session.memory).to.equal(memory)
-      expect(session.memory.query('anything')).to.deep.equal(entries)
+      expect(session.memory.query('anything')).to.deep.equal([
+        {content: 'Hello', role: 'user'},
+        {content: 'Hi', role: 'assistant'},
+      ])
     })
 
     it('uses PromptMemory by default when newSession is called without options', () => {
@@ -179,14 +182,40 @@ describe('model helpers', () => {
         },
         compact() {},
         query() {
-          return [...entries]
+          return [...entries[0].getQuestions(), entries[0].getAnswer()]
         },
       }
 
       const session = new Session({memory})
 
       expect(session.memory).to.equal(memory)
-      expect(session.memory.query('anything')).to.deep.equal(entries)
+      expect(session.memory.query('anything')).to.deep.equal([
+        {content: 'Hello', role: 'user'},
+        {content: 'Hi', role: 'assistant'},
+      ])
+    })
+
+    it('flattens all dialogue prompts in PromptMemory query order', () => {
+      const session = new Session({
+        memory: new PromptMemory([
+          new Dialogue(
+            [
+              {content: 'Hello', role: 'user'},
+              {content: 'Can you help?', role: 'user'},
+            ],
+            {content: 'Sure', role: 'assistant'},
+          ),
+          new Dialogue([{content: 'Thanks', role: 'user'}], {content: 'You are welcome', role: 'assistant'}),
+        ]),
+      })
+
+      expect(session.memory.query('anything')).to.deep.equal([
+        {content: 'Hello', role: 'user'},
+        {content: 'Can you help?', role: 'user'},
+        {content: 'Sure', role: 'assistant'},
+        {content: 'Thanks', role: 'user'},
+        {content: 'You are welcome', role: 'assistant'},
+      ])
     })
   })
 

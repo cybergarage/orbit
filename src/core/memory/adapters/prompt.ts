@@ -1,6 +1,7 @@
 // Copyright (c) 2026 The Scribemuse Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import type {Prompt} from '../../models/prompt.js'
 import type {Memory} from '../memory.js'
 
 import {Dialogue} from '../dialogue.js'
@@ -18,7 +19,7 @@ export class PromptMemory implements Memory {
 
   compact(): void {}
 
-  query(_question: string): Dialogue[] {
-    return [...this.entries]
+  query(_question: string): Prompt[] {
+    return this.entries.flatMap((entry) => [...entry.getQuestions(), entry.getAnswer()])
   }
 }
