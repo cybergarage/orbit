@@ -1,12 +1,12 @@
 {
-  "name": "scribemuse",
+  "name": "orbit",
   "description": "An agentic CLI for crafting and publishing content workflows.",
   "version": "0.0.0",
   "author": "Satoshi Konno",
   "bin": {
-    "scribemuse": "./bin/run.js"
+    "orbit": "./bin/run.js"
   },
-  "bugs": "https://github.com/cybergarage/scribemuse/issues",
+  "bugs": "https://github.com/cybergarage/orbit/issues",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
     "@oclif/core": "^4",
@@ -48,7 +48,7 @@
     "./dist",
     "./oclif.manifest.json"
   ],
-  "homepage": "https://github.com/cybergarage/scribemuse",
+  "homepage": "https://github.com/cybergarage/orbit",
   "keywords": [
     "oclif"
   ],
@@ -56,8 +56,8 @@
   "main": "dist/index.js",
   "type": "module",
   "oclif": {
-    "bin": "scribemuse",
-    "dirname": "scribemuse",
+    "bin": "orbit",
+    "dirname": "orbit",
     "commands": "./dist/apps/cli",
     "plugins": [
       "@oclif/plugin-help",
@@ -65,7 +65,7 @@
     ],
     "topicSeparator": " "
   },
-  "repository": "cybergarage/scribemuse",
+  "repository": "cybergarage/orbit",
   "scripts": {
     "build": "shx rm -rf dist && tsc -b",
     "headers:apply": "node ./bin/headers.js --write",

@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Scribemuse Authors
+// Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
 import {expect} from 'chai'
@@ -227,14 +227,14 @@ describe('model helpers', () => {
     it('replaces a single placeholder', () => {
       const template = PromptTemplate.from('Hello {name}')
 
-      expect(template.invoke({name: 'Scribemuse'})).to.equal('Hello Scribemuse')
+      expect(template.invoke({name: 'Orbit'})).to.equal('Hello Orbit')
     })
 
     it('replaces multiple placeholders and repeated keys', () => {
       const template = PromptTemplate.from('{greeting}, {name}! {greeting} again!')
 
-      expect(template.invoke({greeting: 'Hello', name: 'Scribemuse'})).to.equal(
-        'Hello, Scribemuse! Hello again!',
+      expect(template.invoke({greeting: 'Hello', name: 'Orbit'})).to.equal(
+        'Hello, Orbit! Hello again!',
       )
     })
 

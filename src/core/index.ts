@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Scribemuse Authors
+// Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
 export {Agent} from './agent.js'
@@ -18,7 +18,7 @@ export type {Prompt} from './models/prompt.js'
 export {splitSystemPrompt} from './models/prompt.js'
 export type {Provider} from './models/provider.js'
 export {getProvider, isProvider} from './models/provider.js'
-export {Role, getRoles} from './models/role.js'
+export {getRoles, Role} from './models/role.js'
 export {Session} from './session.js'
 export type {SessionOptions} from './session.js'
 export {GptTokenizer} from './tokenizer/index.js'

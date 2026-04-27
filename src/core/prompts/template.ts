@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Scribemuse Authors
+// Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
 const TEMPLATE_PATTERN = /{([A-Za-z0-9_]+)}/g

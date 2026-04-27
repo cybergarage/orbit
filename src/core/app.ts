@@ -1,11 +1,12 @@
-// Copyright (c) 2026 The Scribemuse Authors
+// Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
 import envPaths from 'env-paths'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-export const APP_NAME = 'scribemuse'
+export const APP_NAME = 'orbit'
+export const DOT_APP_DIR_NAME = `.${APP_NAME}`
 
 export function getPaths() {
   return envPaths(APP_NAME, {suffix: ''})

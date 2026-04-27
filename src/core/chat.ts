@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Scribemuse Authors
+// Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
 import {DEFAULT_MODELS, type Provider} from './models/index.js'

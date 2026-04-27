@@ -1,9 +1,10 @@
-// Copyright (c) 2026 The Scribemuse Authors
+// Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
+import {DOT_APP_DIR_NAME} from './app.js'
 import {getProvider, isProvider, type Provider} from './models/index.js'
 import {findWorkspaceRoot} from './workspace.js'
 
@@ -24,7 +25,7 @@ async function readIfExists(file: string): Promise<string | undefined> {
 
 export async function loadWorkspaceSettings(startDir: string): Promise<WorkspaceSettings> {
   const root = await findWorkspaceRoot(startDir)
-  const preferredFile = path.join(root, '.scribemuse', 'settings.json')
+  const preferredFile = path.join(root, DOT_APP_DIR_NAME, 'settings.json')
   const fallbackFile = path.join(root, 'settings.json')
   const files = [preferredFile, fallbackFile]
   const [preferredRaw, fallbackRaw] = await Promise.all(files.map(async (file) => readIfExists(file)))

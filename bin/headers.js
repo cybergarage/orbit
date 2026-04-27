@@ -5,7 +5,7 @@ import path from 'node:path'
 
 function parseArgs(argv) {
   const args = {
-    author: 'The Scribemuse Authors',
+    author: 'The Orbit Authors',
     baseDirs: ['src', 'test'],
     spdx: 'Apache-2.0',
     write: false,

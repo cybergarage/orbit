@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Scribemuse Authors
+// Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
 export const Role = {
@@ -11,5 +11,5 @@ export const Role = {
 export type Role = (typeof Role)[keyof typeof Role]
 
 export function getRoles(): Role[] {
-  return Object.values(Role) as Role[]
+  return [Role.Assistant, Role.System, Role.User, Role.Developer]
 }

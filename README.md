@@ -1,12 +1,12 @@
-scribemuse
+orbit
 =================
 
 An agentic CLI for crafting and publishing content workflows.
 
 
 [![oclif](https://img.shields.io/badge/cli-oclif-brightgreen.svg)](https://oclif.io)
-[![Version](https://img.shields.io/npm/v/scribemuse.svg)](https://npmjs.org/package/scribemuse)
-[![Downloads/week](https://img.shields.io/npm/dw/scribemuse.svg)](https://npmjs.org/package/scribemuse)
+[![Version](https://img.shields.io/npm/v/orbit.svg)](https://npmjs.org/package/orbit)
+[![Downloads/week](https://img.shields.io/npm/dw/orbit.svg)](https://npmjs.org/package/orbit)
 
 
 <!-- toc -->
@@ -16,40 +16,40 @@ An agentic CLI for crafting and publishing content workflows.
 # Usage
 <!-- usage -->
 ```sh-session
-$ npm install -g scribemuse
-$ scribemuse COMMAND
+$ npm install -g orbit
+$ orbit COMMAND
 running command...
-$ scribemuse (--version)
-scribemuse/0.0.0 darwin-arm64 node-v25.6.1
-$ scribemuse --help [COMMAND]
+$ orbit (--version)
+orbit/0.0.0 darwin-arm64 node-v25.6.1
+$ orbit --help [COMMAND]
 USAGE
-  $ scribemuse COMMAND
+  $ orbit COMMAND
 ...
 ```
 <!-- usagestop -->
 # Commands
 <!-- commands -->
-* [`scribemuse hello PERSON`](#scribemuse-hello-person)
-* [`scribemuse hello world`](#scribemuse-hello-world)
-* [`scribemuse help [COMMAND]`](#scribemuse-help-command)
-* [`scribemuse plugins`](#scribemuse-plugins)
-* [`scribemuse plugins add PLUGIN`](#scribemuse-plugins-add-plugin)
-* [`scribemuse plugins:inspect PLUGIN...`](#scribemuse-pluginsinspect-plugin)
-* [`scribemuse plugins install PLUGIN`](#scribemuse-plugins-install-plugin)
-* [`scribemuse plugins link PATH`](#scribemuse-plugins-link-path)
-* [`scribemuse plugins remove [PLUGIN]`](#scribemuse-plugins-remove-plugin)
-* [`scribemuse plugins reset`](#scribemuse-plugins-reset)
-* [`scribemuse plugins uninstall [PLUGIN]`](#scribemuse-plugins-uninstall-plugin)
-* [`scribemuse plugins unlink [PLUGIN]`](#scribemuse-plugins-unlink-plugin)
-* [`scribemuse plugins update`](#scribemuse-plugins-update)
+* [`orbit hello PERSON`](#orbit-hello-person)
+* [`orbit hello world`](#orbit-hello-world)
+* [`orbit help [COMMAND]`](#orbit-help-command)
+* [`orbit plugins`](#orbit-plugins)
+* [`orbit plugins add PLUGIN`](#orbit-plugins-add-plugin)
+* [`orbit plugins:inspect PLUGIN...`](#orbit-pluginsinspect-plugin)
+* [`orbit plugins install PLUGIN`](#orbit-plugins-install-plugin)
+* [`orbit plugins link PATH`](#orbit-plugins-link-path)
+* [`orbit plugins remove [PLUGIN]`](#orbit-plugins-remove-plugin)
+* [`orbit plugins reset`](#orbit-plugins-reset)
+* [`orbit plugins uninstall [PLUGIN]`](#orbit-plugins-uninstall-plugin)
+* [`orbit plugins unlink [PLUGIN]`](#orbit-plugins-unlink-plugin)
+* [`orbit plugins update`](#orbit-plugins-update)
 
-## `scribemuse hello PERSON`
+## `orbit hello PERSON`
 
 Say hello
 
 ```
 USAGE
-  $ scribemuse hello PERSON -f <value>
+  $ orbit hello PERSON -f <value>
 
 ARGUMENTS
   PERSON  Person to say hello to
@@ -61,37 +61,37 @@ DESCRIPTION
   Say hello
 
 EXAMPLES
-  $ scribemuse hello friend --from oclif
+  $ orbit hello friend --from oclif
   hello friend from oclif! (./src/apps/cli/hello/index.ts)
 ```
 
-_See code: [src/apps/cli/hello/index.ts](https://github.com/cybergarage/scribemuse/blob/v0.0.0/src/apps/cli/hello/index.ts)_
+_See code: [src/apps/cli/hello/index.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/apps/cli/hello/index.ts)_
 
-## `scribemuse hello world`
+## `orbit hello world`
 
 Say hello world
 
 ```
 USAGE
-  $ scribemuse hello world
+  $ orbit hello world
 
 DESCRIPTION
   Say hello world
 
 EXAMPLES
-  $ scribemuse hello world
+  $ orbit hello world
   hello world! (./src/apps/cli/hello/world.ts)
 ```
 
-_See code: [src/apps/cli/hello/world.ts](https://github.com/cybergarage/scribemuse/blob/v0.0.0/src/apps/cli/hello/world.ts)_
+_See code: [src/apps/cli/hello/world.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/apps/cli/hello/world.ts)_
 
-## `scribemuse help [COMMAND]`
+## `orbit help [COMMAND]`
 
-Display help for scribemuse.
+Display help for orbit.
 
 ```
 USAGE
-  $ scribemuse help [COMMAND...] [-n]
+  $ orbit help [COMMAND...] [-n]
 
 ARGUMENTS
   [COMMAND...]  Command to show help for.
@@ -100,18 +100,18 @@ FLAGS
   -n, --nested-commands  Include all nested commands in the output.
 
 DESCRIPTION
-  Display help for scribemuse.
+  Display help for orbit.
 ```
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.37/src/commands/help.ts)_
 
-## `scribemuse plugins`
+## `orbit plugins`
 
 List installed plugins.
 
 ```
 USAGE
-  $ scribemuse plugins [--json] [--core]
+  $ orbit plugins [--json] [--core]
 
 FLAGS
   --core  Show core plugins.
@@ -123,18 +123,18 @@ DESCRIPTION
   List installed plugins.
 
 EXAMPLES
-  $ scribemuse plugins
+  $ orbit plugins
 ```
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.56/src/commands/plugins/index.ts)_
 
-## `scribemuse plugins add PLUGIN`
+## `orbit plugins add PLUGIN`
 
-Installs a plugin into scribemuse.
+Installs a plugin into orbit.
 
 ```
 USAGE
-  $ scribemuse plugins add PLUGIN... [--json] [-f] [-h] [-s | -v]
+  $ orbit plugins add PLUGIN... [--json] [-f] [-h] [-s | -v]
 
 ARGUMENTS
   PLUGIN...  Plugin to install.
@@ -149,39 +149,39 @@ GLOBAL FLAGS
   --json  Format output as json.
 
 DESCRIPTION
-  Installs a plugin into scribemuse.
+  Installs a plugin into orbit.
 
   Uses npm to install plugins.
 
   Installation of a user-installed plugin will override a core plugin.
 
-  Use the SCRIBEMUSE_NPM_LOG_LEVEL environment variable to set the npm loglevel.
-  Use the SCRIBEMUSE_NPM_REGISTRY environment variable to set the npm registry.
+  Use the ORBIT_NPM_LOG_LEVEL environment variable to set the npm loglevel.
+  Use the ORBIT_NPM_REGISTRY environment variable to set the npm registry.
 
 ALIASES
-  $ scribemuse plugins add
+  $ orbit plugins add
 
 EXAMPLES
   Install a plugin from npm registry.
 
-    $ scribemuse plugins add myplugin
+    $ orbit plugins add myplugin
 
   Install a plugin from a github url.
 
-    $ scribemuse plugins add https://github.com/someuser/someplugin
+    $ orbit plugins add https://github.com/someuser/someplugin
 
   Install a plugin from a github slug.
 
-    $ scribemuse plugins add someuser/someplugin
+    $ orbit plugins add someuser/someplugin
 ```
 
-## `scribemuse plugins:inspect PLUGIN...`
+## `orbit plugins:inspect PLUGIN...`
 
 Displays installation properties of a plugin.
 
 ```
 USAGE
-  $ scribemuse plugins inspect PLUGIN...
+  $ orbit plugins inspect PLUGIN...
 
 ARGUMENTS
   PLUGIN...  [default: .] Plugin to inspect.
@@ -197,18 +197,18 @@ DESCRIPTION
   Displays installation properties of a plugin.
 
 EXAMPLES
-  $ scribemuse plugins inspect myplugin
+  $ orbit plugins inspect myplugin
 ```
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.56/src/commands/plugins/inspect.ts)_
 
-## `scribemuse plugins install PLUGIN`
+## `orbit plugins install PLUGIN`
 
-Installs a plugin into scribemuse.
+Installs a plugin into orbit.
 
 ```
 USAGE
-  $ scribemuse plugins install PLUGIN... [--json] [-f] [-h] [-s | -v]
+  $ orbit plugins install PLUGIN... [--json] [-f] [-h] [-s | -v]
 
 ARGUMENTS
   PLUGIN...  Plugin to install.
@@ -223,41 +223,41 @@ GLOBAL FLAGS
   --json  Format output as json.
 
 DESCRIPTION
-  Installs a plugin into scribemuse.
+  Installs a plugin into orbit.
 
   Uses npm to install plugins.
 
   Installation of a user-installed plugin will override a core plugin.
 
-  Use the SCRIBEMUSE_NPM_LOG_LEVEL environment variable to set the npm loglevel.
-  Use the SCRIBEMUSE_NPM_REGISTRY environment variable to set the npm registry.
+  Use the ORBIT_NPM_LOG_LEVEL environment variable to set the npm loglevel.
+  Use the ORBIT_NPM_REGISTRY environment variable to set the npm registry.
 
 ALIASES
-  $ scribemuse plugins add
+  $ orbit plugins add
 
 EXAMPLES
   Install a plugin from npm registry.
 
-    $ scribemuse plugins install myplugin
+    $ orbit plugins install myplugin
 
   Install a plugin from a github url.
 
-    $ scribemuse plugins install https://github.com/someuser/someplugin
+    $ orbit plugins install https://github.com/someuser/someplugin
 
   Install a plugin from a github slug.
 
-    $ scribemuse plugins install someuser/someplugin
+    $ orbit plugins install someuser/someplugin
 ```
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.56/src/commands/plugins/install.ts)_
 
-## `scribemuse plugins link PATH`
+## `orbit plugins link PATH`
 
 Links a plugin into the CLI for development.
 
 ```
 USAGE
-  $ scribemuse plugins link PATH [-h] [--install] [-v]
+  $ orbit plugins link PATH [-h] [--install] [-v]
 
 ARGUMENTS
   PATH  [default: .] path to plugin
@@ -277,18 +277,18 @@ DESCRIPTION
 
 
 EXAMPLES
-  $ scribemuse plugins link myplugin
+  $ orbit plugins link myplugin
 ```
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.56/src/commands/plugins/link.ts)_
 
-## `scribemuse plugins remove [PLUGIN]`
+## `orbit plugins remove [PLUGIN]`
 
 Removes a plugin from the CLI.
 
 ```
 USAGE
-  $ scribemuse plugins remove [PLUGIN...] [-h] [-v]
+  $ orbit plugins remove [PLUGIN...] [-h] [-v]
 
 ARGUMENTS
   [PLUGIN...]  plugin to uninstall
@@ -301,20 +301,20 @@ DESCRIPTION
   Removes a plugin from the CLI.
 
 ALIASES
-  $ scribemuse plugins unlink
-  $ scribemuse plugins remove
+  $ orbit plugins unlink
+  $ orbit plugins remove
 
 EXAMPLES
-  $ scribemuse plugins remove myplugin
+  $ orbit plugins remove myplugin
 ```
 
-## `scribemuse plugins reset`
+## `orbit plugins reset`
 
 Remove all user-installed and linked plugins.
 
 ```
 USAGE
-  $ scribemuse plugins reset [--hard] [--reinstall]
+  $ orbit plugins reset [--hard] [--reinstall]
 
 FLAGS
   --hard       Delete node_modules and package manager related files in addition to uninstalling plugins.
@@ -323,13 +323,13 @@ FLAGS
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.56/src/commands/plugins/reset.ts)_
 
-## `scribemuse plugins uninstall [PLUGIN]`
+## `orbit plugins uninstall [PLUGIN]`
 
 Removes a plugin from the CLI.
 
 ```
 USAGE
-  $ scribemuse plugins uninstall [PLUGIN...] [-h] [-v]
+  $ orbit plugins uninstall [PLUGIN...] [-h] [-v]
 
 ARGUMENTS
   [PLUGIN...]  plugin to uninstall
@@ -342,22 +342,22 @@ DESCRIPTION
   Removes a plugin from the CLI.
 
 ALIASES
-  $ scribemuse plugins unlink
-  $ scribemuse plugins remove
+  $ orbit plugins unlink
+  $ orbit plugins remove
 
 EXAMPLES
-  $ scribemuse plugins uninstall myplugin
+  $ orbit plugins uninstall myplugin
 ```
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.56/src/commands/plugins/uninstall.ts)_
 
-## `scribemuse plugins unlink [PLUGIN]`
+## `orbit plugins unlink [PLUGIN]`
 
 Removes a plugin from the CLI.
 
 ```
 USAGE
-  $ scribemuse plugins unlink [PLUGIN...] [-h] [-v]
+  $ orbit plugins unlink [PLUGIN...] [-h] [-v]
 
 ARGUMENTS
   [PLUGIN...]  plugin to uninstall
@@ -370,20 +370,20 @@ DESCRIPTION
   Removes a plugin from the CLI.
 
 ALIASES
-  $ scribemuse plugins unlink
-  $ scribemuse plugins remove
+  $ orbit plugins unlink
+  $ orbit plugins remove
 
 EXAMPLES
-  $ scribemuse plugins unlink myplugin
+  $ orbit plugins unlink myplugin
 ```
 
-## `scribemuse plugins update`
+## `orbit plugins update`
 
 Update installed plugins.
 
 ```
 USAGE
-  $ scribemuse plugins update [-h] [-v]
+  $ orbit plugins update [-h] [-v]
 
 FLAGS
   -h, --help     Show CLI help.
