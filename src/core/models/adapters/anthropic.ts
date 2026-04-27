@@ -8,6 +8,7 @@ import type {Prompt} from '../prompt.js'
 import type {Provider} from '../provider.js'
 
 import {splitSystemPrompt} from '../prompt.js'
+import {Role} from '../role.js'
 
 export class AnthropicAgent implements Model {
   private readonly client = new Anthropic()
@@ -31,7 +32,7 @@ export class AnthropicAgent implements Model {
       max_tokens: 8096,
       messages: chatMessages.map((message) => ({
         content: message.content,
-        role: message.role === 'assistant' ? 'assistant' : 'user',
+        role: message.role === Role.Assistant ? Role.Assistant : Role.User,
       })),
       model: this.model,
       ...(systemPrompt ? {system: systemPrompt} : {}),
@@ -40,7 +41,7 @@ export class AnthropicAgent implements Model {
     const block = response.content[0]
     return {
       content: block.type === 'text' ? block.text : '',
-      role: 'assistant',
+      role: Role.Assistant,
     }
   }
 }

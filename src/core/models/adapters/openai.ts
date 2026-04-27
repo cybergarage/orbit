@@ -7,6 +7,8 @@ import type {Model} from '../model.js'
 import type {Prompt} from '../prompt.js'
 import type {Provider} from '../provider.js'
 
+import {Role} from '../role.js'
+
 export class OpenAIAgent implements Model {
   private readonly client = new OpenAI()
 
@@ -28,7 +30,7 @@ export class OpenAIAgent implements Model {
 
     return {
       content: response.choices[0]?.message.content ?? '',
-      role: 'assistant',
+      role: Role.Assistant,
     }
   }
 }
