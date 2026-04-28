@@ -11,7 +11,7 @@ import type {
   PromptTemplateInput,
   SessionOptions,
 } from '../../src/core/models/index.js'
-import type {Message, MessageType as MessageTypeName} from '../../src/core/session/message.js'
+import type {MessageType as MessageTypeName} from '../../src/core/session/message.js'
 
 import {Dialogue, PromptMemory} from '../../src/core/index.js'
 import {
@@ -20,9 +20,11 @@ import {
   getModel,
   getProvider,
   getRoles,
+  Message,
   MessageType,
   PromptTemplate,
   Session,
+  SessionHeader,
   splitSystemPrompt,
 } from '../../src/core/models/index.js'
 
@@ -174,23 +176,64 @@ describe('model helpers', () => {
       expect(session.memory).to.be.instanceOf(PromptMemory)
     })
 
-    it('starts with an empty message list', () => {
+    it('starts with a session header message', () => {
       const session = new Session()
+      const messages = session.getMessages()
 
-      expect(session.getMessages()).to.deep.equal([])
+      expect(messages).to.have.length(1)
+      expect(messages[0]).to.be.instanceOf(SessionHeader)
+      expect(messages[0].type).to.equal(MessageType.Session)
+      expect(messages[0].parentid).to.equal(null)
+      expect(messages[0].id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u)
     })
 
     it('appends a message and returns it', () => {
       const session = new Session()
+      const header = session.getMessages()[0]
 
       const message = session.appendMessage(MessageType.User, {
         payload: {content: 'Hello'},
       })
 
-      expect(message).to.deep.equal(session.getMessages()[0])
+      expect(message).to.deep.equal(session.getMessages()[1])
       expect(message.type).to.equal(MessageType.User)
-      expect(message.parentid).to.equal(null)
+      expect(message.parentid).to.equal(header.id)
       expect(message.payload).to.deep.equal({content: 'Hello'})
+    })
+
+    it('appends a prebuilt message instance', () => {
+      const session = new Session()
+      const message = new Message(MessageType.User, {
+        parentid: 'custom-parent-id',
+        payload: {content: 'Hello'},
+      })
+
+      expect(session.appendMessage(message)).to.equal(message)
+      expect(session.getMessages()[1]).to.equal(message)
+    })
+
+    it('creates messages through the Message constructor', () => {
+      const message = new Message(MessageType.Assistant, {
+        parentid: 'parent-message-id',
+        payload: {content: 'Hello'},
+      })
+
+      expect(message.type).to.equal(MessageType.Assistant)
+      expect(message.parentid).to.equal('parent-message-id')
+      expect(message.payload).to.deep.equal({content: 'Hello'})
+      expect(message.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u)
+    })
+
+    it('creates session headers through the Message constructor', () => {
+      const header = new SessionHeader({
+        payload: {title: 'Session'},
+      })
+
+      expect(header).to.be.instanceOf(Message)
+      expect(header.type).to.equal(MessageType.Session)
+      expect(header.parentid).to.equal(null)
+      expect(header.payload).to.deep.equal({title: 'Session'})
+      expect(header.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u)
     })
 
     it('generates UUIDv7 message ids', () => {
@@ -221,10 +264,12 @@ describe('model helpers', () => {
 
     it('uses the previous message id as parentid when parentid is omitted', () => {
       const session = new Session()
+      const header = session.getMessages()[0]
 
       const first = session.appendMessage(MessageType.User)
       const second = session.appendMessage(MessageType.Assistant)
 
+      expect(first.parentid).to.equal(header.id)
       expect(second.parentid).to.equal(first.id)
     })
 
@@ -242,15 +287,11 @@ describe('model helpers', () => {
       const session = new Session()
       const message = session.appendMessage(MessageType.User)
       const messages = session.getMessages()
+      const header = messages[0]
 
-      messages.push({
-        id: 'extra',
-        parentid: null,
-        timestamp: new Date().toISOString(),
-        type: MessageType.Tool,
-      })
+      messages.push(new Message(MessageType.Tool))
 
-      expect(session.getMessages()).to.deep.equal([message])
+      expect(session.getMessages()).to.deep.equal([header, message])
     })
 
     it('throws when appending an unsupported message type', () => {
@@ -263,12 +304,9 @@ describe('model helpers', () => {
 
     it('exports message types from the message module', () => {
       const type: MessageTypeName = MessageType.User
-      const message: Message = {
-        id: 'id',
+      const message = new Message(type, {
         parentid: null,
-        timestamp: '2026-04-28T00:00:00.000Z',
-        type,
-      }
+      })
 
       expect(message.type).to.equal(MessageType.User)
     })

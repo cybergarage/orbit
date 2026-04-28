@@ -5,6 +5,7 @@ import type {Memory} from '../memory/index.js'
 import type {Message, MessagePayload, MessageType} from './message.js'
 
 import {PromptMemory} from '../memory/index.js'
+import {SessionHeader} from './header.js'
 import {createMessage} from './message-factory.js'
 
 export interface SessionOptions {
@@ -24,13 +25,19 @@ export class Session {
   constructor(options: SessionOptions = {}) {
     this.memory = options.memory ?? new PromptMemory()
     this.options = options
+    this.appendMessage(new SessionHeader())
   }
 
-  appendMessage(type: MessageType, options: AppendMessageOptions = {}): Message {
-    const message = createMessage(type, {
-      ...options,
-      previousMessage: this.messages.at(-1),
-    })
+  appendMessage(message: Message): Message
+  appendMessage(type: MessageType, options?: AppendMessageOptions): Message
+  appendMessage(messageOrType: Message | MessageType, options: AppendMessageOptions = {}): Message {
+    const message =
+      typeof messageOrType === 'string'
+        ? createMessage(messageOrType, {
+            ...options,
+            previousMessage: this.messages.at(-1),
+          })
+        : messageOrType
     this.messages.push(message)
     return message
   }

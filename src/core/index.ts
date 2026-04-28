@@ -19,8 +19,13 @@ export {splitSystemPrompt} from './models/prompt.js'
 export type {Provider} from './models/provider.js'
 export {getProvider, isProvider} from './models/provider.js'
 export {getRoles, Role} from './models/role.js'
-export {Session} from './session/index.js'
-export type {AppendMessageOptions, Message, MessagePayload, SessionOptions} from './session/index.js'
-export {MessageType} from './session/index.js'
+export {Message, MessageType, Session, SessionHeader} from './session/index.js'
+export type {
+  AppendMessageOptions,
+  MessageOptions,
+  MessagePayload,
+  SessionHeaderOptions,
+  SessionOptions,
+} from './session/index.js'
 export {GptTokenizer} from './tokenizer/index.js'
 export type {Tokenizer} from './tokenizer/index.js'
