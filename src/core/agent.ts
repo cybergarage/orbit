@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type {Model, Prompt, Provider} from './models/index.js'
-import type {SessionOptions} from './session.js'
+import type {SessionOptions} from './session/index.js'
 
 import {Dialogue} from './index.js'
 import {getModel} from './models/index.js'
-import {Session} from './session.js'
+import {Session} from './session/index.js'
 
 export interface AgentOptions {
   deps?: {

@@ -11,6 +11,7 @@ import type {
   PromptTemplateInput,
   SessionOptions,
 } from '../../src/core/models/index.js'
+import type {Message, MessageType as MessageTypeName} from '../../src/core/session/message.js'
 
 import {Dialogue, PromptMemory} from '../../src/core/index.js'
 import {
@@ -19,6 +20,7 @@ import {
   getModel,
   getProvider,
   getRoles,
+  MessageType,
   PromptTemplate,
   Session,
   splitSystemPrompt,
@@ -170,6 +172,105 @@ describe('model helpers', () => {
       const session = new Session({})
 
       expect(session.memory).to.be.instanceOf(PromptMemory)
+    })
+
+    it('starts with an empty message list', () => {
+      const session = new Session()
+
+      expect(session.getMessages()).to.deep.equal([])
+    })
+
+    it('appends a message and returns it', () => {
+      const session = new Session()
+
+      const message = session.appendMessage(MessageType.User, {
+        payload: {content: 'Hello'},
+      })
+
+      expect(message).to.deep.equal(session.getMessages()[0])
+      expect(message.type).to.equal(MessageType.User)
+      expect(message.parentid).to.equal(null)
+      expect(message.payload).to.deep.equal({content: 'Hello'})
+    })
+
+    it('generates UUIDv7 message ids', () => {
+      const session = new Session()
+
+      const message = session.appendMessage(MessageType.Assistant)
+
+      expect(message.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u)
+    })
+
+    it('serializes messages as JSON objects with the expected field names', () => {
+      const session = new Session()
+
+      const message = session.appendMessage(MessageType.Tool, {
+        parentid: 'parent-message-id',
+        payload: {name: 'lookup', result: 'ok'},
+      })
+      const serialized = JSON.stringify(message)
+
+      expect(JSON.parse(serialized)).to.deep.equal({
+        id: message.id,
+        parentid: 'parent-message-id',
+        payload: {name: 'lookup', result: 'ok'},
+        timestamp: message.timestamp,
+        type: MessageType.Tool,
+      })
+    })
+
+    it('uses the previous message id as parentid when parentid is omitted', () => {
+      const session = new Session()
+
+      const first = session.appendMessage(MessageType.User)
+      const second = session.appendMessage(MessageType.Assistant)
+
+      expect(second.parentid).to.equal(first.id)
+    })
+
+    it('uses an explicit parentid as-is', () => {
+      const session = new Session()
+
+      const message = session.appendMessage(MessageType.Tool, {
+        parentid: 'custom-parent-id',
+      })
+
+      expect(message.parentid).to.equal('custom-parent-id')
+    })
+
+    it('returns a copy of the message list', () => {
+      const session = new Session()
+      const message = session.appendMessage(MessageType.User)
+      const messages = session.getMessages()
+
+      messages.push({
+        id: 'extra',
+        parentid: null,
+        timestamp: new Date().toISOString(),
+        type: MessageType.Tool,
+      })
+
+      expect(session.getMessages()).to.deep.equal([message])
+    })
+
+    it('throws when appending an unsupported message type', () => {
+      const session = new Session()
+
+      expect(() => session.appendMessage('System' as MessageTypeName)).to.throw(
+        'Unsupported message type: System',
+      )
+    })
+
+    it('exports message types from the message module', () => {
+      const type: MessageTypeName = MessageType.User
+      const message: Message = {
+        id: 'id',
+        parentid: null,
+        timestamp: '2026-04-28T00:00:00.000Z',
+        type,
+      }
+
+      expect(message.type).to.equal(MessageType.User)
     })
 
     it('uses the provided memory instance as-is', () => {
