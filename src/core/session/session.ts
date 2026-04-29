@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type {Memory} from '../memory/index.js'
-import type {Message, MessagePayload, MessageType} from './message.js'
+import type {Message, MessagePayload, MessageType} from '../message/index.js'
 
 import {PromptMemory} from '../memory/index.js'
 import {SessionHeader} from './header.js'

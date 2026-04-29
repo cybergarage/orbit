@@ -7,7 +7,7 @@ import type {AgentOptions, Model, Prompt} from '../../../src/core/models/index.j
 
 import {runExecCommand} from '../../../src/apps/cli/exec.js'
 import {resolveAgentOptions} from '../../../src/core/chat.js'
-import {Agent} from '../../../src/core/models/index.js'
+import {Agent, Message, MessageType} from '../../../src/core/models/index.js'
 
 describe('runExecCommand', () => {
   it('builds a system and user message and passes them to model.prompt', async () => {
@@ -27,7 +27,7 @@ describe('runExecCommand', () => {
               },
               async prompt(messages) {
                 calls.push({messages, options})
-                return {content: 'mocked response', role: 'assistant'}
+                return new Message(MessageType.Assistant, {content: 'mocked response'})
               },
             }),
           },
@@ -83,7 +83,7 @@ describe('runExecCommand', () => {
               },
               async prompt() {
                 calls.push({options})
-                return {content: 'ok', role: 'assistant'}
+                return new Message(MessageType.Assistant, {content: 'ok'})
               },
             }),
           },

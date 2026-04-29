@@ -6,7 +6,7 @@ import {expect} from 'chai'
 import type {AgentOptions, Model} from '../../../src/core/models/index.js'
 
 import {runInteractiveCommand} from '../../../src/apps/cli/_interactive.js'
-import {Agent} from '../../../src/core/models/index.js'
+import {Agent, Message, MessageType} from '../../../src/core/models/index.js'
 
 describe('runInteractiveCommand', () => {
   it('uses resolved workspace settings for the interactive session', async () => {
@@ -27,7 +27,7 @@ describe('runInteractiveCommand', () => {
                 return options.model?.provider ?? 'ollama'
               },
               async prompt() {
-                return {content: 'ok', role: 'assistant'}
+                return new Message(MessageType.Assistant, {content: 'ok'})
               },
             }),
           },

@@ -7,7 +7,7 @@ import type {Model} from '../model.js'
 import type {Prompt} from '../prompt.js'
 import type {Provider} from '../provider.js'
 
-import {Role} from '../role.js'
+import {Message, MessageType} from '../../message/index.js'
 
 export class OllamaAgent implements Model {
   private readonly client = new Ollama()
@@ -22,11 +22,10 @@ export class OllamaAgent implements Model {
     return 'ollama'
   }
 
-  async prompt(messages: Prompt[]): Promise<Prompt> {
+  async prompt(messages: Prompt[]): Promise<Message> {
     const response = await this.client.chat({messages, model: this.model})
-    return {
+    return new Message(MessageType.Assistant, {
       content: response.message.content,
-      role: Role.Assistant,
-    }
+    })
   }
 }

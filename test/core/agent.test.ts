@@ -14,6 +14,7 @@ import type {
 import type {MessageType as MessageTypeName} from '../../src/core/session/message.js'
 
 import {Dialogue, PromptMemory} from '../../src/core/index.js'
+import {Message as CoreMessage, MessageType as CoreMessageType} from '../../src/core/message/index.js'
 import {
   Agent,
   DEFAULT_MODELS,
@@ -47,17 +48,18 @@ describe('model helpers', () => {
                 model: model ?? DEFAULT_MODELS[provider ?? 'ollama'],
                 provider: provider ?? 'ollama',
               })
-              return {content: 'ok', role: 'assistant'}
+              return new Message(MessageType.Assistant, {content: 'ok'})
             },
           }),
         },
       })
 
       expect(agent).to.be.instanceOf(Agent)
-      expect(await agent.prompt([{content: 'hello', role: 'user'}])).to.deep.equal({
-        content: 'ok',
-        role: 'assistant',
-      })
+      const response = await agent.prompt([{content: 'hello', role: 'user'}])
+
+      expect(response).to.be.instanceOf(Message)
+      expect(response.content).to.equal('ok')
+      expect(response.role).to.equal('assistant')
       expect(calls).to.deep.equal([
         {
           messages: [{content: 'hello', role: 'user'}],
@@ -80,7 +82,7 @@ describe('model helpers', () => {
             },
             async prompt() {
               calls.push({model: model ?? '', provider: provider ?? 'ollama'})
-              return {content: 'ok', role: 'assistant'}
+              return new Message(MessageType.Assistant, {content: 'ok'})
             },
           }),
         },
@@ -214,14 +216,33 @@ describe('model helpers', () => {
 
     it('creates messages through the Message constructor', () => {
       const message = new Message(MessageType.Assistant, {
+        content: 'Hello',
         parentid: 'parent-message-id',
         payload: {content: 'Hello'},
       })
 
       expect(message.type).to.equal(MessageType.Assistant)
+      expect(message.contents).to.deep.equal(['Hello'])
+      expect(message.content).to.equal('Hello')
       expect(message.parentid).to.equal('parent-message-id')
       expect(message.payload).to.deep.equal({content: 'Hello'})
       expect(message.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u)
+    })
+
+    it('uses the first contents entry as the content getter', () => {
+      const message = new Message(MessageType.Assistant, {
+        contents: ['first', 'second'],
+      })
+
+      expect(message.contents).to.deep.equal(['first', 'second'])
+      expect(message.content).to.equal('first')
+    })
+
+    it('uses an empty content string when contents are omitted', () => {
+      const message = new Message(MessageType.Assistant)
+
+      expect(message.contents).to.deep.equal([])
+      expect(message.content).to.equal('')
     })
 
     it('creates session headers through the Message constructor', () => {
@@ -254,6 +275,7 @@ describe('model helpers', () => {
       const serialized = JSON.stringify(message)
 
       expect(JSON.parse(serialized)).to.deep.equal({
+        contents: [],
         id: message.id,
         parentid: 'parent-message-id',
         payload: {name: 'lookup', result: 'ok'},
@@ -309,6 +331,15 @@ describe('model helpers', () => {
       })
 
       expect(message.type).to.equal(MessageType.User)
+    })
+
+    it('exports messages from the core message module', () => {
+      const message = new CoreMessage(CoreMessageType.Assistant, {
+        content: 'Hello',
+      })
+
+      expect(message.content).to.equal('Hello')
+      expect(message.contents).to.deep.equal(['Hello'])
     })
 
     it('uses the provided memory instance as-is', () => {

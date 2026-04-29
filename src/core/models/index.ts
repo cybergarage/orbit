@@ -3,16 +3,12 @@
 
 export {Agent} from '../agent.js'
 export type {AgentOptions} from '../agent.js'
+export {Message, MessageType} from '../message/index.js'
+export type {MessageOptions, MessagePayload} from '../message/index.js'
 export {PromptTemplate} from '../prompts/template.js'
 export type {PromptTemplateInput} from '../prompts/template.js'
-export {Message, MessageType, Session, SessionHeader} from '../session/index.js'
-export type {
-  AppendMessageOptions,
-  MessageOptions,
-  MessagePayload,
-  SessionHeaderOptions,
-  SessionOptions,
-} from '../session/index.js'
+export {Session, SessionHeader} from '../session/index.js'
+export type {AppendMessageOptions, SessionHeaderOptions, SessionOptions} from '../session/index.js'
 export {DEFAULT_MODELS, getModel} from './factory.js'
 export type {Model} from './model.js'
 export type {Prompt} from './prompt.js'

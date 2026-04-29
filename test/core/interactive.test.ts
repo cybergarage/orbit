@@ -10,7 +10,7 @@ import {
   handleModelCommand,
   submitInteractiveInput,
 } from '../../src/core/interactive.js'
-import {Agent} from '../../src/core/models/index.js'
+import {Agent, Message, MessageType} from '../../src/core/models/index.js'
 
 function createMockAgent(
   promptImpl: Agent['prompt'],
@@ -66,10 +66,9 @@ describe('interactive helpers', () => {
   })
 
   it('appends user and assistant messages while keeping prior history', async () => {
-    const agent = createMockAgent(async (messages) => ({
-      content: `reply:${messages.length}`,
-      role: 'assistant',
-    }))
+    const agent = createMockAgent(async (messages) =>
+      new Message(MessageType.Assistant, {content: `reply:${messages.length}`}),
+    )
     const AgentCtor = class extends MockAgent {
       constructor() {
         super(agent.prompt.bind(agent))
@@ -83,15 +82,19 @@ describe('interactive helpers', () => {
     )
     const second = await submitInteractiveInput(AgentCtor, first, 'again')
 
-    expect(first.messages).to.deep.equal([
-      {content: 'hello', role: 'user'},
-      {content: 'reply:1', role: 'assistant'},
+    expect(first.messages.map((message) => message.content)).to.deep.equal(['hello', 'reply:1'])
+    expect(first.messages.map((message) => message.role)).to.deep.equal(['user', 'assistant'])
+    expect(second.messages.map((message) => message.content)).to.deep.equal([
+      'hello',
+      'reply:1',
+      'again',
+      'reply:3',
     ])
-    expect(second.messages).to.deep.equal([
-      {content: 'hello', role: 'user'},
-      {content: 'reply:1', role: 'assistant'},
-      {content: 'again', role: 'user'},
-      {content: 'reply:3', role: 'assistant'},
+    expect(second.messages.map((message) => message.role)).to.deep.equal([
+      'user',
+      'assistant',
+      'user',
+      'assistant',
     ])
   })
 
@@ -139,7 +142,7 @@ describe('interactive helpers', () => {
       constructor(options: AgentOptions = {}) {
         super(async () => {
           callCount++
-          return {content: 'should not run', role: 'assistant'}
+          return new Message(MessageType.Assistant, {content: 'should not run'})
         }, options)
       }
     }
@@ -164,7 +167,7 @@ describe('interactive helpers', () => {
           const provider = options.model?.provider ?? 'ollama'
           const model = options.model?.name ?? 'llama3.1'
           calls.push({messages: messages.map((message) => message.content), model, provider})
-          return {content: `reply:${provider}:${model}`, role: 'assistant'}
+          return new Message(MessageType.Assistant, {content: `reply:${provider}:${model}`})
         }, options)
       }
     }
@@ -183,11 +186,12 @@ describe('interactive helpers', () => {
         provider: 'openai',
       },
     ])
-    expect(replied.messages).to.deep.equal([
-      {content: 'Model switched to openai:gpt-4o', role: 'assistant'},
-      {content: 'hello', role: 'user'},
-      {content: 'reply:openai:gpt-4o', role: 'assistant'},
+    expect(replied.messages.map((message) => message.content)).to.deep.equal([
+      'Model switched to openai:gpt-4o',
+      'hello',
+      'reply:openai:gpt-4o',
     ])
+    expect(replied.messages.map((message) => message.role)).to.deep.equal(['assistant', 'user', 'assistant'])
   })
 
   it('prepends the system prompt only to the outgoing request', async () => {
@@ -196,7 +200,7 @@ describe('interactive helpers', () => {
       constructor(options: AgentOptions = {}) {
         super(async (messages) => {
           calls.push(messages.map((message) => `${message.role}:${message.content}`))
-          return {content: 'reply', role: 'assistant'}
+          return new Message(MessageType.Assistant, {content: 'reply'})
         }, options)
       }
     }
@@ -212,9 +216,7 @@ describe('interactive helpers', () => {
     )
 
     expect(calls).to.deep.equal([['system:Workspace rules', 'user:hello']])
-    expect(nextState.messages).to.deep.equal([
-      {content: 'hello', role: 'user'},
-      {content: 'reply', role: 'assistant'},
-    ])
+    expect(nextState.messages.map((message) => message.content)).to.deep.equal(['hello', 'reply'])
+    expect(nextState.messages.map((message) => message.role)).to.deep.equal(['user', 'assistant'])
   })
 })
