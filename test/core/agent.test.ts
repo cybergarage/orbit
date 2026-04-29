@@ -13,7 +13,7 @@ import type {
 } from '../../src/core/models/index.js'
 import type {MessageType as MessageTypeName} from '../../src/core/session/message.js'
 
-import {Dialogue, PromptMemory} from '../../src/core/index.js'
+import {Dialogue, PromptMemory, Role} from '../../src/core/index.js'
 import {Message as CoreMessage, MessageType as CoreMessageType} from '../../src/core/message/index.js'
 import {
   Agent,
@@ -222,6 +222,7 @@ describe('model helpers', () => {
       })
 
       expect(message.type).to.equal(MessageType.Assistant)
+      expect(message.role).to.equal(Role.Assistant)
       expect(message.contents).to.deep.equal(['Hello'])
       expect(message.content).to.equal('Hello')
       expect(message.parentid).to.equal('parent-message-id')
@@ -243,6 +244,21 @@ describe('model helpers', () => {
 
       expect(message.contents).to.deep.equal([])
       expect(message.content).to.equal('')
+    })
+
+    it('uses default roles for message types when role is omitted', () => {
+      expect(new Message(MessageType.User).role).to.equal(Role.User)
+      expect(new Message(MessageType.Session).role).to.equal(Role.System)
+      expect(new Message(MessageType.Assistant).role).to.equal(Role.Assistant)
+      expect(new Message(MessageType.Tool).role).to.equal(Role.Assistant)
+    })
+
+    it('uses an explicit role from MessageOptions', () => {
+      const message = new Message(MessageType.Tool, {
+        role: Role.User,
+      })
+
+      expect(message.role).to.equal(Role.User)
     })
 
     it('creates session headers through the Message constructor', () => {
@@ -271,6 +287,7 @@ describe('model helpers', () => {
       const message = session.appendMessage(MessageType.Tool, {
         parentid: 'parent-message-id',
         payload: {name: 'lookup', result: 'ok'},
+        role: Role.User,
       })
       const serialized = JSON.stringify(message)
 
@@ -279,6 +296,7 @@ describe('model helpers', () => {
         id: message.id,
         parentid: 'parent-message-id',
         payload: {name: 'lookup', result: 'ok'},
+        role: Role.User,
         timestamp: message.timestamp,
         type: MessageType.Tool,
       })

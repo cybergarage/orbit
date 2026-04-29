@@ -1,5 +1,5 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-export {isMessageType, Message, MessageType} from './message.js'
+export {defaultRoleForMessageType, isMessageType, Message, MessageType} from './message.js'
 export type {MessageOptions, MessagePayload} from './message.js'

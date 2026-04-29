@@ -15,6 +15,7 @@ export interface SessionOptions {
 export interface AppendMessageOptions {
   parentid?: null | string
   payload?: MessagePayload
+  role?: Message['role']
 }
 
 export class Session {

@@ -22,6 +22,7 @@ export interface MessageOptions {
   parentid?: null | string
   payload?: MessagePayload
   previousMessage?: Message
+  role?: Role
 }
 
 export class Message {
@@ -29,6 +30,7 @@ export class Message {
   public readonly id: string
   public readonly parentid: null | string
   public readonly payload?: MessagePayload
+  public readonly role: Role
   public readonly timestamp: string
   public readonly type: MessageType
 
@@ -40,6 +42,7 @@ export class Message {
     this.contents = options.contents ?? (options.content === undefined ? [] : [options.content])
     this.id = uuidv7()
     this.parentid = options.parentid ?? options.previousMessage?.id ?? null
+    this.role = options.role ?? defaultRoleForMessageType(type)
     this.timestamp = new Date().toISOString()
     this.type = type
 
@@ -51,14 +54,14 @@ export class Message {
   get content(): string {
     return this.contents[0] ?? ''
   }
-
-  get role(): Role {
-    if (this.type === MessageType.User) return Role.User
-    if (this.type === MessageType.Session) return Role.System
-    return Role.Assistant
-  }
 }
 
 export function isMessageType(type: string): type is MessageType {
   return Object.values(MessageType).includes(type as MessageType)
+}
+
+export function defaultRoleForMessageType(type: MessageType): Role {
+  if (type === MessageType.User) return Role.User
+  if (type === MessageType.Session) return Role.System
+  return Role.Assistant
 }
