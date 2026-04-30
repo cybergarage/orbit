@@ -12,7 +12,7 @@ export type {
 } from './interactive.js'
 export type {Memory} from './memory/index.js'
 export {Dialogue, PromptMemory} from './memory/index.js'
-export {Message, MessageType} from './message/index.js'
+export {Message, MessageType, UserMessage} from './message/index.js'
 export type {MessageOptions, MessagePayload} from './message/index.js'
 export {DEFAULT_MODELS, getModel} from './models/factory.js'
 export type {Model} from './models/model.js'

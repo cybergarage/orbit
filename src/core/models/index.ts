@@ -3,7 +3,7 @@
 
 export {Agent} from '../agent.js'
 export type {AgentOptions} from '../agent.js'
-export {Message, MessageType} from '../message/index.js'
+export {Message, MessageType, UserMessage} from '../message/index.js'
 export type {MessageOptions, MessagePayload} from '../message/index.js'
 export {PromptTemplate} from '../prompts/template.js'
 export type {PromptTemplateInput} from '../prompts/template.js'

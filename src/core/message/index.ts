@@ -3,3 +3,4 @@
 
 export {defaultRoleForMessageType, isMessageType, Message, MessageType} from './message.js'
 export type {MessageOptions, MessagePayload} from './message.js'
+export {UserMessage} from './user.js'

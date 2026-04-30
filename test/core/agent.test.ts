@@ -14,7 +14,7 @@ import type {
 import type {MessageType as MessageTypeName} from '../../src/core/session/message.js'
 
 import {Dialogue, PromptMemory, Role} from '../../src/core/index.js'
-import {Message as CoreMessage, MessageType as CoreMessageType} from '../../src/core/message/index.js'
+import {Message as CoreMessage, MessageType as CoreMessageType, UserMessage} from '../../src/core/message/index.js'
 import {
   Agent,
   DEFAULT_MODELS,
@@ -259,6 +259,15 @@ describe('model helpers', () => {
       })
 
       expect(message.role).to.equal(Role.User)
+    })
+
+    it('creates user messages with contents context', () => {
+      const message = new UserMessage(['hello'], Role.User)
+
+      expect(message.type).to.equal(MessageType.User)
+      expect(message.contents).to.deep.equal(['hello'])
+      expect(message.role).to.equal(Role.User)
+      expect(message.content).to.equal('hello')
     })
 
     it('creates session headers through the Message constructor', () => {
