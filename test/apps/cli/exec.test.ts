@@ -3,15 +3,15 @@
 
 import {expect} from 'chai'
 
-import type {AgentOptions, Model, Prompt} from '../../../src/core/models/index.js'
+import type {AgentOptions, Model} from '../../../src/core/models/index.js'
 
 import {runExecCommand} from '../../../src/apps/cli/exec.js'
 import {resolveAgentOptions} from '../../../src/core/chat.js'
 import {Agent, Message, MessageType, Role} from '../../../src/core/models/index.js'
 
 describe('runExecCommand', () => {
-  it('builds a system and user message and passes them to model.prompt', async () => {
-    const calls: {messages: Prompt[]; options?: AgentOptions}[] = []
+  it('builds a system and user message and passes them to model.invoke', async () => {
+    const calls: {messages: Message[]; options?: AgentOptions}[] = []
 
     class TestAgent extends Agent {
       constructor(options: AgentOptions = {}) {
@@ -25,7 +25,7 @@ describe('runExecCommand', () => {
               getProvider() {
                 return options.model?.provider ?? 'ollama'
               },
-              async prompt(messages) {
+              async invoke(messages) {
                 calls.push({messages, options})
                 return new Message(MessageType.Assistant, {content: 'mocked response'})
               },
@@ -46,7 +46,12 @@ describe('runExecCommand', () => {
     )
 
     expect(response).to.equal('mocked response')
-    expect(calls).to.deep.equal([
+    expect(
+      calls.map((call) => ({
+        messages: call.messages.map((message) => ({content: message.content, role: message.role})),
+        options: call.options,
+      })),
+    ).to.deep.equal([
       {
         messages: [
           {
@@ -81,7 +86,7 @@ describe('runExecCommand', () => {
               getProvider() {
                 return options.model?.provider ?? 'ollama'
               },
-              async prompt() {
+              async invoke() {
                 calls.push({options})
                 return new Message(MessageType.Assistant, {content: 'ok'})
               },

@@ -3,11 +3,11 @@
 
 import {Anthropic} from '@anthropic-ai/sdk'
 
+import type {Message} from '../../message/index.js'
 import type {Model} from '../model.js'
-import type {Prompt} from '../prompt.js'
 import type {Provider} from '../provider.js'
 
-import {Message, MessageType} from '../../message/index.js'
+import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {splitSystemPrompt} from '../prompt.js'
 import {Role} from '../role.js'
 
@@ -24,7 +24,7 @@ export class AnthropicAgent implements Model {
     return 'anthropic'
   }
 
-  async prompt(messages: Prompt[]): Promise<Message> {
+  async invoke(messages: Message[]): Promise<Message> {
     const {messages: chatMessages, systemPrompt} = splitSystemPrompt(messages)
 
     const response = await this.client.messages.create({
@@ -40,7 +40,7 @@ export class AnthropicAgent implements Model {
     })
 
     const block = response.content[0]
-    return new Message(MessageType.Assistant, {
+    return new CoreMessage(MessageType.Assistant, {
       content: block.type === 'text' ? block.text : '',
     })
   }

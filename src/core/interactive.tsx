@@ -4,7 +4,7 @@
 import {Box, render, Text, useApp, useInput} from 'ink'
 import {useState} from 'react'
 
-import {Agent, type AgentOptions, isProvider, type Prompt, type Provider, Role} from './models/index.js'
+import {Agent, type AgentOptions, isProvider, Message, MessageType, type Provider, Role} from './models/index.js'
 
 export interface InteractiveSessionOptions {
   agentClass: InteractiveAgentClass
@@ -20,7 +20,7 @@ export interface InteractiveAgentClass {
 export interface InteractiveState {
   input: string
   isLoading: boolean
-  messages: Prompt[]
+  messages: Message[]
   model: string
   provider: Provider
   systemPrompt?: string
@@ -56,14 +56,15 @@ export async function submitInteractiveInput(
   if (commandResult) {
     return {
       ...commandResult.nextState,
-      messages: [...state.messages, {content: commandResult.message, role: Role.Assistant}],
+      messages: [...state.messages, new Message(MessageType.Assistant, {content: commandResult.message})],
     }
   }
 
+  const userMessage = new Message(MessageType.User, {content: input, role: Role.User})
   const requestMessages = [
-    ...(state.systemPrompt ? [{content: state.systemPrompt, role: Role.System} as Prompt] : []),
+    ...(state.systemPrompt ? [new Message(MessageType.Session, {content: state.systemPrompt, role: Role.System})] : []),
     ...state.messages,
-    {content: input, role: Role.User} as Prompt,
+    userMessage,
   ]
   const agent = new AgentClass({
     model: {
@@ -71,11 +72,11 @@ export async function submitInteractiveInput(
       provider: state.provider,
     },
   })
-  const reply = await agent.prompt(requestMessages)
+  const reply = await agent.invoke(requestMessages)
 
   return {
     ...state,
-    messages: [...state.messages, {content: input, role: Role.User}, reply],
+    messages: [...state.messages, userMessage, reply],
   }
 }
 
@@ -164,14 +165,14 @@ function InteractiveApp({agentClass: AgentClass, initialModel, initialProvider, 
           ...commandResult.nextState,
           input: '',
           isLoading: false,
-          messages: [...state.messages, {content: commandResult.message, role: Role.Assistant}],
+          messages: [...state.messages, new Message(MessageType.Assistant, {content: commandResult.message})],
         })
         return
       }
 
-      const nextMessages = [...state.messages, {content: nextInput, role: Role.User} as Prompt]
+      const nextMessages = [...state.messages, new Message(MessageType.User, {content: nextInput, role: Role.User})]
       const requestMessages = [
-        ...(state.systemPrompt ? [{content: state.systemPrompt, role: Role.System} as Prompt] : []),
+        ...(state.systemPrompt ? [new Message(MessageType.Session, {content: state.systemPrompt, role: Role.System})] : []),
         ...nextMessages,
       ]
       setState({
@@ -189,7 +190,7 @@ function InteractiveApp({agentClass: AgentClass, initialModel, initialProvider, 
       })
 
       agent
-        .prompt(requestMessages)
+        .invoke(requestMessages)
         .then((reply) => {
           setState((currentState) => ({
             ...currentState,
@@ -202,7 +203,7 @@ function InteractiveApp({agentClass: AgentClass, initialModel, initialProvider, 
           setState((currentState) => ({
             ...currentState,
             isLoading: false,
-            messages: [...nextMessages, {content: message, role: Role.Assistant}],
+            messages: [...nextMessages, new Message(MessageType.Assistant, {content: message})],
           }))
         })
       return

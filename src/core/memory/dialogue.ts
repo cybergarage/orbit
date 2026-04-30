@@ -3,21 +3,21 @@
 
 import {randomUUID} from 'node:crypto'
 
-import type {Prompt} from '../models/prompt.js'
+import type {Message} from '../message/index.js'
 
 export class Dialogue {
   public readonly createdAt: Date
   public readonly id: string
 
   constructor(
-    public readonly questions: Prompt[],
-    public readonly answer: Prompt,
+    public readonly questions: Message[],
+    public readonly answer: Message,
   ) {
     this.createdAt = new Date()
     this.id = randomUUID()
   }
 
-  getAnswer(): Prompt {
+  getAnswer(): Message {
     return this.answer
   }
 
@@ -29,7 +29,7 @@ export class Dialogue {
     return this.id
   }
 
-  getQuestions(): Prompt[] {
+  getQuestions(): Message[] {
     return this.questions
   }
 }

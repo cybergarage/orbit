@@ -7,7 +7,6 @@ import type {Memory} from '../../src/core/index.js'
 import type {
   AgentOptions,
   Model,
-  Prompt,
   PromptTemplateInput,
   SessionOptions,
 } from '../../src/core/models/index.js'
@@ -32,7 +31,7 @@ import {
 describe('model helpers', () => {
   describe('Agent', () => {
     it('resolves the default provider and model when options are omitted', async () => {
-      const calls: {messages: Prompt[]; model: string; provider: string}[] = []
+      const calls: {messages: Message[]; model: string; provider: string}[] = []
       const agent = new Agent({
         deps: {
           createModel: (provider, model): Model => ({
@@ -42,7 +41,7 @@ describe('model helpers', () => {
             getProvider() {
               return provider ?? 'ollama'
             },
-            async prompt(messages) {
+            async invoke(messages) {
               calls.push({
                 messages,
                 model: model ?? DEFAULT_MODELS[provider ?? 'ollama'],
@@ -55,14 +54,15 @@ describe('model helpers', () => {
       })
 
       expect(agent).to.be.instanceOf(Agent)
-      const response = await agent.prompt([{content: 'hello', role: Role.User}])
+      const prompt = new Message(MessageType.User, {content: 'hello'})
+      const response = await agent.invoke([prompt])
 
       expect(response).to.be.instanceOf(Message)
       expect(response.content).to.equal('ok')
       expect(response.role).to.equal(Role.Assistant)
       expect(calls).to.deep.equal([
         {
-          messages: [{content: 'hello', role: Role.User}],
+          messages: [prompt],
           model: DEFAULT_MODELS.ollama,
           provider: 'ollama',
         },
@@ -80,7 +80,7 @@ describe('model helpers', () => {
             getProvider() {
               return provider ?? 'ollama'
             },
-            async prompt() {
+            async invoke() {
               calls.push({model: model ?? '', provider: provider ?? 'ollama'})
               return new Message(MessageType.Assistant, {content: 'ok'})
             },
@@ -92,7 +92,7 @@ describe('model helpers', () => {
         },
       })
 
-      await agent.prompt([{content: 'hello', role: Role.User}])
+      await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
       expect(calls).to.deep.equal([{model: 'claude-custom', provider: 'anthropic'}])
     })
 
@@ -123,9 +123,9 @@ describe('model helpers', () => {
     })
 
     it('accepts SessionOptions in newSession and passes through the provided memory', () => {
-      const entries: Dialogue[] = [
-        new Dialogue([{content: 'Hello', role: Role.User}], {content: 'Hi', role: Role.Assistant}),
-      ]
+      const question = new Message(MessageType.User, {content: 'Hello'})
+      const answer = new Message(MessageType.Assistant, {content: 'Hi'})
+      const entries: Dialogue[] = [new Dialogue([question], answer)]
       const memory: Memory = {
         add(entry: Dialogue) {
           entries.push(entry)
@@ -142,10 +142,7 @@ describe('model helpers', () => {
 
       expect(session).to.be.instanceOf(Session)
       expect(session.memory).to.equal(memory)
-      expect(session.memory.query('anything')).to.deep.equal([
-        {content: 'Hello', role: Role.User},
-        {content: 'Hi', role: Role.Assistant},
-      ])
+      expect(session.memory.query('anything')).to.deep.equal([question, answer])
     })
 
     it('uses PromptMemory by default when newSession is called without options', () => {
@@ -370,9 +367,9 @@ describe('model helpers', () => {
     })
 
     it('uses the provided memory instance as-is', () => {
-      const entries: Dialogue[] = [
-        new Dialogue([{content: 'Hello', role: Role.User}], {content: 'Hi', role: Role.Assistant}),
-      ]
+      const question = new Message(MessageType.User, {content: 'Hello'})
+      const answer = new Message(MessageType.Assistant, {content: 'Hi'})
+      const entries: Dialogue[] = [new Dialogue([question], answer)]
       const memory: Memory = {
         add(entry: Dialogue) {
           entries.push(entry)
@@ -386,36 +383,23 @@ describe('model helpers', () => {
       const session = new Session({memory})
 
       expect(session.memory).to.equal(memory)
-      expect(session.memory.query('anything')).to.deep.equal([
-        {content: 'Hello', role: Role.User},
-        {content: 'Hi', role: Role.Assistant},
-      ])
+      expect(session.memory.query('anything')).to.deep.equal([question, answer])
     })
 
     it('flattens all dialogue prompts in PromptMemory query order', () => {
+      const hello = new Message(MessageType.User, {content: 'Hello'})
+      const help = new Message(MessageType.User, {content: 'Can you help?'})
+      const sure = new Message(MessageType.Assistant, {content: 'Sure'})
+      const thanks = new Message(MessageType.User, {content: 'Thanks'})
+      const welcome = new Message(MessageType.Assistant, {content: 'You are welcome'})
       const session = new Session({
         memory: new PromptMemory([
-          new Dialogue(
-            [
-              {content: 'Hello', role: Role.User},
-              {content: 'Can you help?', role: Role.User},
-            ],
-            {content: 'Sure', role: Role.Assistant},
-          ),
-          new Dialogue([{content: 'Thanks', role: Role.User}], {
-            content: 'You are welcome',
-            role: Role.Assistant,
-          }),
+          new Dialogue([hello, help], sure),
+          new Dialogue([thanks], welcome),
         ]),
       })
 
-      expect(session.memory.query('anything')).to.deep.equal([
-        {content: 'Hello', role: Role.User},
-        {content: 'Can you help?', role: Role.User},
-        {content: 'Sure', role: Role.Assistant},
-        {content: 'Thanks', role: Role.User},
-        {content: 'You are welcome', role: Role.Assistant},
-      ])
+      expect(session.memory.query('anything')).to.deep.equal([hello, help, sure, thanks, welcome])
     })
   })
 
@@ -493,18 +477,17 @@ describe('model helpers', () => {
 
   describe('splitSystemPrompt', () => {
     it('collects system messages and leaves visible history intact', () => {
+      const hello = new Message(MessageType.User, {content: 'Hello'})
+      const answer = new Message(MessageType.Assistant, {content: 'Hi there'})
       const result = splitSystemPrompt([
-        {content: 'Japanese only', role: Role.System},
-        {content: 'Workspace context', role: Role.System},
-        {content: 'Hello', role: Role.User},
-        {content: 'Hi there', role: Role.Assistant},
+        new Message(MessageType.Session, {content: 'Japanese only', role: Role.System}),
+        new Message(MessageType.Session, {content: 'Workspace context', role: Role.System}),
+        hello,
+        answer,
       ])
 
       expect(result.systemPrompt).to.equal('Japanese only\n\nWorkspace context')
-      expect(result.messages).to.deep.equal([
-        {content: 'Hello', role: Role.User},
-        {content: 'Hi there', role: Role.Assistant},
-      ])
+      expect(result.messages).to.deep.equal([hello, answer])
     })
   })
 })

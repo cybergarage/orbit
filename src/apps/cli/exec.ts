@@ -7,7 +7,7 @@ import process from 'node:process'
 
 import {type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadContext} from '../../core/context.js'
-import {Agent, type Prompt, Role} from '../../core/index.js'
+import {Agent, Message, MessageType, Role} from '../../core/index.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from './flags.js'
 
@@ -42,11 +42,11 @@ export async function runExecCommand(
       provider: resolvedOptions.provider,
     },
   })
-  const messages: Prompt[] = [
-    ...(systemPrompt ? [{content: systemPrompt, role: Role.System} as Prompt] : []),
-    {content: prompt, role: Role.User},
+  const messages: Message[] = [
+    ...(systemPrompt ? [new Message(MessageType.Session, {content: systemPrompt, role: Role.System})] : []),
+    new Message(MessageType.User, {content: prompt, role: Role.User}),
   ]
-  const response = await agent.prompt(messages)
+  const response = await agent.invoke(messages)
   return response.content
 }
 

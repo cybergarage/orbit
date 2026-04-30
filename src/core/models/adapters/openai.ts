@@ -3,11 +3,11 @@
 
 import {OpenAI} from 'openai'
 
+import type {Message} from '../../message/index.js'
 import type {Model} from '../model.js'
-import type {Prompt} from '../prompt.js'
 import type {Provider} from '../provider.js'
 
-import {Message, MessageType} from '../../message/index.js'
+import {Message as CoreMessage, MessageType} from '../../message/index.js'
 
 export class OpenAIAgent implements Model {
   private readonly client = new OpenAI()
@@ -22,13 +22,16 @@ export class OpenAIAgent implements Model {
     return 'openai'
   }
 
-  async prompt(messages: Prompt[]): Promise<Message> {
+  async invoke(messages: Message[]): Promise<Message> {
     const response = await this.client.chat.completions.create({
-      messages,
+      messages: messages.map((message) => ({
+        content: message.content,
+        role: message.role,
+      })),
       model: this.model,
     })
 
-    return new Message(MessageType.Assistant, {
+    return new CoreMessage(MessageType.Assistant, {
       content: response.choices[0]?.message.content ?? '',
     })
   }

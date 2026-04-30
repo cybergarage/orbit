@@ -26,7 +26,7 @@ describe('runInteractiveCommand', () => {
               getProvider() {
                 return options.model?.provider ?? 'ollama'
               },
-              async prompt() {
+              async invoke() {
                 return new Message(MessageType.Assistant, {content: 'ok'})
               },
             }),

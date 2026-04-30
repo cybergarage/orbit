@@ -13,7 +13,7 @@ import {
 import {Agent, Message, MessageType, Role} from '../../src/core/models/index.js'
 
 function createMockAgent(
-  promptImpl: Agent['prompt'],
+  invokeImpl: Agent['invoke'],
   options: AgentOptions = {},
 ): Agent {
   return new Agent({
@@ -26,7 +26,7 @@ function createMockAgent(
         getProvider() {
           return options.model?.provider ?? 'ollama'
         },
-        prompt: promptImpl,
+        invoke: invokeImpl,
       }),
     },
   })
@@ -34,7 +34,7 @@ function createMockAgent(
 
 class MockAgent extends Agent {
   constructor(
-    private readonly promptImpl: Agent['prompt'],
+    private readonly invokeImpl: Agent['invoke'],
     options: AgentOptions = {},
   ) {
     super({
@@ -47,7 +47,7 @@ class MockAgent extends Agent {
           getProvider() {
             return options.model?.provider ?? 'ollama'
           },
-          prompt: promptImpl,
+          invoke: invokeImpl,
         }),
       },
     })
@@ -71,7 +71,7 @@ describe('interactive helpers', () => {
     )
     const AgentCtor = class extends MockAgent {
       constructor() {
-        super(agent.prompt.bind(agent))
+        super(agent.invoke.bind(agent))
       }
     }
 
@@ -154,7 +154,7 @@ describe('interactive helpers', () => {
     )
 
     expect(callCount).to.equal(0)
-    expect(nextState.messages).to.deep.equal([
+    expect(nextState.messages.map((message) => ({content: message.content, role: message.role}))).to.deep.equal([
       {content: 'Invalid model command. Use /model provider:model', role: Role.Assistant},
     ])
   })
