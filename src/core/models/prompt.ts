@@ -1,7 +1,7 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {Role} from './role.js'
+import {Role} from './role.js'
 
 export interface Prompt {
   content: string
@@ -10,9 +10,9 @@ export interface Prompt {
 
 export function splitSystemPrompt(messages: Prompt[]): {messages: Prompt[]; systemPrompt?: string} {
   const systemMessages = messages
-    .filter((message) => message.role === 'system')
+    .filter((message) => message.role === Role.System)
     .map((message) => message.content.trim())
-  const visibleMessages = messages.filter((message) => message.role !== 'system')
+  const visibleMessages = messages.filter((message) => message.role !== Role.System)
 
   return {
     messages: visibleMessages,

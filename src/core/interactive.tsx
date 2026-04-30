@@ -4,7 +4,7 @@
 import {Box, render, Text, useApp, useInput} from 'ink'
 import {useState} from 'react'
 
-import {Agent, type AgentOptions, isProvider, type Prompt, type Provider} from './models/index.js'
+import {Agent, type AgentOptions, isProvider, type Prompt, type Provider, Role} from './models/index.js'
 
 export interface InteractiveSessionOptions {
   agentClass: InteractiveAgentClass
@@ -61,9 +61,9 @@ export async function submitInteractiveInput(
   }
 
   const requestMessages = [
-    ...(state.systemPrompt ? [{content: state.systemPrompt, role: 'system'} as Prompt] : []),
+    ...(state.systemPrompt ? [{content: state.systemPrompt, role: Role.System} as Prompt] : []),
     ...state.messages,
-    {content: input, role: 'user'} as Prompt,
+    {content: input, role: Role.User} as Prompt,
   ]
   const agent = new AgentClass({
     model: {
@@ -75,7 +75,7 @@ export async function submitInteractiveInput(
 
   return {
     ...state,
-    messages: [...state.messages, {content: input, role: 'user'}, reply],
+    messages: [...state.messages, {content: input, role: Role.User}, reply],
   }
 }
 
@@ -169,9 +169,9 @@ function InteractiveApp({agentClass: AgentClass, initialModel, initialProvider, 
         return
       }
 
-      const nextMessages = [...state.messages, {content: nextInput, role: 'user'} as Prompt]
+      const nextMessages = [...state.messages, {content: nextInput, role: Role.User} as Prompt]
       const requestMessages = [
-        ...(state.systemPrompt ? [{content: state.systemPrompt, role: 'system'} as Prompt] : []),
+        ...(state.systemPrompt ? [{content: state.systemPrompt, role: Role.System} as Prompt] : []),
         ...nextMessages,
       ]
       setState({
@@ -225,7 +225,7 @@ function InteractiveApp({agentClass: AgentClass, initialModel, initialProvider, 
         {state.messages.length === 0 ? <Text dimColor>No messages yet.</Text> : null}
         {state.messages.map((message, index) => (
           <Text key={`${message.role}-${index}`}>
-            {message.role === 'user' ? 'You' : 'Assistant'}: {message.content}
+            {message.role === Role.User ? 'You' : 'Assistant'}: {message.content}
           </Text>
         ))}
       </Box>

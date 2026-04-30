@@ -10,7 +10,7 @@ import {
   handleModelCommand,
   submitInteractiveInput,
 } from '../../src/core/interactive.js'
-import {Agent, Message, MessageType} from '../../src/core/models/index.js'
+import {Agent, Message, MessageType, Role} from '../../src/core/models/index.js'
 
 function createMockAgent(
   promptImpl: Agent['prompt'],
@@ -83,7 +83,7 @@ describe('interactive helpers', () => {
     const second = await submitInteractiveInput(AgentCtor, first, 'again')
 
     expect(first.messages.map((message) => message.content)).to.deep.equal(['hello', 'reply:1'])
-    expect(first.messages.map((message) => message.role)).to.deep.equal(['user', 'assistant'])
+    expect(first.messages.map((message) => message.role)).to.deep.equal([Role.User, 'assistant'])
     expect(second.messages.map((message) => message.content)).to.deep.equal([
       'hello',
       'reply:1',
@@ -91,9 +91,9 @@ describe('interactive helpers', () => {
       'reply:3',
     ])
     expect(second.messages.map((message) => message.role)).to.deep.equal([
-      'user',
+      Role.User,
       'assistant',
-      'user',
+      Role.User,
       'assistant',
     ])
   })
@@ -191,7 +191,7 @@ describe('interactive helpers', () => {
       'hello',
       'reply:openai:gpt-4o',
     ])
-    expect(replied.messages.map((message) => message.role)).to.deep.equal(['assistant', 'user', 'assistant'])
+    expect(replied.messages.map((message) => message.role)).to.deep.equal(['assistant', Role.User, 'assistant'])
   })
 
   it('prepends the system prompt only to the outgoing request', async () => {
@@ -217,6 +217,6 @@ describe('interactive helpers', () => {
 
     expect(calls).to.deep.equal([['system:Workspace rules', 'user:hello']])
     expect(nextState.messages.map((message) => message.content)).to.deep.equal(['hello', 'reply'])
-    expect(nextState.messages.map((message) => message.role)).to.deep.equal(['user', 'assistant'])
+    expect(nextState.messages.map((message) => message.role)).to.deep.equal([Role.User, 'assistant'])
   })
 })

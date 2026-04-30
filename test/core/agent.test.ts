@@ -55,14 +55,14 @@ describe('model helpers', () => {
       })
 
       expect(agent).to.be.instanceOf(Agent)
-      const response = await agent.prompt([{content: 'hello', role: 'user'}])
+      const response = await agent.prompt([{content: 'hello', role: Role.User}])
 
       expect(response).to.be.instanceOf(Message)
       expect(response.content).to.equal('ok')
       expect(response.role).to.equal('assistant')
       expect(calls).to.deep.equal([
         {
-          messages: [{content: 'hello', role: 'user'}],
+          messages: [{content: 'hello', role: Role.User}],
           model: DEFAULT_MODELS.ollama,
           provider: 'ollama',
         },
@@ -92,7 +92,7 @@ describe('model helpers', () => {
         },
       })
 
-      await agent.prompt([{content: 'hello', role: 'user'}])
+      await agent.prompt([{content: 'hello', role: Role.User}])
       expect(calls).to.deep.equal([{model: 'claude-custom', provider: 'anthropic'}])
     })
 
@@ -124,7 +124,7 @@ describe('model helpers', () => {
 
     it('accepts SessionOptions in newSession and passes through the provided memory', () => {
       const entries: Dialogue[] = [
-        new Dialogue([{content: 'Hello', role: 'user'}], {content: 'Hi', role: 'assistant'}),
+        new Dialogue([{content: 'Hello', role: Role.User}], {content: 'Hi', role: 'assistant'}),
       ]
       const memory: Memory = {
         add(entry: Dialogue) {
@@ -143,7 +143,7 @@ describe('model helpers', () => {
       expect(session).to.be.instanceOf(Session)
       expect(session.memory).to.equal(memory)
       expect(session.memory.query('anything')).to.deep.equal([
-        {content: 'Hello', role: 'user'},
+        {content: 'Hello', role: Role.User},
         {content: 'Hi', role: 'assistant'},
       ])
     })
@@ -371,7 +371,7 @@ describe('model helpers', () => {
 
     it('uses the provided memory instance as-is', () => {
       const entries: Dialogue[] = [
-        new Dialogue([{content: 'Hello', role: 'user'}], {content: 'Hi', role: 'assistant'}),
+        new Dialogue([{content: 'Hello', role: Role.User}], {content: 'Hi', role: 'assistant'}),
       ]
       const memory: Memory = {
         add(entry: Dialogue) {
@@ -387,7 +387,7 @@ describe('model helpers', () => {
 
       expect(session.memory).to.equal(memory)
       expect(session.memory.query('anything')).to.deep.equal([
-        {content: 'Hello', role: 'user'},
+        {content: 'Hello', role: Role.User},
         {content: 'Hi', role: 'assistant'},
       ])
     })
@@ -397,20 +397,20 @@ describe('model helpers', () => {
         memory: new PromptMemory([
           new Dialogue(
             [
-              {content: 'Hello', role: 'user'},
-              {content: 'Can you help?', role: 'user'},
+              {content: 'Hello', role: Role.User},
+              {content: 'Can you help?', role: Role.User},
             ],
             {content: 'Sure', role: 'assistant'},
           ),
-          new Dialogue([{content: 'Thanks', role: 'user'}], {content: 'You are welcome', role: 'assistant'}),
+          new Dialogue([{content: 'Thanks', role: Role.User}], {content: 'You are welcome', role: 'assistant'}),
         ]),
       })
 
       expect(session.memory.query('anything')).to.deep.equal([
-        {content: 'Hello', role: 'user'},
-        {content: 'Can you help?', role: 'user'},
+        {content: 'Hello', role: Role.User},
+        {content: 'Can you help?', role: Role.User},
         {content: 'Sure', role: 'assistant'},
-        {content: 'Thanks', role: 'user'},
+        {content: 'Thanks', role: Role.User},
         {content: 'You are welcome', role: 'assistant'},
       ])
     })
@@ -484,22 +484,22 @@ describe('model helpers', () => {
 
   describe('getRoles', () => {
     it('returns all defined roles in a stable order', () => {
-      expect(getRoles()).to.deep.equal(['assistant', 'system', 'user', 'developer'])
+      expect(getRoles()).to.deep.equal(['assistant', Role.System, Role.User, 'developer'])
     })
   })
 
   describe('splitSystemPrompt', () => {
     it('collects system messages and leaves visible history intact', () => {
       const result = splitSystemPrompt([
-        {content: 'Japanese only', role: 'system'},
-        {content: 'Workspace context', role: 'system'},
-        {content: 'Hello', role: 'user'},
+        {content: 'Japanese only', role: Role.System},
+        {content: 'Workspace context', role: Role.System},
+        {content: 'Hello', role: Role.User},
         {content: 'Hi there', role: 'assistant'},
       ])
 
       expect(result.systemPrompt).to.equal('Japanese only\n\nWorkspace context')
       expect(result.messages).to.deep.equal([
-        {content: 'Hello', role: 'user'},
+        {content: 'Hello', role: Role.User},
         {content: 'Hi there', role: 'assistant'},
       ])
     })

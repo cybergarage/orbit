@@ -7,7 +7,7 @@ import type {AgentOptions, Model, Prompt} from '../../../src/core/models/index.j
 
 import {runExecCommand} from '../../../src/apps/cli/exec.js'
 import {resolveAgentOptions} from '../../../src/core/chat.js'
-import {Agent, Message, MessageType} from '../../../src/core/models/index.js'
+import {Agent, Message, MessageType, Role} from '../../../src/core/models/index.js'
 
 describe('runExecCommand', () => {
   it('builds a system and user message and passes them to model.prompt', async () => {
@@ -52,9 +52,9 @@ describe('runExecCommand', () => {
           {
             content:
               'IMPORTANT: You MUST respond in Japanese only. Do not use any other language, regardless of the language used in the rest of this prompt or in the user message.\n\nWorkspace instructions',
-            role: 'system',
+            role: Role.System,
           },
-          {content: 'hello', role: 'user'},
+          {content: 'hello', role: Role.User},
         ],
         options: {
           model: {
