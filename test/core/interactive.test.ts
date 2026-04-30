@@ -83,7 +83,7 @@ describe('interactive helpers', () => {
     const second = await submitInteractiveInput(AgentCtor, first, 'again')
 
     expect(first.messages.map((message) => message.content)).to.deep.equal(['hello', 'reply:1'])
-    expect(first.messages.map((message) => message.role)).to.deep.equal([Role.User, 'assistant'])
+    expect(first.messages.map((message) => message.role)).to.deep.equal([Role.User, Role.Assistant])
     expect(second.messages.map((message) => message.content)).to.deep.equal([
       'hello',
       'reply:1',
@@ -92,9 +92,9 @@ describe('interactive helpers', () => {
     ])
     expect(second.messages.map((message) => message.role)).to.deep.equal([
       Role.User,
-      'assistant',
+      Role.Assistant,
       Role.User,
-      'assistant',
+      Role.Assistant,
     ])
   })
 
@@ -155,7 +155,7 @@ describe('interactive helpers', () => {
 
     expect(callCount).to.equal(0)
     expect(nextState.messages).to.deep.equal([
-      {content: 'Invalid model command. Use /model provider:model', role: 'assistant'},
+      {content: 'Invalid model command. Use /model provider:model', role: Role.Assistant},
     ])
   })
 
@@ -191,7 +191,11 @@ describe('interactive helpers', () => {
       'hello',
       'reply:openai:gpt-4o',
     ])
-    expect(replied.messages.map((message) => message.role)).to.deep.equal(['assistant', Role.User, 'assistant'])
+    expect(replied.messages.map((message) => message.role)).to.deep.equal([
+      Role.Assistant,
+      Role.User,
+      Role.Assistant,
+    ])
   })
 
   it('prepends the system prompt only to the outgoing request', async () => {
@@ -217,6 +221,6 @@ describe('interactive helpers', () => {
 
     expect(calls).to.deep.equal([['system:Workspace rules', 'user:hello']])
     expect(nextState.messages.map((message) => message.content)).to.deep.equal(['hello', 'reply'])
-    expect(nextState.messages.map((message) => message.role)).to.deep.equal([Role.User, 'assistant'])
+    expect(nextState.messages.map((message) => message.role)).to.deep.equal([Role.User, Role.Assistant])
   })
 })

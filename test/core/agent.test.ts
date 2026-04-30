@@ -59,7 +59,7 @@ describe('model helpers', () => {
 
       expect(response).to.be.instanceOf(Message)
       expect(response.content).to.equal('ok')
-      expect(response.role).to.equal('assistant')
+      expect(response.role).to.equal(Role.Assistant)
       expect(calls).to.deep.equal([
         {
           messages: [{content: 'hello', role: Role.User}],
@@ -124,7 +124,7 @@ describe('model helpers', () => {
 
     it('accepts SessionOptions in newSession and passes through the provided memory', () => {
       const entries: Dialogue[] = [
-        new Dialogue([{content: 'Hello', role: Role.User}], {content: 'Hi', role: 'assistant'}),
+        new Dialogue([{content: 'Hello', role: Role.User}], {content: 'Hi', role: Role.Assistant}),
       ]
       const memory: Memory = {
         add(entry: Dialogue) {
@@ -144,7 +144,7 @@ describe('model helpers', () => {
       expect(session.memory).to.equal(memory)
       expect(session.memory.query('anything')).to.deep.equal([
         {content: 'Hello', role: Role.User},
-        {content: 'Hi', role: 'assistant'},
+        {content: 'Hi', role: Role.Assistant},
       ])
     })
 
@@ -371,7 +371,7 @@ describe('model helpers', () => {
 
     it('uses the provided memory instance as-is', () => {
       const entries: Dialogue[] = [
-        new Dialogue([{content: 'Hello', role: Role.User}], {content: 'Hi', role: 'assistant'}),
+        new Dialogue([{content: 'Hello', role: Role.User}], {content: 'Hi', role: Role.Assistant}),
       ]
       const memory: Memory = {
         add(entry: Dialogue) {
@@ -388,7 +388,7 @@ describe('model helpers', () => {
       expect(session.memory).to.equal(memory)
       expect(session.memory.query('anything')).to.deep.equal([
         {content: 'Hello', role: Role.User},
-        {content: 'Hi', role: 'assistant'},
+        {content: 'Hi', role: Role.Assistant},
       ])
     })
 
@@ -400,18 +400,21 @@ describe('model helpers', () => {
               {content: 'Hello', role: Role.User},
               {content: 'Can you help?', role: Role.User},
             ],
-            {content: 'Sure', role: 'assistant'},
+            {content: 'Sure', role: Role.Assistant},
           ),
-          new Dialogue([{content: 'Thanks', role: Role.User}], {content: 'You are welcome', role: 'assistant'}),
+          new Dialogue([{content: 'Thanks', role: Role.User}], {
+            content: 'You are welcome',
+            role: Role.Assistant,
+          }),
         ]),
       })
 
       expect(session.memory.query('anything')).to.deep.equal([
         {content: 'Hello', role: Role.User},
         {content: 'Can you help?', role: Role.User},
-        {content: 'Sure', role: 'assistant'},
+        {content: 'Sure', role: Role.Assistant},
         {content: 'Thanks', role: Role.User},
-        {content: 'You are welcome', role: 'assistant'},
+        {content: 'You are welcome', role: Role.Assistant},
       ])
     })
   })
@@ -484,7 +487,7 @@ describe('model helpers', () => {
 
   describe('getRoles', () => {
     it('returns all defined roles in a stable order', () => {
-      expect(getRoles()).to.deep.equal(['assistant', Role.System, Role.User, 'developer'])
+      expect(getRoles()).to.deep.equal([Role.Assistant, Role.System, Role.User, 'developer'])
     })
   })
 
@@ -494,13 +497,13 @@ describe('model helpers', () => {
         {content: 'Japanese only', role: Role.System},
         {content: 'Workspace context', role: Role.System},
         {content: 'Hello', role: Role.User},
-        {content: 'Hi there', role: 'assistant'},
+        {content: 'Hi there', role: Role.Assistant},
       ])
 
       expect(result.systemPrompt).to.equal('Japanese only\n\nWorkspace context')
       expect(result.messages).to.deep.equal([
         {content: 'Hello', role: Role.User},
-        {content: 'Hi there', role: 'assistant'},
+        {content: 'Hi there', role: Role.Assistant},
       ])
     })
   })

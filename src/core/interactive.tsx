@@ -56,7 +56,7 @@ export async function submitInteractiveInput(
   if (commandResult) {
     return {
       ...commandResult.nextState,
-      messages: [...state.messages, {content: commandResult.message, role: 'assistant'}],
+      messages: [...state.messages, {content: commandResult.message, role: Role.Assistant}],
     }
   }
 
@@ -164,7 +164,7 @@ function InteractiveApp({agentClass: AgentClass, initialModel, initialProvider, 
           ...commandResult.nextState,
           input: '',
           isLoading: false,
-          messages: [...state.messages, {content: commandResult.message, role: 'assistant'}],
+          messages: [...state.messages, {content: commandResult.message, role: Role.Assistant}],
         })
         return
       }
@@ -202,7 +202,7 @@ function InteractiveApp({agentClass: AgentClass, initialModel, initialProvider, 
           setState((currentState) => ({
             ...currentState,
             isLoading: false,
-            messages: [...nextMessages, {content: message, role: 'assistant'}],
+            messages: [...nextMessages, {content: message, role: Role.Assistant}],
           }))
         })
       return
