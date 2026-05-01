@@ -23,6 +23,9 @@ describe('runInteractiveCommand', () => {
               getModel() {
                 return options.model?.name ?? ''
               },
+              getName() {
+                return 'model'
+              },
               getProvider() {
                 return options.model?.provider ?? 'ollama'
               },

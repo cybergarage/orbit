@@ -4,6 +4,7 @@
 import {Ollama} from 'ollama'
 
 import type {Message} from '../../message/index.js'
+import type {ProcessorOptions} from '../../processor/index.js'
 import type {Model} from '../model.js'
 import type {Provider} from '../provider.js'
 
@@ -18,11 +19,15 @@ export class OllamaAgent implements Model {
     return this.model
   }
 
+  getName(_suffix?: string): string {
+    return 'model'
+  }
+
   getProvider(): Provider {
     return 'ollama'
   }
 
-  async invoke(messages: Message[]): Promise<Message> {
+  async invoke(messages: Message[], _options?: Partial<ProcessorOptions>): Promise<Message> {
     const response = await this.client.chat({
       messages: messages.map((message) => ({
         content: message.content,

@@ -4,6 +4,7 @@
 import {Anthropic} from '@anthropic-ai/sdk'
 
 import type {Message} from '../../message/index.js'
+import type {ProcessorOptions} from '../../processor/index.js'
 import type {Model} from '../model.js'
 import type {Provider} from '../provider.js'
 
@@ -20,11 +21,15 @@ export class AnthropicAgent implements Model {
     return this.model
   }
 
+  getName(_suffix?: string): string {
+    return 'model'
+  }
+
   getProvider(): Provider {
     return 'anthropic'
   }
 
-  async invoke(messages: Message[]): Promise<Message> {
+  async invoke(messages: Message[], _options?: Partial<ProcessorOptions>): Promise<Message> {
     const {messages: chatMessages, systemPrompt} = splitSystemPrompt(messages)
 
     const response = await this.client.messages.create({

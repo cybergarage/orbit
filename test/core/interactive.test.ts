@@ -23,6 +23,9 @@ function createMockAgent(
         getModel() {
           return options.model?.name ?? 'llama3.1'
         },
+        getName() {
+          return 'model'
+        },
         getProvider() {
           return options.model?.provider ?? 'ollama'
         },
@@ -43,6 +46,9 @@ class MockAgent extends Agent {
         createModel: (): Model => ({
           getModel() {
             return options.model?.name ?? 'llama3.1'
+          },
+          getName() {
+            return 'model'
           },
           getProvider() {
             return options.model?.provider ?? 'ollama'

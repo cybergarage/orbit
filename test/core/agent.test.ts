@@ -7,6 +7,8 @@ import type {Memory} from '../../src/core/index.js'
 import type {
   AgentOptions,
   Model,
+  Processor,
+  ProcessorOptions,
   PromptTemplateInput,
   SessionOptions,
 } from '../../src/core/models/index.js'
@@ -37,6 +39,9 @@ describe('model helpers', () => {
           createModel: (provider, model): Model => ({
             getModel() {
               return model ?? DEFAULT_MODELS[provider ?? 'ollama']
+            },
+            getName() {
+              return 'model'
             },
             getProvider() {
               return provider ?? 'ollama'
@@ -77,6 +82,9 @@ describe('model helpers', () => {
             getModel() {
               return model ?? ''
             },
+            getName() {
+              return 'model'
+            },
             getProvider() {
               return provider ?? 'ollama'
             },
@@ -94,6 +102,43 @@ describe('model helpers', () => {
 
       await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
       expect(calls).to.deep.equal([{model: 'claude-custom', provider: 'anthropic'}])
+    })
+
+    it('passes processor options through to the model invoke call', async () => {
+      const calls: {messages: Message[]; options?: Partial<ProcessorOptions>}[] = []
+      const agent = new Agent({
+        deps: {
+          createModel: (): Model => ({
+            getModel() {
+              return DEFAULT_MODELS.ollama
+            },
+            getName() {
+              return 'model'
+            },
+            getProvider() {
+              return 'ollama'
+            },
+            async invoke(messages, options) {
+              calls.push({messages, options})
+              return new Message(MessageType.Assistant, {content: 'ok'})
+            },
+          }),
+        },
+      })
+      const prompt = new Message(MessageType.User, {content: 'hello'})
+      const options = {traceId: 'trace-1'}
+
+      await agent.invoke([prompt], options)
+
+      expect(calls).to.deep.equal([{messages: [prompt], options}])
+    })
+
+    it('treats models as processors and returns the model name', () => {
+      const model = getModel('ollama')
+      const processor: Processor<Message[], Message, ProcessorOptions> = model
+
+      expect(processor.getName()).to.equal('model')
+      expect(processor.getName('Suffix')).to.equal('model')
     })
 
     it('accepts AgentOptions as the constructor type', () => {

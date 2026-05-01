@@ -22,6 +22,9 @@ describe('runExecCommand', () => {
               getModel() {
                 return options.model?.name ?? ''
               },
+              getName() {
+                return 'model'
+              },
               getProvider() {
                 return options.model?.provider ?? 'ollama'
               },
@@ -82,6 +85,9 @@ describe('runExecCommand', () => {
             createModel: (): Model => ({
               getModel() {
                 return options.model?.name ?? ''
+              },
+              getName() {
+                return 'model'
               },
               getProvider() {
                 return options.model?.provider ?? 'ollama'
