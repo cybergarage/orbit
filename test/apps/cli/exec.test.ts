@@ -7,7 +7,7 @@ import type {AgentOptions, Model} from '../../../src/core/models/index.js'
 
 import {runExecCommand} from '../../../src/apps/cli/exec.js'
 import {resolveAgentOptions} from '../../../src/core/chat.js'
-import {Agent, Message, MessageType, Role} from '../../../src/core/models/index.js'
+import {Agent, Message, MessageType, ProcessorType, Role} from '../../../src/core/models/index.js'
 
 describe('runExecCommand', () => {
   it('builds a system and user message and passes them to model.invoke', async () => {
@@ -23,7 +23,7 @@ describe('runExecCommand', () => {
                 return options.model?.name ?? ''
               },
               getName() {
-                return 'model'
+                return ProcessorType.Model
               },
               getProvider() {
                 return options.model?.provider ?? 'ollama'
@@ -87,7 +87,7 @@ describe('runExecCommand', () => {
                 return options.model?.name ?? ''
               },
               getName() {
-                return 'model'
+                return ProcessorType.Model
               },
               getProvider() {
                 return options.model?.provider ?? 'ollama'

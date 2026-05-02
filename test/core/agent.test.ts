@@ -24,6 +24,7 @@ import {
   getRoles,
   Message,
   MessageType,
+  ProcessorType,
   PromptTemplate,
   Session,
   SessionHeader,
@@ -41,7 +42,7 @@ describe('model helpers', () => {
               return model ?? DEFAULT_MODELS[provider ?? 'ollama']
             },
             getName() {
-              return 'model'
+              return ProcessorType.Model
             },
             getProvider() {
               return provider ?? 'ollama'
@@ -83,7 +84,7 @@ describe('model helpers', () => {
               return model ?? ''
             },
             getName() {
-              return 'model'
+              return ProcessorType.Model
             },
             getProvider() {
               return provider ?? 'ollama'
@@ -113,7 +114,7 @@ describe('model helpers', () => {
               return DEFAULT_MODELS.ollama
             },
             getName() {
-              return 'model'
+              return ProcessorType.Model
             },
             getProvider() {
               return 'ollama'
@@ -137,8 +138,16 @@ describe('model helpers', () => {
       const model = getModel('ollama')
       const processor: Processor<Message[], Message, ProcessorOptions> = model
 
-      expect(processor.getName()).to.equal('model')
-      expect(processor.getName('Suffix')).to.equal('model')
+      expect(processor.getName()).to.equal(ProcessorType.Model)
+      expect(processor.getName('Suffix')).to.equal(`${ProcessorType.Model}:Suffix`)
+    })
+
+    it('returns the agent processor name with optional suffixes', () => {
+      const agent = new Agent()
+
+      expect(agent.getName()).to.equal(ProcessorType.Agent)
+      expect(agent.getName('Suffix')).to.equal(`${ProcessorType.Agent}:Suffix`)
+      expect(agent.getName('')).to.equal(ProcessorType.Agent)
     })
 
     it('accepts AgentOptions as the constructor type', () => {

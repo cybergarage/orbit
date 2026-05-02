@@ -7,6 +7,7 @@ import type {SessionOptions} from './session/index.js'
 
 import {Dialogue} from './index.js'
 import {getModel} from './models/index.js'
+import {formatProcessorName, ProcessorType} from './processor/index.js'
 import {Session} from './session/index.js'
 
 export interface AgentOptions {
@@ -27,8 +28,8 @@ export class Agent implements Processor<Message[], Message, ProcessorOptions> {
     this.model = createModel(options.model?.provider, options.model?.name)
   }
 
-  getName(_suffix?: string): string {
-    return 'agent'
+  getName(suffix?: string): string {
+    return formatProcessorName(ProcessorType.Agent, suffix)
   }
 
   invoke(messages: Message[], options?: Partial<ProcessorOptions>): Promise<Message> {

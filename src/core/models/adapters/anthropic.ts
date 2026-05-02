@@ -9,6 +9,7 @@ import type {Model} from '../model.js'
 import type {Provider} from '../provider.js'
 
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
+import {formatProcessorName, ProcessorType} from '../../processor/index.js'
 import {splitSystemPrompt} from '../prompt.js'
 import {Role} from '../role.js'
 
@@ -21,8 +22,8 @@ export class AnthropicAgent implements Model {
     return this.model
   }
 
-  getName(_suffix?: string): string {
-    return 'model'
+  getName(suffix?: string): string {
+    return formatProcessorName(ProcessorType.Model, suffix)
   }
 
   getProvider(): Provider {

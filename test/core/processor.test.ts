@@ -5,10 +5,19 @@ import {expect} from 'chai'
 
 import type {Agent, Message, Model, Processor, ProcessorOptions} from '../../src/core/models/index.js'
 
+import {ProcessorType} from '../../src/core/models/index.js'
+
 type Assert<T extends true> = T
 type Extends<T, U> = T extends U ? true : false
 
 describe('Processor', () => {
+  it('defines processor type names', () => {
+    expect(ProcessorType).to.deep.equal({
+      Agent: 'agent',
+      Model: 'model',
+    })
+  })
+
   it('accepts models as message processors at the type level', () => {
     type ModelIsMessageProcessor = Assert<Extends<Model, Processor<Message[], Message, ProcessorOptions>>>
 
