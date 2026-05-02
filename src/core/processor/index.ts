@@ -3,3 +3,4 @@
 
 export {formatProcessorName, ProcessorType} from './processor.js'
 export type {Processor, ProcessorInput, ProcessorOptions, ProcessorOutput} from './processor.js'
+export {ProcessorSequence} from './sequence.js'
