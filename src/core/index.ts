@@ -3,6 +3,16 @@
 
 export {Agent} from './agent.js'
 export type {AgentOptions} from './agent.js'
+export {
+  ContextOverflowError,
+  InvalidConfigurationError,
+  InvalidInputError,
+  ModelAbortError,
+  OrbitError,
+  OrbitErrorCode,
+  ProcessorSequenceEmptyError,
+} from './errors/index.js'
+export type {OrbitErrorOptions} from './errors/index.js'
 export {runInteractiveSession} from './interactive.js'
 export type {
   InteractiveAgentClass,

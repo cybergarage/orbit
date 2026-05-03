@@ -1,6 +1,7 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {ProcessorSequenceEmptyError} from '../errors/index.js'
 import {formatProcessorName, type Processor, type ProcessorOptions, ProcessorType} from './processor.js'
 
 export class ProcessorSequence<
@@ -10,7 +11,7 @@ export class ProcessorSequence<
 > implements Processor<RunInput, RunOutput, CallOptions> {
   constructor(private readonly processors: readonly Processor<unknown, unknown, CallOptions>[]) {
     if (processors.length === 0) {
-      throw new Error('ProcessorSequence requires at least one processor.')
+      throw new ProcessorSequenceEmptyError()
     }
   }
 

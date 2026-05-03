@@ -5,7 +5,7 @@ import {expect} from 'chai'
 
 import type {Agent, Message, Model, Processor, ProcessorOptions} from '../../src/core/models/index.js'
 
-import {ProcessorSequence, ProcessorType} from '../../src/core/models/index.js'
+import {ProcessorSequence, ProcessorSequenceEmptyError, ProcessorType} from '../../src/core/models/index.js'
 
 type Assert<T extends true> = T
 type Extends<T, U> = T extends U ? true : false
@@ -90,6 +90,7 @@ describe('Processor', () => {
 
   it('throws when constructed without processors', () => {
     expect(() => new ProcessorSequence<unknown, unknown>([])).to.throw(
+      ProcessorSequenceEmptyError,
       'ProcessorSequence requires at least one processor.',
     )
   })
