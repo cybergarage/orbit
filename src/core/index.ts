@@ -5,14 +5,17 @@ export {Agent} from './agent.js'
 export type {AgentOptions} from './agent.js'
 export {
   ContextOverflowError,
+  ExecutorSequenceEmptyError,
   InvalidConfigurationError,
   InvalidInputError,
   ModelAbortError,
   OrbitError,
   OrbitErrorCode,
-  ProcessorSequenceEmptyError,
 } from './errors/index.js'
 export type {OrbitErrorOptions} from './errors/index.js'
+export {ExecutorSequence} from './executor/index.js'
+export {ExecutorType} from './executor/index.js'
+export type {Executor, ExecutorInput, ExecutorOptions, ExecutorOutput} from './executor/index.js'
 export {runInteractiveSession} from './interactive.js'
 export type {
   InteractiveAgentClass,
@@ -31,9 +34,6 @@ export {splitSystemPrompt} from './models/prompt.js'
 export type {Provider} from './models/provider.js'
 export {getProvider, isProvider} from './models/provider.js'
 export {getRoles, Role} from './models/role.js'
-export {ProcessorSequence} from './processor/index.js'
-export {ProcessorType} from './processor/index.js'
-export type {Processor, ProcessorInput, ProcessorOptions, ProcessorOutput} from './processor/index.js'
 export {Session, SessionHeader} from './session/index.js'
 export type {AppendMessageOptions, SessionHeaderOptions, SessionOptions} from './session/index.js'
 export {GptTokenizer} from './tokenizer/index.js'

@@ -3,13 +3,13 @@
 
 import {Ollama} from 'ollama'
 
+import type {ExecutorOptions} from '../../executor/index.js'
 import type {Message} from '../../message/index.js'
-import type {ProcessorOptions} from '../../processor/index.js'
 import type {Model} from '../model.js'
 import type {Provider} from '../provider.js'
 
+import {ExecutorType, formatExecutorName} from '../../executor/index.js'
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
-import {formatProcessorName, ProcessorType} from '../../processor/index.js'
 
 export class OllamaAgent implements Model {
   private readonly client = new Ollama()
@@ -21,14 +21,14 @@ export class OllamaAgent implements Model {
   }
 
   getName(suffix?: string): string {
-    return formatProcessorName(ProcessorType.Model, suffix)
+    return formatExecutorName(ExecutorType.Model, suffix)
   }
 
   getProvider(): Provider {
     return 'ollama'
   }
 
-  async invoke(messages: Message[], _options?: Partial<ProcessorOptions>): Promise<Message> {
+  async invoke(messages: Message[], _options?: Partial<ExecutorOptions>): Promise<Message> {
     const response = await this.client.chat({
       messages: messages.map((message) => ({
         content: message.content,

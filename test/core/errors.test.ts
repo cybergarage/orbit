@@ -5,13 +5,13 @@ import {expect} from 'chai'
 
 import {
   ContextOverflowError,
+  ExecutorSequence,
+  ExecutorSequenceEmptyError,
   InvalidConfigurationError,
   InvalidInputError,
   ModelAbortError,
   OrbitError,
   OrbitErrorCode,
-  ProcessorSequence,
-  ProcessorSequenceEmptyError,
 } from '../../src/core/index.js'
 
 describe('core errors', () => {
@@ -38,12 +38,12 @@ describe('core errors', () => {
 
   it('defines common derived errors', () => {
     expect(new InvalidConfigurationError('bad config').code).to.equal(OrbitErrorCode.InvalidConfiguration)
-    expect(new ProcessorSequenceEmptyError().code).to.equal(OrbitErrorCode.ProcessorSequenceEmpty)
+    expect(new ExecutorSequenceEmptyError().code).to.equal(OrbitErrorCode.ExecutorSequenceEmpty)
     expect(new ModelAbortError('aborted').code).to.equal(OrbitErrorCode.ModelAborted)
     expect(new ContextOverflowError('too long').code).to.equal(OrbitErrorCode.ContextOverflow)
   })
 
-  it('throws a processor sequence empty error for empty sequences', () => {
-    expect(() => new ProcessorSequence<unknown, unknown>([])).to.throw(ProcessorSequenceEmptyError)
+  it('throws an executor sequence empty error for empty sequences', () => {
+    expect(() => new ExecutorSequence<unknown, unknown>([])).to.throw(ExecutorSequenceEmptyError)
   })
 })

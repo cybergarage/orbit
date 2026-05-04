@@ -5,19 +5,19 @@ export {Agent} from '../agent.js'
 export type {AgentOptions} from '../agent.js'
 export {
   ContextOverflowError,
+  ExecutorSequenceEmptyError,
   InvalidConfigurationError,
   InvalidInputError,
   ModelAbortError,
   OrbitError,
   OrbitErrorCode,
-  ProcessorSequenceEmptyError,
 } from '../errors/index.js'
 export type {OrbitErrorOptions} from '../errors/index.js'
+export {ExecutorSequence} from '../executor/index.js'
+export {ExecutorType} from '../executor/index.js'
+export type {Executor, ExecutorInput, ExecutorOptions, ExecutorOutput} from '../executor/index.js'
 export {Message, MessageType, UserMessage} from '../message/index.js'
 export type {MessageOptions, MessagePayload} from '../message/index.js'
-export {ProcessorSequence} from '../processor/index.js'
-export {ProcessorType} from '../processor/index.js'
-export type {Processor, ProcessorInput, ProcessorOptions, ProcessorOutput} from '../processor/index.js'
 export {PromptTemplate} from '../prompts/template.js'
 export type {PromptTemplateInput} from '../prompts/template.js'
 export {Session, SessionHeader} from '../session/index.js'
