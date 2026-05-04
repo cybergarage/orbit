@@ -5,6 +5,7 @@ export const ProcessorType = {
   Agent: 'agent',
   Model: 'model',
   Sequence: 'sequence',
+  Tool: 'tool',
 } as const
 
 export type ProcessorType = (typeof ProcessorType)[keyof typeof ProcessorType]

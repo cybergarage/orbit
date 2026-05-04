@@ -3,7 +3,7 @@
 
 import {expect} from 'chai'
 
-import type {Agent, Message, Model, Processor, ProcessorOptions} from '../../src/core/models/index.js'
+import type {Agent, Message, Model, Processor, ProcessorOptions, Tool, ToolOptions} from '../../src/core/models/index.js'
 
 import {ProcessorSequence, ProcessorSequenceEmptyError, ProcessorType} from '../../src/core/models/index.js'
 
@@ -16,6 +16,7 @@ describe('Processor', () => {
       Agent: 'agent',
       Model: 'model',
       Sequence: 'sequence',
+      Tool: 'tool',
     })
   })
 
@@ -39,6 +40,14 @@ describe('Processor', () => {
     type SequenceIsProcessor = Assert<Extends<ProcessorSequence<string, number>, Processor<string, number>>>
 
     const _typeCheck: SequenceIsProcessor = true
+
+    expect(_typeCheck).to.equal(true)
+  })
+
+  it('accepts tools as processors at the type level', () => {
+    type ToolIsProcessor = Assert<Extends<Tool<unknown, unknown>, Processor<unknown, unknown, ToolOptions>>>
+
+    const _typeCheck: ToolIsProcessor = true
 
     expect(_typeCheck).to.equal(true)
   })
