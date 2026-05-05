@@ -4,7 +4,7 @@
 import {expect} from 'chai'
 import {z} from 'zod'
 
-import {ExecutorType, tool, Tool} from '../../src/core/index.js'
+import {OperatorType, tool, Tool} from '../../src/core/index.js'
 
 describe('tools', () => {
   it('builds a Tool instance with metadata', () => {
@@ -61,15 +61,15 @@ describe('tools', () => {
     }
   })
 
-  it('returns the tool executor name with optional suffixes', () => {
+  it('returns the tool operator name with optional suffixes', () => {
     const sampleTool = tool((input: string) => input, {
       description: 'Identity.',
       name: 'identity',
       schema: z.string(),
     })
 
-    expect(sampleTool.getName()).to.equal(ExecutorType.Tool)
-    expect(sampleTool.getName('Suffix')).to.equal(`${ExecutorType.Tool}:Suffix`)
-    expect(sampleTool.getName('')).to.equal(ExecutorType.Tool)
+    expect(sampleTool.getName()).to.equal(OperatorType.Tool)
+    expect(sampleTool.getName('Suffix')).to.equal(`${OperatorType.Tool}:Suffix`)
+    expect(sampleTool.getName('')).to.equal(OperatorType.Tool)
   })
 })

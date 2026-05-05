@@ -3,13 +3,13 @@
 
 import {Anthropic} from '@anthropic-ai/sdk'
 
-import type {ExecutorOptions} from '../../executor/index.js'
 import type {Message} from '../../message/index.js'
+import type {OperatorOptions} from '../../processor/index.js'
 import type {Model} from '../model.js'
 import type {Provider} from '../provider.js'
 
-import {ExecutorType, formatExecutorName} from '../../executor/index.js'
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
+import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {splitSystemPrompt} from '../prompt.js'
 import {Role} from '../role.js'
 
@@ -23,14 +23,14 @@ export class AnthropicAgent implements Model {
   }
 
   getName(suffix?: string): string {
-    return formatExecutorName(ExecutorType.Model, suffix)
+    return formatOperatorName(OperatorType.Model, suffix)
   }
 
   getProvider(): Provider {
     return 'anthropic'
   }
 
-  async invoke(messages: Message[], _options?: Partial<ExecutorOptions>): Promise<Message> {
+  async invoke(messages: Message[], _options?: Partial<OperatorOptions>): Promise<Message> {
     const {messages: chatMessages, systemPrompt} = splitSystemPrompt(messages)
 
     const response = await this.client.messages.create({

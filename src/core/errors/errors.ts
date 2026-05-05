@@ -3,10 +3,10 @@
 
 export const OrbitErrorCode = {
   ContextOverflow: 'CONTEXT_OVERFLOW',
-  ExecutorSequenceEmpty: 'EXECUTOR_SEQUENCE_EMPTY',
   InvalidConfiguration: 'INVALID_CONFIGURATION',
   InvalidInput: 'INVALID_INPUT',
   ModelAborted: 'MODEL_ABORTED',
+  OperatorSequenceEmpty: 'OPERATOR_SEQUENCE_EMPTY',
 } as const
 
 export type OrbitErrorCode = (typeof OrbitErrorCode)[keyof typeof OrbitErrorCode]
@@ -42,12 +42,12 @@ export class InvalidConfigurationError extends OrbitError {
   }
 }
 
-export class ExecutorSequenceEmptyError extends OrbitError {
+export class OperatorSequenceEmptyError extends OrbitError {
   constructor(
-    message = 'ExecutorSequence requires at least one executor.',
+    message = 'OperatorSequence requires at least one operator.',
     options: Omit<OrbitErrorOptions, 'code'> = {},
   ) {
-    super(message, {...options, code: OrbitErrorCode.ExecutorSequenceEmpty})
+    super(message, {...options, code: OrbitErrorCode.OperatorSequenceEmpty})
   }
 }
 

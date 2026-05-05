@@ -10,7 +10,7 @@ import {
   handleModelCommand,
   submitInteractiveInput,
 } from '../../src/core/interactive.js'
-import {Agent, ExecutorType, Message, MessageType, Role} from '../../src/core/models/index.js'
+import {Agent, Message, MessageType, OperatorType, Role} from '../../src/core/models/index.js'
 
 function createMockAgent(
   invokeImpl: Agent['invoke'],
@@ -24,7 +24,7 @@ function createMockAgent(
           return options.model?.name ?? 'llama3.1'
         },
         getName() {
-          return ExecutorType.Model
+          return OperatorType.Model
         },
         getProvider() {
           return options.model?.provider ?? 'ollama'
@@ -48,7 +48,7 @@ class MockAgent extends Agent {
             return options.model?.name ?? 'llama3.1'
           },
           getName() {
-            return ExecutorType.Model
+            return OperatorType.Model
           },
           getProvider() {
             return options.model?.provider ?? 'ollama'

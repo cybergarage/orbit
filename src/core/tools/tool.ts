@@ -3,15 +3,15 @@
 
 import type {z} from 'zod'
 
-import type {Executor, ExecutorOptions} from '../executor/index.js'
+import type {Operator, OperatorOptions} from '../processor/index.js'
 
-import {ExecutorType, formatExecutorName} from '../executor/index.js'
+import {formatOperatorName, OperatorType} from '../processor/index.js'
 
 export type ToolInput = unknown
 export type ToolOutput = unknown
 export type ToolContext = Record<string, unknown>
 
-export interface ToolOptions extends ExecutorOptions {
+export interface ToolOptions extends OperatorOptions {
   context?: ToolContext
 }
 
@@ -30,7 +30,7 @@ export class Tool<
   Input = ToolInput,
   Output = ToolOutput,
   Options extends ToolOptions = ToolOptions,
-> implements Executor<Input, Output, Options> {
+> implements Operator<Input, Output, Options> {
   public readonly description: string
   public readonly name: string
   public readonly schema: z.ZodType<Input>
@@ -45,7 +45,7 @@ export class Tool<
   }
 
   getName(suffix?: string): string {
-    return formatExecutorName(ExecutorType.Tool, suffix)
+    return formatOperatorName(OperatorType.Tool, suffix)
   }
 
   async invoke(input: Input, options: Partial<Options> = {}): Promise<Output> {

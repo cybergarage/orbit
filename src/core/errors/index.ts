@@ -3,10 +3,10 @@
 
 export {
   ContextOverflowError,
-  ExecutorSequenceEmptyError,
   InvalidConfigurationError,
   InvalidInputError,
   ModelAbortError,
+  OperatorSequenceEmptyError,
   OrbitError,
   OrbitErrorCode,
 } from './errors.js'

@@ -6,9 +6,9 @@ import {expect} from 'chai'
 import type {Memory} from '../../src/core/index.js'
 import type {
   AgentOptions,
-  Executor,
-  ExecutorOptions,
   Model,
+  Operator,
+  OperatorOptions,
   PromptTemplateInput,
   SessionOptions,
 } from '../../src/core/models/index.js'
@@ -19,12 +19,12 @@ import {Message as CoreMessage, MessageType as CoreMessageType, UserMessage} fro
 import {
   Agent,
   DEFAULT_MODELS,
-  ExecutorType,
   getModel,
   getProvider,
   getRoles,
   Message,
   MessageType,
+  OperatorType,
   PromptTemplate,
   Session,
   SessionHeader,
@@ -42,7 +42,7 @@ describe('model helpers', () => {
               return model ?? DEFAULT_MODELS[provider ?? 'ollama']
             },
             getName() {
-              return ExecutorType.Model
+              return OperatorType.Model
             },
             getProvider() {
               return provider ?? 'ollama'
@@ -84,7 +84,7 @@ describe('model helpers', () => {
               return model ?? ''
             },
             getName() {
-              return ExecutorType.Model
+              return OperatorType.Model
             },
             getProvider() {
               return provider ?? 'ollama'
@@ -105,8 +105,8 @@ describe('model helpers', () => {
       expect(calls).to.deep.equal([{model: 'claude-custom', provider: 'anthropic'}])
     })
 
-    it('passes executor options through to the model invoke call', async () => {
-      const calls: {messages: Message[]; options?: Partial<ExecutorOptions>}[] = []
+    it('passes operator options through to the model invoke call', async () => {
+      const calls: {messages: Message[]; options?: Partial<OperatorOptions>}[] = []
       const agent = new Agent({
         deps: {
           createModel: (): Model => ({
@@ -114,7 +114,7 @@ describe('model helpers', () => {
               return DEFAULT_MODELS.ollama
             },
             getName() {
-              return ExecutorType.Model
+              return OperatorType.Model
             },
             getProvider() {
               return 'ollama'
@@ -134,20 +134,20 @@ describe('model helpers', () => {
       expect(calls).to.deep.equal([{messages: [prompt], options}])
     })
 
-    it('treats models as executors and returns the model name', () => {
+    it('treats models as operators and returns the model name', () => {
       const model = getModel('ollama')
-      const executor: Executor<Message[], Message, ExecutorOptions> = model
+      const operator: Operator<Message[], Message, OperatorOptions> = model
 
-      expect(executor.getName()).to.equal(ExecutorType.Model)
-      expect(executor.getName('Suffix')).to.equal(`${ExecutorType.Model}:Suffix`)
+      expect(operator.getName()).to.equal(OperatorType.Model)
+      expect(operator.getName('Suffix')).to.equal(`${OperatorType.Model}:Suffix`)
     })
 
-    it('returns the agent executor name with optional suffixes', () => {
+    it('returns the agent operator name with optional suffixes', () => {
       const agent = new Agent()
 
-      expect(agent.getName()).to.equal(ExecutorType.Agent)
-      expect(agent.getName('Suffix')).to.equal(`${ExecutorType.Agent}:Suffix`)
-      expect(agent.getName('')).to.equal(ExecutorType.Agent)
+      expect(agent.getName()).to.equal(OperatorType.Agent)
+      expect(agent.getName('Suffix')).to.equal(`${OperatorType.Agent}:Suffix`)
+      expect(agent.getName('')).to.equal(OperatorType.Agent)
     })
 
     it('accepts AgentOptions as the constructor type', () => {
