@@ -3,5 +3,6 @@
 
 export {formatOperatorName, OperatorType} from './operator.js'
 export type {Operator, OperatorInput, OperatorOptions, OperatorOutput} from './operator.js'
-export type {Processor, ProcessorInput, ProcessorOptions, ProcessorOutput} from './processor.js'
+export type {Processor, ProcessorInput, ProcessorOptions, ProcessorOutput, ProcessorType} from './processor.js'
+export {ProcessorRegistry} from './registry.js'
 export {OperatorSequence} from './sequence.js'

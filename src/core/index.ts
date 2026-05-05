@@ -31,9 +31,19 @@ export {splitSystemPrompt} from './models/prompt.js'
 export type {Provider} from './models/provider.js'
 export {getProvider, isProvider} from './models/provider.js'
 export {getRoles, Role} from './models/role.js'
-export {OperatorSequence} from './processor/index.js'
+export {OperatorSequence, ProcessorRegistry} from './processor/index.js'
 export {OperatorType} from './processor/index.js'
-export type {Operator, OperatorInput, OperatorOptions, OperatorOutput} from './processor/index.js'
+export type {
+  Operator,
+  OperatorInput,
+  OperatorOptions,
+  OperatorOutput,
+  Processor,
+  ProcessorInput,
+  ProcessorOptions,
+  ProcessorOutput,
+  ProcessorType,
+} from './processor/index.js'
 export {Session, SessionHeader} from './session/index.js'
 export type {AppendMessageOptions, SessionHeaderOptions, SessionOptions} from './session/index.js'
 export {GptTokenizer} from './tokenizer/index.js'
