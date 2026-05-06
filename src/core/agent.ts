@@ -3,10 +3,10 @@
 
 import type {Message, Model, Provider} from './models/index.js'
 import type {Operator, OperatorOptions} from './processor/index.js'
+import type {Session} from './session/index.js'
 
 import {getModel} from './models/index.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
-import {Session} from './session/index.js'
 import {State} from './state.js'
 
 export interface AgentOptions {
@@ -38,16 +38,16 @@ export class Agent implements Operator<Message[], Message, OperatorOptions> {
     return formatOperatorName(OperatorType.Agent, suffix)
   }
 
+  getSession(): Session {
+    return this.state.getSession()
+  }
+
   getState(): State {
     return this.state
   }
 
   invoke(messages: Message[], options?: Partial<OperatorOptions>): Promise<Message> {
     return this.model.invoke(messages, options)
-  }
-
-  newSession(): Session {
-    return new Session()
   }
 
   async run(_session: Session, messages: Message[], options?: Partial<OperatorOptions>): Promise<Message> {

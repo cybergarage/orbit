@@ -27,6 +27,7 @@ import {
   Session,
   SessionHeader,
   splitSystemPrompt,
+  State,
 } from '../../src/core/models/index.js'
 
 describe('model helpers', () => {
@@ -188,14 +189,22 @@ describe('model helpers', () => {
       })
     })
 
-    it('creates a new Session instance for each call to newSession', () => {
+    it('returns the State Session from getSession', () => {
       const agent = new Agent()
-      const firstSession = agent.newSession()
-      const secondSession = agent.newSession()
+      const firstSession = agent.getSession()
+      const secondSession = agent.getSession()
 
       expect(firstSession).to.be.instanceOf(Session)
       expect(secondSession).to.be.instanceOf(Session)
-      expect(firstSession).to.not.equal(secondSession)
+      expect(firstSession).to.equal(secondSession)
+      expect(firstSession).to.equal(agent.getState().getSession())
+    })
+
+    it('returns the provided State Session from getSession', () => {
+      const session = new Session()
+      const agent = new Agent({state: new State(session)})
+
+      expect(agent.getSession()).to.equal(session)
     })
 
   })
