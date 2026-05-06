@@ -20,8 +20,6 @@ export type {
   InteractiveState,
   ModelCommandResult,
 } from './interactive.js'
-export type {Memory} from './memory/index.js'
-export {Dialogue, PromptMemory} from './memory/index.js'
 export {Message, MessageType, UserMessage} from './message/index.js'
 export type {MessageOptions, MessagePayload} from './message/index.js'
 export {DEFAULT_MODELS, getModel} from './models/factory.js'
@@ -45,7 +43,7 @@ export type {
   ProcessorType,
 } from './processor/index.js'
 export {Session, SessionHeader} from './session/index.js'
-export type {AppendMessageOptions, SessionHeaderOptions, SessionOptions} from './session/index.js'
+export type {AppendMessageOptions, SessionHeaderOptions} from './session/index.js'
 export {GptTokenizer} from './tokenizer/index.js'
 export type {Tokenizer} from './tokenizer/index.js'
 export {tool, Tool} from './tools/index.js'

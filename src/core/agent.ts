@@ -3,9 +3,7 @@
 
 import type {Message, Model, Provider} from './models/index.js'
 import type {Operator, OperatorOptions} from './processor/index.js'
-import type {SessionOptions} from './session/index.js'
 
-import {Dialogue} from './index.js'
 import {getModel} from './models/index.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
 import {Session} from './session/index.js'
@@ -36,13 +34,11 @@ export class Agent implements Operator<Message[], Message, OperatorOptions> {
     return this.model.invoke(messages, options)
   }
 
-  newSession(options: SessionOptions = {}): Session {
-    return new Session(options)
+  newSession(): Session {
+    return new Session()
   }
 
-  async run(session: Session, messages: Message[], options?: Partial<OperatorOptions>): Promise<Message> {
-    const answer = await this.model.invoke(messages, options)
-    session.getMemory().add(new Dialogue(messages, answer))
-    return answer
+  async run(_session: Session, messages: Message[], options?: Partial<OperatorOptions>): Promise<Message> {
+    return this.model.invoke(messages, options)
   }
 }

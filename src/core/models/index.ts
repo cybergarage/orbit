@@ -31,7 +31,7 @@ export type {
 export {PromptTemplate} from '../prompts/template.js'
 export type {PromptTemplateInput} from '../prompts/template.js'
 export {Session, SessionHeader} from '../session/index.js'
-export type {AppendMessageOptions, SessionHeaderOptions, SessionOptions} from '../session/index.js'
+export type {AppendMessageOptions, SessionHeaderOptions} from '../session/index.js'
 export {tool, Tool} from '../tools/index.js'
 export type {ToolConfig, ToolContext, ToolHandler, ToolInput, ToolOptions, ToolOutput} from '../tools/index.js'
 export {DEFAULT_MODELS, getModel} from './factory.js'

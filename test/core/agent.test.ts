@@ -3,18 +3,16 @@
 
 import {expect} from 'chai'
 
-import type {Memory} from '../../src/core/index.js'
 import type {
   AgentOptions,
   Model,
   Operator,
   OperatorOptions,
   PromptTemplateInput,
-  SessionOptions,
 } from '../../src/core/models/index.js'
 import type {MessageType as MessageTypeName} from '../../src/core/session/message.js'
 
-import {Dialogue, PromptMemory, Role} from '../../src/core/index.js'
+import {Role} from '../../src/core/index.js'
 import {Message as CoreMessage, MessageType as CoreMessageType, UserMessage} from '../../src/core/message/index.js'
 import {
   Agent,
@@ -134,6 +132,30 @@ describe('model helpers', () => {
       expect(calls).to.deep.equal([{messages: [prompt], options}])
     })
 
+    it('returns the model response from run', async () => {
+      const response = new Message(MessageType.Assistant, {content: 'ok'})
+      const agent = new Agent({
+        deps: {
+          createModel: (): Model => ({
+            getModel() {
+              return DEFAULT_MODELS.ollama
+            },
+            getName() {
+              return OperatorType.Model
+            },
+            getProvider() {
+              return 'ollama'
+            },
+            async invoke() {
+              return response
+            },
+          }),
+        },
+      })
+
+      expect(await agent.run(new Session(), [new Message(MessageType.User)])).to.equal(response)
+    })
+
     it('treats models as operators and returns the model name', () => {
       const model = getModel('ollama')
       const operator: Operator<Message[], Message, OperatorOptions> = model
@@ -176,59 +198,9 @@ describe('model helpers', () => {
       expect(firstSession).to.not.equal(secondSession)
     })
 
-    it('accepts SessionOptions in newSession and passes through the provided memory', () => {
-      const question = new Message(MessageType.User, {content: 'Hello'})
-      const answer = new Message(MessageType.Assistant, {content: 'Hi'})
-      const entries: Dialogue[] = [new Dialogue([question], answer)]
-      const memory: Memory = {
-        add(entry: Dialogue) {
-          entries.push(entry)
-        },
-        compact() {},
-        query() {
-          return [...entries[0].getQuestions(), entries[0].getAnswer()]
-        },
-      }
-      const options: SessionOptions = {memory}
-      const agent = new Agent()
-
-      const session = agent.newSession(options)
-
-      expect(session).to.be.instanceOf(Session)
-      expect(session.memory).to.equal(memory)
-      expect(session.memory.query('anything')).to.deep.equal([question, answer])
-    })
-
-    it('uses PromptMemory by default when newSession is called without options', () => {
-      const agent = new Agent()
-
-      const session = agent.newSession()
-
-      expect(session.memory).to.be.instanceOf(PromptMemory)
-    })
   })
 
   describe('Session', () => {
-    it('accepts SessionOptions as the constructor type', () => {
-      const options: SessionOptions = {
-        memory: new PromptMemory(),
-      }
-
-      expect(new Session(options)).to.be.instanceOf(Session)
-    })
-
-    it('uses PromptMemory by default when options are omitted', () => {
-      const session = new Session()
-
-      expect(session.memory).to.be.instanceOf(PromptMemory)
-    })
-
-    it('uses PromptMemory by default when memory is not provided', () => {
-      const session = new Session({})
-
-      expect(session.memory).to.be.instanceOf(PromptMemory)
-    })
-
     it('starts with a session header message', () => {
       const session = new Session()
       const messages = session.getMessages()
@@ -420,41 +392,6 @@ describe('model helpers', () => {
       expect(message.contents).to.deep.equal(['Hello'])
     })
 
-    it('uses the provided memory instance as-is', () => {
-      const question = new Message(MessageType.User, {content: 'Hello'})
-      const answer = new Message(MessageType.Assistant, {content: 'Hi'})
-      const entries: Dialogue[] = [new Dialogue([question], answer)]
-      const memory: Memory = {
-        add(entry: Dialogue) {
-          entries.push(entry)
-        },
-        compact() {},
-        query() {
-          return [...entries[0].getQuestions(), entries[0].getAnswer()]
-        },
-      }
-
-      const session = new Session({memory})
-
-      expect(session.memory).to.equal(memory)
-      expect(session.memory.query('anything')).to.deep.equal([question, answer])
-    })
-
-    it('flattens all dialogue prompts in PromptMemory query order', () => {
-      const hello = new Message(MessageType.User, {content: 'Hello'})
-      const help = new Message(MessageType.User, {content: 'Can you help?'})
-      const sure = new Message(MessageType.Assistant, {content: 'Sure'})
-      const thanks = new Message(MessageType.User, {content: 'Thanks'})
-      const welcome = new Message(MessageType.Assistant, {content: 'You are welcome'})
-      const session = new Session({
-        memory: new PromptMemory([
-          new Dialogue([hello, help], sure),
-          new Dialogue([thanks], welcome),
-        ]),
-      })
-
-      expect(session.memory.query('anything')).to.deep.equal([hello, help, sure, thanks, welcome])
-    })
   })
 
   describe('PromptTemplate', () => {

@@ -1,16 +1,10 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {Memory} from '../memory/index.js'
 import type {Message, MessagePayload, MessageType} from '../message/index.js'
 
-import {PromptMemory} from '../memory/index.js'
 import {SessionHeader} from './header.js'
 import {createMessage} from './message-factory.js'
-
-export interface SessionOptions {
-  memory?: Memory
-}
 
 export interface AppendMessageOptions {
   parentid?: null | string
@@ -19,13 +13,9 @@ export interface AppendMessageOptions {
 }
 
 export class Session {
-  public readonly memory: Memory
-  public readonly options: SessionOptions
   private readonly messages: Message[] = []
 
-  constructor(options: SessionOptions = {}) {
-    this.memory = options.memory ?? new PromptMemory()
-    this.options = options
+  constructor() {
     this.appendMessage(new SessionHeader())
   }
 
@@ -41,10 +31,6 @@ export class Session {
         : messageOrType
     this.messages.push(message)
     return message
-  }
-
-  getMemory(): Memory {
-    return this.memory
   }
 
   getMessages(): Message[] {
