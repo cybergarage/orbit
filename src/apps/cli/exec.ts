@@ -33,7 +33,7 @@ export async function runExecCommand(
   }
 
   const resolvedOptions = await resolveWorkspaceAgentOptions(options, cwd, deps.settingsLoader)
-  const {text: contextText} = await (deps.contextLoader ?? loadSystemContext)(cwd)
+  const {content: contextText} = await (deps.contextLoader ?? loadSystemContext)(cwd)
   const systemPrompt = buildSystemPrompt(contextText, resolvedOptions.lang)
   const AgentClass = deps.agentClass ?? Agent
   const agent = new AgentClass({

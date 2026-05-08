@@ -63,7 +63,7 @@ describe('runInteractiveCommand', () => {
         },
         {
           agentClass: TestAgent,
-          contextLoader: async () => ({source: {kind: 'none'} as const, text: 'Workspace context'}),
+          contextLoader: async () => ({content: 'Workspace context', source: {kind: 'none'} as const}),
           settingsLoader: async () => ({model: 'workspace-model', provider: 'openai'}),
         },
       )

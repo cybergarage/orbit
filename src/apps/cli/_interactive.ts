@@ -26,7 +26,7 @@ export async function runInteractiveCommand(
   }
 
   const resolvedOptions = await resolveWorkspaceAgentOptions(options, process.cwd(), deps.settingsLoader)
-  const {text: contextText} = await (deps.contextLoader ?? loadSystemContext)(process.cwd())
+  const {content: contextText} = await (deps.contextLoader ?? loadSystemContext)(process.cwd())
   const systemPrompt = buildSystemPrompt(contextText, resolvedOptions.lang)
   const agentClass = deps.agentClass ?? Agent
   await sessionRunner({

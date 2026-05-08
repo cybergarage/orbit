@@ -24,8 +24,8 @@ describe('loadSystemContext', () => {
     await fs.writeFile(path.join(root, 'ACME.md'), 'custom context')
 
     expect(await loadSystemContext(nested)).to.deep.equal({
+      content: 'custom context',
       source: {file: path.join(root, 'ACME.md'), kind: 'compat'},
-      text: 'custom context',
     })
   })
 
@@ -40,8 +40,8 @@ describe('loadSystemContext', () => {
     await fs.writeFile(path.join(child, 'ORBIT.md'), 'child context')
 
     expect(await loadSystemContext(grandchild)).to.deep.equal({
+      content: 'child context',
       source: {file: path.join(child, 'ORBIT.md'), kind: 'compat'},
-      text: 'child context',
     })
   })
 
@@ -58,8 +58,8 @@ describe('loadSystemContext', () => {
       process.chdir(child)
 
       expect(await loadSystemContext()).to.deep.equal({
+        content: 'cwd context',
         source: {file: path.join(realRoot, 'ORBIT.md'), kind: 'compat'},
-        text: 'cwd context',
       })
     } finally {
       process.chdir(previousCwd)

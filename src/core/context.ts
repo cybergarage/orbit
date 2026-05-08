@@ -14,6 +14,11 @@ export type ContextSource =
   | {file: string; kind: 'workspace'}
   | {kind: 'none'}
 
+export interface Context {
+  content: string
+  source: ContextSource
+}
+
 const AGENTS_FILE_NAME = 'AGENTS.md'
 
 function agentFiles(): string[] {
@@ -34,21 +39,21 @@ async function readIfExists(p: string): Promise<null | string> {
   return fs.readFile(p, 'utf8')
 }
 
-export async function loadSystemContext(startDir = process.cwd()): Promise<{source: ContextSource; text: string}> {
+export async function loadSystemContext(startDir = process.cwd()): Promise<Context> {
   const directories = await findWorkspaceDirectories(startDir)
   const agentFileNames = agentFiles()
-  let match: null | {source: ContextSource; text: string} = null
+  let match: Context | null = null
 
   for (const dir of directories) {
     for (const fileName of agentFileNames) {
       const file = path.join(dir, fileName)
       // eslint-disable-next-line no-await-in-loop
-      const text = await readIfExists(file)
-      if (text) match = {source: {file, kind: 'compat'}, text}
+      const content = await readIfExists(file)
+      if (content) match = {content, source: {file, kind: 'compat'}}
     }
   }
 
   if (match) return match
 
-  return {source: {kind: 'none'}, text: ''}
+  return {content: '', source: {kind: 'none'}}
 }
