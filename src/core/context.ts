@@ -39,21 +39,22 @@ async function readIfExists(p: string): Promise<null | string> {
   return fs.readFile(p, 'utf8')
 }
 
-export async function loadSystemContext(startDir = process.cwd()): Promise<Context> {
+export async function loadSystemContexts(startDir = process.cwd()): Promise<Context[]> {
   const directories = await findWorkspaceDirectories(startDir)
   const agentFileNames = agentFiles()
-  let match: Context | null = null
+  const matches: Context[] = []
 
   for (const dir of directories) {
+    let dirMatch: Context | null = null
     for (const fileName of agentFileNames) {
       const file = path.join(dir, fileName)
       // eslint-disable-next-line no-await-in-loop
       const content = await readIfExists(file)
-      if (content) match = {content, source: {file, kind: 'compat'}}
+      if (content) dirMatch = {content, source: {file, kind: 'compat'}}
     }
+
+    if (dirMatch) matches.push(dirMatch)
   }
 
-  if (match) return match
-
-  return {content: '', source: {kind: 'none'}}
+  return matches
 }

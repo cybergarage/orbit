@@ -6,7 +6,7 @@ import {readFileSync} from 'node:fs'
 import process from 'node:process'
 
 import {type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../../core/chat.js'
-import {loadSystemContext} from '../../core/context.js'
+import {loadSystemContexts} from '../../core/context.js'
 import {Agent, Message, MessageType, Role} from '../../core/index.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from './flags.js'
@@ -19,7 +19,7 @@ export async function runExecCommand(
   cwd = process.cwd(),
   deps: {
     agentClass?: AgentClass
-    contextLoader?: typeof loadSystemContext
+    contextLoader?: typeof loadSystemContexts
     settingsLoader?: typeof loadWorkspaceSettings
   } = {},
 ): Promise<string> {
@@ -33,8 +33,9 @@ export async function runExecCommand(
   }
 
   const resolvedOptions = await resolveWorkspaceAgentOptions(options, cwd, deps.settingsLoader)
-  const {content: contextText} = await (deps.contextLoader ?? loadSystemContext)(cwd)
-  const systemPrompt = buildSystemPrompt(contextText, resolvedOptions.lang)
+  const contexts = await (deps.contextLoader ?? loadSystemContexts)(cwd)
+  const contextsText = contexts.map((c) => c.content).join('\n\n')
+  const systemPrompt = buildSystemPrompt(contextsText, resolvedOptions.lang)
   const AgentClass = deps.agentClass ?? Agent
   const agent = new AgentClass({
     model: {

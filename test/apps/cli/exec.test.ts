@@ -44,7 +44,7 @@ describe('runExecCommand', () => {
       '/tmp/workspace',
       {
         agentClass: TestAgent,
-        contextLoader: async () => ({content: 'Workspace instructions', source: {kind: 'none'} as const}),
+        contextLoader: async () => [{content: 'Workspace instructions', source: {kind: 'none'} as const}],
       },
     )
 
@@ -108,7 +108,7 @@ describe('runExecCommand', () => {
       '/tmp/workspace',
       {
         agentClass: TestAgent,
-        contextLoader: async () => ({content: '', source: {kind: 'none'} as const}),
+        contextLoader: async () => [{content: '', source: {kind: 'none'} as const}],
         settingsLoader: async () => ({model: 'claude-sonnet', provider: 'anthropic'}),
       },
     )

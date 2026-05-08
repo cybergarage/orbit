@@ -5,7 +5,7 @@ import {Command} from '@oclif/core'
 import process from 'node:process'
 
 import {type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../../core/chat.js'
-import {loadSystemContext} from '../../core/context.js'
+import {loadSystemContexts} from '../../core/context.js'
 import {Agent, runInteractiveSession} from '../../core/index.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from './flags.js'
@@ -17,7 +17,7 @@ export async function runInteractiveCommand(
   sessionRunner: typeof runInteractiveSession = runInteractiveSession,
   deps: {
     agentClass?: AgentClass
-    contextLoader?: typeof loadSystemContext
+    contextLoader?: typeof loadSystemContexts
     settingsLoader?: typeof loadWorkspaceSettings
   } = {},
 ): Promise<void> {
@@ -26,7 +26,8 @@ export async function runInteractiveCommand(
   }
 
   const resolvedOptions = await resolveWorkspaceAgentOptions(options, process.cwd(), deps.settingsLoader)
-  const {content: contextText} = await (deps.contextLoader ?? loadSystemContext)(process.cwd())
+  const contexts = await (deps.contextLoader ?? loadSystemContexts)(process.cwd())
+  const contextText = contexts.map((c) => c.content).join('\n\n')
   const systemPrompt = buildSystemPrompt(contextText, resolvedOptions.lang)
   const agentClass = deps.agentClass ?? Agent
   await sessionRunner({

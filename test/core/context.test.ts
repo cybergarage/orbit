@@ -7,12 +7,20 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import {loadSystemContext} from '../../src/core/context.js'
+import {loadSystemContexts} from '../../src/core/context.js'
 import {configureApp} from '../../src/core/index.js'
 
-describe('loadSystemContext', () => {
+describe('loadSystemContexts', () => {
   afterEach(() => {
     configureApp({appName: 'orbit'})
+  })
+
+  it('returns an empty array when no workspace directories are found', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-context-'))
+    const nested = path.join(root, 'nested')
+    await fs.mkdir(nested)
+
+    expect(await loadSystemContexts(nested)).to.deep.equal([])
   })
 
   it('uses the configured app name for workspace context files', async () => {
@@ -23,13 +31,15 @@ describe('loadSystemContext', () => {
     await fs.mkdir(nested)
     await fs.writeFile(path.join(root, 'ACME.md'), 'custom context')
 
-    expect(await loadSystemContext(nested)).to.deep.equal({
-      content: 'custom context',
-      source: {file: path.join(root, 'ACME.md'), kind: 'compat'},
-    })
+    expect(await loadSystemContexts(nested)).to.deep.equal([
+      {
+        content: 'custom context',
+        source: {file: path.join(root, 'ACME.md'), kind: 'compat'},
+      },
+    ])
   })
 
-  it('returns the deepest discovered workspace context', async () => {
+  it('returns all discovered workspace contexts from shallowest to deepest', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-context-'))
     const child = path.join(root, 'child')
     const grandchild = path.join(child, 'grandchild')
@@ -39,10 +49,16 @@ describe('loadSystemContext', () => {
     await fs.writeFile(path.join(root, 'ORBIT.md'), 'root context')
     await fs.writeFile(path.join(child, 'ORBIT.md'), 'child context')
 
-    expect(await loadSystemContext(grandchild)).to.deep.equal({
-      content: 'child context',
-      source: {file: path.join(child, 'ORBIT.md'), kind: 'compat'},
-    })
+    expect(await loadSystemContexts(grandchild)).to.deep.equal([
+      {
+        content: 'root context',
+        source: {file: path.join(root, 'ORBIT.md'), kind: 'compat'},
+      },
+      {
+        content: 'child context',
+        source: {file: path.join(child, 'ORBIT.md'), kind: 'compat'},
+      },
+    ])
   })
 
   it('uses the current working directory when no start directory is provided', async () => {
@@ -57,10 +73,12 @@ describe('loadSystemContext', () => {
     try {
       process.chdir(child)
 
-      expect(await loadSystemContext()).to.deep.equal({
-        content: 'cwd context',
-        source: {file: path.join(realRoot, 'ORBIT.md'), kind: 'compat'},
-      })
+      expect(await loadSystemContexts()).to.deep.equal([
+        {
+          content: 'cwd context',
+          source: {file: path.join(realRoot, 'ORBIT.md'), kind: 'compat'},
+        },
+      ])
     } finally {
       process.chdir(previousCwd)
     }
