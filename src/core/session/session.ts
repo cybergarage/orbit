@@ -16,7 +16,7 @@ export class Session {
   private readonly messages: Message[] = []
 
   constructor() {
-    this.appendMessage(new SessionHeader())
+    this.messages.push(new SessionHeader())
   }
 
   appendMessage(message: Message): Message
@@ -26,9 +26,14 @@ export class Session {
       typeof messageOrType === 'string'
         ? createMessage(messageOrType, {
             ...options,
-            previousMessage: this.messages.at(-1),
+            parentid: this.getLastMessageId(),
           })
-        : messageOrType
+        : createMessage(messageOrType.type, {
+            contents: messageOrType.contents,
+            parentid: this.getLastMessageId(),
+            ...(messageOrType.payload === undefined ? {} : {payload: messageOrType.payload}),
+            role: messageOrType.role,
+          })
     this.messages.push(message)
     return message
   }

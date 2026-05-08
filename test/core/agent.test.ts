@@ -327,15 +327,26 @@ describe('model helpers', () => {
       expect(message.payload).to.deep.equal({content: 'Hello'})
     })
 
-    it('appends a prebuilt message instance', () => {
+    it('appends a copy of a prebuilt message instance with the last message id as parentid', () => {
       const session = new Session()
+      const header = session.getMessages()[0]
       const message = new Message(MessageType.User, {
+        contents: ['Hello', 'World'],
         parentid: 'custom-parent-id',
         payload: {content: 'Hello'},
+        role: Role.User,
       })
 
-      expect(session.appendMessage(message)).to.equal(message)
-      expect(session.getMessages()[1]).to.equal(message)
+      const appended = session.appendMessage(message)
+
+      expect(appended).to.not.equal(message)
+      expect(appended.type).to.equal(message.type)
+      expect(appended.contents).to.deep.equal(message.contents)
+      expect(appended.content).to.equal(message.content)
+      expect(appended.payload).to.deep.equal(message.payload)
+      expect(appended.role).to.equal(message.role)
+      expect(appended.parentid).to.equal(header.id)
+      expect(session.getMessages()[1]).to.equal(appended)
     })
 
     it('creates messages through the Message constructor', () => {
@@ -427,7 +438,7 @@ describe('model helpers', () => {
       expect(JSON.parse(serialized)).to.deep.equal({
         contents: [],
         id: message.id,
-        parentid: 'parent-message-id',
+        parentid: session.getMessages()[0].id,
         payload: {name: 'lookup', result: 'ok'},
         role: Role.User,
         timestamp: message.timestamp,
@@ -446,14 +457,15 @@ describe('model helpers', () => {
       expect(second.parentid).to.equal(first.id)
     })
 
-    it('uses an explicit parentid as-is', () => {
+    it('overrides an explicit parentid with the last message id', () => {
       const session = new Session()
+      const header = session.getMessages()[0]
 
       const message = session.appendMessage(MessageType.Tool, {
         parentid: 'custom-parent-id',
       })
 
-      expect(message.parentid).to.equal('custom-parent-id')
+      expect(message.parentid).to.equal(header.id)
     })
 
     it('returns a copy of the message list', () => {
