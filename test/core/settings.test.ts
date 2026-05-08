@@ -6,7 +6,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import {configureApp} from '../../src/core/index.js'
+import {configureApp, SETTINGS_FILE_NAME} from '../../src/core/index.js'
 import {loadWorkspaceSettings} from '../../src/core/settings.js'
 
 describe('loadWorkspaceSettings', () => {
@@ -17,8 +17,8 @@ describe('loadWorkspaceSettings', () => {
   it('prefers .orbit/settings.json over workspace settings.json', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-'))
     await fs.mkdir(path.join(root, '.orbit'))
-    await fs.writeFile(path.join(root, '.orbit', 'settings.json'), JSON.stringify({provider: 'openai'}))
-    await fs.writeFile(path.join(root, 'settings.json'), JSON.stringify({provider: 'anthropic'}))
+    await fs.writeFile(path.join(root, '.orbit', SETTINGS_FILE_NAME), JSON.stringify({provider: 'openai'}))
+    await fs.writeFile(path.join(root, SETTINGS_FILE_NAME), JSON.stringify({provider: 'anthropic'}))
 
     expect(await loadWorkspaceSettings(root)).to.deep.equal({provider: 'openai'})
   })
@@ -26,7 +26,7 @@ describe('loadWorkspaceSettings', () => {
   it('falls back to workspace settings.json when nested settings are missing', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-'))
     await fs.mkdir(path.join(root, '.orbit'))
-    await fs.writeFile(path.join(root, 'settings.json'), JSON.stringify({model: 'gpt-4.1'}))
+    await fs.writeFile(path.join(root, SETTINGS_FILE_NAME), JSON.stringify({model: 'gpt-4.1'}))
 
     expect(await loadWorkspaceSettings(root)).to.deep.equal({model: 'gpt-4.1'})
   })
@@ -41,7 +41,7 @@ describe('loadWorkspaceSettings', () => {
   it('throws for invalid JSON', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-'))
     await fs.mkdir(path.join(root, '.orbit'))
-    await fs.writeFile(path.join(root, '.orbit', 'settings.json'), '{')
+    await fs.writeFile(path.join(root, '.orbit', SETTINGS_FILE_NAME), '{')
 
     await expectReject(loadWorkspaceSettings(root), 'Invalid workspace settings')
   })
@@ -49,7 +49,7 @@ describe('loadWorkspaceSettings', () => {
   it('throws for invalid provider values', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-'))
     await fs.mkdir(path.join(root, '.orbit'))
-    await fs.writeFile(path.join(root, '.orbit', 'settings.json'), JSON.stringify({provider: 'local'}))
+    await fs.writeFile(path.join(root, '.orbit', SETTINGS_FILE_NAME), JSON.stringify({provider: 'local'}))
 
     await expectReject(loadWorkspaceSettings(root), 'provider must be one of anthropic, ollama, openai')
   })
@@ -60,7 +60,7 @@ describe('loadWorkspaceSettings', () => {
     configureApp({appName: 'acme'})
     await fs.mkdir(path.join(root, '.acme'))
     await fs.mkdir(nested)
-    await fs.writeFile(path.join(root, '.acme', 'settings.json'), JSON.stringify({provider: 'openai'}))
+    await fs.writeFile(path.join(root, '.acme', SETTINGS_FILE_NAME), JSON.stringify({provider: 'openai'}))
 
     expect(await loadWorkspaceSettings(nested)).to.deep.equal({provider: 'openai'})
   })

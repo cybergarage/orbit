@@ -4,7 +4,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import {DOT_APP_DIR_NAME} from './app.js'
+import {DOT_APP_DIR_NAME, SETTINGS_FILE_NAME} from './app.js'
 import {getProvider, isProvider, type Provider} from './models/index.js'
 import {findWorkspaceRoot} from './workspace.js'
 
@@ -25,8 +25,8 @@ async function readIfExists(file: string): Promise<string | undefined> {
 
 export async function loadWorkspaceSettings(startDir: string): Promise<WorkspaceSettings> {
   const root = await findWorkspaceRoot(startDir)
-  const preferredFile = path.join(root, DOT_APP_DIR_NAME, 'settings.json')
-  const fallbackFile = path.join(root, 'settings.json')
+  const preferredFile = path.join(root, DOT_APP_DIR_NAME, SETTINGS_FILE_NAME)
+  const fallbackFile = path.join(root, SETTINGS_FILE_NAME)
   const files = [preferredFile, fallbackFile]
   const [preferredRaw, fallbackRaw] = await Promise.all(files.map(async (file) => readIfExists(file)))
   const matches = [

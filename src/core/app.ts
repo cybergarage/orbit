@@ -11,6 +11,7 @@ export interface AppConfig {
 
 export let APP_NAME = 'orbit'
 export let DOT_APP_DIR_NAME = `.${APP_NAME}`
+export const SETTINGS_FILE_NAME = 'settings.json'
 
 export function setAppName(appName: string): void {
   APP_NAME = appName
