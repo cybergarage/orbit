@@ -55,7 +55,10 @@ describe('runExecCommand', () => {
     expect(
       calls.map((call) => ({
         messages: call.messages.map((message) => ({content: message.content, role: message.role})),
-        options: call.options,
+        options: {
+          ...call.options,
+          messages: call.options?.messages?.map((message) => ({content: message.content, role: message.role})),
+        },
       })),
     ).to.deep.equal([
       {
@@ -71,6 +74,16 @@ describe('runExecCommand', () => {
           {content: 'hello', role: Role.User},
         ],
         options: {
+          messages: [
+            {
+              content: 'Workspace instructions',
+              role: Role.System,
+            },
+            {
+              content: 'Project instructions',
+              role: Role.System,
+            },
+          ],
           model: {
             name: 'test-model',
             provider: 'ollama',
@@ -122,6 +135,7 @@ describe('runExecCommand', () => {
     expect(calls).to.deep.equal([
       {
         options: {
+          messages: [],
           model: {
             name: 'claude-sonnet',
             provider: 'anthropic',

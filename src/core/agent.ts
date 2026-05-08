@@ -13,6 +13,7 @@ export interface AgentOptions {
   deps?: {
     createModel?: typeof getModel
   }
+  messages?: Message[]
   model?: {
     name?: string
     provider?: Provider
@@ -21,12 +22,14 @@ export interface AgentOptions {
 }
 
 export class Agent implements Operator<Message[], Message, OperatorOptions> {
+  public readonly messages: Message[]
   public readonly state: State
   private readonly model: Model
 
   constructor(options: AgentOptions = {}) {
     const createModel = options.deps?.createModel ?? getModel
     this.model = createModel(options.model?.provider, options.model?.name)
+    this.messages = [...(options.messages ?? [])]
     this.state = options.state ?? new State()
   }
 
@@ -47,10 +50,10 @@ export class Agent implements Operator<Message[], Message, OperatorOptions> {
   }
 
   invoke(messages: Message[], options?: Partial<OperatorOptions>): Promise<Message> {
-    return this.model.invoke(messages, options)
+    return this.model.invoke([...this.messages, ...messages], options)
   }
 
   async run(_session: Session, messages: Message[], options?: Partial<OperatorOptions>): Promise<Message> {
-    return this.model.invoke(messages, options)
+    return this.model.invoke([...this.messages, ...messages], options)
   }
 }

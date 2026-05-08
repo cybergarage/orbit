@@ -35,20 +35,20 @@ export async function runExecCommand(
   const resolvedOptions = await resolveWorkspaceAgentOptions(options, cwd, deps.settingsLoader)
   const systemContexts = await (deps.contextLoader ?? loadSystemContexts)(cwd)
   const systemPrompts = systemContexts.filter((context) => context.content).map((context) => context.content)
+  const systemMessages: Message[] = systemPrompts.map(
+    (systemPrompt) => new Message(MessageType.Session, {content: systemPrompt, role: Role.System}),
+  )
+
   const AgentClass = deps.agentClass ?? Agent
   const agent = new AgentClass({
+    messages: systemMessages,
     model: {
       name: resolvedOptions.model,
       provider: resolvedOptions.provider,
     },
   })
-  const messages: Message[] = [
-    ...systemPrompts.map(
-      (systemPrompt) => new Message(MessageType.Session, {content: systemPrompt, role: Role.System}),
-    ),
-    new Message(MessageType.User, {content: prompt, role: Role.User}),
-  ]
-  const response = await agent.invoke(messages)
+  const userMessages: Message[] = [new Message(MessageType.User, {content: prompt, role: Role.User})]
+  const response = await agent.invoke(userMessages)
   return response.content
 }
 

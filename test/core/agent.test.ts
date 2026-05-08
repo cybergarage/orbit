@@ -133,6 +133,36 @@ describe('model helpers', () => {
       expect(calls).to.deep.equal([{messages: [prompt], options}])
     })
 
+    it('prepends Agent messages when invoking the model', async () => {
+      const calls: Message[][] = []
+      const systemMessage = new Message(MessageType.Session, {content: 'System context', role: Role.System})
+      const agent = new Agent({
+        deps: {
+          createModel: (): Model => ({
+            getModel() {
+              return DEFAULT_MODELS.ollama
+            },
+            getName() {
+              return OperatorType.Model
+            },
+            getProvider() {
+              return 'ollama'
+            },
+            async invoke(messages) {
+              calls.push(messages)
+              return new Message(MessageType.Assistant, {content: 'ok'})
+            },
+          }),
+        },
+        messages: [systemMessage],
+      })
+      const prompt = new Message(MessageType.User, {content: 'hello'})
+
+      await agent.invoke([prompt])
+
+      expect(calls).to.deep.equal([[systemMessage, prompt]])
+    })
+
     it('returns the model response from run', async () => {
       const response = new Message(MessageType.Assistant, {content: 'ok'})
       const agent = new Agent({
@@ -157,6 +187,47 @@ describe('model helpers', () => {
       expect(await agent.run(new Session(), [new Message(MessageType.User)])).to.equal(response)
     })
 
+    it('prepends Agent messages when running the model', async () => {
+      const calls: Message[][] = []
+      const systemMessage = new Message(MessageType.Session, {content: 'System context', role: Role.System})
+      const agent = new Agent({
+        deps: {
+          createModel: (): Model => ({
+            getModel() {
+              return DEFAULT_MODELS.ollama
+            },
+            getName() {
+              return OperatorType.Model
+            },
+            getProvider() {
+              return 'ollama'
+            },
+            async invoke(messages) {
+              calls.push(messages)
+              return new Message(MessageType.Assistant, {content: 'ok'})
+            },
+          }),
+        },
+        messages: [systemMessage],
+      })
+      const prompt = new Message(MessageType.User, {content: 'hello'})
+
+      await agent.run(new Session(), [prompt])
+
+      expect(calls).to.deep.equal([[systemMessage, prompt]])
+    })
+
+    it('copies AgentOptions messages when constructed', () => {
+      const systemMessage = new Message(MessageType.Session, {content: 'System context', role: Role.System})
+      const appendedMessage = new Message(MessageType.Session, {content: 'Appended context', role: Role.System})
+      const messages = [systemMessage]
+      const agent = new Agent({messages})
+
+      messages.push(appendedMessage)
+
+      expect(agent.messages).to.deep.equal([systemMessage])
+    })
+
     it('treats models as operators and returns the model name', () => {
       const model = getModel('ollama')
       const operator: Operator<Message[], Message, OperatorOptions> = model
@@ -174,7 +245,9 @@ describe('model helpers', () => {
     })
 
     it('accepts AgentOptions as the constructor type', () => {
+      const systemMessage = new Message(MessageType.Session, {content: 'System context', role: Role.System})
       const options: AgentOptions = {
+        messages: [systemMessage],
         model: {
           name: 'llama3.1',
           provider: 'ollama',
@@ -182,6 +255,7 @@ describe('model helpers', () => {
       }
 
       expect(options).to.deep.equal({
+        messages: [systemMessage],
         model: {
           name: 'llama3.1',
           provider: 'ollama',
