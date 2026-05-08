@@ -49,11 +49,15 @@ export class Agent implements Operator<Message[], Message, OperatorOptions> {
     return this.state
   }
 
-  invoke(messages: Message[], options?: Partial<OperatorOptions>): Promise<Message> {
-    return this.model.invoke([...this.messages, ...messages], options)
+  async invoke(messages: Message[], options?: Partial<OperatorOptions>): Promise<Message> {
+    const session = this.getSession()
+    session.appendMessages(messages)
+    const modelMessage = await this.model.invoke([...this.messages, ...messages], options)
+    session.appendMessages([modelMessage])
+    return modelMessage
   }
 
   async run(_session: Session, messages: Message[], options?: Partial<OperatorOptions>): Promise<Message> {
-    return this.model.invoke([...this.messages, ...messages], options)
+    return this.invoke(messages, options)
   }
 }
