@@ -22,15 +22,16 @@ export class Session {
   appendMessage(message: Message): Message
   appendMessage(type: MessageType, options?: AppendMessageOptions): Message
   appendMessage(messageOrType: Message | MessageType, options: AppendMessageOptions = {}): Message {
+    const parentId = options.parentid ?? this.getLastMessageId()
     const message =
       typeof messageOrType === 'string'
         ? createMessage(messageOrType, {
             ...options,
-            parentid: this.getLastMessageId(),
+            parentid: parentId,
           })
         : createMessage(messageOrType.type, {
             contents: messageOrType.contents,
-            parentid: this.getLastMessageId(),
+            parentid: parentId,
             ...(messageOrType.payload === undefined ? {} : {payload: messageOrType.payload}),
             role: messageOrType.role,
           })
