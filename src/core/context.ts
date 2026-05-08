@@ -3,6 +3,7 @@
 
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import process from 'node:process'
 
 import {APP_NAME} from './app.js'
 import {findWorkspaceDirectories} from './workspace.js'
@@ -33,7 +34,7 @@ async function readIfExists(p: string): Promise<null | string> {
   return fs.readFile(p, 'utf8')
 }
 
-export async function loadContext(startDir: string): Promise<{source: ContextSource; text: string}> {
+export async function loadSystemContext(startDir = process.cwd()): Promise<{source: ContextSource; text: string}> {
   const directories = await findWorkspaceDirectories(startDir)
   const agentFileNames = agentFiles()
   let match: null | {source: ContextSource; text: string} = null

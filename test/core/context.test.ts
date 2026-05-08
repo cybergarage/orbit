@@ -5,11 +5,12 @@ import {expect} from 'chai'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import process from 'node:process'
 
-import {loadContext} from '../../src/core/context.js'
+import {loadSystemContext} from '../../src/core/context.js'
 import {configureApp} from '../../src/core/index.js'
 
-describe('loadContext', () => {
+describe('loadSystemContext', () => {
   afterEach(() => {
     configureApp({appName: 'orbit'})
   })
@@ -22,7 +23,7 @@ describe('loadContext', () => {
     await fs.mkdir(nested)
     await fs.writeFile(path.join(root, 'ACME.md'), 'custom context')
 
-    expect(await loadContext(nested)).to.deep.equal({
+    expect(await loadSystemContext(nested)).to.deep.equal({
       source: {file: path.join(root, 'ACME.md'), kind: 'compat'},
       text: 'custom context',
     })
@@ -38,9 +39,30 @@ describe('loadContext', () => {
     await fs.writeFile(path.join(root, 'ORBIT.md'), 'root context')
     await fs.writeFile(path.join(child, 'ORBIT.md'), 'child context')
 
-    expect(await loadContext(grandchild)).to.deep.equal({
+    expect(await loadSystemContext(grandchild)).to.deep.equal({
       source: {file: path.join(child, 'ORBIT.md'), kind: 'compat'},
       text: 'child context',
     })
+  })
+
+  it('uses the current working directory when no start directory is provided', async () => {
+    const previousCwd = process.cwd()
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-context-'))
+    const realRoot = await fs.realpath(root)
+    const child = path.join(root, 'child')
+    await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
+    await fs.mkdir(child)
+    await fs.writeFile(path.join(root, 'ORBIT.md'), 'cwd context')
+
+    try {
+      process.chdir(child)
+
+      expect(await loadSystemContext()).to.deep.equal({
+        source: {file: path.join(realRoot, 'ORBIT.md'), kind: 'compat'},
+        text: 'cwd context',
+      })
+    } finally {
+      process.chdir(previousCwd)
+    }
   })
 })

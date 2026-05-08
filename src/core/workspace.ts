@@ -3,6 +3,7 @@
 
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import process from 'node:process'
 
 import {DOT_APP_DIR_NAME} from './app.js'
 
@@ -15,7 +16,7 @@ async function exists(p: string): Promise<boolean> {
   }
 }
 
-export async function findWorkspaceDirectories(startDir: string): Promise<string[]> {
+export async function findWorkspaceDirectories(startDir = process.cwd()): Promise<string[]> {
   const dirs: string[] = []
   let dir = path.resolve(startDir)
   while (true) {

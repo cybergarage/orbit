@@ -5,6 +5,7 @@ import {expect} from 'chai'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import process from 'node:process'
 
 import {findWorkspaceDirectories} from '../../src/core/workspace.js'
 
@@ -26,5 +27,22 @@ describe('findWorkspaceDirectories', () => {
     await fs.mkdir(child)
 
     expect(await findWorkspaceDirectories(child)).to.deep.equal([])
+  })
+
+  it('uses the current working directory when no start directory is provided', async () => {
+    const previousCwd = process.cwd()
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-workspace-'))
+    const realRoot = await fs.realpath(root)
+    const child = path.join(root, 'child')
+    await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
+    await fs.mkdir(child)
+
+    try {
+      process.chdir(child)
+
+      expect(await findWorkspaceDirectories()).to.deep.equal([realRoot])
+    } finally {
+      process.chdir(previousCwd)
+    }
   })
 })
