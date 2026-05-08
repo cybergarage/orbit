@@ -6,9 +6,14 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
+import {configureApp} from '../../src/core/index.js'
 import {loadWorkspaceSettings} from '../../src/core/settings.js'
 
 describe('loadWorkspaceSettings', () => {
+  afterEach(() => {
+    configureApp({appName: 'orbit'})
+  })
+
   it('prefers .orbit/settings.json over workspace settings.json', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-'))
     await fs.mkdir(path.join(root, '.orbit'))
@@ -47,6 +52,17 @@ describe('loadWorkspaceSettings', () => {
     await fs.writeFile(path.join(root, '.orbit', 'settings.json'), JSON.stringify({provider: 'local'}))
 
     await expectReject(loadWorkspaceSettings(root), 'provider must be one of anthropic, ollama, openai')
+  })
+
+  it('uses the configured dot app directory name', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-'))
+    const nested = path.join(root, 'nested')
+    configureApp({appName: 'acme'})
+    await fs.mkdir(path.join(root, '.acme'))
+    await fs.mkdir(nested)
+    await fs.writeFile(path.join(root, '.acme', 'settings.json'), JSON.stringify({provider: 'openai'}))
+
+    expect(await loadWorkspaceSettings(nested)).to.deep.equal({provider: 'openai'})
   })
 })
 

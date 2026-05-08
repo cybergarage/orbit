@@ -4,6 +4,17 @@
 export {Agent} from './agent.js'
 export type {AgentOptions} from './agent.js'
 export {
+  APP_NAME,
+  configureApp,
+  DOT_APP_DIR_NAME,
+  ensureDir,
+  getPaths,
+  sessionsDir,
+  setAppName,
+  setDotAppDirName,
+} from './app.js'
+export type {AppConfig} from './app.js'
+export {
   ContextOverflowError,
   InvalidConfigurationError,
   InvalidInputError,

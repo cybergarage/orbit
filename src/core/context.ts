@@ -13,7 +13,9 @@ export type ContextSource =
   | {file: string; kind: 'workspace'}
   | {kind: 'none'}
 
-const AGENT_FILES = [`${APP_NAME.toUpperCase()}.md`, 'AGENTS.md']
+function agentFiles(): string[] {
+  return [`${APP_NAME.toUpperCase()}.md`, 'AGENTS.md']
+}
 
 async function exists(p: string): Promise<boolean> {
   try {
@@ -32,8 +34,9 @@ async function readIfExists(p: string): Promise<null | string> {
 export async function loadContext(startDir: string): Promise<{source: ContextSource; text: string}> {
   // 1) Workspace root
   const root = await findWorkspaceRoot(startDir)
+  const agentFileNames = agentFiles()
   const rootChecks = await Promise.all(
-    AGENT_FILES.map(async (f) => {
+    agentFileNames.map(async (f) => {
       const p = path.join(root, f)
       const t = await readIfExists(p)
       return t ? {source: {file: p, kind: 'compat'} as ContextSource, text: t} : null
@@ -55,7 +58,7 @@ export async function loadContext(startDir: string): Promise<{source: ContextSou
 
   const allChecks = await Promise.all(
     dirs.flatMap((d) =>
-      AGENT_FILES.map(async (f) => {
+      agentFileNames.map(async (f) => {
         const p = path.join(d, f)
         const t = await readIfExists(p)
         return t ? {source: {file: p, kind: 'compat'} as ContextSource, text: t} : null
