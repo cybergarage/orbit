@@ -5,7 +5,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import {APP_NAME} from './app.js'
-import {findWorkspaceRoot} from './workspace.js'
+import {findWorkspaceDirectories} from './workspace.js'
 
 export type ContextSource =
   | {file: string; kind: 'compat'}
@@ -34,40 +34,19 @@ async function readIfExists(p: string): Promise<null | string> {
 }
 
 export async function loadContext(startDir: string): Promise<{source: ContextSource; text: string}> {
-  // 1) Workspace root
-  const root = await findWorkspaceRoot(startDir)
+  const directories = await findWorkspaceDirectories(startDir)
   const agentFileNames = agentFiles()
-  const rootChecks = await Promise.all(
-    agentFileNames.map(async (f) => {
-      const p = path.join(root, f)
-      const t = await readIfExists(p)
-      return t ? {source: {file: p, kind: 'compat'} as ContextSource, text: t} : null
-    }),
-  )
-  const rootMatch = rootChecks.find((r) => r !== null)
-  if (rootMatch) return rootMatch
+  let match: null | {source: ContextSource; text: string} = null
 
-  // 2) Compatibility (search upwards to root)
-  const dirs: string[] = []
-  let dir = path.resolve(startDir)
-  while (true) {
-    dirs.push(dir)
-    if (dir === root) break
-    const parent = path.dirname(dir)
-    if (parent === dir) break
-    dir = parent
+  for (const dir of directories) {
+    for (const fileName of agentFileNames) {
+      const file = path.join(dir, fileName)
+      // eslint-disable-next-line no-await-in-loop
+      const text = await readIfExists(file)
+      if (text) match = {source: {file, kind: 'compat'}, text}
+    }
   }
 
-  const allChecks = await Promise.all(
-    dirs.flatMap((d) =>
-      agentFileNames.map(async (f) => {
-        const p = path.join(d, f)
-        const t = await readIfExists(p)
-        return t ? {source: {file: p, kind: 'compat'} as ContextSource, text: t} : null
-      }),
-    ),
-  )
-  const match = allChecks.find((r) => r !== null)
   if (match) return match
 
   return {source: {kind: 'none'}, text: ''}

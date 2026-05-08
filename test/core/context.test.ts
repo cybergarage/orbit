@@ -27,4 +27,20 @@ describe('loadContext', () => {
       text: 'custom context',
     })
   })
+
+  it('returns the deepest discovered workspace context', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-context-'))
+    const child = path.join(root, 'child')
+    const grandchild = path.join(child, 'grandchild')
+    await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
+    await fs.mkdir(path.join(child, '.orbit'), {recursive: true})
+    await fs.mkdir(grandchild, {recursive: true})
+    await fs.writeFile(path.join(root, 'ORBIT.md'), 'root context')
+    await fs.writeFile(path.join(child, 'ORBIT.md'), 'child context')
+
+    expect(await loadContext(grandchild)).to.deep.equal({
+      source: {file: path.join(child, 'ORBIT.md'), kind: 'compat'},
+      text: 'child context',
+    })
+  })
 })

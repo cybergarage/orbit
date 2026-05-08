@@ -6,7 +6,7 @@ import path from 'node:path'
 
 import {DOT_APP_DIR_NAME, SETTINGS_FILE_NAME} from './app.js'
 import {getProvider, isProvider, type Provider} from './models/index.js'
-import {findWorkspaceRoot} from './workspace.js'
+import {findWorkspaceDirectories} from './workspace.js'
 
 export interface WorkspaceSettings {
   model?: string
@@ -24,18 +24,20 @@ async function readIfExists(file: string): Promise<string | undefined> {
 }
 
 export async function loadWorkspaceSettings(startDir: string): Promise<WorkspaceSettings> {
-  const root = await findWorkspaceRoot(startDir)
-  const preferredFile = path.join(root, DOT_APP_DIR_NAME, SETTINGS_FILE_NAME)
-  const fallbackFile = path.join(root, SETTINGS_FILE_NAME)
-  const files = [preferredFile, fallbackFile]
-  const [preferredRaw, fallbackRaw] = await Promise.all(files.map(async (file) => readIfExists(file)))
-  const matches = [
-    {file: preferredFile, raw: preferredRaw},
-    {file: fallbackFile, raw: fallbackRaw},
-  ]
+  const mergedSettings: WorkspaceSettings = {}
+  const directories = await findWorkspaceDirectories(startDir)
 
-  for (const {file, raw} of matches) {
-    if (!raw) continue
+  for (const dir of directories) {
+    const preferredFile = path.join(dir, DOT_APP_DIR_NAME, SETTINGS_FILE_NAME)
+    const fallbackFile = path.join(dir, SETTINGS_FILE_NAME)
+    // eslint-disable-next-line no-await-in-loop
+    const preferredRaw = await readIfExists(preferredFile)
+    // eslint-disable-next-line no-await-in-loop
+    const fallbackRaw = preferredRaw === undefined ? await readIfExists(fallbackFile) : undefined
+    const raw = preferredRaw ?? fallbackRaw
+    if (raw === undefined) continue
+
+    const file = preferredRaw === undefined ? fallbackFile : preferredFile
 
     let parsed: unknown
     try {
@@ -45,9 +47,9 @@ export async function loadWorkspaceSettings(startDir: string): Promise<Workspace
       throw new Error(`Invalid workspace settings in ${file}: ${message}`)
     }
 
-    const settings = parsed as Record<string, unknown>
-    const {provider} = settings
-    const {model} = settings
+    const parsedSettings = parsed as Record<string, unknown>
+    const {provider} = parsedSettings
+    const {model} = parsedSettings
     const providerOptions = getProvider().join(', ')
 
     if (provider !== undefined && !isProvider(provider)) {
@@ -58,11 +60,11 @@ export async function loadWorkspaceSettings(startDir: string): Promise<Workspace
       throw new Error(`Invalid workspace settings in ${file}: model must be a string.`)
     }
 
-    return {
+    Object.assign(mergedSettings, {
       ...(typeof model === 'string' ? {model} : {}),
       ...(isProvider(provider) ? {provider} : {}),
-    }
+    })
   }
 
-  return {}
+  return mergedSettings
 }

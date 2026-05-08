@@ -15,15 +15,16 @@ async function exists(p: string): Promise<boolean> {
   }
 }
 
-export async function findWorkspaceRoot(startDir: string): Promise<string> {
+export async function findWorkspaceDirectories(startDir: string): Promise<string[]> {
+  const dirs: string[] = []
   let dir = path.resolve(startDir)
   while (true) {
     // eslint-disable-next-line no-await-in-loop
-    if (await exists(path.join(dir, DOT_APP_DIR_NAME))) return dir
+    if (await exists(path.join(dir, DOT_APP_DIR_NAME))) dirs.push(dir)
     const parent = path.dirname(dir)
     if (parent === dir) break
     dir = parent
   }
 
-  return path.resolve(startDir)
+  return dirs.reverse()
 }

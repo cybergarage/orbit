@@ -64,6 +64,23 @@ describe('loadWorkspaceSettings', () => {
 
     expect(await loadWorkspaceSettings(nested)).to.deep.equal({provider: 'openai'})
   })
+
+  it('overrides shallow workspace settings with deeper workspace settings', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-'))
+    const child = path.join(root, 'child')
+    const grandchild = path.join(child, 'grandchild')
+    await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
+    await fs.mkdir(path.join(child, '.orbit'), {recursive: true})
+    await fs.mkdir(grandchild, {recursive: true})
+    await fs.writeFile(
+      path.join(root, '.orbit', SETTINGS_FILE_NAME),
+      JSON.stringify({model: 'root-model', provider: 'openai'}),
+    )
+
+    await fs.writeFile(path.join(child, '.orbit', SETTINGS_FILE_NAME), JSON.stringify({model: 'child-model'}))
+
+    expect(await loadWorkspaceSettings(grandchild)).to.deep.equal({model: 'child-model', provider: 'openai'})
+  })
 })
 
 async function expectReject(promise: Promise<unknown>, expected: string): Promise<void> {
