@@ -38,12 +38,12 @@ export class Session {
     return message
   }
 
-  getFirstMessageId(): string {
-    return this.messages[0].id
+  getFirstMessageId(): null | string {
+    return this.messages[0]?.id ?? null
   }
 
-  getLastMessageId(): string {
-    return this.messages.at(-1)!.id
+  getLastMessageId(): null | string {
+    return this.messages.at(-1)?.id ?? null
   }
 
   getMessages(): Message[] {

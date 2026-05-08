@@ -303,6 +303,15 @@ describe('model helpers', () => {
       expect(session.getLastMessageId()).to.equal(header.id)
     })
 
+    it('returns null for message ids when the message list is empty', () => {
+      const session = new Session()
+      const internals = session as unknown as {messages: Message[]}
+      internals.messages.length = 0
+
+      expect(session.getFirstMessageId()).to.equal(null)
+      expect(session.getLastMessageId()).to.equal(null)
+    })
+
     it('keeps the first message id and updates the last message id as messages are appended', () => {
       const session = new Session()
       const header = session.getMessages()[0]
