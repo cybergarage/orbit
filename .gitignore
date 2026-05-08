@@ -11,5 +11,5 @@ yarn.lock
 pnpm-lock.yaml
 
 .scribemuse
-AGENT.md
+AGENTS.md
 PROMPT.md
