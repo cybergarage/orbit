@@ -58,8 +58,7 @@ describe('runExecCommand', () => {
       {
         messages: [
           {
-            content:
-              'IMPORTANT: You MUST respond in Japanese only. Do not use any other language, regardless of the language used in the rest of this prompt or in the user message.\n\nWorkspace instructions',
+            content: 'Workspace instructions',
             role: Role.System,
           },
           {content: 'hello', role: Role.User},

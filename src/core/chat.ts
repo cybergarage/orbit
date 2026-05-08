@@ -4,11 +4,6 @@
 import {DEFAULT_MODELS, type Provider} from './models/index.js'
 import {loadWorkspaceSettings, type WorkspaceSettings} from './settings.js'
 
-export const LANG_INSTRUCTIONS: Record<string, string> = {
-  en: 'IMPORTANT: You MUST respond in English only. Do not use any other language, regardless of the language used in the rest of this prompt or in the user message.',
-  ja: 'IMPORTANT: You MUST respond in Japanese only. Do not use any other language, regardless of the language used in the rest of this prompt or in the user message.',
-}
-
 export interface AgentOptions {
   lang?: string
   model?: string
@@ -19,14 +14,6 @@ export interface ResolvedAgentOptions {
   lang?: string
   model: string
   provider: Provider
-}
-
-export function buildSystemPrompt(contextText: string, lang?: string): string | undefined {
-  const langInstruction = lang ? LANG_INSTRUCTIONS[lang] : undefined
-  if (!contextText && !langInstruction) return undefined
-  if (!contextText) return langInstruction
-  if (!langInstruction) return contextText
-  return `${langInstruction}\n\n${contextText}`
 }
 
 export function resolveAgentOptions(options: AgentOptions, settings: WorkspaceSettings = {}): ResolvedAgentOptions {

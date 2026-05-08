@@ -76,8 +76,7 @@ describe('runInteractiveCommand', () => {
       {
         initialModel: 'workspace-model',
         initialProvider: 'openai',
-        systemPrompt:
-          'IMPORTANT: You MUST respond in Japanese only. Do not use any other language, regardless of the language used in the rest of this prompt or in the user message.\n\nWorkspace context',
+        systemPrompt: 'Workspace context',
       },
     ])
     expect(calls).to.deep.equal([

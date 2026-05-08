@@ -5,7 +5,7 @@ import {Args, Command} from '@oclif/core'
 import {readFileSync} from 'node:fs'
 import process from 'node:process'
 
-import {type AgentOptions, buildSystemPrompt, resolveWorkspaceAgentOptions} from '../../core/chat.js'
+import {type AgentOptions, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadSystemContexts} from '../../core/context.js'
 import {Agent, Message, MessageType, Role} from '../../core/index.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
@@ -33,9 +33,9 @@ export async function runExecCommand(
   }
 
   const resolvedOptions = await resolveWorkspaceAgentOptions(options, cwd, deps.settingsLoader)
-  const contexts = await (deps.contextLoader ?? loadSystemContexts)(cwd)
-  const contextsText = contexts.map((c) => c.content).join('\n\n')
-  const systemPrompt = buildSystemPrompt(contextsText, resolvedOptions.lang)
+  const systemContexts = await (deps.contextLoader ?? loadSystemContexts)(cwd)
+  const systemContextsText = systemContexts.map((c) => c.content).join('\n\n')
+  const systemPrompt = systemContextsText
   const AgentClass = deps.agentClass ?? Agent
   const agent = new AgentClass({
     model: {
