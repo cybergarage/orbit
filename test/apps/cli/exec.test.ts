@@ -44,7 +44,10 @@ describe('runExecCommand', () => {
       '/tmp/workspace',
       {
         agentClass: TestAgent,
-        contextLoader: async () => [{content: 'Workspace instructions', source: {kind: 'none'} as const}],
+        contextLoader: async () => [
+          {content: 'Workspace instructions', source: {kind: 'none'} as const},
+          {content: 'Project instructions', source: {kind: 'none'} as const},
+        ],
       },
     )
 
@@ -59,6 +62,10 @@ describe('runExecCommand', () => {
         messages: [
           {
             content: 'Workspace instructions',
+            role: Role.System,
+          },
+          {
+            content: 'Project instructions',
             role: Role.System,
           },
           {content: 'hello', role: Role.User},

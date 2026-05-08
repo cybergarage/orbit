@@ -34,8 +34,6 @@ export async function runExecCommand(
 
   const resolvedOptions = await resolveWorkspaceAgentOptions(options, cwd, deps.settingsLoader)
   const systemContexts = await (deps.contextLoader ?? loadSystemContexts)(cwd)
-  const systemContextsText = systemContexts.map((c) => c.content).join('\n\n')
-  const systemPrompt = systemContextsText
   const AgentClass = deps.agentClass ?? Agent
   const agent = new AgentClass({
     model: {
@@ -44,7 +42,9 @@ export async function runExecCommand(
     },
   })
   const messages: Message[] = [
-    ...(systemPrompt ? [new Message(MessageType.Session, {content: systemPrompt, role: Role.System})] : []),
+    ...systemContexts
+      .filter((context) => context.content)
+      .map((context) => new Message(MessageType.Session, {content: context.content, role: Role.System})),
     new Message(MessageType.User, {content: prompt, role: Role.User}),
   ]
   const response = await agent.invoke(messages)
