@@ -13,8 +13,10 @@ export type ContextSource =
   | {file: string; kind: 'workspace'}
   | {kind: 'none'}
 
+const AGENTS_FILE_NAME = 'AGENTS.md'
+
 function agentFiles(): string[] {
-  return [`${APP_NAME.toUpperCase()}.md`, 'AGENTS.md']
+  return [`${APP_NAME.toUpperCase()}.md`, AGENTS_FILE_NAME]
 }
 
 async function exists(p: string): Promise<boolean> {
