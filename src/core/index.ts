@@ -54,7 +54,7 @@ export type {
   ProcessorType,
 } from './processor/index.js'
 export {Session, SessionHeader} from './session/index.js'
-export type {AppendMessageOptions, SessionHeaderOptions} from './session/index.js'
+export type {SessionHeaderOptions} from './session/index.js'
 export {State} from './state.js'
 export {GptTokenizer} from './tokenizer/index.js'
 export type {Tokenizer} from './tokenizer/index.js'

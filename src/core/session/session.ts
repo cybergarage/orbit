@@ -14,10 +14,11 @@ export class Session {
   }
 
   appendMessages(messages: Message[]): Message[] {
+    const parentId = this.getLastMessageId()
     const appendedMessages = messages.map((message) => {
       const appendedMessage = createMessage(message.type, {
         contents: message.contents,
-        parentid: this.getLastMessageId(),
+        parentid: parentId,
         ...(message.payload === undefined ? {} : {payload: message.payload}),
         role: message.role,
       })

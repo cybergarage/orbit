@@ -315,8 +315,8 @@ describe('model helpers', () => {
     it('keeps the first message id and updates the last message id as messages are appended', () => {
       const session = new Session()
       const header = session.getMessages()[0]
-      session.appendMessage(MessageType.User)
-      const second = session.appendMessage(MessageType.Assistant)
+      session.appendMessages([new Message(MessageType.User)])
+      const [second] = session.appendMessages([new Message(MessageType.Assistant)])
 
       expect(session.getFirstMessageId()).to.equal(header.id)
       expect(session.getLastMessageId()).to.equal(second.id)
@@ -326,9 +326,11 @@ describe('model helpers', () => {
       const session = new Session()
       const header = session.getMessages()[0]
 
-      const message = session.appendMessage(MessageType.User, {
-        payload: {content: 'Hello'},
-      })
+      const [message] = session.appendMessages([
+        new Message(MessageType.User, {
+          payload: {content: 'Hello'},
+        }),
+      ])
 
       expect(message).to.deep.equal(session.getMessages()[1])
       expect(message.type).to.equal(MessageType.User)
@@ -346,7 +348,7 @@ describe('model helpers', () => {
         role: Role.User,
       })
 
-      const appended = session.appendMessage(message)
+      const [appended] = session.appendMessages([message])
 
       expect(appended).to.not.equal(message)
       expect(appended.type).to.equal(message.type)
@@ -429,7 +431,7 @@ describe('model helpers', () => {
     it('generates UUIDv7 message ids', () => {
       const session = new Session()
 
-      const message = session.appendMessage(MessageType.Assistant)
+      const [message] = session.appendMessages([new Message(MessageType.Assistant)])
 
       expect(message.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u)
     })
@@ -437,11 +439,13 @@ describe('model helpers', () => {
     it('serializes messages as JSON objects with the expected field names', () => {
       const session = new Session()
 
-      const message = session.appendMessage(MessageType.Tool, {
-        parentid: 'parent-message-id',
-        payload: {name: 'lookup', result: 'ok'},
-        role: Role.User,
-      })
+      const [message] = session.appendMessages([
+        new Message(MessageType.Tool, {
+          parentid: 'parent-message-id',
+          payload: {name: 'lookup', result: 'ok'},
+          role: Role.User,
+        }),
+      ])
       const serialized = JSON.stringify(message)
 
       expect(JSON.parse(serialized)).to.deep.equal({
@@ -459,27 +463,39 @@ describe('model helpers', () => {
       const session = new Session()
       const header = session.getMessages()[0]
 
-      const first = session.appendMessage(MessageType.User)
-      const second = session.appendMessage(MessageType.Assistant)
+      const [first] = session.appendMessages([new Message(MessageType.User)])
+      const [second] = session.appendMessages([new Message(MessageType.Assistant)])
 
       expect(first.parentid).to.equal(header.id)
       expect(second.parentid).to.equal(first.id)
+    })
+
+    it('uses the same initial parentid for messages appended together', () => {
+      const session = new Session()
+      const header = session.getMessages()[0]
+
+      const [first, second] = session.appendMessages([new Message(MessageType.User), new Message(MessageType.Assistant)])
+
+      expect(first.parentid).to.equal(header.id)
+      expect(second.parentid).to.equal(header.id)
     })
 
     it('overrides an explicit parentid with the last message id', () => {
       const session = new Session()
       const header = session.getMessages()[0]
 
-      const message = session.appendMessage(MessageType.Tool, {
-        parentid: 'custom-parent-id',
-      })
+      const [message] = session.appendMessages([
+        new Message(MessageType.Tool, {
+          parentid: 'custom-parent-id',
+        }),
+      ])
 
       expect(message.parentid).to.equal(header.id)
     })
 
     it('returns a copy of the message list', () => {
       const session = new Session()
-      const message = session.appendMessage(MessageType.User)
+      const [message] = session.appendMessages([new Message(MessageType.User)])
       const messages = session.getMessages()
       const header = messages[0]
 
@@ -491,7 +507,7 @@ describe('model helpers', () => {
     it('throws when appending an unsupported message type', () => {
       const session = new Session()
 
-      expect(() => session.appendMessage('System' as MessageTypeName)).to.throw(
+      expect(() => session.appendMessages([new Message('System' as MessageTypeName)])).to.throw(
         'Unsupported message type: System',
       )
     })
