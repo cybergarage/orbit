@@ -295,6 +295,24 @@ describe('model helpers', () => {
       expect(messages[0].id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u)
     })
 
+    it('returns the first and last message ids for a new Session', () => {
+      const session = new Session()
+      const header = session.getMessages()[0]
+
+      expect(session.getFirstMessageId()).to.equal(header.id)
+      expect(session.getLastMessageId()).to.equal(header.id)
+    })
+
+    it('keeps the first message id and updates the last message id as messages are appended', () => {
+      const session = new Session()
+      const header = session.getMessages()[0]
+      session.appendMessage(MessageType.User)
+      const second = session.appendMessage(MessageType.Assistant)
+
+      expect(session.getFirstMessageId()).to.equal(header.id)
+      expect(session.getLastMessageId()).to.equal(second.id)
+    })
+
     it('appends a message and returns it', () => {
       const session = new Session()
       const header = session.getMessages()[0]
