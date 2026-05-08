@@ -3,7 +3,7 @@
 
 import {expect} from 'chai'
 
-import {APP_NAME, configureApp, DOT_APP_DIR_NAME, setAppName, setDotAppDirName} from '../../src/core/index.js'
+import {APP_NAME, configureApp, DOT_APP_DIR_NAME, setAppName} from '../../src/core/index.js'
 
 describe('app config', () => {
   afterEach(() => {
@@ -22,17 +22,10 @@ describe('app config', () => {
     expect(DOT_APP_DIR_NAME).to.equal('.acme')
   })
 
-  it('allows the dot app directory name to be customized independently', () => {
-    setDotAppDirName('.custom')
-
-    expect(APP_NAME).to.equal('orbit')
-    expect(DOT_APP_DIR_NAME).to.equal('.custom')
-  })
-
-  it('configures both app names at once', () => {
-    configureApp({appName: 'acme', dotAppDirName: '.acme-sdk'})
+  it('configures the app name and derived dot app directory at once', () => {
+    configureApp({appName: 'acme'})
 
     expect(APP_NAME).to.equal('acme')
-    expect(DOT_APP_DIR_NAME).to.equal('.acme-sdk')
+    expect(DOT_APP_DIR_NAME).to.equal('.acme')
   })
 })
