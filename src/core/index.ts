@@ -55,6 +55,8 @@ export type {
 } from './processor/index.js'
 export {Session, SessionHeader} from './session/index.js'
 export type {SessionHeaderOptions} from './session/index.js'
+export {Skill} from './skills/index.js'
+export type {SkillConfig, SkillMetadata, SkillSource, SkillSourceInfo} from './skills/index.js'
 export {State} from './state.js'
 export {GptTokenizer} from './tokenizer/index.js'
 export type {Tokenizer} from './tokenizer/index.js'
