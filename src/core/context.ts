@@ -6,7 +6,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 import {APP_NAME} from './app.js'
-import {findWorkspaceDirectories} from './workspace.js'
+import {LocalWorkspaceLocator} from './workspace.js'
 
 export type ContextSource =
   | {file: string; kind: 'compat'}
@@ -40,7 +40,7 @@ async function readIfExists(p: string): Promise<null | string> {
 }
 
 export async function loadSystemContexts(startDir = process.cwd()): Promise<Context[]> {
-  const directories = await findWorkspaceDirectories(startDir)
+  const directories = await new LocalWorkspaceLocator({start: startDir}).directories()
   const agentFileNames = agentFiles()
   const matches: Context[] = []
 

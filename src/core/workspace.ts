@@ -7,6 +7,14 @@ import process from 'node:process'
 
 import {DOT_APP_DIR_NAME} from './app.js'
 
+export interface WorkspaceLocator {
+  directories(): Promise<string[]>
+}
+
+export interface LocalWorkspaceLocatorOptions {
+  start?: string
+}
+
 async function exists(p: string): Promise<boolean> {
   try {
     await fs.stat(p)
@@ -16,16 +24,24 @@ async function exists(p: string): Promise<boolean> {
   }
 }
 
-export async function findWorkspaceDirectories(startDir = process.cwd()): Promise<string[]> {
-  const dirs: string[] = []
-  let dir = path.resolve(startDir)
-  while (true) {
-    // eslint-disable-next-line no-await-in-loop
-    if (await exists(path.join(dir, DOT_APP_DIR_NAME))) dirs.push(dir)
-    const parent = path.dirname(dir)
-    if (parent === dir) break
-    dir = parent
+export class LocalWorkspaceLocator implements WorkspaceLocator {
+  private readonly start: string
+
+  constructor(options: LocalWorkspaceLocatorOptions = {}) {
+    this.start = options.start ?? process.cwd()
   }
 
-  return dirs.reverse()
+  async directories(): Promise<string[]> {
+    const dirs: string[] = []
+    let dir = path.resolve(this.start)
+    while (true) {
+      // eslint-disable-next-line no-await-in-loop
+      if (await exists(path.join(dir, DOT_APP_DIR_NAME))) dirs.push(dir)
+      const parent = path.dirname(dir)
+      if (parent === dir) break
+      dir = parent
+    }
+
+    return dirs.reverse()
+  }
 }

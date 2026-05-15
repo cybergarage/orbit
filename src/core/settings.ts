@@ -7,7 +7,7 @@ import process from 'node:process'
 
 import {DOT_APP_DIR_NAME, SETTINGS_FILE_NAME} from './app.js'
 import {getProvider, isProvider, type Provider} from './models/index.js'
-import {findWorkspaceDirectories} from './workspace.js'
+import {LocalWorkspaceLocator} from './workspace.js'
 
 export interface WorkspaceSettings {
   model?: string
@@ -26,7 +26,7 @@ async function readIfExists(file: string): Promise<string | undefined> {
 
 export async function loadWorkspaceSettings(startDir = process.cwd()): Promise<WorkspaceSettings> {
   const mergedSettings: WorkspaceSettings = {}
-  const directories = await findWorkspaceDirectories(startDir)
+  const directories = await new LocalWorkspaceLocator({start: startDir}).directories()
 
   for (const dir of directories) {
     const preferredFile = path.join(dir, DOT_APP_DIR_NAME, SETTINGS_FILE_NAME)
