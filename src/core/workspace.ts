@@ -9,7 +9,7 @@ import {DOT_APP_DIR_NAME} from './app.js'
 
 export interface WorkspaceLocator {
   directories(): Promise<string[]>
-  files(pattern: RegExp): Promise<string[]>
+  files(pattern: RegExp | string): Promise<string[]>
 }
 
 export interface LocalWorkspaceLocatorOptions {
@@ -46,7 +46,7 @@ export class LocalWorkspaceLocator implements WorkspaceLocator {
     return dirs.reverse()
   }
 
-  async files(pattern: RegExp): Promise<string[]> {
+  async files(pattern: RegExp | string): Promise<string[]> {
     const files: string[] = []
     const directories = await this.directories()
 
@@ -67,7 +67,9 @@ export class LocalWorkspaceLocator implements WorkspaceLocator {
   }
 }
 
-function matchesPattern(pattern: RegExp, value: string): boolean {
+function matchesPattern(pattern: RegExp | string, value: string): boolean {
+  if (typeof pattern === 'string') return value === pattern
+
   pattern.lastIndex = 0
   return pattern.test(value)
 }
