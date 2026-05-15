@@ -61,6 +61,43 @@ describe('loadSystemContexts', () => {
     ])
   })
 
+  it('loads all matching system context files within a workspace', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-context-'))
+    const nested = path.join(root, 'nested')
+    await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
+    await fs.mkdir(nested)
+    await fs.writeFile(path.join(root, 'AGENTS.md'), 'agents context')
+    await fs.writeFile(path.join(root, 'ORBIT.md'), 'orbit context')
+
+    expect(await loadSystemContexts(nested)).to.deep.equal([
+      {
+        content: 'agents context',
+        source: {file: path.join(root, 'AGENTS.md'), kind: 'compat'},
+      },
+      {
+        content: 'orbit context',
+        source: {file: path.join(root, 'ORBIT.md'), kind: 'compat'},
+      },
+    ])
+  })
+
+  it('escapes configured app names when matching system context files', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-context-'))
+    const nested = path.join(root, 'nested')
+    configureApp({appName: 'acme.tools'})
+    await fs.mkdir(path.join(root, '.acme.tools'), {recursive: true})
+    await fs.mkdir(nested)
+    await fs.writeFile(path.join(root, 'ACME.TOOLS.md'), 'custom context')
+    await fs.writeFile(path.join(root, 'ACMEXTOOLS.md'), 'wrong context')
+
+    expect(await loadSystemContexts(nested)).to.deep.equal([
+      {
+        content: 'custom context',
+        source: {file: path.join(root, 'ACME.TOOLS.md'), kind: 'compat'},
+      },
+    ])
+  })
+
   it('uses the current working directory when no start directory is provided', async () => {
     const previousCwd = process.cwd()
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-context-'))

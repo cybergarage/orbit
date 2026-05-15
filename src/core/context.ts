@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import fs from 'node:fs/promises'
-import path from 'node:path'
 import process from 'node:process'
 
 import {APP_NAME} from './app.js'
@@ -25,35 +24,26 @@ function agentFiles(): string[] {
   return [`${APP_NAME.toUpperCase()}.md`, AGENTS_FILE_NAME]
 }
 
-async function exists(p: string): Promise<boolean> {
-  try {
-    await fs.stat(p)
-    return true
-  } catch {
-    return false
-  }
+function escapeRegExp(value: string): string {
+  return value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 }
 
-async function readIfExists(p: string): Promise<null | string> {
-  if (!(await exists(p))) return null
-  return fs.readFile(p, 'utf8')
+function agentFilePattern(): RegExp {
+  return new RegExp(
+    `^(?:${agentFiles()
+      .map((fileName) => escapeRegExp(fileName))
+      .join('|')})$`,
+  )
 }
 
 export async function loadSystemContexts(startDir = process.cwd()): Promise<Context[]> {
-  const directories = await new LocalWorkspaceLocator({start: startDir}).directories()
-  const agentFileNames = agentFiles()
+  const files = await new LocalWorkspaceLocator({start: startDir}).files(agentFilePattern())
   const matches: Context[] = []
 
-  for (const dir of directories) {
-    let dirMatch: Context | null = null
-    for (const fileName of agentFileNames) {
-      const file = path.join(dir, fileName)
-      // eslint-disable-next-line no-await-in-loop
-      const content = await readIfExists(file)
-      if (content) dirMatch = {content, source: {file, kind: 'compat'}}
-    }
-
-    if (dirMatch) matches.push(dirMatch)
+  for (const file of files) {
+    // eslint-disable-next-line no-await-in-loop
+    const content = await fs.readFile(file, 'utf8')
+    if (content) matches.push({content, source: {file, kind: 'compat'}})
   }
 
   return matches

@@ -9,6 +9,7 @@ import {DOT_APP_DIR_NAME} from './app.js'
 
 export interface WorkspaceLocator {
   directories(): Promise<string[]>
+  files(pattern: RegExp): Promise<string[]>
 }
 
 export interface LocalWorkspaceLocatorOptions {
@@ -44,4 +45,29 @@ export class LocalWorkspaceLocator implements WorkspaceLocator {
 
     return dirs.reverse()
   }
+
+  async files(pattern: RegExp): Promise<string[]> {
+    const files: string[] = []
+    const directories = await this.directories()
+
+    for (const dir of directories) {
+      // eslint-disable-next-line no-await-in-loop
+      const entries = await fs.readdir(dir, {withFileTypes: true})
+      const matchingFiles = entries
+        .filter((entry) => entry.isFile() && matchesPattern(pattern, entry.name))
+        .map((entry) => entry.name)
+        .sort()
+
+      for (const fileName of matchingFiles) {
+        files.push(path.join(dir, fileName))
+      }
+    }
+
+    return files
+  }
+}
+
+function matchesPattern(pattern: RegExp, value: string): boolean {
+  pattern.lastIndex = 0
+  return pattern.test(value)
 }
