@@ -3,13 +3,23 @@
 
 import type {z} from 'zod'
 
-import type {Message, Model, Provider, ToolOptions} from './models/index.js'
-import type {Operator, OperatorOptions} from './processor/index.js'
+import type {
+  Model,
+  ModelInvokeOptions,
+  ModelToolCall,
+  ModelToolCallPayload,
+  ModelToolResultPayload,
+  Provider,
+  ToolOptions,
+} from './models/index.js'
+import type {Operator} from './processor/index.js'
 import type {Session} from './session/index.js'
 
-import {getModel} from './models/index.js'
+import {getModel, Message, MessageType} from './models/index.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
 import {State} from './state.js'
+
+const DEFAULT_MAX_TOOL_ITERATIONS = 5
 
 export interface AgentTool extends Operator<never, unknown, ToolOptions> {
   readonly description: string
@@ -30,7 +40,7 @@ export interface AgentOptions {
   tools?: AgentTool[]
 }
 
-export class Agent implements Operator<Message[], Message, OperatorOptions> {
+export class Agent implements Operator<Message[], Message, ModelInvokeOptions> {
   public readonly messages: Message[]
   public readonly state: State
   public readonly tools: AgentTool[]
@@ -60,15 +70,90 @@ export class Agent implements Operator<Message[], Message, OperatorOptions> {
     return this.state
   }
 
-  async invoke(messages: Message[], options?: Partial<OperatorOptions>): Promise<Message> {
+  async invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
     const session = this.getSession()
     session.appendMessages(messages)
-    const modelMessage = await this.model.invoke([...this.messages, ...messages], options)
-    session.appendMessages([modelMessage])
-    return modelMessage
+    const conversation = [...messages]
+    const tools = [...this.tools, ...(options?.tools ?? [])]
+    const modelOptions = tools.length > 0 ? {...options, tools} : options
+    const maxToolIterations = options?.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS
+
+    for (let iteration = 0; iteration <= maxToolIterations; iteration += 1) {
+      // Tool loops are intentionally sequential because each model response depends on the previous tool results.
+      // eslint-disable-next-line no-await-in-loop
+      const modelMessage = await this.model.invoke([...this.messages, ...conversation], modelOptions)
+      session.appendMessages([modelMessage])
+      conversation.push(modelMessage)
+
+      const toolCalls = getToolCalls(modelMessage)
+      if (toolCalls.length === 0) {
+        return modelMessage
+      }
+
+      if (iteration === maxToolIterations) {
+        throw new Error(`Agent exceeded maximum tool iterations: ${maxToolIterations}`)
+      }
+
+      // Tool execution for one model turn can run in parallel before the next model call.
+      // eslint-disable-next-line no-await-in-loop
+      const toolMessages = await Promise.all(toolCalls.map((toolCall) => this.invokeTool(toolCall, tools, options)))
+      session.appendMessages(toolMessages)
+      conversation.push(...toolMessages)
+    }
+
+    throw new Error(`Agent exceeded maximum tool iterations: ${maxToolIterations}`)
   }
 
-  async run(_session: Session, messages: Message[], options?: Partial<OperatorOptions>): Promise<Message> {
+  async run(_session: Session, messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
     return this.invoke(messages, options)
   }
+
+  private async invokeTool(
+    toolCall: ModelToolCall,
+    tools: AgentTool[],
+    options?: Partial<ModelInvokeOptions>,
+  ): Promise<Message> {
+    const tool = tools.find((candidate) => candidate.name === toolCall.name)
+
+    if (tool === undefined) {
+      return createToolResultMessage(toolCall, `Unknown tool: ${toolCall.name}`, true)
+    }
+
+    try {
+      const output = await tool.invoke(toolCall.input as never, options)
+      return createToolResultMessage(toolCall, output)
+    } catch (error) {
+      return createToolResultMessage(toolCall, error instanceof Error ? error.message : String(error), true)
+    }
+  }
+}
+
+function createToolResultMessage(toolCall: ModelToolCall, output: unknown, isError = false): Message {
+  const payload: ModelToolResultPayload = {
+    input: toolCall.input,
+    isError,
+    name: toolCall.name,
+    output,
+    toolCallId: toolCall.id,
+  }
+
+  return new Message(MessageType.Tool, {
+    payload,
+  })
+}
+
+function getToolCalls(message: Message): ModelToolCall[] {
+  if (!isModelToolCallPayload(message.payload)) {
+    return []
+  }
+
+  return message.payload.toolCalls
+}
+
+function isModelToolCallPayload(payload: unknown): payload is ModelToolCallPayload {
+  if (typeof payload !== 'object' || payload === null || !('toolCalls' in payload)) {
+    return false
+  }
+
+  return Array.isArray((payload as ModelToolCallPayload).toolCalls)
 }

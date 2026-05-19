@@ -7,6 +7,7 @@ import {z} from 'zod'
 import type {
   AgentOptions,
   Model,
+  ModelInvokeOptions,
   Operator,
   OperatorOptions,
   PromptTemplateInput,
@@ -247,6 +248,189 @@ describe('model helpers', () => {
       tools.push(lookupTool)
 
       expect(agent.tools).to.deep.equal([searchTool])
+    })
+
+    it('passes constructor tools to the model invoke call', async () => {
+      const searchTool = tool((input: string) => input, {
+        description: 'Search for a value.',
+        name: 'search',
+        schema: z.string(),
+      })
+      const calls: {options?: Partial<ModelInvokeOptions>}[] = []
+      const agent = new Agent({
+        deps: {
+          createModel: (): Model => createStubModel(async (_messages, options) => {
+            calls.push({options})
+            return new Message(MessageType.Assistant, {content: 'ok'})
+          }),
+        },
+        tools: [searchTool],
+      })
+
+      await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
+
+      expect(calls[0].options?.tools).to.deep.equal([searchTool])
+    })
+
+    it('merges invocation tools with constructor tools', async () => {
+      const searchTool = tool((input: string) => input, {
+        description: 'Search for a value.',
+        name: 'search',
+        schema: z.string(),
+      })
+      const lookupTool = tool((input: string) => input, {
+        description: 'Look up a value.',
+        name: 'lookup',
+        schema: z.string(),
+      })
+      const calls: {options?: Partial<ModelInvokeOptions>}[] = []
+      const agent = new Agent({
+        deps: {
+          createModel: (): Model => createStubModel(async (_messages, options) => {
+            calls.push({options})
+            return new Message(MessageType.Assistant, {content: 'ok'})
+          }),
+        },
+        tools: [searchTool],
+      })
+
+      await agent.invoke([new Message(MessageType.User, {content: 'hello'})], {tools: [lookupTool]})
+
+      expect(calls[0].options?.tools).to.deep.equal([searchTool, lookupTool])
+    })
+
+    it('executes model tool calls and re-invokes the model with tool results', async () => {
+      const searchTool = tool(({query}: {query: string}) => `result:${query}`, {
+        description: 'Search for a value.',
+        name: 'search',
+        schema: z.object({query: z.string()}),
+      })
+      const calls: Message[][] = []
+      const agent = new Agent({
+        deps: {
+          createModel: (): Model => createStubModel(async (messages) => {
+            calls.push(messages)
+            if (calls.length === 1) {
+              return new Message(MessageType.Assistant, {
+                payload: {
+                  toolCalls: [{id: 'call-1', input: {query: 'orbit'}, name: 'search'}],
+                },
+              })
+            }
+
+            return new Message(MessageType.Assistant, {content: 'done'})
+          }),
+        },
+        tools: [searchTool],
+      })
+
+      const response = await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
+      const toolMessage = calls[1][2]
+
+      expect(response.content).to.equal('done')
+      expect(calls).to.have.length(2)
+      expect(toolMessage.type).to.equal(MessageType.Tool)
+      expect(toolMessage.payload).to.deep.equal({
+        input: {query: 'orbit'},
+        isError: false,
+        name: 'search',
+        output: 'result:orbit',
+        toolCallId: 'call-1',
+      })
+    })
+
+    it('returns tool execution errors to the model as tool results', async () => {
+      const failingTool = tool(() => {
+        throw new Error('boom')
+      }, {
+        description: 'Fail.',
+        name: 'fail',
+        schema: z.object({}),
+      })
+      const calls: Message[][] = []
+      const agent = new Agent({
+        deps: {
+          createModel: (): Model => createStubModel(async (messages) => {
+            calls.push(messages)
+            if (calls.length === 1) {
+              return new Message(MessageType.Assistant, {
+                payload: {
+                  toolCalls: [{id: 'call-1', input: {}, name: 'fail'}],
+                },
+              })
+            }
+
+            return new Message(MessageType.Assistant, {content: 'handled'})
+          }),
+        },
+        tools: [failingTool],
+      })
+
+      await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
+
+      expect(calls[1][2].payload).to.deep.equal({
+        input: {},
+        isError: true,
+        name: 'fail',
+        output: 'boom',
+        toolCallId: 'call-1',
+      })
+    })
+
+    it('returns unknown tool calls to the model as tool errors', async () => {
+      const calls: Message[][] = []
+      const agent = new Agent({
+        deps: {
+          createModel: (): Model => createStubModel(async (messages) => {
+            calls.push(messages)
+            if (calls.length === 1) {
+              return new Message(MessageType.Assistant, {
+                payload: {
+                  toolCalls: [{id: 'call-1', input: {}, name: 'missing'}],
+                },
+              })
+            }
+
+            return new Message(MessageType.Assistant, {content: 'handled'})
+          }),
+        },
+      })
+
+      await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
+
+      expect(calls[1][2].payload).to.deep.equal({
+        input: {},
+        isError: true,
+        name: 'missing',
+        output: 'Unknown tool: missing',
+        toolCallId: 'call-1',
+      })
+    })
+
+    it('throws when the model exceeds max tool iterations', async () => {
+      const searchTool = tool((input: string) => input, {
+        description: 'Search for a value.',
+        name: 'search',
+        schema: z.string(),
+      })
+      const agent = new Agent({
+        deps: {
+          createModel: (): Model => createStubModel(async () => new Message(MessageType.Assistant, {
+            payload: {
+              toolCalls: [{id: 'call-1', input: 'orbit', name: 'search'}],
+            },
+          })),
+        },
+        tools: [searchTool],
+      })
+
+      try {
+        await agent.invoke([new Message(MessageType.User, {content: 'hello'})], {maxToolIterations: 1})
+        throw new Error('Expected Agent.invoke to fail.')
+      } catch (error) {
+        expect(error).to.be.instanceOf(Error)
+        expect((error as Error).message).to.equal('Agent exceeded maximum tool iterations: 1')
+      }
     })
 
     it('treats models as operators and returns the model name', () => {
@@ -648,3 +832,20 @@ describe('model helpers', () => {
     })
   })
 })
+
+function createStubModel(
+  invoke: (messages: Message[], options?: Partial<ModelInvokeOptions>) => Promise<Message>,
+): Model {
+  return {
+    getModel() {
+      return DEFAULT_MODELS.ollama
+    },
+    getName() {
+      return OperatorType.Model
+    },
+    getProvider() {
+      return 'ollama'
+    },
+    invoke,
+  }
+}

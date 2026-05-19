@@ -34,7 +34,13 @@ export type {
 export {Message, MessageType, UserMessage} from './message/index.js'
 export type {MessageOptions, MessagePayload} from './message/index.js'
 export {DEFAULT_MODELS, getModel} from './models/factory.js'
-export type {Model} from './models/model.js'
+export type {
+  Model,
+  ModelInvokeOptions,
+  ModelToolCall,
+  ModelToolCallPayload,
+  ModelToolResultPayload,
+} from './models/model.js'
 export type {Prompt} from './models/prompt.js'
 export {splitSystemPrompt} from './models/prompt.js'
 export type {Provider} from './models/provider.js'
