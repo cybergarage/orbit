@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 export {Agent} from './agent.js'
-export type {AgentOptions} from './agent.js'
+export type {AgentOptions, AgentTool} from './agent.js'
 export {
   APP_NAME,
   configureApp,

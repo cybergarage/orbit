@@ -1,13 +1,21 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {Message, Model, Provider} from './models/index.js'
+import type {z} from 'zod'
+
+import type {Message, Model, Provider, ToolOptions} from './models/index.js'
 import type {Operator, OperatorOptions} from './processor/index.js'
 import type {Session} from './session/index.js'
 
 import {getModel} from './models/index.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
 import {State} from './state.js'
+
+export interface AgentTool extends Operator<never, unknown, ToolOptions> {
+  readonly description: string
+  readonly name: string
+  readonly schema: z.ZodType<unknown>
+}
 
 export interface AgentOptions {
   deps?: {
@@ -19,11 +27,13 @@ export interface AgentOptions {
     provider?: Provider
   }
   state?: State
+  tools?: AgentTool[]
 }
 
 export class Agent implements Operator<Message[], Message, OperatorOptions> {
   public readonly messages: Message[]
   public readonly state: State
+  public readonly tools: AgentTool[]
   private readonly model: Model
 
   constructor(options: AgentOptions = {}) {
@@ -31,6 +41,7 @@ export class Agent implements Operator<Message[], Message, OperatorOptions> {
     this.model = createModel(options.model?.provider, options.model?.name)
     this.messages = [...(options.messages ?? [])]
     this.state = options.state ?? new State()
+    this.tools = [...(options.tools ?? [])]
   }
 
   getModel(): Model {

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {expect} from 'chai'
+import {z} from 'zod'
 
 import type {
   AgentOptions,
@@ -28,6 +29,7 @@ import {
   SessionHeader,
   splitSystemPrompt,
   State,
+  tool,
 } from '../../src/core/models/index.js'
 
 describe('model helpers', () => {
@@ -228,6 +230,25 @@ describe('model helpers', () => {
       expect(agent.messages).to.deep.equal([systemMessage])
     })
 
+    it('copies AgentOptions tools when constructed', () => {
+      const searchTool = tool((input: string) => input, {
+        description: 'Search for a value.',
+        name: 'search',
+        schema: z.string(),
+      })
+      const lookupTool = tool((input: string) => input, {
+        description: 'Look up a value.',
+        name: 'lookup',
+        schema: z.string(),
+      })
+      const tools = [searchTool]
+      const agent = new Agent({tools})
+
+      tools.push(lookupTool)
+
+      expect(agent.tools).to.deep.equal([searchTool])
+    })
+
     it('treats models as operators and returns the model name', () => {
       const model = getModel('ollama')
       const operator: Operator<Message[], Message, OperatorOptions> = model
@@ -246,12 +267,18 @@ describe('model helpers', () => {
 
     it('accepts AgentOptions as the constructor type', () => {
       const systemMessage = new Message(MessageType.Session, {content: 'System context', role: Role.System})
+      const searchTool = tool((input: string) => input, {
+        description: 'Search for a value.',
+        name: 'search',
+        schema: z.string(),
+      })
       const options: AgentOptions = {
         messages: [systemMessage],
         model: {
           name: 'llama3.1',
           provider: 'ollama',
         },
+        tools: [searchTool],
       }
 
       expect(options).to.deep.equal({
@@ -260,6 +287,7 @@ describe('model helpers', () => {
           name: 'llama3.1',
           provider: 'ollama',
         },
+        tools: [searchTool],
       })
     })
 
