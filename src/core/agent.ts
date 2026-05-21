@@ -3,6 +3,7 @@
 
 import type {z} from 'zod'
 
+import type {McpToolManager, McpToolManagerFactoryOptions} from './mcp.js'
 import type {
   Model,
   ModelInvokeOptions,
@@ -16,6 +17,7 @@ import type {Operator} from './processor/index.js'
 import type {Session} from './session/index.js'
 import type {WorkspaceSettings} from './settings.js'
 
+import {createMcpToolManager} from './mcp.js'
 import {getModel, Message, MessageType} from './models/index.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
 import {loadWorkspaceSettingsSync, mergeWorkspaceSettings} from './settings.js'
@@ -25,6 +27,7 @@ const DEFAULT_MAX_TOOL_ITERATIONS = 5
 
 export interface AgentTool extends Operator<never, unknown, ToolOptions> {
   readonly description: string
+  readonly inputSchema?: Record<string, unknown>
   readonly name: string
   readonly schema: z.ZodType<unknown>
 }
@@ -32,6 +35,7 @@ export interface AgentTool extends Operator<never, unknown, ToolOptions> {
 export interface AgentOptions {
   cwd?: string
   deps?: {
+    createMcpToolManager?: (settings: WorkspaceSettings, options: McpToolManagerFactoryOptions) => McpToolManager
     createModel?: typeof getModel
   }
   messages?: Message[]
@@ -49,6 +53,7 @@ export class Agent implements Operator<Message[], Message, ModelInvokeOptions> {
   public readonly settings: WorkspaceSettings
   public readonly state: State
   public readonly tools: AgentTool[]
+  private readonly mcpToolManager: McpToolManager
   private readonly model: Model
 
   constructor(options: AgentOptions = {}) {
@@ -62,6 +67,13 @@ export class Agent implements Operator<Message[], Message, ModelInvokeOptions> {
     this.messages = [...(options.messages ?? [])]
     this.state = options.state ?? new State()
     this.tools = [...(options.tools ?? [])]
+    this.mcpToolManager = (options.deps?.createMcpToolManager ?? createMcpToolManager)(this.settings, {
+      cwd: options.cwd,
+    })
+  }
+
+  async close(): Promise<void> {
+    await this.mcpToolManager.close()
   }
 
   getModel(): Model {
@@ -88,7 +100,8 @@ export class Agent implements Operator<Message[], Message, ModelInvokeOptions> {
     const session = this.getSession()
     session.appendMessages(messages)
     const conversation = [...messages]
-    const tools = [...this.tools, ...(options?.tools ?? [])]
+    const mcpTools = await this.mcpToolManager.getTools()
+    const tools = [...this.tools, ...mcpTools, ...(options?.tools ?? [])]
     const modelOptions = tools.length > 0 ? {...options, tools} : options
     const maxToolIterations = options?.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS
 

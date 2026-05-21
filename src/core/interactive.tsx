@@ -77,7 +77,12 @@ export async function submitInteractiveInput(
     },
     settings: state.settings,
   })
-  const reply = await agent.invoke(requestMessages)
+  let reply: Message
+  try {
+    reply = await agent.invoke(requestMessages)
+  } finally {
+    await agent.close()
+  }
 
   return {
     ...state,
@@ -219,6 +224,7 @@ function InteractiveApp({
             messages: [...nextMessages, new Message(MessageType.Assistant, {content: message})],
           }))
         })
+        .finally(() => agent.close().catch(() => {}))
       return
     }
 

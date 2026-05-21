@@ -50,8 +50,12 @@ export async function runExecCommand(
     settings: resolvedOptions.settings,
   })
   const userMessages: Message[] = [new Message(MessageType.User, {content: prompt, role: Role.User})]
-  const response = await agent.invoke(userMessages)
-  return response.content
+  try {
+    const response = await agent.invoke(userMessages)
+    return response.content
+  } finally {
+    await agent.close()
+  }
 }
 
 export default class Exec extends Command {

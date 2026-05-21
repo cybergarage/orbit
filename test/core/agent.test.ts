@@ -9,6 +9,7 @@ import {z} from 'zod'
 
 import type {
   AgentOptions,
+  McpClient,
   Model,
   ModelInvokeOptions,
   Operator,
@@ -21,6 +22,7 @@ import {Role, SETTINGS_FILE_NAME} from '../../src/core/index.js'
 import {Message as CoreMessage, MessageType as CoreMessageType, UserMessage} from '../../src/core/message/index.js'
 import {
   Agent,
+  createMcpToolManager,
   DEFAULT_MODELS,
   getModel,
   getProvider,
@@ -300,6 +302,141 @@ describe('model helpers', () => {
       await agent.invoke([new Message(MessageType.User, {content: 'hello'})], {tools: [lookupTool]})
 
       expect(calls[0].options?.tools).to.deep.equal([searchTool, lookupTool])
+    })
+
+    it('loads configured MCP tools once and passes their input schema to the model', async () => {
+      const inputSchema = {
+        properties: {path: {type: 'string'}},
+        required: ['path'],
+        type: 'object',
+      }
+      const fakeClient = createFakeMcpClient({
+        tools: [{description: 'Read a file.', inputSchema, name: 'read_file'}],
+      })
+      const manager = createMcpToolManager(
+        {servers: {filesystem: {command: 'mcp-filesystem'}}},
+        {
+          clientFactory: () => fakeClient,
+          transportFactory: () => ({}) as never,
+        },
+      )
+      const calls: {options?: Partial<ModelInvokeOptions>}[] = []
+      const agent = new Agent({
+        deps: {
+          createMcpToolManager: () => manager,
+          createModel: (): Model => createStubModel(async (_messages, options) => {
+            calls.push({options})
+            return new Message(MessageType.Assistant, {content: 'ok'})
+          }),
+        },
+      })
+
+      await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
+      await agent.invoke([new Message(MessageType.User, {content: 'again'})])
+
+      expect(fakeClient.listToolsCalls).to.equal(1)
+      expect(calls[0].options?.tools?.map((availableTool) => ({
+        description: availableTool.description,
+        inputSchema: availableTool.inputSchema,
+        name: availableTool.name,
+      }))).to.deep.equal([
+        {
+          description: 'Read a file.',
+          inputSchema,
+          name: 'filesystem__read_file',
+        },
+      ])
+    })
+
+    it('executes namespaced MCP tool calls against the original remote tool name', async () => {
+      const fakeClient = createFakeMcpClient({
+        callToolOutput: {content: [{text: 'file contents', type: 'text'}]},
+        tools: [{description: 'Read a file.', inputSchema: {type: 'object'}, name: 'read_file'}],
+      })
+      const manager = createMcpToolManager(
+        {servers: {filesystem: {command: 'mcp-filesystem'}}},
+        {
+          clientFactory: () => fakeClient,
+          transportFactory: () => ({}) as never,
+        },
+      )
+      const calls: Message[][] = []
+      const agent = new Agent({
+        deps: {
+          createMcpToolManager: () => manager,
+          createModel: (): Model => createStubModel(async (messages) => {
+            calls.push(messages)
+            if (calls.length === 1) {
+              return new Message(MessageType.Assistant, {
+                payload: {
+                  toolCalls: [{id: 'call-1', input: {path: 'README.md'}, name: 'filesystem__read_file'}],
+                },
+              })
+            }
+
+            return new Message(MessageType.Assistant, {content: 'done'})
+          }),
+        },
+      })
+
+      await agent.invoke([new Message(MessageType.User, {content: 'read'})])
+
+      expect(fakeClient.callToolCalls).to.deep.equal([{arguments: {path: 'README.md'}, name: 'read_file'}])
+      expect(calls[1][2].payload).to.deep.equal({
+        input: {path: 'README.md'},
+        isError: false,
+        name: 'filesystem__read_file',
+        output: {content: [{text: 'file contents', type: 'text'}]},
+        toolCallId: 'call-1',
+      })
+    })
+
+    it('namespaces duplicate MCP tool names from multiple servers', async () => {
+      const clients: Record<string, ReturnType<typeof createFakeMcpClient>> = {
+        files: createFakeMcpClient({tools: [{inputSchema: {type: 'object'}, name: 'search'}]}),
+        web: createFakeMcpClient({tools: [{inputSchema: {type: 'object'}, name: 'search'}]}),
+      }
+      const manager = createMcpToolManager(
+        {
+          servers: {
+            files: {command: 'mcp-files'},
+            web: {command: 'mcp-web'},
+          },
+        },
+        {
+          clientFactory: (serverName) => clients[serverName],
+          transportFactory: () => ({}) as never,
+        },
+      )
+
+      expect((await manager.getTools()).map((availableTool) => availableTool.name)).to.deep.equal([
+        'files__search',
+        'web__search',
+      ])
+    })
+
+    it('closes connected MCP clients through Agent.close', async () => {
+      const fakeClient = createFakeMcpClient({
+        tools: [{description: 'Read a file.', inputSchema: {type: 'object'}, name: 'read_file'}],
+      })
+      const manager = createMcpToolManager(
+        {servers: {filesystem: {command: 'mcp-filesystem'}}},
+        {
+          clientFactory: () => fakeClient,
+          transportFactory: () => ({}) as never,
+        },
+      )
+      const agent = new Agent({
+        deps: {
+          createMcpToolManager: () => manager,
+          createModel: (): Model => createStubModel(async () => new Message(MessageType.Assistant, {content: 'ok'})),
+        },
+      })
+
+      await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
+      await agent.close()
+
+      expect(fakeClient.closeCalls).to.equal(1)
     })
 
     it('executes model tool calls and re-invokes the model with tool results', async () => {
@@ -916,4 +1053,37 @@ function createStubModel(
     },
     invoke,
   }
+}
+
+function createFakeMcpClient(options: {
+  callToolOutput?: unknown
+  tools: Array<{description?: string; inputSchema: Record<string, unknown>; name: string}>
+}) {
+  const client = {
+    async callTool(params: {arguments?: Record<string, unknown>; name: string}) {
+      client.callToolCalls.push(params)
+      return options.callToolOutput ?? {content: []}
+    },
+    callToolCalls: [] as Array<{arguments?: Record<string, unknown>; name: string}>,
+    async close() {
+      client.closeCalls += 1
+    },
+    closeCalls: 0,
+    async connect() {
+      client.connectCalls += 1
+    },
+    connectCalls: 0,
+    async listTools() {
+      client.listToolsCalls += 1
+      return {tools: options.tools}
+    },
+    listToolsCalls: 0,
+  } satisfies McpClient & {
+    callToolCalls: Array<{arguments?: Record<string, unknown>; name: string}>
+    closeCalls: number
+    connectCalls: number
+    listToolsCalls: number
+  }
+
+  return client
 }

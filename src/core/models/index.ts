@@ -13,6 +13,16 @@ export {
   OrbitErrorCode,
 } from '../errors/index.js'
 export type {OrbitErrorOptions} from '../errors/index.js'
+export {createMcpClient, createMcpToolManager, createMcpTransport, mcpToolName} from '../mcp.js'
+export type {
+  McpClient,
+  McpClientFactory,
+  McpToolDefinition,
+  McpToolManager,
+  McpToolManagerFactoryOptions,
+  McpToolManagerOptions,
+  McpTransportFactory,
+} from '../mcp.js'
 export {Message, MessageType, UserMessage} from '../message/index.js'
 export type {MessageOptions, MessagePayload} from '../message/index.js'
 export {OperatorSequence, ProcessorRegistry} from '../processor/index.js'

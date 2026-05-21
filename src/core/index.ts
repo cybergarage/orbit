@@ -31,6 +31,16 @@ export type {
   InteractiveState,
   ModelCommandResult,
 } from './interactive.js'
+export {createMcpClient, createMcpToolManager, createMcpTransport, mcpToolName} from './mcp.js'
+export type {
+  McpClient,
+  McpClientFactory,
+  McpToolDefinition,
+  McpToolManager,
+  McpToolManagerFactoryOptions,
+  McpToolManagerOptions,
+  McpTransportFactory,
+} from './mcp.js'
 export {Message, MessageType, UserMessage} from './message/index.js'
 export type {MessageOptions, MessagePayload} from './message/index.js'
 export {DEFAULT_MODELS, getModel} from './models/factory.js'

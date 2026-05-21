@@ -22,6 +22,7 @@ export function stringifyToolOutput(output: unknown): string {
 }
 
 export function toolInputSchema(tool: AgentTool): JSONSchema {
+  if (tool.inputSchema !== undefined) return tool.inputSchema
   return z.toJSONSchema(tool.schema, {io: 'input'}) as JSONSchema
 }
 

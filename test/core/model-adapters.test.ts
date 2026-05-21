@@ -167,6 +167,31 @@ describe('model adapter tools', () => {
     })
   })
 
+  it('uses MCP-provided JSON Schema directly when serializing tool definitions', () => {
+    const inputSchema = {
+      properties: {
+        path: {description: 'File path.', type: 'string'},
+      },
+      required: ['path'],
+      type: 'object',
+    }
+    const mcpTool = Object.assign(tool((input: unknown) => input, {
+      description: 'Read a file.',
+      name: 'filesystem__read_file',
+      schema: z.unknown(),
+    }), {inputSchema})
+
+    const openAITool = toOpenAITool(mcpTool) as unknown as {
+      function: {parameters?: Record<string, unknown>}
+    }
+    const anthropicTool = toAnthropicTool(mcpTool)
+    const ollamaTool = toOllamaTool(mcpTool)
+
+    expect(openAITool.function.parameters).to.equal(inputSchema)
+    expect(anthropicTool.input_schema).to.equal(inputSchema)
+    expect(ollamaTool.function.parameters).to.equal(inputSchema)
+  })
+
   it('resolves OpenAI API key from configured environment variable', () => {
     process.env.ORBIT_TEST_OPENAI_KEY = 'openai-secret'
 
