@@ -20,5 +20,23 @@ describe('CLI agent flags', () => {
     it('ignores an invalid provider', () => {
       expect(toAgentOptions({provider: 'local'})).to.deep.equal({})
     })
+
+    it('includes provider settings flags', () => {
+      expect(
+        toAgentOptions({
+          anthropicApiKeyEnv: 'ANTHROPIC_KEY',
+          ollamaHost: 'http://localhost:11434',
+          openaiApiKeyEnv: 'OPENAI_KEY',
+        }),
+      ).to.deep.equal({
+        settings: {
+          providers: {
+            anthropic: {apiKeyEnv: 'ANTHROPIC_KEY'},
+            ollama: {host: 'http://localhost:11434'},
+            openai: {apiKeyEnv: 'OPENAI_KEY'},
+          },
+        },
+      })
+    })
   })
 })

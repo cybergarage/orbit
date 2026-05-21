@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {expect} from 'chai'
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 import {z} from 'zod'
 
 import type {
@@ -14,7 +17,7 @@ import type {
 } from '../../src/core/models/index.js'
 import type {MessageType as MessageTypeName} from '../../src/core/session/message.js'
 
-import {Role} from '../../src/core/index.js'
+import {Role, SETTINGS_FILE_NAME} from '../../src/core/index.js'
 import {Message as CoreMessage, MessageType as CoreMessageType, UserMessage} from '../../src/core/message/index.js'
 import {
   Agent,
@@ -491,6 +494,71 @@ describe('model helpers', () => {
       const agent = new Agent({state: new State(session)})
 
       expect(agent.getSession()).to.equal(session)
+    })
+
+    it('loads workspace settings when constructed', async () => {
+      const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-agent-settings-'))
+      await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
+      await fs.writeFile(
+        path.join(root, '.orbit', SETTINGS_FILE_NAME),
+        JSON.stringify({
+          provider: 'openai',
+          providers: {
+            openai: {apiKeyEnv: 'OPENAI_KEY'},
+          },
+        }),
+      )
+
+      const agent = new Agent({
+        cwd: root,
+        deps: {
+          createModel: (_provider, _model, settings): Model => createStubModel(async () => new Message(MessageType.Assistant, {
+            content: settings?.providers?.openai?.apiKeyEnv ?? '',
+          })),
+        },
+      })
+
+      expect(agent.getSettings()).to.deep.equal({
+        provider: 'openai',
+        providers: {
+          openai: {apiKeyEnv: 'OPENAI_KEY'},
+        },
+      })
+      expect((await agent.invoke([new Message(MessageType.User)])).content).to.equal('OPENAI_KEY')
+    })
+
+    it('lets AgentOptions settings override workspace settings', async () => {
+      const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-agent-settings-'))
+      await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
+      await fs.writeFile(
+        path.join(root, '.orbit', SETTINGS_FILE_NAME),
+        JSON.stringify({
+          providers: {
+            openai: {apiKeyEnv: 'WORKSPACE_OPENAI_KEY'},
+          },
+        }),
+      )
+
+      const agent = new Agent({
+        cwd: root,
+        deps: {
+          createModel: (_provider, _model, settings): Model => createStubModel(async () => new Message(MessageType.Assistant, {
+            content: settings?.providers?.openai?.apiKeyEnv ?? '',
+          })),
+        },
+        settings: {
+          providers: {
+            openai: {apiKeyEnv: 'CLI_OPENAI_KEY'},
+          },
+        },
+      })
+
+      expect(agent.getSettings()).to.deep.equal({
+        providers: {
+          openai: {apiKeyEnv: 'CLI_OPENAI_KEY'},
+        },
+      })
+      expect((await agent.invoke([new Message(MessageType.User)])).content).to.equal('CLI_OPENAI_KEY')
     })
 
   })

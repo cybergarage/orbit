@@ -11,6 +11,7 @@ import type {
 import {Anthropic} from '@anthropic-ai/sdk'
 
 import type {Message} from '../../message/index.js'
+import type {WorkspaceSettings} from '../../settings.js'
 import type {Model, ModelInvokeOptions, ModelToolCall} from '../model.js'
 import type {Provider} from '../provider.js'
 
@@ -21,9 +22,14 @@ import {Role} from '../role.js'
 import {getToolCalls, getToolResult, stringifyToolOutput, toolInputSchema} from './tools.js'
 
 export class AnthropicAgent implements Model {
-  private readonly client = new Anthropic()
+  private readonly client: Anthropic
 
-  constructor(private readonly model: string) {}
+  constructor(
+    private readonly model: string,
+    settings?: WorkspaceSettings,
+  ) {
+    this.client = new Anthropic(createAnthropicOptions(settings))
+  }
 
   getModel(): string {
     return this.model
@@ -63,6 +69,22 @@ export class AnthropicAgent implements Model {
       ...(toolCalls.length > 0 ? {payload: {toolCalls}} : {}),
     })
   }
+}
+
+export function createAnthropicOptions(settings?: WorkspaceSettings): ConstructorParameters<typeof Anthropic>[0] {
+  const apiKey = readConfiguredApiKey('anthropic', settings?.providers?.anthropic?.apiKeyEnv)
+  return apiKey === undefined ? {} : {apiKey}
+}
+
+function readConfiguredApiKey(provider: Provider, apiKeyEnv: string | undefined): string | undefined {
+  if (apiKeyEnv === undefined) return undefined
+
+  const apiKey = process.env[apiKeyEnv]
+  if (apiKey === undefined) {
+    throw new Error(`${provider} API key environment variable is not set: ${apiKeyEnv}`)
+  }
+
+  return apiKey
 }
 
 export function toAnthropicMessage(message: Message): MessageParam {

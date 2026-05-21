@@ -41,11 +41,13 @@ export async function runExecCommand(
 
   const AgentClass = deps.agentClass ?? Agent
   const agent = new AgentClass({
+    cwd,
     messages: systemMessages,
     model: {
       name: resolvedOptions.model,
       provider: resolvedOptions.provider,
     },
+    settings: resolvedOptions.settings,
   })
   const userMessages: Message[] = [new Message(MessageType.User, {content: prompt, role: Role.User})]
   const response = await agent.invoke(userMessages)

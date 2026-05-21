@@ -74,6 +74,7 @@ describe('runExecCommand', () => {
           {content: 'hello', role: Role.User},
         ],
         options: {
+          cwd: '/tmp/workspace',
           messages: [
             {
               content: 'Workspace instructions',
@@ -86,6 +87,10 @@ describe('runExecCommand', () => {
           ],
           model: {
             name: 'test-model',
+            provider: 'ollama',
+          },
+          settings: {
+            model: 'test-model',
             provider: 'ollama',
           },
         },
@@ -135,9 +140,14 @@ describe('runExecCommand', () => {
     expect(calls).to.deep.equal([
       {
         options: {
+          cwd: '/tmp/workspace',
           messages: [],
           model: {
             name: 'claude-sonnet',
+            provider: 'anthropic',
+          },
+          settings: {
+            model: 'claude-sonnet',
             provider: 'anthropic',
           },
         },
@@ -155,6 +165,25 @@ describe('runExecCommand', () => {
       lang: undefined,
       model: 'cli-model',
       provider: 'openai',
+      settings: {
+        model: 'cli-model',
+        provider: 'openai',
+      },
+    })
+  })
+
+  it('keeps CLI provider settings ahead of workspace settings', () => {
+    expect(
+      resolveAgentOptions(
+        {settings: {providers: {openai: {apiKeyEnv: 'CLI_OPENAI_KEY'}}}},
+        {providers: {openai: {apiKeyEnv: 'WORKSPACE_OPENAI_KEY'}}},
+      ).settings,
+    ).to.deep.equal({
+      model: 'llama3.1',
+      provider: 'ollama',
+      providers: {
+        openai: {apiKeyEnv: 'CLI_OPENAI_KEY'},
+      },
     })
   })
 })

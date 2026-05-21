@@ -61,6 +61,8 @@ export type {
 } from './processor/index.js'
 export {Session, SessionHeader} from './session/index.js'
 export type {SessionHeaderOptions} from './session/index.js'
+export {loadWorkspaceSettings, loadWorkspaceSettingsSync, mergeWorkspaceSettings} from './settings.js'
+export type {McpServerSettings, McpSettings, ProviderSettings, WorkspaceSettings} from './settings.js'
 export {Skill} from './skills/index.js'
 export type {SkillConfig, SkillMetadata, SkillSource, SkillSourceInfo} from './skills/index.js'
 export {State} from './state.js'

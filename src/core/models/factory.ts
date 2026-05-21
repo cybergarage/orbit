@@ -1,6 +1,7 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import type {WorkspaceSettings} from '../settings.js'
 import type {Model} from './model.js'
 import type {Provider} from './provider.js'
 
@@ -14,19 +15,19 @@ export const DEFAULT_MODELS: Record<Provider, string> = {
   openai: 'gpt-4o',
 }
 
-export function getModel(provider: Provider = 'ollama', model?: string): Model {
+export function getModel(provider: Provider = 'ollama', model?: string, settings?: WorkspaceSettings): Model {
   const resolvedModel = model ?? DEFAULT_MODELS[provider]
   switch (provider) {
     case 'anthropic': {
-      return new AnthropicAgent(resolvedModel)
+      return new AnthropicAgent(resolvedModel, settings)
     }
 
     case 'ollama': {
-      return new OllamaAgent(resolvedModel)
+      return new OllamaAgent(resolvedModel, settings)
     }
 
     case 'openai': {
-      return new OpenAIAgent(resolvedModel)
+      return new OpenAIAgent(resolvedModel, settings)
     }
   }
 }

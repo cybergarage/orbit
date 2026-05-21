@@ -1,11 +1,12 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {Message as OllamaMessage, Tool as OllamaTool, ToolCall as OllamaToolCall} from 'ollama'
+import type {Config, Message as OllamaMessage, Tool as OllamaTool, ToolCall as OllamaToolCall} from 'ollama'
 
 import {Ollama} from 'ollama'
 
 import type {Message} from '../../message/index.js'
+import type {WorkspaceSettings} from '../../settings.js'
 import type {Model, ModelInvokeOptions, ModelToolCall} from '../model.js'
 import type {Provider} from '../provider.js'
 
@@ -14,9 +15,14 @@ import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {getToolCalls, getToolResult, stringifyToolOutput, toolInputSchema} from './tools.js'
 
 export class OllamaAgent implements Model {
-  private readonly client = new Ollama()
+  private readonly client: Ollama
 
-  constructor(private readonly model: string) {}
+  constructor(
+    private readonly model: string,
+    settings?: WorkspaceSettings,
+  ) {
+    this.client = new Ollama(createOllamaOptions(settings))
+  }
 
   getModel(): string {
     return this.model
@@ -42,6 +48,11 @@ export class OllamaAgent implements Model {
       ...(toolCalls.length > 0 ? {payload: {toolCalls}} : {}),
     })
   }
+}
+
+export function createOllamaOptions(settings?: WorkspaceSettings): Partial<Config> {
+  const host = settings?.providers?.ollama?.host
+  return host === undefined ? {} : {host}
 }
 
 export function toOllamaMessage(message: Message): OllamaMessage {

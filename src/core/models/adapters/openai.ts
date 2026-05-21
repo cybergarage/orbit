@@ -11,6 +11,7 @@ import type {
 import {OpenAI} from 'openai'
 
 import type {Message} from '../../message/index.js'
+import type {WorkspaceSettings} from '../../settings.js'
 import type {Model, ModelInvokeOptions, ModelToolCall} from '../model.js'
 import type {Provider} from '../provider.js'
 
@@ -19,9 +20,14 @@ import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {getToolCalls, getToolResult, stringifyToolOutput, toolInputSchema} from './tools.js'
 
 export class OpenAIAgent implements Model {
-  private readonly client = new OpenAI()
+  private readonly client: OpenAI
 
-  constructor(private readonly model: string) {}
+  constructor(
+    private readonly model: string,
+    settings?: WorkspaceSettings,
+  ) {
+    this.client = new OpenAI(createOpenAIOptions(settings))
+  }
 
   getModel(): string {
     return this.model
@@ -53,6 +59,22 @@ export class OpenAIAgent implements Model {
       ...(toolCalls.length > 0 ? {payload: {toolCalls}} : {}),
     })
   }
+}
+
+export function createOpenAIOptions(settings?: WorkspaceSettings): ConstructorParameters<typeof OpenAI>[0] {
+  const apiKey = readConfiguredApiKey('openai', settings?.providers?.openai?.apiKeyEnv)
+  return apiKey === undefined ? {} : {apiKey}
+}
+
+function readConfiguredApiKey(provider: Provider, apiKeyEnv: string | undefined): string | undefined {
+  if (apiKeyEnv === undefined) return undefined
+
+  const apiKey = process.env[apiKeyEnv]
+  if (apiKey === undefined) {
+    throw new Error(`${provider} API key environment variable is not set: ${apiKeyEnv}`)
+  }
+
+  return apiKey
 }
 
 export function toOpenAIMessage(message: Message): ChatCompletionMessageParam {

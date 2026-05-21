@@ -8,6 +8,10 @@ import type {AgentOptions} from '../../core/chat.js'
 import {getProvider, isProvider} from '../../core/index.js'
 
 export const agentFlags = {
+  'anthropic-api-key-env': Flags.string({
+    description: 'Environment variable name for the Anthropic API key',
+    required: false,
+  }),
   lang: Flags.string({
     description: 'Output language',
     options: ['en', 'ja'],
@@ -17,6 +21,14 @@ export const agentFlags = {
     description: 'Model name (overrides workspace setting and provider default)',
     required: false,
   }),
+  'ollama-host': Flags.string({
+    description: 'Ollama host URL',
+    required: false,
+  }),
+  'openai-api-key-env': Flags.string({
+    description: 'Environment variable name for the OpenAI API key',
+    required: false,
+  }),
   provider: Flags.string({
     description: 'LLM provider (overrides workspace setting)',
     options: getProvider(),
@@ -24,10 +36,28 @@ export const agentFlags = {
   }),
 }
 
-export function toAgentOptions(flags: {lang?: string; model?: string; provider?: string}): AgentOptions {
+export function toAgentOptions(flags: {
+  anthropicApiKeyEnv?: string
+  lang?: string
+  model?: string
+  ollamaHost?: string
+  openaiApiKeyEnv?: string
+  provider?: string
+}): AgentOptions {
   return {
     ...(flags.lang ? {lang: flags.lang} : {}),
     ...(flags.model ? {model: flags.model} : {}),
     ...(isProvider(flags.provider) ? {provider: flags.provider} : {}),
+    ...(flags.anthropicApiKeyEnv || flags.ollamaHost || flags.openaiApiKeyEnv
+      ? {
+          settings: {
+            providers: {
+              ...(flags.anthropicApiKeyEnv ? {anthropic: {apiKeyEnv: flags.anthropicApiKeyEnv}} : {}),
+              ...(flags.ollamaHost ? {ollama: {host: flags.ollamaHost}} : {}),
+              ...(flags.openaiApiKeyEnv ? {openai: {apiKeyEnv: flags.openaiApiKeyEnv}} : {}),
+            },
+          },
+        }
+      : {}),
   }
 }

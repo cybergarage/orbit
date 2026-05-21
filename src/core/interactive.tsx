@@ -4,12 +4,15 @@
 import {Box, render, Text, useApp, useInput} from 'ink'
 import {useState} from 'react'
 
+import type {WorkspaceSettings} from './settings.js'
+
 import {Agent, type AgentOptions, isProvider, Message, MessageType, type Provider, Role} from './models/index.js'
 
 export interface InteractiveSessionOptions {
   agentClass: InteractiveAgentClass
   initialModel: string
   initialProvider: Provider
+  settings?: WorkspaceSettings
   systemPrompt?: string
 }
 
@@ -23,6 +26,7 @@ export interface InteractiveState {
   messages: Message[]
   model: string
   provider: Provider
+  settings?: WorkspaceSettings
   systemPrompt?: string
 }
 
@@ -32,7 +36,7 @@ export interface ModelCommandResult {
 }
 
 export function createInitialInteractiveState(
-  options: Pick<InteractiveState, 'model' | 'provider' | 'systemPrompt'>,
+  options: Pick<InteractiveState, 'model' | 'provider' | 'settings' | 'systemPrompt'>,
 ): InteractiveState {
   return {
     input: '',
@@ -71,6 +75,7 @@ export async function submitInteractiveInput(
       name: state.model,
       provider: state.provider,
     },
+    settings: state.settings,
   })
   const reply = await agent.invoke(requestMessages)
 
@@ -135,12 +140,19 @@ function parseProvider(value: string): Provider | undefined {
   }
 }
 
-function InteractiveApp({agentClass: AgentClass, initialModel, initialProvider, systemPrompt}: InteractiveSessionOptions) {
+function InteractiveApp({
+  agentClass: AgentClass,
+  initialModel,
+  initialProvider,
+  settings,
+  systemPrompt,
+}: InteractiveSessionOptions) {
   const {exit} = useApp()
   const [state, setState] = useState<InteractiveState>(() =>
     createInitialInteractiveState({
       model: initialModel,
       provider: initialProvider,
+      settings,
       systemPrompt,
     }),
   )
@@ -187,6 +199,7 @@ function InteractiveApp({agentClass: AgentClass, initialModel, initialProvider, 
           name: state.model,
           provider: state.provider,
         },
+        settings: state.settings,
       })
 
       agent

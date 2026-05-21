@@ -2,27 +2,32 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {DEFAULT_MODELS, type Provider} from './models/index.js'
-import {loadWorkspaceSettings, type WorkspaceSettings} from './settings.js'
+import {loadWorkspaceSettings, mergeWorkspaceSettings, type WorkspaceSettings} from './settings.js'
 
 export interface AgentOptions {
   lang?: string
   model?: string
   provider?: Provider
+  settings?: WorkspaceSettings
 }
 
 export interface ResolvedAgentOptions {
   lang?: string
   model: string
   provider: Provider
+  settings: WorkspaceSettings
 }
 
 export function resolveAgentOptions(options: AgentOptions, settings: WorkspaceSettings = {}): ResolvedAgentOptions {
-  const provider = options.provider ?? settings.provider ?? 'ollama'
+  const mergedSettings = mergeWorkspaceSettings(settings, options.settings)
+  const provider = options.provider ?? mergedSettings.provider ?? 'ollama'
+  const model = options.model ?? mergedSettings.model ?? DEFAULT_MODELS[provider]
 
   return {
     lang: options.lang,
-    model: options.model ?? settings.model ?? DEFAULT_MODELS[provider],
+    model,
     provider,
+    settings: mergeWorkspaceSettings(mergedSettings, {model, provider}),
   }
 }
 

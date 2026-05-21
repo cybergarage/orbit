@@ -34,6 +34,7 @@ export async function runInteractiveCommand(
     agentClass,
     initialModel: resolvedOptions.model,
     initialProvider: resolvedOptions.provider,
+    settings: resolvedOptions.settings,
     systemPrompt,
   })
 }

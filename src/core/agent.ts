@@ -14,9 +14,11 @@ import type {
 } from './models/index.js'
 import type {Operator} from './processor/index.js'
 import type {Session} from './session/index.js'
+import type {WorkspaceSettings} from './settings.js'
 
 import {getModel, Message, MessageType} from './models/index.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
+import {loadWorkspaceSettingsSync, mergeWorkspaceSettings} from './settings.js'
 import {State} from './state.js'
 
 const DEFAULT_MAX_TOOL_ITERATIONS = 5
@@ -28,6 +30,7 @@ export interface AgentTool extends Operator<never, unknown, ToolOptions> {
 }
 
 export interface AgentOptions {
+  cwd?: string
   deps?: {
     createModel?: typeof getModel
   }
@@ -36,19 +39,26 @@ export interface AgentOptions {
     name?: string
     provider?: Provider
   }
+  settings?: WorkspaceSettings
   state?: State
   tools?: AgentTool[]
 }
 
 export class Agent implements Operator<Message[], Message, ModelInvokeOptions> {
   public readonly messages: Message[]
+  public readonly settings: WorkspaceSettings
   public readonly state: State
   public readonly tools: AgentTool[]
   private readonly model: Model
 
   constructor(options: AgentOptions = {}) {
     const createModel = options.deps?.createModel ?? getModel
-    this.model = createModel(options.model?.provider, options.model?.name)
+    this.settings = mergeWorkspaceSettings(loadWorkspaceSettingsSync(options.cwd), options.settings)
+    this.model = createModel(
+      options.model?.provider ?? this.settings.provider,
+      options.model?.name ?? this.settings.model,
+      this.settings,
+    )
     this.messages = [...(options.messages ?? [])]
     this.state = options.state ?? new State()
     this.tools = [...(options.tools ?? [])]
@@ -64,6 +74,10 @@ export class Agent implements Operator<Message[], Message, ModelInvokeOptions> {
 
   getSession(): Session {
     return this.state.getSession()
+  }
+
+  getSettings(): WorkspaceSettings {
+    return this.settings
   }
 
   getState(): State {
