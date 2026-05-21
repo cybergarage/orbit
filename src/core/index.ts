@@ -31,6 +31,8 @@ export type {
   InteractiveState,
   ModelCommandResult,
 } from './interactive.js'
+export {createLogger, createNoopLogger} from './logger/index.js'
+export type {LogFields, Logger, LoggerBindings, LoggerOptions, LogLevel, LogMethod, LogValue} from './logger/index.js'
 export {createMcpClient, createMcpToolManager, createMcpTransport, mcpToolName} from './mcp.js'
 export type {
   McpClient,

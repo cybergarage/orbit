@@ -13,6 +13,8 @@ export {
   OrbitErrorCode,
 } from '../errors/index.js'
 export type {OrbitErrorOptions} from '../errors/index.js'
+export {createLogger, createNoopLogger} from '../logger/index.js'
+export type {LogFields, Logger, LoggerBindings, LoggerOptions, LogLevel, LogMethod, LogValue} from '../logger/index.js'
 export {createMcpClient, createMcpToolManager, createMcpTransport, mcpToolName} from '../mcp.js'
 export type {
   McpClient,
