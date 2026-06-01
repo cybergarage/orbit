@@ -21,6 +21,8 @@ export interface Logger {
   error: LogMethod
   fatal: LogMethod
   info: LogMethod
+  isDebugEnabled(): boolean
+  setDebugEnabled(enabled: boolean): void
   trace: LogMethod
   warn: LogMethod
 }
@@ -49,7 +51,13 @@ export function createNoopLogger(): Logger {
 }
 
 class PinoLogger implements Logger {
-  constructor(private readonly logger: pino.Logger) {}
+  constructor(
+    private readonly logger: pino.Logger,
+    private readonly debugController: PinoDebugController = createPinoDebugController(logger.level as LogLevel),
+  ) {
+    this.debugController.loggers.add(logger)
+    logger.level = this.debugController.level
+  }
 
   get debug(): LogMethod {
     return this.logger.debug.bind(this.logger) as LogMethod
@@ -76,7 +84,30 @@ class PinoLogger implements Logger {
   }
 
   child(bindings: LoggerBindings): Logger {
-    return new PinoLogger(this.logger.child(bindings))
+    return new PinoLogger(this.logger.child(bindings), this.debugController)
+  }
+
+  isDebugEnabled(): boolean {
+    return this.debugController.level === 'debug'
+  }
+
+  setDebugEnabled(enabled: boolean): void {
+    this.debugController.level = enabled ? 'debug' : 'info'
+    for (const logger of this.debugController.loggers) {
+      logger.level = this.debugController.level
+    }
+  }
+}
+
+interface PinoDebugController {
+  level: LogLevel
+  loggers: Set<pino.Logger>
+}
+
+function createPinoDebugController(level: LogLevel): PinoDebugController {
+  return {
+    level,
+    loggers: new Set(),
   }
 }
 
@@ -91,4 +122,10 @@ class NoopLogger implements Logger {
   child(): Logger {
     return this
   }
+
+  isDebugEnabled(): boolean {
+    return false
+  }
+
+  setDebugEnabled(): void {}
 }

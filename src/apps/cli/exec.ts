@@ -7,7 +7,7 @@ import process from 'node:process'
 
 import {type AgentOptions, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadSystemContexts} from '../../core/context.js'
-import {Agent, Message, MessageType, Role} from '../../core/index.js'
+import {Agent, createLogger, Message, MessageType, Role} from '../../core/index.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from './flags.js'
 
@@ -40,8 +40,10 @@ export async function runExecCommand(
   )
 
   const AgentClass = deps.agentClass ?? Agent
+  const logger = createLogger({destination: process.stderr, level: resolvedOptions.debug ? 'debug' : 'info'})
   const agent = new AgentClass({
     cwd,
+    logger,
     messages: systemMessages,
     model: {
       name: resolvedOptions.model,

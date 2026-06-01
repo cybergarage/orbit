@@ -55,10 +55,7 @@ describe('runExecCommand', () => {
     expect(
       calls.map((call) => ({
         messages: call.messages.map((message) => ({content: message.content, role: message.role})),
-        options: {
-          ...call.options,
-          messages: call.options?.messages?.map((message) => ({content: message.content, role: message.role})),
-        },
+        options: formatAgentOptions(call.options),
       })),
     ).to.deep.equal([
       {
@@ -137,7 +134,7 @@ describe('runExecCommand', () => {
       },
     )
 
-    expect(calls).to.deep.equal([
+    expect(calls.map((call) => ({options: formatAgentOptions(call.options)}))).to.deep.equal([
       {
         options: {
           cwd: '/tmp/workspace',
@@ -187,3 +184,16 @@ describe('runExecCommand', () => {
     })
   })
 })
+
+function formatAgentOptions(options?: AgentOptions): Record<string, unknown> | undefined {
+  if (options === undefined) {
+    return undefined
+  }
+
+  const rest = {...options}
+  delete rest.logger
+  return {
+    ...rest,
+    messages: options.messages?.map((message) => ({content: message.content, role: message.role})),
+  }
+}

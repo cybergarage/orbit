@@ -4,6 +4,7 @@
 import {Box, render, Text, useApp, useInput} from 'ink'
 import {useState} from 'react'
 
+import type {Logger} from './logger/index.js'
 import type {WorkspaceSettings} from './settings.js'
 
 import {Agent, type AgentOptions, isProvider, Message, MessageType, type Provider, Role} from './models/index.js'
@@ -12,6 +13,7 @@ export interface InteractiveSessionOptions {
   agentClass: InteractiveAgentClass
   initialModel: string
   initialProvider: Provider
+  logger?: Logger
   settings?: WorkspaceSettings
   systemPrompt?: string
 }
@@ -23,6 +25,7 @@ export interface InteractiveAgentClass {
 export interface InteractiveState {
   input: string
   isLoading: boolean
+  logger?: Logger
   messages: Message[]
   model: string
   provider: Provider
@@ -35,8 +38,10 @@ export interface ModelCommandResult {
   nextState: InteractiveState
 }
 
+export type SlashCommandResult = ModelCommandResult
+
 export function createInitialInteractiveState(
-  options: Pick<InteractiveState, 'model' | 'provider' | 'settings' | 'systemPrompt'>,
+  options: Pick<InteractiveState, 'logger' | 'model' | 'provider' | 'settings' | 'systemPrompt'>,
 ): InteractiveState {
   return {
     input: '',
@@ -56,7 +61,7 @@ export async function submitInteractiveInput(
     return state
   }
 
-  const commandResult = handleModelCommand(state, input)
+  const commandResult = handleSlashCommand(state, input)
   if (commandResult) {
     return {
       ...commandResult.nextState,
@@ -71,6 +76,7 @@ export async function submitInteractiveInput(
     userMessage,
   ]
   const agent = new AgentClass({
+    logger: state.logger,
     model: {
       name: state.model,
       provider: state.provider,
@@ -135,6 +141,55 @@ export function handleModelCommand(state: InteractiveState, input: string): Mode
   }
 }
 
+export function handleSlashCommand(state: InteractiveState, input: string): SlashCommandResult | undefined {
+  if (!input.startsWith('/')) return undefined
+
+  const [commandName] = input.split(/\s+/u)
+  if (commandName === '/model') {
+    return handleModelCommand(state, input)
+  }
+
+  if (commandName === '/debug') {
+    return handleDebugCommand(state, input)
+  }
+
+  return {
+    message: `Unknown command: ${commandName}`,
+    nextState: state,
+  }
+}
+
+function handleDebugCommand(state: InteractiveState, input: string): SlashCommandResult {
+  const args = input.split(/\s+/u).slice(1)
+  if (args.length === 0) {
+    return {
+      message: `Debug logging is ${state.logger?.isDebugEnabled() ? 'on' : 'off'}`,
+      nextState: state,
+    }
+  }
+
+  if (args.length === 1 && args[0] === 'on') {
+    state.logger?.setDebugEnabled(true)
+    return {
+      message: 'Debug logging enabled',
+      nextState: state,
+    }
+  }
+
+  if (args.length === 1 && args[0] === 'off') {
+    state.logger?.setDebugEnabled(false)
+    return {
+      message: 'Debug logging disabled',
+      nextState: state,
+    }
+  }
+
+  return {
+    message: 'Invalid debug command. Use /debug, /debug on, or /debug off',
+    nextState: state,
+  }
+}
+
 export function formatProviderModel(provider: Provider, model: string): string {
   return `${provider}:${model}`
 }
@@ -149,12 +204,14 @@ function InteractiveApp({
   agentClass: AgentClass,
   initialModel,
   initialProvider,
+  logger,
   settings,
   systemPrompt,
 }: InteractiveSessionOptions) {
   const {exit} = useApp()
   const [state, setState] = useState<InteractiveState>(() =>
     createInitialInteractiveState({
+      logger,
       model: initialModel,
       provider: initialProvider,
       settings,
@@ -176,7 +233,7 @@ function InteractiveApp({
         return
       }
 
-      const commandResult = handleModelCommand(state, nextInput)
+      const commandResult = handleSlashCommand(state, nextInput)
       if (commandResult) {
         setState({
           ...commandResult.nextState,
@@ -200,6 +257,7 @@ function InteractiveApp({
       })
 
       const agent = new AgentClass({
+        logger: state.logger,
         model: {
           name: state.model,
           provider: state.provider,

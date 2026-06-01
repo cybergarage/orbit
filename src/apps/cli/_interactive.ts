@@ -6,7 +6,7 @@ import process from 'node:process'
 
 import {type AgentOptions, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadSystemContexts} from '../../core/context.js'
-import {Agent, runInteractiveSession} from '../../core/index.js'
+import {Agent, createLogger, runInteractiveSession} from '../../core/index.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from './flags.js'
 
@@ -30,10 +30,12 @@ export async function runInteractiveCommand(
   const contextText = contexts.map((c) => c.content).join('\n\n')
   const systemPrompt = contextText
   const agentClass = deps.agentClass ?? Agent
+  const logger = createLogger({destination: process.stderr, level: resolvedOptions.debug ? 'debug' : 'info'})
   await sessionRunner({
     agentClass,
     initialModel: resolvedOptions.model,
     initialProvider: resolvedOptions.provider,
+    logger,
     settings: resolvedOptions.settings,
     systemPrompt,
   })

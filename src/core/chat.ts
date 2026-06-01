@@ -5,6 +5,7 @@ import {DEFAULT_MODELS, type Provider} from './models/index.js'
 import {loadWorkspaceSettings, mergeWorkspaceSettings, type WorkspaceSettings} from './settings.js'
 
 export interface AgentOptions {
+  debug?: boolean
   lang?: string
   model?: string
   provider?: Provider
@@ -12,6 +13,7 @@ export interface AgentOptions {
 }
 
 export interface ResolvedAgentOptions {
+  debug?: boolean
   lang?: string
   model: string
   provider: Provider
@@ -24,6 +26,7 @@ export function resolveAgentOptions(options: AgentOptions, settings: WorkspaceSe
   const model = options.model ?? mergedSettings.model ?? DEFAULT_MODELS[provider]
 
   return {
+    ...(options.debug === undefined ? {} : {debug: options.debug}),
     lang: options.lang,
     model,
     provider,

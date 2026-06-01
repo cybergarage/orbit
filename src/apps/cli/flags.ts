@@ -12,6 +12,10 @@ export const agentFlags = {
     description: 'Environment variable name for the Anthropic API key',
     required: false,
   }),
+  debug: Flags.boolean({
+    description: 'Enable debug logging',
+    required: false,
+  }),
   lang: Flags.string({
     description: 'Output language',
     options: ['en', 'ja'],
@@ -38,6 +42,7 @@ export const agentFlags = {
 
 export function toAgentOptions(flags: {
   anthropicApiKeyEnv?: string
+  debug?: boolean
   lang?: string
   model?: string
   ollamaHost?: string
@@ -45,6 +50,7 @@ export function toAgentOptions(flags: {
   provider?: string
 }): AgentOptions {
   return {
+    ...(flags.debug ? {debug: true} : {}),
     ...(flags.lang ? {lang: flags.lang} : {}),
     ...(flags.model ? {model: flags.model} : {}),
     ...(isProvider(flags.provider) ? {provider: flags.provider} : {}),

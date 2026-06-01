@@ -8,9 +8,10 @@ import type {AgentOptions, Model} from '../../src/core/models/index.js'
 import {
   createInitialInteractiveState,
   handleModelCommand,
+  handleSlashCommand,
   submitInteractiveInput,
 } from '../../src/core/interactive.js'
-import {Agent, Message, MessageType, OperatorType, Role} from '../../src/core/models/index.js'
+import {Agent, createLogger, Message, MessageType, OperatorType, Role} from '../../src/core/models/index.js'
 
 function createMockAgent(
   invokeImpl: Agent['invoke'],
@@ -139,6 +140,66 @@ describe('interactive helpers', () => {
         model: 'claude-opus-4-6',
         provider: 'anthropic',
       },
+    })
+  })
+
+  it('reports and toggles debug logging with /debug commands', async () => {
+    const logger = createLogger()
+    const AgentCtor = class extends MockAgent {
+      constructor(options: AgentOptions = {}) {
+        super(async () => {
+          throw new Error('should not be called')
+        }, options)
+      }
+    }
+    const initial = createInitialInteractiveState({logger, model: 'llama3.1', provider: 'ollama'})
+    const enabled = await submitInteractiveInput(AgentCtor, initial, '/debug on')
+    const status = await submitInteractiveInput(AgentCtor, enabled, '/debug')
+    const disabled = await submitInteractiveInput(AgentCtor, status, '/debug off')
+
+    expect(logger.isDebugEnabled()).to.equal(false)
+    expect(disabled.messages.map((message) => message.content)).to.deep.equal([
+      'Debug logging enabled',
+      'Debug logging is on',
+      'Debug logging disabled',
+    ])
+    expect(disabled.messages.map((message) => message.role)).to.deep.equal([
+      Role.Assistant,
+      Role.Assistant,
+      Role.Assistant,
+    ])
+  })
+
+  it('reports invalid /debug arguments without calling the agent', async () => {
+    let callCount = 0
+    const AgentCtor = class extends MockAgent {
+      constructor(options: AgentOptions = {}) {
+        super(async () => {
+          callCount++
+          return new Message(MessageType.Assistant, {content: 'should not run'})
+        }, options)
+      }
+    }
+
+    const nextState = await submitInteractiveInput(
+      AgentCtor,
+      createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'}),
+      '/debug maybe',
+    )
+
+    expect(callCount).to.equal(0)
+    expect(nextState.messages.map((message) => ({content: message.content, role: message.role}))).to.deep.equal([
+      {content: 'Invalid debug command. Use /debug, /debug on, or /debug off', role: Role.Assistant},
+    ])
+  })
+
+  it('reports unknown slash commands without calling the agent', () => {
+    const initial = createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'})
+    const result = handleSlashCommand(initial, '/unknown value')
+
+    expect(result).to.deep.equal({
+      message: 'Unknown command: /unknown',
+      nextState: initial,
     })
   })
 

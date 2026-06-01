@@ -3,6 +3,7 @@
 
 import type {z} from 'zod'
 
+import type {Logger} from './logger/index.js'
 import type {McpToolManager, McpToolManagerFactoryOptions} from './mcp.js'
 import type {
   Model,
@@ -17,6 +18,7 @@ import type {Operator} from './processor/index.js'
 import type {Session} from './session/index.js'
 import type {WorkspaceSettings} from './settings.js'
 
+import {createNoopLogger} from './logger/index.js'
 import {createMcpToolManager} from './mcp.js'
 import {getModel, Message, MessageType} from './models/index.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
@@ -38,6 +40,7 @@ export interface AgentOptions {
     createMcpToolManager?: (settings: WorkspaceSettings, options: McpToolManagerFactoryOptions) => McpToolManager
     createModel?: typeof getModel
   }
+  logger?: Logger
   messages?: Message[]
   model?: {
     name?: string
@@ -49,6 +52,7 @@ export interface AgentOptions {
 }
 
 export class Agent implements Operator<Message[], Message, ModelInvokeOptions> {
+  public readonly logger: Logger
   public readonly messages: Message[]
   public readonly settings: WorkspaceSettings
   public readonly state: State
@@ -65,6 +69,7 @@ export class Agent implements Operator<Message[], Message, ModelInvokeOptions> {
       this.settings,
     )
     this.messages = [...(options.messages ?? [])]
+    this.logger = (options.logger ?? createNoopLogger()).child({component: 'agent'})
     this.state = options.state ?? new State()
     this.tools = [...(options.tools ?? [])]
     this.mcpToolManager = (options.deps?.createMcpToolManager ?? createMcpToolManager)(this.settings, {
@@ -100,24 +105,42 @@ export class Agent implements Operator<Message[], Message, ModelInvokeOptions> {
     const session = this.getSession()
     session.appendMessages(messages)
     const conversation = [...messages]
+    this.logger.debug(
+      {
+        initialMessageCount: this.messages.length,
+        requestMessageCount: messages.length,
+      },
+      'agent invoke started',
+    )
     const mcpTools = await this.mcpToolManager.getTools()
     const tools = [...this.tools, ...mcpTools, ...(options?.tools ?? [])]
     const modelOptions = tools.length > 0 ? {...options, tools} : options
     const maxToolIterations = options?.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS
+    this.logger.debug(
+      {
+        mcpToolCount: mcpTools.length,
+        toolCount: tools.length,
+      },
+      'agent tools loaded',
+    )
 
     for (let iteration = 0; iteration <= maxToolIterations; iteration += 1) {
+      this.logger.debug({iteration, maxToolIterations}, 'agent model iteration started')
       // Tool loops are intentionally sequential because each model response depends on the previous tool results.
       // eslint-disable-next-line no-await-in-loop
       const modelMessage = await this.model.invoke([...this.messages, ...conversation], modelOptions)
       session.appendMessages([modelMessage])
       conversation.push(modelMessage)
+      this.logger.debug({iteration, role: modelMessage.role}, 'agent model iteration completed')
 
       const toolCalls = getToolCalls(modelMessage)
+      this.logger.debug({iteration, toolCallCount: toolCalls.length}, 'agent tool calls received')
       if (toolCalls.length === 0) {
         return modelMessage
       }
 
       if (iteration === maxToolIterations) {
+        this.logger.debug({maxToolIterations, toolCallCount: toolCalls.length}, 'agent max tool iterations exceeded')
         throw new Error(`Agent exceeded maximum tool iterations: ${maxToolIterations}`)
       }
 

@@ -17,6 +17,14 @@ describe('CLI agent flags', () => {
       expect(toAgentOptions({provider: 'openai'})).to.deep.equal({provider: 'openai'})
     })
 
+    it('includes debug when enabled', () => {
+      expect(toAgentOptions({debug: true})).to.deep.equal({debug: true})
+    })
+
+    it('omits debug when disabled', () => {
+      expect(toAgentOptions({debug: false})).to.deep.equal({})
+    })
+
     it('ignores an invalid provider', () => {
       expect(toAgentOptions({provider: 'local'})).to.deep.equal({})
     })

@@ -11,7 +11,7 @@ import {Agent, Message, MessageType, OperatorType} from '../../../src/core/model
 describe('runInteractiveCommand', () => {
   it('uses resolved workspace settings for the interactive session', async () => {
     const calls: {options?: AgentOptions}[] = []
-    const sessionCalls: {initialModel: string; initialProvider: string; systemPrompt?: string}[] = []
+    const sessionCalls: {debugEnabled: boolean; initialModel: string; initialProvider: string; systemPrompt?: string}[] = []
 
     class TestAgent extends Agent {
       constructor(options: AgentOptions = {}) {
@@ -45,9 +45,10 @@ describe('runInteractiveCommand', () => {
 
     try {
       await runInteractiveCommand(
-        {lang: 'ja'},
+        {debug: true, lang: 'ja'},
         async (options) => {
           sessionCalls.push({
+            debugEnabled: options.logger?.isDebugEnabled() ?? false,
             initialModel: options.initialModel,
             initialProvider: options.initialProvider,
             systemPrompt: options.systemPrompt,
@@ -74,6 +75,7 @@ describe('runInteractiveCommand', () => {
 
     expect(sessionCalls).to.deep.equal([
       {
+        debugEnabled: true,
         initialModel: 'workspace-model',
         initialProvider: 'openai',
         systemPrompt: 'Workspace context',

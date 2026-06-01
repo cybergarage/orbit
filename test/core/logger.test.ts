@@ -76,6 +76,36 @@ describe('logger', () => {
     })
   })
 
+  it('toggles debug output at runtime', () => {
+    const stream = new MemoryLogStream()
+    const logger = createLogger({destination: stream})
+
+    logger.debug('hidden')
+    logger.setDebugEnabled(true)
+    logger.debug('visible')
+    logger.setDebugEnabled(false)
+    logger.debug('hidden again')
+
+    expect(logger.isDebugEnabled()).to.equal(false)
+    expect(stream.records.map((record) => record.msg)).to.deep.equal(['visible'])
+  })
+
+  it('keeps debug toggles shared with child loggers', () => {
+    const stream = new MemoryLogStream()
+    const logger = createLogger({destination: stream})
+    const child = logger.child({component: 'child'})
+
+    logger.setDebugEnabled(true)
+    child.debug('child visible')
+    child.setDebugEnabled(false)
+    logger.debug('parent hidden')
+
+    expect(logger.isDebugEnabled()).to.equal(false)
+    expect(child.isDebugEnabled()).to.equal(false)
+    expect(stream.records.map((record) => record.msg)).to.deep.equal(['child visible'])
+    expect(stream.records[0]).to.include({component: 'child'})
+  })
+
   it('logs Error instances as structured errors', () => {
     const stream = new MemoryLogStream()
     const logger = createLogger({destination: stream})
