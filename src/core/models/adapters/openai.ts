@@ -11,9 +11,8 @@ import type {
 import {OpenAI} from 'openai'
 
 import type {Message} from '../../message/index.js'
-import type {WorkspaceSettings} from '../../settings.js'
 import type {Model, ModelInvokeOptions, ModelToolCall} from '../model.js'
-import type {Provider} from '../provider.js'
+import type {Provider, ProviderName} from '../provider.js'
 
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
@@ -24,9 +23,9 @@ export class OpenAIAgent implements Model {
 
   constructor(
     private readonly model: string,
-    settings?: WorkspaceSettings,
+    private readonly provider: Provider,
   ) {
-    this.client = new OpenAI(createOpenAIOptions(settings))
+    this.client = new OpenAI(createOpenAIOptions(provider))
   }
 
   getModel(): string {
@@ -37,8 +36,8 @@ export class OpenAIAgent implements Model {
     return formatOperatorName(OperatorType.Model, suffix)
   }
 
-  getProvider(): Provider {
-    return 'openai'
+  getProvider(): ProviderName {
+    return this.provider.getName()
   }
 
   async invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
@@ -61,20 +60,9 @@ export class OpenAIAgent implements Model {
   }
 }
 
-export function createOpenAIOptions(settings?: WorkspaceSettings): ConstructorParameters<typeof OpenAI>[0] {
-  const apiKey = readConfiguredApiKey('openai', settings?.providers?.openai?.apiKeyEnv)
+export function createOpenAIOptions(provider: Provider): ConstructorParameters<typeof OpenAI>[0] {
+  const apiKey = provider.getAPIKey()
   return apiKey === undefined ? {} : {apiKey}
-}
-
-function readConfiguredApiKey(provider: Provider, apiKeyEnv: string | undefined): string | undefined {
-  if (apiKeyEnv === undefined) return undefined
-
-  const apiKey = process.env[apiKeyEnv]
-  if (apiKey === undefined) {
-    throw new Error(`${provider} API key environment variable is not set: ${apiKeyEnv}`)
-  }
-
-  return apiKey
 }
 
 export function toOpenAIMessage(message: Message): ChatCompletionMessageParam {

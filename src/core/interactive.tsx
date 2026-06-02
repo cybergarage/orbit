@@ -7,12 +7,12 @@ import {useState} from 'react'
 import type {Logger} from './logger/index.js'
 import type {WorkspaceSettings} from './settings.js'
 
-import {Agent, type AgentOptions, isProvider, Message, MessageType, type Provider, Role} from './models/index.js'
+import {Agent, type AgentOptions, isProvider, Message, MessageType, type ProviderName, Role} from './models/index.js'
 
 export interface InteractiveSessionOptions {
   agentClass: InteractiveAgentClass
   initialModel: string
-  initialProvider: Provider
+  initialProvider: ProviderName
   logger?: Logger
   settings?: WorkspaceSettings
   systemPrompt?: string
@@ -28,7 +28,7 @@ export interface InteractiveState {
   logger?: Logger
   messages: Message[]
   model: string
-  provider: Provider
+  provider: ProviderName
   settings?: WorkspaceSettings
   systemPrompt?: string
 }
@@ -190,11 +190,11 @@ function handleDebugCommand(state: InteractiveState, input: string): SlashComman
   }
 }
 
-export function formatProviderModel(provider: Provider, model: string): string {
+export function formatProviderModel(provider: ProviderName, model: string): string {
   return `${provider}:${model}`
 }
 
-function parseProvider(value: string): Provider | undefined {
+function parseProvider(value: string): ProviderName | undefined {
   if (isProvider(value)) {
     return value
   }

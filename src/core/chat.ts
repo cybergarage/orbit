@@ -1,14 +1,14 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {DEFAULT_MODELS, type Provider} from './models/index.js'
+import {DEFAULT_MODELS, type ProviderName} from './models/index.js'
 import {loadWorkspaceSettings, mergeWorkspaceSettings, type WorkspaceSettings} from './settings.js'
 
 export interface AgentOptions {
   debug?: boolean
   lang?: string
   model?: string
-  provider?: Provider
+  provider?: ProviderName
   settings?: WorkspaceSettings
 }
 
@@ -16,7 +16,7 @@ export interface ResolvedAgentOptions {
   debug?: boolean
   lang?: string
   model: string
-  provider: Provider
+  provider: ProviderName
   settings: WorkspaceSettings
 }
 

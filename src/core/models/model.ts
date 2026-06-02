@@ -4,7 +4,7 @@
 import type {AgentTool} from '../agent.js'
 import type {Message} from '../message/index.js'
 import type {Operator, OperatorOptions} from '../processor/index.js'
-import type {Provider} from './provider.js'
+import type {ProviderName} from './provider.js'
 
 export interface ModelToolCall {
   id: string
@@ -32,6 +32,6 @@ export interface ModelInvokeOptions extends OperatorOptions {
 export interface Model extends Operator<Message[], Message, ModelInvokeOptions> {
   getModel(): string
   getName(suffix?: string): string
-  getProvider(): Provider
+  getProvider(): ProviderName
   invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message>
 }

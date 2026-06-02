@@ -11,7 +11,7 @@ import type {
   ModelToolCall,
   ModelToolCallPayload,
   ModelToolResultPayload,
-  Provider,
+  ProviderName,
   ToolOptions,
 } from './models/index.js'
 import type {Operator} from './processor/index.js'
@@ -44,7 +44,7 @@ export interface AgentOptions {
   messages?: Message[]
   model?: {
     name?: string
-    provider?: Provider
+    provider?: ProviderName
   }
   settings?: WorkspaceSettings
   state?: State

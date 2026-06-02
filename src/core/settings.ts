@@ -7,7 +7,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 import {DOT_APP_DIR_NAME, SETTINGS_FILE_NAME} from './app.js'
-import {getProvider, isProvider, type Provider} from './models/provider.js'
+import {getProvider, isProvider, type ProviderName} from './models/provider.js'
 import {LocalWorkspaceLocator} from './workspace.js'
 
 export interface ProviderSettings {
@@ -35,7 +35,7 @@ export interface McpSettings {
 export interface WorkspaceSettings {
   mcp?: McpSettings
   model?: string
-  provider?: Provider
+  provider?: ProviderName
   providers?: ProviderSettings
 }
 

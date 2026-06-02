@@ -6,9 +6,8 @@ import type {Config, Message as OllamaMessage, Tool as OllamaTool, ToolCall as O
 import {Ollama} from 'ollama'
 
 import type {Message} from '../../message/index.js'
-import type {WorkspaceSettings} from '../../settings.js'
 import type {Model, ModelInvokeOptions, ModelToolCall} from '../model.js'
-import type {Provider} from '../provider.js'
+import type {Provider, ProviderName} from '../provider.js'
 
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
@@ -19,9 +18,9 @@ export class OllamaAgent implements Model {
 
   constructor(
     private readonly model: string,
-    settings?: WorkspaceSettings,
+    private readonly provider: Provider,
   ) {
-    this.client = new Ollama(createOllamaOptions(settings))
+    this.client = new Ollama(createOllamaOptions(provider))
   }
 
   getModel(): string {
@@ -32,8 +31,8 @@ export class OllamaAgent implements Model {
     return formatOperatorName(OperatorType.Model, suffix)
   }
 
-  getProvider(): Provider {
-    return 'ollama'
+  getProvider(): ProviderName {
+    return this.provider.getName()
   }
 
   async invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
@@ -50,8 +49,8 @@ export class OllamaAgent implements Model {
   }
 }
 
-export function createOllamaOptions(settings?: WorkspaceSettings): Partial<Config> {
-  const host = settings?.providers?.ollama?.host
+export function createOllamaOptions(provider: Provider): Partial<Config> {
+  const host = provider.getHost()
   return host === undefined ? {} : {host}
 }
 

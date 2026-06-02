@@ -4,7 +4,7 @@
 import {expect} from 'chai'
 import {z} from 'zod'
 
-import {Message, MessageType, tool} from '../../src/core/index.js'
+import {createProvider, Message, MessageType, tool} from '../../src/core/index.js'
 import {
   createAnthropicOptions,
   toAnthropicMessage,
@@ -195,33 +195,37 @@ describe('model adapter tools', () => {
   it('resolves OpenAI API key from configured environment variable', () => {
     process.env.ORBIT_TEST_OPENAI_KEY = 'openai-secret'
 
-    expect(createOpenAIOptions({providers: {openai: {apiKeyEnv: 'ORBIT_TEST_OPENAI_KEY'}}})).to.deep.equal({
+    expect(createOpenAIOptions(createProvider('openai', {providers: {openai: {apiKeyEnv: 'ORBIT_TEST_OPENAI_KEY'}}}))).to.deep.equal({
       apiKey: 'openai-secret',
     })
   })
 
   it('throws when configured OpenAI API key environment variable is missing', () => {
-    expect(() => createOpenAIOptions({providers: {openai: {apiKeyEnv: 'ORBIT_TEST_OPENAI_KEY'}}})).to.throw(
-      'openai API key environment variable is not set: ORBIT_TEST_OPENAI_KEY',
-    )
+    expect(() =>
+      createOpenAIOptions(createProvider('openai', {providers: {openai: {apiKeyEnv: 'ORBIT_TEST_OPENAI_KEY'}}})),
+    ).to.throw('openai API key environment variable is not set: ORBIT_TEST_OPENAI_KEY')
   })
 
   it('resolves Anthropic API key from configured environment variable', () => {
     process.env.ORBIT_TEST_ANTHROPIC_KEY = 'anthropic-secret'
 
-    expect(createAnthropicOptions({providers: {anthropic: {apiKeyEnv: 'ORBIT_TEST_ANTHROPIC_KEY'}}})).to.deep.equal({
+    expect(
+      createAnthropicOptions(createProvider('anthropic', {providers: {anthropic: {apiKeyEnv: 'ORBIT_TEST_ANTHROPIC_KEY'}}})),
+    ).to.deep.equal({
       apiKey: 'anthropic-secret',
     })
   })
 
   it('throws when configured Anthropic API key environment variable is missing', () => {
-    expect(() => createAnthropicOptions({providers: {anthropic: {apiKeyEnv: 'ORBIT_TEST_ANTHROPIC_KEY'}}})).to.throw(
-      'anthropic API key environment variable is not set: ORBIT_TEST_ANTHROPIC_KEY',
-    )
+    expect(() =>
+      createAnthropicOptions(
+        createProvider('anthropic', {providers: {anthropic: {apiKeyEnv: 'ORBIT_TEST_ANTHROPIC_KEY'}}}),
+      ),
+    ).to.throw('anthropic API key environment variable is not set: ORBIT_TEST_ANTHROPIC_KEY')
   })
 
   it('uses configured Ollama host', () => {
-    expect(createOllamaOptions({providers: {ollama: {host: 'http://localhost:11434'}}})).to.deep.equal({
+    expect(createOllamaOptions(createProvider('ollama', {providers: {ollama: {host: 'http://localhost:11434'}}}))).to.deep.equal({
       host: 'http://localhost:11434',
     })
   })

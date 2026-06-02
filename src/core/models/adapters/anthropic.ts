@@ -11,9 +11,8 @@ import type {
 import {Anthropic} from '@anthropic-ai/sdk'
 
 import type {Message} from '../../message/index.js'
-import type {WorkspaceSettings} from '../../settings.js'
 import type {Model, ModelInvokeOptions, ModelToolCall} from '../model.js'
-import type {Provider} from '../provider.js'
+import type {Provider, ProviderName} from '../provider.js'
 
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
@@ -26,9 +25,9 @@ export class AnthropicAgent implements Model {
 
   constructor(
     private readonly model: string,
-    settings?: WorkspaceSettings,
+    private readonly provider: Provider,
   ) {
-    this.client = new Anthropic(createAnthropicOptions(settings))
+    this.client = new Anthropic(createAnthropicOptions(provider))
   }
 
   getModel(): string {
@@ -39,8 +38,8 @@ export class AnthropicAgent implements Model {
     return formatOperatorName(OperatorType.Model, suffix)
   }
 
-  getProvider(): Provider {
-    return 'anthropic'
+  getProvider(): ProviderName {
+    return this.provider.getName()
   }
 
   async invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
@@ -71,20 +70,9 @@ export class AnthropicAgent implements Model {
   }
 }
 
-export function createAnthropicOptions(settings?: WorkspaceSettings): ConstructorParameters<typeof Anthropic>[0] {
-  const apiKey = readConfiguredApiKey('anthropic', settings?.providers?.anthropic?.apiKeyEnv)
+export function createAnthropicOptions(provider: Provider): ConstructorParameters<typeof Anthropic>[0] {
+  const apiKey = provider.getAPIKey()
   return apiKey === undefined ? {} : {apiKey}
-}
-
-function readConfiguredApiKey(provider: Provider, apiKeyEnv: string | undefined): string | undefined {
-  if (apiKeyEnv === undefined) return undefined
-
-  const apiKey = process.env[apiKeyEnv]
-  if (apiKey === undefined) {
-    throw new Error(`${provider} API key environment variable is not set: ${apiKeyEnv}`)
-  }
-
-  return apiKey
 }
 
 export function toAnthropicMessage(message: Message): MessageParam {
