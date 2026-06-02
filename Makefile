@@ -17,4 +17,9 @@ doc-touch: $(csvs)
 oclif-docs:
 	npx oclif readme
 
+.PHONY: run
+run:
+	npm run build
+	node ./bin/run.js $(ARGS)
+
 doc: doc-touch oclif-docs $(docs)

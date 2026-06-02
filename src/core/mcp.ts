@@ -4,7 +4,7 @@
 import type {Transport} from '@modelcontextprotocol/sdk/shared/transport.js'
 
 import {Client} from '@modelcontextprotocol/sdk/client'
-import {getDefaultEnvironment, StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio'
+import {getDefaultEnvironment, StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js'
 import {z} from 'zod'
 
 import type {AgentTool} from './agent.js'
