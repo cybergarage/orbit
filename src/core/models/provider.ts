@@ -41,14 +41,16 @@ class SettingsProvider implements Provider {
 
   getAPIKey(): string | undefined {
     const apiKeyEnv = this.getAPIKeyEnv()
-    if (apiKeyEnv === undefined) return undefined
+    if (apiKeyEnv !== undefined) {
+      const apiKey = process.env[apiKeyEnv]
+      if (apiKey === undefined) {
+        throw new Error(`${this.name} API key environment variable is not set: ${apiKeyEnv}`)
+      }
 
-    const apiKey = process.env[apiKeyEnv]
-    if (apiKey === undefined) {
-      throw new Error(`${this.name} API key environment variable is not set: ${apiKeyEnv}`)
+      return apiKey
     }
 
-    return apiKey
+    return this.getConfiguredAPIKey()
   }
 
   getHost(): string | undefined {
@@ -63,6 +65,12 @@ class SettingsProvider implements Provider {
   private getAPIKeyEnv(): string | undefined {
     if (this.name === 'anthropic') return this.settings?.providers?.anthropic?.apiKeyEnv
     if (this.name === 'openai') return this.settings?.providers?.openai?.apiKeyEnv
+    return undefined
+  }
+
+  private getConfiguredAPIKey(): string | undefined {
+    if (this.name === 'anthropic') return this.settings?.providers?.anthropic?.apiKey
+    if (this.name === 'openai') return this.settings?.providers?.openai?.apiKey
     return undefined
   }
 }

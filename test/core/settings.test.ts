@@ -99,9 +99,9 @@ describe('loadWorkspaceSettings', () => {
           },
         },
         providers: {
-          anthropic: {apiKeyEnv: 'ANTHROPIC_KEY'},
+          anthropic: {apiKey: 'anthropic-secret', apiKeyEnv: 'ANTHROPIC_KEY'},
           ollama: {host: 'http://localhost:11434'},
-          openai: {apiKeyEnv: 'OPENAI_KEY'},
+          openai: {apiKey: 'openai-secret', apiKeyEnv: 'OPENAI_KEY'},
         },
       }),
     )
@@ -117,9 +117,9 @@ describe('loadWorkspaceSettings', () => {
         },
       },
       providers: {
-        anthropic: {apiKeyEnv: 'ANTHROPIC_KEY'},
+        anthropic: {apiKey: 'anthropic-secret', apiKeyEnv: 'ANTHROPIC_KEY'},
         ollama: {host: 'http://localhost:11434'},
-        openai: {apiKeyEnv: 'OPENAI_KEY'},
+        openai: {apiKey: 'openai-secret', apiKeyEnv: 'OPENAI_KEY'},
       },
     })
   })
@@ -180,6 +180,14 @@ describe('loadWorkspaceSettings', () => {
     await fs.writeFile(path.join(root, '.orbit', SETTINGS_FILE_NAME), JSON.stringify({providers: {openai: {apiKeyEnv: 1}}}))
 
     await expectReject(loadWorkspaceSettings(root), 'providers.openai.apiKeyEnv must be a string')
+  })
+
+  it('throws for invalid direct API key settings', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-'))
+    await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
+    await fs.writeFile(path.join(root, '.orbit', SETTINGS_FILE_NAME), JSON.stringify({providers: {anthropic: {apiKey: 1}}}))
+
+    await expectReject(loadWorkspaceSettings(root), 'providers.anthropic.apiKey must be a string')
   })
 
   it('throws for invalid MCP server settings', async () => {

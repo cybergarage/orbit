@@ -41,6 +41,30 @@ describe('Provider', () => {
     ).to.equal('anthropic-secret')
   })
 
+  it('returns direct API keys when API key environment variables are not configured', () => {
+    expect(createProvider('openai', {providers: {openai: {apiKey: 'openai-direct'}}}).getAPIKey()).to.equal(
+      'openai-direct',
+    )
+    expect(createProvider('anthropic', {providers: {anthropic: {apiKey: 'anthropic-direct'}}}).getAPIKey()).to.equal(
+      'anthropic-direct',
+    )
+  })
+
+  it('prefers API key environment variables over direct API keys', () => {
+    process.env.ORBIT_TEST_OPENAI_KEY = 'openai-env'
+
+    expect(
+      createProvider('openai', {
+        providers: {
+          openai: {
+            apiKey: 'openai-direct',
+            apiKeyEnv: 'ORBIT_TEST_OPENAI_KEY',
+          },
+        },
+      }).getAPIKey(),
+    ).to.equal('openai-env')
+  })
+
   it('throws when a configured API key environment variable is missing', () => {
     expect(() => createProvider('openai', {providers: {openai: {apiKeyEnv: 'ORBIT_TEST_OPENAI_KEY'}}}).getAPIKey()).to.throw(
       'openai API key environment variable is not set: ORBIT_TEST_OPENAI_KEY',

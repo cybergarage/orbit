@@ -12,12 +12,14 @@ import {LocalWorkspaceLocator} from './workspace.js'
 
 export interface ProviderSettings {
   anthropic?: {
+    apiKey?: string
     apiKeyEnv?: string
   }
   ollama?: {
     host?: string
   }
   openai?: {
+    apiKey?: string
     apiKeyEnv?: string
   }
 }
@@ -188,13 +190,18 @@ function validateApiKeyEnvSettings(
   value: Record<string, unknown>,
   file: string,
   provider: 'anthropic' | 'openai',
-): {apiKeyEnv?: string} {
-  const {apiKeyEnv} = value
+): {apiKey?: string; apiKeyEnv?: string} {
+  const {apiKey, apiKeyEnv} = value
+  if (apiKey !== undefined && typeof apiKey !== 'string') {
+    throw new Error(`Invalid workspace settings in ${file}: providers.${provider}.apiKey must be a string.`)
+  }
+
   if (apiKeyEnv !== undefined && typeof apiKeyEnv !== 'string') {
     throw new Error(`Invalid workspace settings in ${file}: providers.${provider}.apiKeyEnv must be a string.`)
   }
 
   return {
+    ...(typeof apiKey === 'string' ? {apiKey} : {}),
     ...(typeof apiKeyEnv === 'string' ? {apiKeyEnv} : {}),
   }
 }
