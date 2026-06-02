@@ -1,0 +1,7 @@
+command,arguments,description,effect
+"/exit","",Exit interactive mode,Ends the interactive session
+"/model","",Show the current model,Prints the current provider and model
+"/model","provider:model",Switch the current model,Updates the provider and model for subsequent requests
+"/debug","",Show debug logging state,Prints whether debug logging is on or off
+"/debug","on",Enable debug logging,Turns debug logging on for subsequent requests
+"/debug","off",Disable debug logging,Turns debug logging off for subsequent requests
