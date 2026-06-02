@@ -9,6 +9,10 @@ An agentic CLI for crafting and publishing content workflows.
 [![Downloads/week](https://img.shields.io/npm/dw/orbit.svg)](https://npmjs.org/package/orbit)
 
 
+# Documentation
+
+* [Settings](docs/settings.md)
+
 <!-- toc -->
 * [Usage](#usage)
 * [Commands](#commands)
