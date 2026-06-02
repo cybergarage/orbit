@@ -12,8 +12,10 @@ An agentic CLI for crafting and publishing content workflows.
 # Documentation
 
 * [Settings](docs/settings.md)
+* [Interactive Commands](docs/interactive.md)
 
 <!-- toc -->
+* [Documentation](#documentation)
 * [Usage](#usage)
 * [Commands](#commands)
 <!-- tocstop -->
@@ -24,7 +26,7 @@ $ npm install -g orbit
 $ orbit COMMAND
 running command...
 $ orbit (--version)
-orbit/0.0.0 darwin-arm64 node-v25.6.1
+orbit/0.0.0 darwin-arm64 node-v26.0.0
 $ orbit --help [COMMAND]
 USAGE
   $ orbit COMMAND
@@ -33,8 +35,6 @@ USAGE
 <!-- usagestop -->
 # Commands
 <!-- commands -->
-* [`orbit hello PERSON`](#orbit-hello-person)
-* [`orbit hello world`](#orbit-hello-world)
 * [`orbit help [COMMAND]`](#orbit-help-command)
 * [`orbit plugins`](#orbit-plugins)
 * [`orbit plugins add PLUGIN`](#orbit-plugins-add-plugin)
@@ -46,48 +46,6 @@ USAGE
 * [`orbit plugins uninstall [PLUGIN]`](#orbit-plugins-uninstall-plugin)
 * [`orbit plugins unlink [PLUGIN]`](#orbit-plugins-unlink-plugin)
 * [`orbit plugins update`](#orbit-plugins-update)
-
-## `orbit hello PERSON`
-
-Say hello
-
-```
-USAGE
-  $ orbit hello PERSON -f <value>
-
-ARGUMENTS
-  PERSON  Person to say hello to
-
-FLAGS
-  -f, --from=<value>  (required) Who is saying hello
-
-DESCRIPTION
-  Say hello
-
-EXAMPLES
-  $ orbit hello friend --from oclif
-  hello friend from oclif! (./src/apps/cli/hello/index.ts)
-```
-
-_See code: [src/apps/cli/hello/index.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/apps/cli/hello/index.ts)_
-
-## `orbit hello world`
-
-Say hello world
-
-```
-USAGE
-  $ orbit hello world
-
-DESCRIPTION
-  Say hello world
-
-EXAMPLES
-  $ orbit hello world
-  hello world! (./src/apps/cli/hello/world.ts)
-```
-
-_See code: [src/apps/cli/hello/world.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/apps/cli/hello/world.ts)_
 
 ## `orbit help [COMMAND]`
 
