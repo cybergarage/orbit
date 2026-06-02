@@ -1,0 +1,6 @@
+# Interactive
+
+[format="csv", options="header, autowidth"]
+|====
+include::data/interactive.csv[]
+|====
