@@ -40,6 +40,21 @@ export interface ModelCommandResult {
 
 export type SlashCommandResult = ModelCommandResult
 
+const slashCommandHelpItems = [
+  {command: '/help', description: 'Show slash commands'},
+  {command: '/exit', description: 'Exit interactive mode'},
+  {command: '/model', description: 'Show the current model'},
+  {command: '/model provider:model', description: 'Switch the current model'},
+  {command: '/debug', description: 'Show debug logging state'},
+  {command: '/debug on', description: 'Enable debug logging'},
+  {command: '/debug off', description: 'Disable debug logging'},
+]
+
+export const slashCommandHelpMessage = [
+  'Slash commands:',
+  ...slashCommandHelpItems.map((item) => `${item.command} - ${item.description}`),
+].join('\n')
+
 export function createInitialInteractiveState(
   options: Pick<InteractiveState, 'logger' | 'model' | 'provider' | 'settings' | 'systemPrompt'>,
 ): InteractiveState {
@@ -145,6 +160,13 @@ export function handleSlashCommand(state: InteractiveState, input: string): Slas
   if (!input.startsWith('/')) return undefined
 
   const [commandName] = input.split(/\s+/u)
+  if (commandName === '/help') {
+    return {
+      message: slashCommandHelpMessage,
+      nextState: state,
+    }
+  }
+
   if (commandName === '/model') {
     return handleModelCommand(state, input)
   }

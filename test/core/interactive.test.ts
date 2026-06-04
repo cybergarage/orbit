@@ -9,6 +9,7 @@ import {
   createInitialInteractiveState,
   handleModelCommand,
   handleSlashCommand,
+  slashCommandHelpMessage,
   submitInteractiveInput,
 } from '../../src/core/interactive.js'
 import {Agent, createLogger, Message, MessageType, OperatorType, Role} from '../../src/core/models/index.js'
@@ -190,6 +191,51 @@ describe('interactive helpers', () => {
     expect(callCount).to.equal(0)
     expect(nextState.messages.map((message) => ({content: message.content, role: message.role}))).to.deep.equal([
       {content: 'Invalid debug command. Use /debug, /debug on, or /debug off', role: Role.Assistant},
+    ])
+  })
+
+  it('returns slash command help while preserving state', () => {
+    const initial = createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'})
+    const result = handleSlashCommand(initial, '/help')
+
+    expect(result).to.deep.equal({
+      message: slashCommandHelpMessage,
+      nextState: initial,
+    })
+    expect(slashCommandHelpMessage).to.equal(
+      [
+        'Slash commands:',
+        '/help - Show slash commands',
+        '/exit - Exit interactive mode',
+        '/model - Show the current model',
+        '/model provider:model - Switch the current model',
+        '/debug - Show debug logging state',
+        '/debug on - Enable debug logging',
+        '/debug off - Disable debug logging',
+      ].join('\n'),
+    )
+  })
+
+  it('reports slash command help without calling the agent', async () => {
+    let callCount = 0
+    const AgentCtor = class extends MockAgent {
+      constructor(options: AgentOptions = {}) {
+        super(async () => {
+          callCount++
+          return new Message(MessageType.Assistant, {content: 'should not run'})
+        }, options)
+      }
+    }
+
+    const nextState = await submitInteractiveInput(
+      AgentCtor,
+      createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'}),
+      '/help',
+    )
+
+    expect(callCount).to.equal(0)
+    expect(nextState.messages.map((message) => ({content: message.content, role: message.role}))).to.deep.equal([
+      {content: slashCommandHelpMessage, role: Role.Assistant},
     ])
   })
 
