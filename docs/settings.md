@@ -11,6 +11,8 @@ Orbit checks workspace directories from the shallowest parent to the current wor
 
 If both files exist in the same workspace, `.orbit/settings.json` is used.
 
+Orbit discovers workspaces by walking from the current directory to the filesystem root and treating each directory that contains an `.orbit` directory as a workspace. As a result, when the current directory is below the user's home directory and `~/.orbit` exists, `~/.orbit/settings.json` is loaded as the shallowest workspace setting. The home directory is not searched separately, so this file is not loaded when the current directory is outside the home directory hierarchy.
+
 ## Example
 
 ```json
@@ -108,6 +110,32 @@ MCP servers are configured under `mcp.servers`. Each server name is user-defined
 
 ## Merge behavior
 
-Settings are merged from parent workspaces to deeper workspaces. Deeper workspace settings override shallower settings. Nested provider and MCP server settings are merged by provider or server name.
+Settings are loaded from the shallowest parent workspace to the deepest workspace. A deeper workspace overrides only the properties it defines; properties it omits remain inherited from shallower workspaces. Nested provider and MCP server settings are merged by provider or server name.
+
+For example, given these settings in `~/.orbit/settings.json`:
+
+```json
+{
+  "provider": "openai",
+  "model": "gpt-5",
+  "providers": {
+    "openai": {
+      "apiKeyEnv": "OPENAI_API_KEY"
+    }
+  }
+}
+```
+
+and these settings in the current workspace's `.orbit/settings.json`:
+
+```json
+{
+  "model": "gpt-5-mini"
+}
+```
+
+the effective settings use `openai` with `gpt-5-mini` and retain the `OPENAI_API_KEY` environment variable setting from the home directory.
+
+Within a single workspace, `.orbit/settings.json` and `settings.json` are not merged. If `.orbit/settings.json` exists, it takes precedence and `settings.json` is ignored.
 
 CLI flags are applied on top of workspace settings when supported by the command.
