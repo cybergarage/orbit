@@ -1,8 +1,17 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
+export {AgentEventType} from './agent-events.js'
+export type {
+  AgentEvent,
+  AgentEventHandler,
+  AgentMessageCompletedEvent,
+  AgentModelStartedEvent,
+  AgentToolCompletedEvent,
+  AgentToolStartedEvent,
+} from './agent-events.js'
 export {Agent} from './agent.js'
-export type {AgentOptions, AgentTool} from './agent.js'
+export type {AgentInvokeOptions, AgentOptions, AgentTool} from './agent.js'
 export {
   APP_NAME,
   configureApp,
@@ -78,6 +87,27 @@ export type {McpServerSettings, McpSettings, ProviderSettings, WorkspaceSettings
 export {Skill} from './skills/index.js'
 export type {SkillConfig, SkillMetadata, SkillSource, SkillSourceInfo} from './skills/index.js'
 export {State} from './state.js'
+export {serializeMessage, ThreadEventType, ThreadManager, ThreadStatus} from './thread.js'
+export type {
+  CreateThreadOptions,
+  ThreadAgent,
+  ThreadAgentFactory,
+  ThreadError,
+  ThreadEvent,
+  ThreadEventHandler,
+  ThreadManagerOptions,
+  ThreadMessage,
+  ThreadMessageCompletedEvent,
+  ThreadModelStartedEvent,
+  ThreadRunCancelledEvent,
+  ThreadRunCompletedEvent,
+  ThreadRunFailedEvent,
+  ThreadRunOptions,
+  ThreadRunStartedEvent,
+  ThreadSnapshot,
+  ThreadToolCompletedEvent,
+  ThreadToolStartedEvent,
+} from './thread.js'
 export {GptTokenizer} from './tokenizer/index.js'
 export type {Tokenizer} from './tokenizer/index.js'
 export {tool, Tool} from './tools/index.js'

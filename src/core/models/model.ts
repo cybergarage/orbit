@@ -26,6 +26,7 @@ export interface ModelToolResultPayload {
 
 export interface ModelInvokeOptions extends OperatorOptions {
   maxToolIterations?: number
+  signal?: AbortSignal
   tools?: AgentTool[]
 }
 

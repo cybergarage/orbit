@@ -41,11 +41,14 @@ export class OpenAIAgent implements Model {
   }
 
   async invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
-    const response = await this.client.chat.completions.create({
-      messages: messages.map((message) => toOpenAIMessage(message)),
-      model: this.model,
-      ...(options?.tools && options.tools.length > 0 ? {tools: options.tools.map((tool) => toOpenAITool(tool))} : {}),
-    })
+    const response = await this.client.chat.completions.create(
+      {
+        messages: messages.map((message) => toOpenAIMessage(message)),
+        model: this.model,
+        ...(options?.tools && options.tools.length > 0 ? {tools: options.tools.map((tool) => toOpenAITool(tool))} : {}),
+      },
+      {signal: options?.signal},
+    )
 
     const message = response.choices[0]?.message
     const toolCalls =

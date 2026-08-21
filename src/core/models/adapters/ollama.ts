@@ -14,6 +14,7 @@ import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {getToolCalls, getToolResult, stringifyToolOutput, toolInputSchema} from './tools.js'
 
 export class OllamaAgent implements Model {
+  private readonly abort = () => this.client.abort()
   private readonly client: Ollama
 
   constructor(
@@ -36,11 +37,18 @@ export class OllamaAgent implements Model {
   }
 
   async invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
-    const response = await this.client.chat({
-      messages: messages.map((message) => toOllamaMessage(message)),
-      model: this.model,
-      ...(options?.tools && options.tools.length > 0 ? {tools: options.tools.map((tool) => toOllamaTool(tool))} : {}),
-    })
+    options?.signal?.addEventListener('abort', this.abort, {once: true})
+    let response
+    try {
+      response = await this.client.chat({
+        messages: messages.map((message) => toOllamaMessage(message)),
+        model: this.model,
+        ...(options?.tools && options.tools.length > 0 ? {tools: options.tools.map((tool) => toOllamaTool(tool))} : {}),
+      })
+    } finally {
+      options?.signal?.removeEventListener('abort', this.abort)
+    }
+
     const toolCalls = response.message.tool_calls?.map(toOllamaModelToolCall) ?? []
     return new CoreMessage(MessageType.Assistant, {
       content: response.message.content,

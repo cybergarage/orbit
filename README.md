@@ -13,6 +13,7 @@ An agentic CLI for crafting and publishing content workflows.
 
 * [Settings](docs/settings.md)
 * [Interactive Commands](docs/interactive.md)
+* [GUI Integration](docs/gui-integration.md)
 
 <!-- toc -->
 * [Documentation](#documentation)

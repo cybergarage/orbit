@@ -1,8 +1,17 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
+export {AgentEventType} from '../agent-events.js'
+export type {
+  AgentEvent,
+  AgentEventHandler,
+  AgentMessageCompletedEvent,
+  AgentModelStartedEvent,
+  AgentToolCompletedEvent,
+  AgentToolStartedEvent,
+} from '../agent-events.js'
 export {Agent} from '../agent.js'
-export type {AgentOptions, AgentTool} from '../agent.js'
+export type {AgentInvokeOptions, AgentOptions, AgentTool} from '../agent.js'
 export {
   ContextOverflowError,
   InvalidConfigurationError,

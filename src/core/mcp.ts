@@ -4,6 +4,8 @@
 import type {Transport} from '@modelcontextprotocol/sdk/shared/transport.js'
 
 import {Client} from '@modelcontextprotocol/sdk/client'
+// The runtime ESM export requires the .js suffix even though the lint resolver cannot resolve it.
+// eslint-disable-next-line import/no-unresolved
 import {getDefaultEnvironment, StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js'
 import {z} from 'zod'
 

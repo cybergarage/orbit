@@ -3,6 +3,7 @@
 
 import type {z} from 'zod'
 
+import type {AgentEvent, AgentEventHandler} from './agent-events.js'
 import type {Logger} from './logger/index.js'
 import type {McpToolManager, McpToolManagerFactoryOptions} from './mcp.js'
 import type {
@@ -18,6 +19,8 @@ import type {Operator} from './processor/index.js'
 import type {Session} from './session/index.js'
 import type {WorkspaceSettings} from './settings.js'
 
+import {AgentEventType} from './agent-events.js'
+import {ModelAbortError} from './errors/index.js'
 import {createNoopLogger} from './logger/index.js'
 import {createMcpToolManager} from './mcp.js'
 import {getModel, Message, MessageType} from './models/index.js'
@@ -32,6 +35,10 @@ export interface AgentTool extends Operator<never, unknown, ToolOptions> {
   readonly inputSchema?: Record<string, unknown>
   readonly name: string
   readonly schema: z.ZodType<unknown>
+}
+
+export interface AgentInvokeOptions extends ModelInvokeOptions {
+  onEvent?: AgentEventHandler
 }
 
 export interface AgentOptions {
@@ -51,7 +58,7 @@ export interface AgentOptions {
   tools?: AgentTool[]
 }
 
-export class Agent implements Operator<Message[], Message, ModelInvokeOptions> {
+export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   public readonly logger: Logger
   public readonly messages: Message[]
   public readonly settings: WorkspaceSettings
@@ -101,80 +108,117 @@ export class Agent implements Operator<Message[], Message, ModelInvokeOptions> {
     return this.state
   }
 
-  async invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
-    const session = this.getSession()
-    session.appendMessages(messages)
-    const conversation = [...messages]
-    this.logger.debug(
-      {
-        initialMessageCount: this.messages.length,
-        requestMessageCount: messages.length,
-      },
-      'agent invoke started',
-    )
-    const mcpTools = await this.mcpToolManager.getTools()
-    const tools = [...this.tools, ...mcpTools, ...(options?.tools ?? [])]
-    const modelOptions = tools.length > 0 ? {...options, tools} : options
-    const maxToolIterations = options?.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS
-    this.logger.debug(
-      {
-        mcpToolCount: mcpTools.length,
-        toolCount: tools.length,
-      },
-      'agent tools loaded',
-    )
+  async invoke(messages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message> {
+    try {
+      throwIfAborted(options?.signal)
+      const session = this.getSession()
+      session.appendMessages(messages)
+      const conversation = [...messages]
+      this.logger.debug(
+        {
+          initialMessageCount: this.messages.length,
+          requestMessageCount: messages.length,
+        },
+        'agent invoke started',
+      )
+      const mcpTools = await this.mcpToolManager.getTools()
+      throwIfAborted(options?.signal)
+      const tools = [...this.tools, ...mcpTools, ...(options?.tools ?? [])]
+      const modelOptions = tools.length > 0 ? {...options, tools} : options
+      const maxToolIterations = options?.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS
+      this.logger.debug(
+        {
+          mcpToolCount: mcpTools.length,
+          toolCount: tools.length,
+        },
+        'agent tools loaded',
+      )
 
-    for (let iteration = 0; iteration <= maxToolIterations; iteration += 1) {
-      this.logger.debug({iteration, maxToolIterations}, 'agent model iteration started')
-      // Tool loops are intentionally sequential because each model response depends on the previous tool results.
-      // eslint-disable-next-line no-await-in-loop
-      const modelMessage = await this.model.invoke([...this.messages, ...conversation], modelOptions)
-      session.appendMessages([modelMessage])
-      conversation.push(modelMessage)
-      this.logger.debug({iteration, role: modelMessage.role}, 'agent model iteration completed')
+      for (let iteration = 0; iteration <= maxToolIterations; iteration += 1) {
+        throwIfAborted(options?.signal)
+        this.logger.debug({iteration, maxToolIterations}, 'agent model iteration started')
+        emitAgentEvent(options?.onEvent, {iteration, type: AgentEventType.ModelStarted})
+        // Tool loops are intentionally sequential because each model response depends on the previous tool results.
+        // eslint-disable-next-line no-await-in-loop
+        const modelMessage = await this.model.invoke([...this.messages, ...conversation], modelOptions)
+        throwIfAborted(options?.signal)
+        session.appendMessages([modelMessage])
+        conversation.push(modelMessage)
+        emitAgentEvent(options?.onEvent, {iteration, message: modelMessage, type: AgentEventType.MessageCompleted})
+        this.logger.debug({iteration, role: modelMessage.role}, 'agent model iteration completed')
 
-      const toolCalls = getToolCalls(modelMessage)
-      this.logger.debug({iteration, toolCallCount: toolCalls.length}, 'agent tool calls received')
-      if (toolCalls.length === 0) {
-        return modelMessage
+        const toolCalls = getToolCalls(modelMessage)
+        this.logger.debug({iteration, toolCallCount: toolCalls.length}, 'agent tool calls received')
+        if (toolCalls.length === 0) {
+          return modelMessage
+        }
+
+        if (iteration === maxToolIterations) {
+          this.logger.debug({maxToolIterations, toolCallCount: toolCalls.length}, 'agent max tool iterations exceeded')
+          throw new Error(`Agent exceeded maximum tool iterations: ${maxToolIterations}`)
+        }
+
+        // Tool execution for one model turn can run in parallel before the next model call.
+        // eslint-disable-next-line no-await-in-loop
+        const toolMessages = await Promise.all(
+          toolCalls.map((toolCall) => this.invokeTool(toolCall, tools, iteration, options)),
+        )
+        session.appendMessages(toolMessages)
+        conversation.push(...toolMessages)
       }
 
-      if (iteration === maxToolIterations) {
-        this.logger.debug({maxToolIterations, toolCallCount: toolCalls.length}, 'agent max tool iterations exceeded')
-        throw new Error(`Agent exceeded maximum tool iterations: ${maxToolIterations}`)
+      throw new Error(`Agent exceeded maximum tool iterations: ${maxToolIterations}`)
+    } catch (error) {
+      if (options?.signal?.aborted && !(error instanceof ModelAbortError)) {
+        throw new ModelAbortError('Agent invocation aborted.', {cause: error})
       }
 
-      // Tool execution for one model turn can run in parallel before the next model call.
-      // eslint-disable-next-line no-await-in-loop
-      const toolMessages = await Promise.all(toolCalls.map((toolCall) => this.invokeTool(toolCall, tools, options)))
-      session.appendMessages(toolMessages)
-      conversation.push(...toolMessages)
+      throw error
     }
-
-    throw new Error(`Agent exceeded maximum tool iterations: ${maxToolIterations}`)
   }
 
-  async run(_session: Session, messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
+  async run(_session: Session, messages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message> {
     return this.invoke(messages, options)
   }
 
   private async invokeTool(
     toolCall: ModelToolCall,
     tools: AgentTool[],
-    options?: Partial<ModelInvokeOptions>,
+    iteration: number,
+    options?: Partial<AgentInvokeOptions>,
   ): Promise<Message> {
+    throwIfAborted(options?.signal)
+    emitAgentEvent(options?.onEvent, {iteration, toolCall, type: AgentEventType.ToolStarted})
     const tool = tools.find((candidate) => candidate.name === toolCall.name)
 
     if (tool === undefined) {
-      return createToolResultMessage(toolCall, `Unknown tool: ${toolCall.name}`, true)
+      const message = createToolResultMessage(toolCall, `Unknown tool: ${toolCall.name}`, true)
+      emitAgentEvent(options?.onEvent, {iteration, message, toolCall, type: AgentEventType.ToolCompleted})
+      return message
     }
 
     try {
       const output = await tool.invoke(toolCall.input as never, options)
-      return createToolResultMessage(toolCall, output)
+      throwIfAborted(options?.signal)
+      const message = createToolResultMessage(toolCall, output)
+      emitAgentEvent(options?.onEvent, {iteration, message, toolCall, type: AgentEventType.ToolCompleted})
+      return message
     } catch (error) {
-      return createToolResultMessage(toolCall, error instanceof Error ? error.message : String(error), true)
+      throwIfAborted(options?.signal)
+      const message = createToolResultMessage(toolCall, error instanceof Error ? error.message : String(error), true)
+      emitAgentEvent(options?.onEvent, {iteration, message, toolCall, type: AgentEventType.ToolCompleted})
+      return message
     }
+  }
+}
+
+function emitAgentEvent(handler: AgentEventHandler | undefined, event: AgentEvent): void {
+  handler?.(event)
+}
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) {
+    throw new ModelAbortError('Agent invocation aborted.', {cause: signal.reason})
   }
 }
 

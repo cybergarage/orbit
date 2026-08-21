@@ -45,17 +45,20 @@ export class AnthropicAgent implements Model {
   async invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
     const {messages: chatMessages, systemPrompt} = splitSystemPrompt(messages)
 
-    const response = await this.client.messages.create({
-      // Anthropic's SDK expects snake_case for this field.
-      // eslint-disable-next-line camelcase
-      max_tokens: 8096,
-      messages: chatMessages.map((message) => toAnthropicMessage(message)),
-      model: this.model,
-      ...(systemPrompt ? {system: systemPrompt} : {}),
-      ...(options?.tools && options.tools.length > 0
-        ? {tools: options.tools.map((tool) => toAnthropicTool(tool))}
-        : {}),
-    })
+    const response = await this.client.messages.create(
+      {
+        // Anthropic's SDK expects snake_case for this field.
+        // eslint-disable-next-line camelcase
+        max_tokens: 8096,
+        messages: chatMessages.map((message) => toAnthropicMessage(message)),
+        model: this.model,
+        ...(systemPrompt ? {system: systemPrompt} : {}),
+        ...(options?.tools && options.tools.length > 0
+          ? {tools: options.tools.map((tool) => toAnthropicTool(tool))}
+          : {}),
+      },
+      {signal: options?.signal},
+    )
 
     const toolCalls = response.content
       .filter((block) => isToolUseBlock(block))
