@@ -6,7 +6,7 @@ working on the CLI or the reusable TypeScript library.
 
 ## Prerequisites
 
-- Node.js 18 or newer
+- Node.js 20.19 or newer
 - npm
 
 ## Setup

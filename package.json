@@ -12,7 +12,6 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@oclif/core": "^4",
     "@oclif/plugin-help": "^6",
-    "@oclif/plugin-plugins": "^5",
     "@types/react": "^19.2.14",
     "env-paths": "^4.0.0",
     "express": "^5.2.1",
@@ -33,7 +32,7 @@
     "@types/chai": "^4",
     "@types/express": "^5.0.6",
     "@types/mocha": "^10",
-    "@types/node": "^18",
+    "@types/node": "^20.19.43",
     "@types/react-dom": "^19.2.4",
     "@types/sinon": "^21.0.0",
     "chai": "^4",
@@ -50,7 +49,7 @@
     "typescript": "^5"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.19.0"
   },
   "files": [
     "./bin",
@@ -69,10 +68,15 @@
     "dirname": "orbit",
     "commands": "./dist/apps/cli",
     "plugins": [
-      "@oclif/plugin-help",
-      "@oclif/plugin-plugins"
+      "@oclif/plugin-help"
     ],
     "topicSeparator": " "
+  },
+  "overrides": {
+    "mocha": {
+      "diff": "^8.0.3",
+      "serialize-javascript": "^7.1.0"
+    }
   },
   "repository": "cybergarage/orbit",
   "scripts": {

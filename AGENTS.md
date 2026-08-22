@@ -25,7 +25,7 @@ Orbit is an agentic CLI and reusable TypeScript library for content workflows. I
 
 ## Development Environment
 
-- Use Node.js 18 or newer and npm. `package-lock.json` is the authoritative dependency lockfile.
+- Use Node.js 20.19 or newer and npm. `package-lock.json` is the authoritative dependency lockfile.
 - Install reproducibly with `npm ci`. Update dependencies with npm and include the resulting lockfile changes.
 - The project uses TypeScript in strict mode, native ESM, and Node16 module resolution.
 - Relative imports in TypeScript must use the emitted `.js` extension, such as `./settings.js`.
