@@ -23,6 +23,13 @@ export type {CreateMessageOptions} from './message-factory.js'
 export {sessionFilePath} from './paths.js'
 export {SessionRecorder} from './recorder.js'
 export {SessionRepository} from './repository.js'
-export type {CreateSessionOptions, SessionRepositoryOptions, SessionSummary} from './repository.js'
+export type {
+  CreateSessionOptions,
+  SessionListError,
+  SessionListOptions,
+  SessionListResult,
+  SessionRepositoryOptions,
+  SessionSummary,
+} from './repository.js'
 export {Session} from './session.js'
 export type {AppendMessageOptions, RecordTurnContextOptions, RecordTurnEventOptions, SessionOptions} from './session.js'

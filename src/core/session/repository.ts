@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import fs from 'node:fs'
+import fsPromises from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import {v7 as uuidv7} from 'uuid'
@@ -38,9 +39,26 @@ export interface SessionSummary {
   id: string
   model?: string
   originator?: string
+  preview?: string
   provider?: ProviderName
   status: 'cancelled' | 'completed' | 'failed' | 'interrupted' | 'new'
   updatedAt: string
+}
+
+export interface SessionListError {
+  file: string
+  message: string
+}
+
+export interface SessionListOptions {
+  cursor?: string
+  limit?: number
+}
+
+export interface SessionListResult {
+  data: SessionSummary[]
+  errors: SessionListError[]
+  nextCursor?: string
 }
 
 export class SessionRepository {
@@ -78,6 +96,45 @@ export class SessionRepository {
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
   }
 
+  async listPage(options: SessionListOptions = {}): Promise<SessionListResult> {
+    const limit = options.limit ?? 50
+    if (!Number.isSafeInteger(limit) || limit <= 0 || limit > 200) {
+      throw new Error('Session list limit must be an integer between 1 and 200.')
+    }
+
+    const offset = parseCursor(options.cursor)
+    try {
+      await fsPromises.access(this.rootDir)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return {data: [], errors: []}
+      throw error
+    }
+
+    const files = await findSessionFilesAsync(this.rootDir)
+    const errors: SessionListError[] = []
+    const summaries = (
+      await Promise.all(
+        files.map(async (file) => {
+          try {
+            const source = await fsPromises.readFile(file, 'utf8')
+            return summaryFromParsed(parseSessionFile(source, file), file)
+          } catch (error) {
+            errors.push({file, message: error instanceof Error ? error.message : String(error)})
+          }
+        }),
+      )
+    )
+      .filter((summary): summary is SessionSummary => summary !== undefined)
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+    const data = summaries.slice(offset, offset + limit)
+    const nextOffset = offset + data.length
+    return {
+      data,
+      errors,
+      ...(nextOffset < summaries.length ? {nextCursor: String(nextOffset)} : {}),
+    }
+  }
+
   open(file: string): Session {
     const resolvedFile = path.resolve(file)
     const parsed = parseSessionFile(fs.readFileSync(resolvedFile, 'utf8'), resolvedFile)
@@ -110,19 +167,28 @@ export class SessionRepository {
   readSummary(file: string): SessionSummary {
     const resolvedFile = path.resolve(file)
     const parsed = parseSessionFile(fs.readFileSync(resolvedFile, 'utf8'), resolvedFile)
-    const lastEntry = parsed.entries.at(-1)
-    const lastTurnEvent = findLastTurnEvent(parsed.entries)
-    return {
-      createdAt: parsed.header.timestamp,
-      cwd: parsed.header.cwd,
-      file: resolvedFile,
-      id: parsed.header.id,
-      ...(parsed.header.model === undefined ? {} : {model: parsed.header.model}),
-      ...(parsed.header.originator === undefined ? {} : {originator: parsed.header.originator}),
-      ...(parsed.header.provider === undefined ? {} : {provider: parsed.header.provider}),
-      status: summaryStatus(parsed.entries, lastTurnEvent),
-      updatedAt: lastEntry?.timestamp ?? parsed.header.timestamp,
-    }
+    return summaryFromParsed(parsed, resolvedFile)
+  }
+}
+
+function summaryFromParsed(parsed: ReturnType<typeof parseSessionFile>, file: string): SessionSummary {
+  const lastEntry = parsed.entries.at(-1)
+  const lastTurnEvent = findLastTurnEvent(parsed.entries)
+  const previewEntry = parsed.entries.find(
+    (entry) =>
+      entry.type === SessionEntryType.Message && entry.message.type === 'user' && entry.message.contents.length > 0,
+  )
+  return {
+    createdAt: parsed.header.timestamp,
+    cwd: parsed.header.cwd,
+    file,
+    id: parsed.header.id,
+    ...(parsed.header.model === undefined ? {} : {model: parsed.header.model}),
+    ...(parsed.header.originator === undefined ? {} : {originator: parsed.header.originator}),
+    ...(previewEntry?.type === SessionEntryType.Message ? {preview: previewEntry.message.contents[0]} : {}),
+    ...(parsed.header.provider === undefined ? {} : {provider: parsed.header.provider}),
+    status: summaryStatus(parsed.entries, lastTurnEvent),
+    updatedAt: lastEntry?.timestamp ?? parsed.header.timestamp,
   }
 }
 
@@ -149,6 +215,25 @@ function findSessionFiles(rootDir: string): string[] {
   }
 
   return files
+}
+
+async function findSessionFilesAsync(rootDir: string): Promise<string[]> {
+  const entries = await fsPromises.readdir(rootDir, {withFileTypes: true})
+  const nestedFiles = await Promise.all(
+    entries.map(async (entry) => {
+      const item = path.join(rootDir, entry.name)
+      if (entry.isDirectory()) return findSessionFilesAsync(item)
+      return entry.isFile() && entry.name.endsWith('.jsonl') ? [item] : []
+    }),
+  )
+  return nestedFiles.flat()
+}
+
+function parseCursor(cursor: string | undefined): number {
+  if (cursor === undefined) return 0
+  const offset = Number(cursor)
+  if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Invalid session list cursor.')
+  return offset
 }
 
 function findLastTurnEvent(entries: SessionEntry[]): SessionTurnEventEntry | undefined {

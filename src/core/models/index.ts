@@ -60,7 +60,16 @@ export {State} from '../state.js'
 export {tool, Tool} from '../tools/index.js'
 export type {ToolConfig, ToolContext, ToolHandler, ToolInput, ToolOptions, ToolOutput} from '../tools/index.js'
 export {DEFAULT_MODELS, getModel} from './factory.js'
-export type {Model, ModelInvokeOptions, ModelToolCall, ModelToolCallPayload, ModelToolResultPayload} from './model.js'
+export type {
+  Model,
+  ModelAssistantPayload,
+  ModelInvokeOptions,
+  ModelResponseMetadata,
+  ModelTokenUsage,
+  ModelToolCall,
+  ModelToolCallPayload,
+  ModelToolResultPayload,
+} from './model.js'
 export type {Prompt} from './prompt.js'
 export {splitSystemPrompt} from './prompt.js'
 export type {Provider, ProviderName} from './provider.js'

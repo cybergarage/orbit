@@ -3,14 +3,16 @@
 
 import type {Config, Message as OllamaMessage, Tool as OllamaTool, ToolCall as OllamaToolCall} from 'ollama'
 
+import {performance} from 'node:perf_hooks'
 import {Ollama} from 'ollama'
 
 import type {Message} from '../../message/index.js'
-import type {Model, ModelInvokeOptions, ModelToolCall} from '../model.js'
+import type {Model, ModelInvokeOptions, ModelResponseMetadata, ModelToolCall} from '../model.js'
 import type {Provider, ProviderName} from '../provider.js'
 
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
+import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
 import {getToolCalls, getToolResult, stringifyToolOutput, toolInputSchema} from './tools.js'
 
 export class OllamaAgent implements Model {
@@ -38,21 +40,56 @@ export class OllamaAgent implements Model {
 
   async invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
     options?.signal?.addEventListener('abort', this.abort, {once: true})
+    const request = {
+      messages: messages.map((message) => toOllamaMessage(message)),
+      model: this.model,
+      ...(options?.tools && options.tools.length > 0 ? {tools: options.tools.map((tool) => toOllamaTool(tool))} : {}),
+    }
+    emitModelRequest(
+      options,
+      {
+        messageCount: request.messages.length,
+        model: this.model,
+        provider: this.getProvider(),
+        toolCount: options?.tools?.length ?? 0,
+      },
+      request,
+    )
+    const startedAt = performance.now()
     let response
     try {
-      response = await this.client.chat({
-        messages: messages.map((message) => toOllamaMessage(message)),
-        model: this.model,
-        ...(options?.tools && options.tools.length > 0 ? {tools: options.tools.map((tool) => toOllamaTool(tool))} : {}),
-      })
+      response = await this.client.chat(request)
+    } catch (error) {
+      emitModelFailure(
+        options,
+        {durationMs: performance.now() - startedAt, model: this.model, provider: this.getProvider()},
+        error,
+      )
+      throw error
     } finally {
       options?.signal?.removeEventListener('abort', this.abort)
     }
 
     const toolCalls = response.message.tool_calls?.map(toOllamaModelToolCall) ?? []
+    const {content} = response.message
+    const metadata: ModelResponseMetadata = {
+      durationMs: performance.now() - startedAt,
+      model: response.model,
+      provider: this.getProvider(),
+      ...(response.done_reason === undefined ? {} : {stopReason: response.done_reason}),
+      usage: {
+        inputTokens: response.prompt_eval_count,
+        outputTokens: response.eval_count,
+        totalTokens: response.prompt_eval_count + response.eval_count,
+      },
+    }
+    emitModelResponse(options, {content, metadata, response, toolCalls})
     return new CoreMessage(MessageType.Assistant, {
-      content: response.message.content,
-      ...(toolCalls.length > 0 ? {payload: {toolCalls}} : {}),
+      content,
+      payload: {
+        response: metadata,
+        ...(toolCalls.length > 0 ? {toolCalls} : {}),
+      },
     })
   }
 }

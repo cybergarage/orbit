@@ -15,7 +15,7 @@ English is the canonical and required language for this project.
 Orbit is an agentic CLI and reusable TypeScript library for content workflows. It supports OpenAI, Anthropic, and Ollama models, MCP tools, interactive sessions, workspace settings, and a thread lifecycle API for GUI integrations.
 
 - `src/index.ts` is the package entry point.
-- `src/apps/cli/` contains oclif commands and shared CLI flag handling.
+- `src/apps/cli/` contains oclif commands; `src/apps/cli-flags.ts` contains shared flag handling.
 - `src/core/` contains the reusable runtime and public library implementation.
 - `src/core/models/adapters/` contains provider-specific model adapters.
 - `src/core/thread.ts` provides the event-driven thread API used by GUI clients.

@@ -198,6 +198,31 @@ describe('session persistence', () => {
     ])
   })
 
+  it('lists paginated session previews while isolating corrupt files', async () => {
+    const repository = new SessionRepository({rootDir: root})
+    const first = repository.create({createdAt: '2026-08-21T00:00:00.000Z', id: 'first'})
+    first.appendMessages([new Message(MessageType.User, {content: 'First prompt'})])
+    await first.close()
+    const second = repository.create({createdAt: '2026-08-22T00:00:00.000Z', id: 'second'})
+    second.appendMessages([new Message(MessageType.User, {content: 'Second prompt'})])
+    await second.close()
+    const corruptFile = path.join(root, 'broken.jsonl')
+    await fs.writeFile(corruptFile, 'not-json\n')
+
+    const firstPage = await repository.listPage({limit: 1})
+    const secondPage = await repository.listPage({cursor: firstPage.nextCursor, limit: 1})
+    const summaries = [...firstPage.data, ...secondPage.data]
+
+    expect(summaries.map((summary) => summary.id)).to.have.members(['first', 'second'])
+    expect(summaries.find((summary) => summary.id === 'first')?.preview).to.equal('First prompt')
+    expect(summaries.find((summary) => summary.id === 'second')?.preview).to.equal('Second prompt')
+    expect(firstPage.nextCursor).to.equal('1')
+    expect(secondPage.nextCursor).to.equal(undefined)
+    expect(firstPage.errors).to.have.length(1)
+    expect(firstPage.errors[0].file).to.equal(corruptFile)
+    expect(firstPage.errors[0].message).to.contain(`Invalid session file ${corruptFile} at line 1`)
+  })
+
   it('records failed and pre-cancelled agent turns', async () => {
     const repository = new SessionRepository({rootDir: root})
     const failedSession = repository.create({id: 'failed'})

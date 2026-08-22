@@ -8,14 +8,16 @@ import type {
   ChatCompletionTool,
 } from 'openai/resources/chat/completions'
 
+import {performance} from 'node:perf_hooks'
 import {OpenAI} from 'openai'
 
 import type {Message} from '../../message/index.js'
-import type {Model, ModelInvokeOptions, ModelToolCall} from '../model.js'
+import type {Model, ModelInvokeOptions, ModelResponseMetadata, ModelToolCall} from '../model.js'
 import type {Provider, ProviderName} from '../provider.js'
 
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
+import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
 import {getToolCalls, getToolResult, stringifyToolOutput, toolInputSchema} from './tools.js'
 
 export class OpenAIAgent implements Model {
@@ -40,25 +42,73 @@ export class OpenAIAgent implements Model {
     return this.provider.getName()
   }
 
+  // Request mapping and optional provider metadata are kept together at the adapter boundary.
+  // eslint-disable-next-line complexity
   async invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
-    const response = await this.client.chat.completions.create(
+    const request = {
+      messages: messages.map((message) => toOpenAIMessage(message)),
+      model: this.model,
+      ...(options?.tools && options.tools.length > 0 ? {tools: options.tools.map((tool) => toOpenAITool(tool))} : {}),
+    }
+    emitModelRequest(
+      options,
       {
-        messages: messages.map((message) => toOpenAIMessage(message)),
+        messageCount: request.messages.length,
         model: this.model,
-        ...(options?.tools && options.tools.length > 0 ? {tools: options.tools.map((tool) => toOpenAITool(tool))} : {}),
+        provider: this.getProvider(),
+        toolCount: options?.tools?.length ?? 0,
       },
-      {signal: options?.signal},
+      request,
     )
+    const startedAt = performance.now()
+    let response
+    try {
+      response = await this.client.chat.completions.create(request, {signal: options?.signal})
+    } catch (error) {
+      emitModelFailure(
+        options,
+        {durationMs: performance.now() - startedAt, model: this.model, provider: this.getProvider()},
+        error,
+      )
+      throw error
+    }
 
     const message = response.choices[0]?.message
     const toolCalls =
       message?.tool_calls
         ?.filter((toolCall) => isOpenAIFunctionToolCall(toolCall))
         .map((toolCall) => toOpenAIModelToolCall(toolCall)) ?? []
+    const content = message?.content ?? ''
+    const metadata: ModelResponseMetadata = {
+      durationMs: performance.now() - startedAt,
+      model: response.model,
+      provider: this.getProvider(),
+      responseId: response.id,
+      ...(response.choices[0]?.finish_reason === undefined ? {} : {stopReason: response.choices[0].finish_reason}),
+      ...(response.usage === undefined
+        ? {}
+        : {
+            usage: {
+              ...(response.usage.prompt_tokens_details?.cached_tokens === undefined
+                ? {}
+                : {cachedInputTokens: response.usage.prompt_tokens_details.cached_tokens}),
+              inputTokens: response.usage.prompt_tokens,
+              outputTokens: response.usage.completion_tokens,
+              ...(response.usage.completion_tokens_details?.reasoning_tokens === undefined
+                ? {}
+                : {reasoningTokens: response.usage.completion_tokens_details.reasoning_tokens}),
+              totalTokens: response.usage.total_tokens,
+            },
+          }),
+    }
+    emitModelResponse(options, {content, metadata, response, toolCalls})
 
     return new CoreMessage(MessageType.Assistant, {
-      content: message?.content ?? '',
-      ...(toolCalls.length > 0 ? {payload: {toolCalls}} : {}),
+      content,
+      payload: {
+        response: metadata,
+        ...(toolCalls.length > 0 ? {toolCalls} : {}),
+      },
     })
   }
 }

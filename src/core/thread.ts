@@ -6,7 +6,7 @@ import {v7 as uuidv7} from 'uuid'
 import type {AgentEvent} from './agent-events.js'
 import type {AgentInvokeOptions, AgentOptions} from './agent.js'
 import type {Message, MessagePayload, MessageType} from './message/index.js'
-import type {ModelToolCall, Role} from './models/index.js'
+import type {ModelToolCall, ProviderName, Role} from './models/index.js'
 
 import {AgentEventType} from './agent-events.js'
 import {Agent} from './agent.js'
@@ -48,9 +48,12 @@ export interface ThreadMessage {
 
 export interface ThreadSnapshot {
   createdAt: string
+  cwd: string
   file?: string
   id: string
   messages: ThreadMessage[]
+  model?: string
+  provider?: ProviderName
   status: ThreadStatus
   updatedAt: string
 }
@@ -145,6 +148,12 @@ export interface ThreadRunOptions {
   signal?: AbortSignal
 }
 
+export interface ThreadRunHandle {
+  completion: Promise<ThreadMessage>
+  id: string
+  threadId: string
+}
+
 interface ManagedThread {
   agent: ThreadAgent
   createdAt: string
@@ -164,13 +173,13 @@ interface ActiveRun {
 export class ThreadManager {
   private readonly activeRuns = new Map<string, ActiveRun>()
   private readonly createAgent: ThreadAgentFactory
-  private readonly onEvent?: ThreadEventHandler
+  private readonly eventHandlers = new Set<ThreadEventHandler>()
   private readonly sessionRepository?: SessionRepository
   private readonly threads = new Map<string, ManagedThread>()
 
   constructor(options: ThreadManagerOptions = {}) {
     this.createAgent = options.createAgent ?? ((agentOptions) => new Agent(agentOptions))
-    this.onEvent = options.onEvent
+    if (options.onEvent !== undefined) this.eventHandlers.add(options.onEvent)
     this.sessionRepository = options.sessionRepository
   }
 
@@ -272,8 +281,18 @@ export class ThreadManager {
 
     const session = this.sessionRepository.open(file)
     const metadata = session.getMetadata()
+    const persistedModel =
+      metadata.model === undefined && metadata.provider === undefined
+        ? undefined
+        : {
+            ...(metadata.model === undefined ? {} : {name: metadata.model}),
+            ...(metadata.provider === undefined ? {} : {provider: metadata.provider}),
+            ...options.agent?.model,
+          }
     const agentOptions: AgentOptions = {
+      cwd: metadata.cwd,
       ...options.agent,
+      ...(persistedModel === undefined ? {} : {model: persistedModel}),
       ...(options.agent?.messages === undefined && metadata.systemPrompt !== undefined
         ? {messages: [new CoreMessage(CoreMessageType.Session, {content: metadata.systemPrompt})]}
         : {}),
@@ -298,7 +317,11 @@ export class ThreadManager {
     return this.snapshot(thread)
   }
 
-  async sendMessage(threadId: string, content: string, options: ThreadRunOptions = {}): Promise<ThreadMessage> {
+  sendMessage(threadId: string, content: string, options: ThreadRunOptions = {}): Promise<ThreadMessage> {
+    return this.startRun(threadId, content, options).completion
+  }
+
+  startRun(threadId: string, content: string, options: ThreadRunOptions = {}): ThreadRunHandle {
     if (content.trim().length === 0) {
       throw new InvalidInputError('Message content cannot be empty.')
     }
@@ -310,6 +333,26 @@ export class ThreadManager {
 
     const run = createActiveRun(threadId)
     this.activeRuns.set(run.id, run)
+    const completion = this.executeRun(thread, content, options, run)
+    return {completion, id: run.id, threadId}
+  }
+
+  subscribe(handler: ThreadEventHandler): () => void {
+    this.eventHandlers.add(handler)
+    return () => this.eventHandlers.delete(handler)
+  }
+
+  private emit(event: ThreadEvent): void {
+    for (const handler of this.eventHandlers) handler(event)
+  }
+
+  private async executeRun(
+    thread: ManagedThread,
+    content: string,
+    options: ThreadRunOptions,
+    run: ActiveRun,
+  ): Promise<ThreadMessage> {
+    const {threadId} = run
     const forwardAbort = () => run.controller.abort(options.signal?.reason)
     options.signal?.addEventListener('abort', forwardAbort, {once: true})
     if (options.signal?.aborted) forwardAbort()
@@ -371,10 +414,6 @@ export class ThreadManager {
     }
   }
 
-  private emit(event: ThreadEvent): void {
-    this.onEvent?.(event)
-  }
-
   private getActiveRunForThread(threadId: string): ActiveRun | undefined {
     return [...this.activeRuns.values()].find((run) => run.threadId === threadId)
   }
@@ -426,11 +465,15 @@ export class ThreadManager {
   }
 
   private snapshot(thread: ManagedThread): ThreadSnapshot {
+    const metadata = thread.session.getMetadata()
     return {
       createdAt: thread.createdAt,
+      cwd: metadata.cwd,
       ...(thread.session.getFile() === undefined ? {} : {file: thread.session.getFile()}),
       id: thread.id,
       messages: thread.session.getConversationMessages().map((message) => serializeMessage(message)),
+      ...(metadata.model === undefined ? {} : {model: metadata.model}),
+      ...(metadata.provider === undefined ? {} : {provider: metadata.provider}),
       status: this.getActiveRunForThread(thread.id) === undefined ? ThreadStatus.Idle : ThreadStatus.Running,
       updatedAt: thread.updatedAt,
     }

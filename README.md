@@ -14,6 +14,7 @@ An agentic CLI for crafting and publishing content workflows.
 * [Development](docs/development.md)
 * [Settings](docs/settings.md)
 * [Interactive Commands](docs/interactive.md)
+* [Local GUI](docs/gui.md)
 * [GUI Integration](docs/gui-integration.md)
 
 <!-- toc -->
@@ -28,7 +29,7 @@ $ npm install -g orbit
 $ orbit COMMAND
 running command...
 $ orbit (--version)
-orbit/0.0.0 darwin-arm64 node-v26.0.0
+orbit/0.0.0 darwin-arm64 node-v26.5.0
 $ orbit --help [COMMAND]
 USAGE
   $ orbit COMMAND
@@ -37,6 +38,8 @@ USAGE
 <!-- usagestop -->
 # Commands
 <!-- commands -->
+* [`orbit exec [PROMPT]`](#orbit-exec-prompt)
+* [`orbit gui`](#orbit-gui)
 * [`orbit help [COMMAND]`](#orbit-help-command)
 * [`orbit plugins`](#orbit-plugins)
 * [`orbit plugins add PLUGIN`](#orbit-plugins-add-plugin)
@@ -48,6 +51,67 @@ USAGE
 * [`orbit plugins uninstall [PLUGIN]`](#orbit-plugins-uninstall-plugin)
 * [`orbit plugins unlink [PLUGIN]`](#orbit-plugins-unlink-plugin)
 * [`orbit plugins update`](#orbit-plugins-update)
+
+## `orbit exec [PROMPT]`
+
+Send a prompt to the agent and print the response
+
+```
+USAGE
+  $ orbit exec [PROMPT] [--anthropic-api-key-env <value>] [--debug] [--lang en|ja] [--model <value>]
+    [--ollama-host <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai]
+
+ARGUMENTS
+  [PROMPT]  Prompt to send to the agent
+
+FLAGS
+  --anthropic-api-key-env=<value>  Environment variable name for the Anthropic API key
+  --debug                          Enable debug logging
+  --lang=<option>                  Output language
+                                   <options: en|ja>
+  --model=<value>                  Model name (overrides workspace setting and provider default)
+  --ollama-host=<value>            Ollama host URL
+  --openai-api-key-env=<value>     Environment variable name for the OpenAI API key
+  --provider=<option>              LLM provider (overrides workspace setting)
+                                   <options: anthropic|ollama|openai>
+
+DESCRIPTION
+  Send a prompt to the agent and print the response
+
+EXAMPLES
+  $ orbit exec "Write a haiku about TypeScript"
+
+  echo "Write a haiku about TypeScript" | orbit exec
+```
+
+_See code: [src/cli/exec.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/exec.ts)_
+
+## `orbit gui`
+
+Start the local Orbit graphical interface
+
+```
+USAGE
+  $ orbit gui [--anthropic-api-key-env <value>] [--debug] [--lang en|ja] [--model <value>] [--ollama-host
+    <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai] [--port <value>]
+
+FLAGS
+  --anthropic-api-key-env=<value>  Environment variable name for the Anthropic API key
+  --debug                          Enable debug logging
+  --lang=<option>                  Output language
+                                   <options: en|ja>
+  --model=<value>                  Model name (overrides workspace setting and provider default)
+  --ollama-host=<value>            Ollama host URL
+  --openai-api-key-env=<value>     Environment variable name for the OpenAI API key
+  --port=<value>                   Loopback port (uses an available port by default)
+  --provider=<option>              LLM provider (overrides workspace setting)
+                                   <options: anthropic|ollama|openai>
+
+DESCRIPTION
+  Start the local Orbit graphical interface
+```
+
+_See code: [src/cli/gui.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/gui.ts)_
 
 ## `orbit help [COMMAND]`
 

@@ -8,7 +8,12 @@ import path from 'node:path'
 import process from 'node:process'
 
 import {configureApp, SETTINGS_FILE_NAME} from '../../src/core/index.js'
-import {loadWorkspaceSettings, loadWorkspaceSettingsSync} from '../../src/core/settings.js'
+import {
+  loadWorkspaceSettings,
+  loadWorkspaceSettingsSync,
+  loadWorkspaceSettingsWithSources,
+  loadWorkspaceSettingsWithSourcesSync,
+} from '../../src/core/settings.js'
 
 describe('loadWorkspaceSettings', () => {
   afterEach(() => {
@@ -207,6 +212,29 @@ describe('loadWorkspaceSettings', () => {
     )
 
     expect(loadWorkspaceSettingsSync(root)).to.deep.equal(await loadWorkspaceSettings(root))
+  })
+
+  it('reports the files that contributed workspace settings', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-'))
+    const child = path.join(root, 'child')
+    await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
+    await fs.mkdir(path.join(child, '.orbit'), {recursive: true})
+    const rootFile = path.join(root, '.orbit', SETTINGS_FILE_NAME)
+    const childFile = path.join(child, '.orbit', SETTINGS_FILE_NAME)
+    await fs.writeFile(rootFile, JSON.stringify({provider: 'openai'}))
+    await fs.writeFile(childFile, JSON.stringify({model: 'gpt-test'}))
+
+    const asynchronous = await loadWorkspaceSettingsWithSources(child)
+    const synchronous = loadWorkspaceSettingsWithSourcesSync(child)
+
+    expect(asynchronous).to.deep.equal({
+      settings: {model: 'gpt-test', provider: 'openai'},
+      sources: [
+        {file: rootFile, settings: {provider: 'openai'}},
+        {file: childFile, settings: {model: 'gpt-test'}},
+      ],
+    })
+    expect(synchronous).to.deep.equal(asynchronous)
   })
 
   it('uses the current working directory when no start directory is provided', async () => {

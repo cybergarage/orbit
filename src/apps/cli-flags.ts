@@ -3,9 +3,9 @@
 
 import {Flags} from '@oclif/core'
 
-import type {AgentOptions} from '../../core/chat.js'
+import type {AgentOptions} from '../core/chat.js'
 
-import {getProvider, isProvider} from '../../core/index.js'
+import {getProvider, isProvider} from '../core/index.js'
 
 export const agentFlags = {
   'anthropic-api-key-env': Flags.string({

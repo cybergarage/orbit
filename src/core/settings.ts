@@ -41,6 +41,16 @@ export interface WorkspaceSettings {
   providers?: ProviderSettings
 }
 
+export interface WorkspaceSettingsSource {
+  file: string
+  settings: WorkspaceSettings
+}
+
+export interface ResolvedWorkspaceSettings {
+  settings: WorkspaceSettings
+  sources: WorkspaceSettingsSource[]
+}
+
 async function readIfExists(file: string): Promise<string | undefined> {
   try {
     return await fs.readFile(file, 'utf8')
@@ -62,7 +72,12 @@ function readIfExistsSync(file: string): string | undefined {
 }
 
 export async function loadWorkspaceSettings(startDir = process.cwd()): Promise<WorkspaceSettings> {
+  return (await loadWorkspaceSettingsWithSources(startDir)).settings
+}
+
+export async function loadWorkspaceSettingsWithSources(startDir = process.cwd()): Promise<ResolvedWorkspaceSettings> {
   const mergedSettings: WorkspaceSettings = {}
+  const sources: WorkspaceSettingsSource[] = []
   const directories = await new LocalWorkspaceLocator({start: startDir}).directories()
 
   for (const dir of directories) {
@@ -77,14 +92,21 @@ export async function loadWorkspaceSettings(startDir = process.cwd()): Promise<W
 
     const file = preferredRaw === undefined ? fallbackFile : preferredFile
 
-    mergeWorkspaceSettingsInto(mergedSettings, parseWorkspaceSettings(raw, file))
+    const settings = parseWorkspaceSettings(raw, file)
+    sources.push({file, settings})
+    mergeWorkspaceSettingsInto(mergedSettings, settings)
   }
 
-  return mergedSettings
+  return {settings: mergedSettings, sources}
 }
 
 export function loadWorkspaceSettingsSync(startDir = process.cwd()): WorkspaceSettings {
+  return loadWorkspaceSettingsWithSourcesSync(startDir).settings
+}
+
+export function loadWorkspaceSettingsWithSourcesSync(startDir = process.cwd()): ResolvedWorkspaceSettings {
   const mergedSettings: WorkspaceSettings = {}
+  const sources: WorkspaceSettingsSource[] = []
   const directories = workspaceDirectoriesSync(startDir)
 
   for (const dir of directories) {
@@ -96,10 +118,12 @@ export function loadWorkspaceSettingsSync(startDir = process.cwd()): WorkspaceSe
     if (raw === undefined) continue
 
     const file = preferredRaw === undefined ? fallbackFile : preferredFile
-    mergeWorkspaceSettingsInto(mergedSettings, parseWorkspaceSettings(raw, file))
+    const settings = parseWorkspaceSettings(raw, file)
+    sources.push({file, settings})
+    mergeWorkspaceSettingsInto(mergedSettings, settings)
   }
 
-  return mergedSettings
+  return {settings: mergedSettings, sources}
 }
 
 export function mergeWorkspaceSettings(...settings: Array<undefined | WorkspaceSettings>): WorkspaceSettings {

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type {AgentTool} from '../agent.js'
+import type {DiagnosticContext, DiagnosticEventBus} from '../diagnostics/index.js'
 import type {Message} from '../message/index.js'
 import type {Operator, OperatorOptions} from '../processor/index.js'
 import type {ProviderName} from './provider.js'
@@ -16,6 +17,29 @@ export interface ModelToolCallPayload {
   toolCalls: ModelToolCall[]
 }
 
+export interface ModelTokenUsage {
+  cacheCreationInputTokens?: number
+  cachedInputTokens?: number
+  inputTokens?: number
+  outputTokens?: number
+  reasoningTokens?: number
+  totalTokens?: number
+}
+
+export interface ModelResponseMetadata {
+  durationMs: number
+  model: string
+  provider: ProviderName
+  responseId?: string
+  stopReason?: string
+  usage?: ModelTokenUsage
+}
+
+export interface ModelAssistantPayload {
+  response: ModelResponseMetadata
+  toolCalls?: ModelToolCall[]
+}
+
 export interface ModelToolResultPayload {
   input: unknown
   isError?: boolean
@@ -25,6 +49,8 @@ export interface ModelToolResultPayload {
 }
 
 export interface ModelInvokeOptions extends OperatorOptions {
+  diagnosticContext?: DiagnosticContext
+  diagnostics?: DiagnosticEventBus
   maxToolIterations?: number
   signal?: AbortSignal
   tools?: AgentTool[]

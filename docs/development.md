@@ -71,7 +71,8 @@ commits.
 ## Project structure
 
 - `src/index.ts`: package entry point
-- `src/apps/cli/`: oclif commands and CLI-specific behavior
+- `src/apps/cli/`: oclif commands
+- `src/apps/cli-flags.ts`: shared CLI flag handling
 - `src/core/`: reusable runtime and public library implementation
 - `src/core/models/adapters/`: provider-specific model adapters
 - `src/core/thread.ts`: event-driven thread API for GUI integrations

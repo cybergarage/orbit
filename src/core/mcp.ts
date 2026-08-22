@@ -10,6 +10,7 @@ import {getDefaultEnvironment, StdioClientTransport} from '@modelcontextprotocol
 import {z} from 'zod'
 
 import type {AgentTool} from './agent.js'
+import type {DiagnosticContext, DiagnosticEventBus} from './diagnostics/index.js'
 import type {McpServerSettings, McpSettings} from './settings.js'
 
 export interface McpClient {
@@ -32,6 +33,8 @@ export interface McpToolManager {
 
 export interface McpToolManagerFactoryOptions {
   cwd?: string
+  diagnosticContext?: DiagnosticContext
+  diagnostics?: DiagnosticEventBus
 }
 
 export type McpClientFactory = (serverName: string, settings: McpServerSettings) => McpClient
@@ -97,10 +100,26 @@ class StdioMcpToolManager implements McpToolManager {
   private async connectServer(serverName: string, serverSettings: McpServerSettings): Promise<McpConnection> {
     const client = (this.options.clientFactory ?? createMcpClient)(serverName, serverSettings)
     const transport = (this.options.transportFactory ?? createMcpTransport)(serverSettings, this.options)
+    this.options.diagnostics?.emit({
+      ...this.options.diagnosticContext,
+      data: {serverName},
+      fullData: {
+        args: serverSettings.args,
+        command: serverSettings.command,
+        envNames: Object.keys(serverSettings.env ?? {}),
+      },
+      type: 'mcp.server.connecting',
+    })
 
     try {
       await client.connect(transport)
       const result = await client.listTools()
+      this.options.diagnostics?.emit({
+        ...this.options.diagnosticContext,
+        data: {serverName, toolCount: result.tools.length},
+        fullData: {tools: result.tools.map((tool) => ({description: tool.description, name: tool.name}))},
+        type: 'mcp.server.connected',
+      })
       return {
         client,
         tools: result.tools.map((remoteTool) => wrapMcpTool(serverName, client, remoteTool)),
@@ -108,6 +127,12 @@ class StdioMcpToolManager implements McpToolManager {
     } catch (error) {
       await client.close().catch(() => {})
       const message = error instanceof Error ? error.message : String(error)
+      this.options.diagnostics?.emit({
+        ...this.options.diagnosticContext,
+        data: {error: message, serverName},
+        level: 'error',
+        type: 'mcp.server.failed',
+      })
       throw new Error(`Failed to initialize MCP server "${serverName}": ${message}`)
     }
   }
@@ -125,6 +150,11 @@ class StdioMcpToolManager implements McpToolManager {
       tools.push(...connection.tools)
     }
 
+    this.options.diagnostics?.emit({
+      ...this.options.diagnosticContext,
+      data: {serverCount: Object.keys(servers).length, toolCount: tools.length},
+      type: 'mcp.tools.loaded',
+    })
     return tools
   }
 }

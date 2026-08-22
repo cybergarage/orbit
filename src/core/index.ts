@@ -23,6 +23,24 @@ export {
   SETTINGS_FILE_NAME,
 } from './app.js'
 export type {AppConfig} from './app.js'
+export {OrbitApplicationService} from './application.js'
+export type {
+  GuiPreferences,
+  OrbitApplicationServiceOptions,
+  RuntimeContextSource,
+  RuntimeSettingsSource,
+  RuntimeSnapshot,
+  StartApplicationRunResult,
+} from './application.js'
+export {attachDiagnosticLogger, DiagnosticCapture, DiagnosticEventBus, DiagnosticLevel} from './diagnostics/index.js'
+export type {
+  DiagnosticContext,
+  DiagnosticData,
+  DiagnosticEvent,
+  DiagnosticEventBusOptions,
+  DiagnosticEventHandler,
+  DiagnosticEventInput,
+} from './diagnostics/index.js'
 export {
   ContextOverflowError,
   InvalidConfigurationError,
@@ -57,7 +75,10 @@ export type {MessageOptions, MessagePayload} from './message/index.js'
 export {DEFAULT_MODELS, getModel} from './models/factory.js'
 export type {
   Model,
+  ModelAssistantPayload,
   ModelInvokeOptions,
+  ModelResponseMetadata,
+  ModelTokenUsage,
   ModelToolCall,
   ModelToolCallPayload,
   ModelToolResultPayload,
@@ -103,6 +124,9 @@ export type {
   SessionError,
   SessionHeaderEntry,
   SessionHeaderOptions,
+  SessionListError,
+  SessionListOptions,
+  SessionListResult,
   SessionMessageEntry,
   SessionMetadata,
   SessionOptions,
@@ -111,8 +135,21 @@ export type {
   SessionTurnContextEntry,
   SessionTurnEventEntry,
 } from './session/index.js'
-export {loadWorkspaceSettings, loadWorkspaceSettingsSync, mergeWorkspaceSettings} from './settings.js'
-export type {McpServerSettings, McpSettings, ProviderSettings, WorkspaceSettings} from './settings.js'
+export {
+  loadWorkspaceSettings,
+  loadWorkspaceSettingsSync,
+  loadWorkspaceSettingsWithSources,
+  loadWorkspaceSettingsWithSourcesSync,
+  mergeWorkspaceSettings,
+} from './settings.js'
+export type {
+  McpServerSettings,
+  McpSettings,
+  ProviderSettings,
+  ResolvedWorkspaceSettings,
+  WorkspaceSettings,
+  WorkspaceSettingsSource,
+} from './settings.js'
 export {Skill} from './skills/index.js'
 export type {SkillConfig, SkillMetadata, SkillSource, SkillSourceInfo} from './skills/index.js'
 export {State} from './state.js'
@@ -131,6 +168,7 @@ export type {
   ThreadRunCancelledEvent,
   ThreadRunCompletedEvent,
   ThreadRunFailedEvent,
+  ThreadRunHandle,
   ThreadRunOptions,
   ThreadRunStartedEvent,
   ThreadSnapshot,

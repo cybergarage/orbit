@@ -9,7 +9,7 @@ import {type AgentOptions, resolveWorkspaceAgentOptions} from '../../core/chat.j
 import {loadSystemContexts} from '../../core/context.js'
 import {Agent, createLogger, Message, MessageType, Role} from '../../core/index.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
-import {agentFlags, toAgentOptions} from './flags.js'
+import {agentFlags, toAgentOptions} from '../cli-flags.js'
 
 type AgentClass = new (options?: ConstructorParameters<typeof Agent>[0]) => Agent
 

@@ -3,7 +3,7 @@
 
 import {expect} from 'chai'
 
-import {agentFlags, toAgentOptions} from '../../../src/apps/cli/flags.js'
+import {agentFlags, toAgentOptions} from '../../../src/apps/cli-flags.js'
 
 describe('CLI agent flags', () => {
   describe('agentFlags', () => {

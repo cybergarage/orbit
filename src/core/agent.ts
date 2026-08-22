@@ -4,10 +4,12 @@
 import type {z} from 'zod'
 
 import path from 'node:path'
+import {performance} from 'node:perf_hooks'
 import process from 'node:process'
 import {v7 as uuidv7} from 'uuid'
 
 import type {AgentEvent, AgentEventHandler} from './agent-events.js'
+import type {DiagnosticEventBus} from './diagnostics/index.js'
 import type {Logger} from './logger/index.js'
 import type {McpToolManager, McpToolManagerFactoryOptions} from './mcp.js'
 import type {
@@ -53,6 +55,7 @@ export interface AgentOptions {
     createMcpToolManager?: (settings: WorkspaceSettings, options: McpToolManagerFactoryOptions) => McpToolManager
     createModel?: typeof getModel
   }
+  diagnostics?: DiagnosticEventBus
   logger?: Logger
   messages?: Message[]
   model?: {
@@ -71,6 +74,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   public readonly state: State
   public readonly tools: AgentTool[]
   private readonly cwd: string
+  private readonly diagnostics?: DiagnosticEventBus
   private readonly mcpToolManager: McpToolManager
   private readonly model: Model
 
@@ -83,12 +87,27 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       options.model?.name ?? this.settings.model,
       this.settings,
     )
+    this.diagnostics = options.diagnostics
     this.messages = [...(options.messages ?? [])]
     this.logger = (options.logger ?? createNoopLogger()).child({component: 'agent'})
     this.state = options.state ?? new State()
     this.tools = [...(options.tools ?? [])]
     this.mcpToolManager = (options.deps?.createMcpToolManager ?? createMcpToolManager)(this.settings, {
       cwd: options.cwd,
+      diagnosticContext: {
+        sessionId: this.state.getSession().getId(),
+        threadId: this.state.getSession().getId(),
+      },
+      diagnostics: this.diagnostics,
+    })
+    this.diagnostics?.emit({
+      data: {
+        cwd: this.cwd,
+        model: this.model.getModel(),
+        provider: this.model.getProvider(),
+      },
+      sessionId: this.state.getSession().getId(),
+      type: 'model.selected',
     })
   }
 
@@ -155,7 +174,22 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       const mcpTools = await this.mcpToolManager.getTools()
       throwIfAborted(options?.signal)
       const tools = [...this.tools, ...mcpTools, ...(options?.tools ?? [])]
-      const modelOptions = tools.length > 0 ? {...options, tools} : options
+      const diagnostics = options?.diagnostics ?? this.diagnostics
+      const modelOptions: Partial<ModelInvokeOptions> = {
+        ...options,
+        ...(diagnostics === undefined
+          ? {}
+          : {
+              diagnosticContext: {
+                iteration: 0,
+                runId: turnId,
+                sessionId: session.getId(),
+                threadId: session.getId(),
+              },
+              diagnostics,
+            }),
+        ...(tools.length > 0 ? {tools} : {}),
+      }
       this.logger.debug(
         {
           mcpToolCount: mcpTools.length,
@@ -168,9 +202,16 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         throwIfAborted(options?.signal)
         this.logger.debug({iteration, maxToolIterations}, 'agent model iteration started')
         emitAgentEvent(options?.onEvent, {iteration, type: AgentEventType.ModelStarted})
+        const iterationOptions =
+          modelOptions.diagnostics === undefined
+            ? modelOptions
+            : {
+                ...modelOptions,
+                diagnosticContext: {...modelOptions.diagnosticContext, iteration},
+              }
         // Tool loops are intentionally sequential because each model response depends on the previous tool results.
         // eslint-disable-next-line no-await-in-loop
-        const modelMessage = await this.model.invoke([...this.messages, ...conversation], modelOptions)
+        const modelMessage = await this.model.invoke([...this.messages, ...conversation], iterationOptions)
         throwIfAborted(options?.signal)
         const [storedModelMessage] = session.appendMessages([modelMessage], {iteration, turnId})
         conversation.push(storedModelMessage)
@@ -241,6 +282,8 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     }
   }
 
+  // Tool execution, error projection, and diagnostics share one lifecycle boundary.
+  // eslint-disable-next-line complexity
   private async invokeTool(
     toolCall: ModelToolCall,
     tools: AgentTool[],
@@ -249,19 +292,55 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   ): Promise<Message> {
     throwIfAborted(options?.signal)
     emitAgentEvent(options?.onEvent, {iteration, toolCall, type: AgentEventType.ToolStarted})
+    const diagnostics = options?.diagnostics ?? this.diagnostics
+    const diagnosticContext = {
+      ...options?.diagnosticContext,
+      iteration,
+      runId: options?.turnId ?? options?.diagnosticContext?.runId,
+      sessionId: options?.diagnosticContext?.sessionId ?? this.state.getSession().getId(),
+    }
+    diagnostics?.emit({
+      ...diagnosticContext,
+      data: {name: toolCall.name, toolCallId: toolCall.id},
+      fullData: {input: toolCall.input},
+      type: 'tool.started',
+    })
+    const startedAt = performance.now()
     const tool = tools.find((candidate) => candidate.name === toolCall.name)
 
     if (tool === undefined) {
-      return createToolResultMessage(toolCall, `Unknown tool: ${toolCall.name}`, true)
+      const output = `Unknown tool: ${toolCall.name}`
+      diagnostics?.emit({
+        ...diagnosticContext,
+        data: {durationMs: performance.now() - startedAt, isError: true, name: toolCall.name, toolCallId: toolCall.id},
+        fullData: {input: toolCall.input, output},
+        level: 'warn',
+        type: 'tool.completed',
+      })
+      return createToolResultMessage(toolCall, output, true)
     }
 
     try {
       const output = await tool.invoke(toolCall.input as never, options)
       throwIfAborted(options?.signal)
+      diagnostics?.emit({
+        ...diagnosticContext,
+        data: {durationMs: performance.now() - startedAt, isError: false, name: toolCall.name, toolCallId: toolCall.id},
+        fullData: {input: toolCall.input, output},
+        type: 'tool.completed',
+      })
       return createToolResultMessage(toolCall, output)
     } catch (error) {
       throwIfAborted(options?.signal)
-      return createToolResultMessage(toolCall, error instanceof Error ? error.message : String(error), true)
+      const output = error instanceof Error ? error.message : String(error)
+      diagnostics?.emit({
+        ...diagnosticContext,
+        data: {durationMs: performance.now() - startedAt, isError: true, name: toolCall.name, toolCallId: toolCall.id},
+        fullData: {input: toolCall.input, output},
+        level: 'error',
+        type: 'tool.completed',
+      })
+      return createToolResultMessage(toolCall, output, true)
     }
   }
 }
