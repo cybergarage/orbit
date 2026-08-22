@@ -61,6 +61,35 @@ Then run the compiled CLI with:
 Do not edit files in `dist/` or `oclif.manifest.json` by hand. They are
 generated outputs.
 
+## Run the local GUI application
+
+The GUI client is bundled as part of the normal build, so build Orbit before
+starting the application:
+
+```sh
+npm run build
+./bin/run.js gui
+```
+
+The command prints a loopback URL containing a temporary capability token.
+Open that exact URL in a browser. Orbit selects an available port by default;
+pass `--port` to use a fixed port:
+
+```sh
+./bin/run.js gui --port 4100
+```
+
+Provider and model flags can be passed to the same command. For example:
+
+```sh
+./bin/run.js gui --provider ollama --model llama3.1
+```
+
+Press Ctrl+C in the starting terminal to stop the application and close its
+active agents, MCP clients, and session recorders. Re-run `npm run build` after
+changing the React client or server source. See [Local GUI](gui.md) for session,
+diagnostics, and security details.
+
 ## Configuration
 
 Orbit supports OpenAI, Anthropic, and Ollama. Configure the provider, model,
