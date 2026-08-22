@@ -18,6 +18,7 @@ import {
 import {
   Agent,
   createLogger,
+  createNoopLogger,
   Message,
   MessageType,
   OperatorType,
@@ -76,6 +77,7 @@ class MockAgent extends Agent {
 describe('interactive helpers', () => {
   it('starts with an empty session state', () => {
     expect(createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'})).to.deep.equal({
+      conversationMessages: [],
       input: '',
       isLoading: false,
       messages: [],
@@ -229,6 +231,9 @@ describe('interactive helpers', () => {
 
   it('reports slash command help without calling the agent', async () => {
     let callCount = 0
+    const loggedCommands: unknown[] = []
+    const logger = createNoopLogger()
+    logger.info = (fields) => loggedCommands.push(fields)
     const AgentCtor = class extends MockAgent {
       constructor(options: AgentOptions = {}) {
         super(async () => {
@@ -240,7 +245,7 @@ describe('interactive helpers', () => {
 
     const nextState = await submitInteractiveInput(
       AgentCtor,
-      createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'}),
+      createInitialInteractiveState({logger, model: 'llama3.1', provider: 'ollama'}),
       '/help',
     )
 
@@ -248,6 +253,7 @@ describe('interactive helpers', () => {
     expect(nextState.messages.map((message) => ({content: message.content, role: message.role}))).to.deep.equal([
       {content: slashCommandHelpMessage, role: Role.Assistant},
     ])
+    expect(loggedCommands).to.deep.equal([{command: '/help'}])
   })
 
   it('reports unknown slash commands without calling the agent', () => {
@@ -283,7 +289,7 @@ describe('interactive helpers', () => {
     ])
   })
 
-  it('uses the switched provider and model for subsequent chat requests', async () => {
+  it('uses the switched provider and model without sending command output to the model', async () => {
     const calls: {messages: string[]; model: string; provider: string}[] = []
     const AgentCtor = class extends MockAgent {
       constructor(options: AgentOptions = {}) {
@@ -305,7 +311,7 @@ describe('interactive helpers', () => {
 
     expect(calls).to.deep.equal([
       {
-        messages: ['Model switched to openai:gpt-4o', 'hello'],
+        messages: ['hello'],
         model: 'gpt-4o',
         provider: 'openai',
       },
@@ -364,12 +370,19 @@ describe('interactive helpers', () => {
     })
 
     const first = await submitInteractiveInput(AgentCtor, initial, 'hello')
-    const second = await submitInteractiveInput(AgentCtor, first, 'again')
+    const command = await submitInteractiveInput(AgentCtor, first, '/help')
+    const second = await submitInteractiveInput(AgentCtor, command, 'again')
     const file = session.getFile() as string
     await session.close()
 
     const resumed = repository.open(file)
-    expect(second.messages.map((message) => message.content)).to.deep.equal(['hello', 'reply:1', 'again', 'reply:3'])
+    expect(second.messages.map((message) => message.content)).to.deep.equal([
+      'hello',
+      'reply:1',
+      slashCommandHelpMessage,
+      'again',
+      'reply:3',
+    ])
     expect(resumed.getConversationMessages().map((message) => message.content)).to.deep.equal([
       'hello',
       'reply:1',

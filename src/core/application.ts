@@ -3,6 +3,7 @@
 
 import path from 'node:path'
 import process from 'node:process'
+import {v7 as uuidv7} from 'uuid'
 
 import type {Context} from './context.js'
 import type {DiagnosticCapture, DiagnosticEvent, DiagnosticEventBus} from './diagnostics/index.js'
@@ -10,7 +11,7 @@ import type {Logger} from './logger/index.js'
 import type {ProviderName} from './models/index.js'
 import type {SessionListOptions, SessionListResult, SessionRepository, SessionSummary} from './session/index.js'
 import type {WorkspaceSettings, WorkspaceSettingsSource} from './settings.js'
-import type {ThreadAgentFactory, ThreadEvent, ThreadSnapshot} from './thread.js'
+import type {ThreadAgentFactory, ThreadEvent, ThreadMessage, ThreadSnapshot} from './thread.js'
 
 import {Agent} from './agent.js'
 import {sessionsDir} from './app.js'
@@ -25,7 +26,20 @@ import {createNoopLogger} from './logger/index.js'
 import {Message, MessageType, Role} from './models/index.js'
 import {SessionRepository as Repository} from './session/index.js'
 import {loadWorkspaceSettingsWithSources} from './settings.js'
-import {ThreadEventType, ThreadManager} from './thread.js'
+import {serializeMessage, ThreadEventType, ThreadManager} from './thread.js'
+
+const guiSlashCommandHelpItems = [
+  {command: '/help', description: 'Show GUI slash commands'},
+  {command: '/model', description: 'Show the current model'},
+  {command: '/debug', description: 'Show debug logging state'},
+  {command: '/debug on', description: 'Enable debug logging'},
+  {command: '/debug off', description: 'Disable debug logging'},
+]
+
+export const guiSlashCommandHelpMessage = [
+  'GUI slash commands:',
+  ...guiSlashCommandHelpItems.map((item) => `${item.command} - ${item.description}`),
+].join('\n')
 
 export interface GuiPreferences {
   debugPanelVisible: boolean
@@ -80,6 +94,7 @@ export class OrbitApplicationService {
   readonly repository: SessionRepository
   readonly runtime: RuntimeSnapshot
   private readonly detachDiagnosticLogger: () => void
+  private readonly displayMessages = new Map<string, ThreadMessage[]>()
   private readonly logger: Logger
   private preferences: GuiPreferences
   private readonly settings: WorkspaceSettings
@@ -166,6 +181,7 @@ export class OrbitApplicationService {
     try {
       await this.threadManager.close()
     } finally {
+      this.displayMessages.clear()
       this.detachDiagnosticLogger()
     }
   }
@@ -203,7 +219,8 @@ export class OrbitApplicationService {
   }
 
   getThread(threadId: string): ThreadSnapshot | undefined {
-    return this.threadManager.getThread(threadId)
+    const thread = this.threadManager.getThread(threadId)
+    return thread === undefined ? undefined : this.withDisplayMessages(thread)
   }
 
   async listSessions(options: SessionListOptions = {}): Promise<SessionListResult> {
@@ -212,7 +229,7 @@ export class OrbitApplicationService {
 
   async resumeSession(sessionId: string): Promise<ThreadSnapshot> {
     const loaded = this.threadManager.getThread(sessionId)
-    if (loaded !== undefined) return loaded
+    if (loaded !== undefined) return this.withDisplayMessages(loaded)
 
     const summary = await this.findSession(sessionId)
     if (summary === undefined) throw new Error(`Unknown session: ${sessionId}`)
@@ -233,6 +250,27 @@ export class OrbitApplicationService {
   }
 
   startRun(threadId: string, content: string): StartApplicationRunResult {
+    if (content.startsWith('/')) {
+      const thread = this.threadManager.getThread(threadId)
+      if (thread === undefined) throw new Error(`Unknown thread: ${threadId}`)
+      const runId = uuidv7()
+      const response = this.handleGuiSlashCommand(thread, content)
+      this.appendLocalCommandMessages(thread, content, response)
+      const event = this.diagnostics.emit({
+        data: {command: content, response},
+        level: 'info',
+        runId,
+        sessionId: threadId,
+        threadId,
+        type: 'command.submitted',
+      })
+      if (event === undefined) {
+        this.logger.info({command: content, response, runId, sessionId: threadId, threadId}, 'command.submitted')
+      }
+
+      return {runId, threadId}
+    }
+
     const handle = this.threadManager.startRun(threadId, content)
     handle.completion.catch(() => {})
     return {runId: handle.id, threadId: handle.threadId}
@@ -250,6 +288,21 @@ export class OrbitApplicationService {
       diagnosticCapture: update.diagnosticCapture ?? this.diagnostics.getCapture(),
     }
     return this.getPreferences()
+  }
+
+  private appendLocalCommandMessages(thread: ThreadSnapshot, command: string, response: string): void {
+    const displayMessages = this.withDisplayMessages(thread).messages
+    const commandMessage = new Message(MessageType.User, {
+      content: command,
+      parentid: displayMessages.at(-1)?.id ?? null,
+      role: Role.User,
+    })
+    const responseMessage = new Message(MessageType.Assistant, {content: response, previousMessage: commandMessage})
+    this.displayMessages.set(thread.id, [
+      ...displayMessages,
+      serializeMessage(commandMessage),
+      serializeMessage(responseMessage),
+    ])
   }
 
   private emitStartupDiagnostics(contexts: Context[], settingsSources: WorkspaceSettingsSource[]): void {
@@ -300,6 +353,34 @@ export class OrbitApplicationService {
     } while (cursor !== undefined)
   }
 
+  private handleGuiSlashCommand(thread: ThreadSnapshot, input: string): string {
+    const [commandName] = input.split(/\s+/u)
+    if (commandName === '/help') return guiSlashCommandHelpMessage
+    if (commandName === '/model') {
+      if (input !== '/model') return 'Model switching is only available in interactive CLI mode.'
+      return `Current model: ${thread.provider ?? this.runtime.provider}:${thread.model ?? this.runtime.model}`
+    }
+
+    if (commandName === '/debug') {
+      const args = input.split(/\s+/u).slice(1)
+      if (args.length === 0) return `Debug logging is ${this.logger.isDebugEnabled() ? 'on' : 'off'}`
+      if (args.length === 1 && args[0] === 'on') {
+        this.logger.setDebugEnabled(true)
+        return 'Debug logging enabled'
+      }
+
+      if (args.length === 1 && args[0] === 'off') {
+        this.logger.setDebugEnabled(false)
+        return 'Debug logging disabled'
+      }
+
+      return 'Invalid debug command. Use /debug, /debug on, or /debug off'
+    }
+
+    if (commandName === '/exit') return 'The /exit command is only available in interactive CLI mode.'
+    return `Unknown command: ${commandName}`
+  }
+
   private handleThreadEvent(event: ThreadEvent): void {
     this.diagnostics.emit({
       data: threadEventMetadata(event),
@@ -309,6 +390,20 @@ export class OrbitApplicationService {
       ...eventContext(event),
       type: event.type.replaceAll('-', '.'),
     })
+  }
+
+  private withDisplayMessages(thread: ThreadSnapshot): ThreadSnapshot {
+    const displayed = this.displayMessages.get(thread.id)
+    if (displayed === undefined) return thread
+
+    const displayedIds = new Set(displayed.map((message) => message.id))
+    const messages = [...displayed, ...thread.messages.filter((message) => !displayedIds.has(message.id))]
+    this.displayMessages.set(thread.id, messages)
+    return {
+      ...thread,
+      messages,
+      updatedAt: messages.at(-1)?.timestamp ?? thread.updatedAt,
+    }
   }
 }
 

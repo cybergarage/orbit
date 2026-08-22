@@ -69,7 +69,9 @@ function App() {
     selectedThreadId.current = thread?.id
   }, [thread?.id])
 
-  useEffect(() => messagesEnd.current?.scrollIntoView({behavior: 'smooth'}), [thread?.messages.length])
+  useEffect(() => {
+    messagesEnd.current?.scrollIntoView({behavior: 'smooth'})
+  }, [thread?.messages.length])
 
   const createThread = async () => {
     try {

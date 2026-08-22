@@ -9,7 +9,9 @@ import path from 'node:path'
 import type {AgentOptions, DiagnosticEvent, ThreadAgentFactory} from '../../src/core/index.js'
 
 import {
+  createNoopLogger,
   DiagnosticCapture,
+  guiSlashCommandHelpMessage,
   Message,
   MessageType,
   OrbitApplicationService,
@@ -99,6 +101,64 @@ describe('OrbitApplicationService', () => {
       expect(resumedOptions[0].model).to.deep.equal({name: 'persisted-model', provider: 'anthropic'})
     } finally {
       await second.close()
+    }
+  })
+
+  it('displays and logs GUI slash commands without adding them to the session', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-application-command-'))
+    const repository = new SessionRepository({rootDir: path.join(root, 'sessions')})
+    let invokeCount = 0
+    const modelRequests: string[][] = []
+    const loggedCommands: unknown[] = []
+    const logger = createNoopLogger()
+    logger.info = (fields) => loggedCommands.push(fields)
+    const service = new OrbitApplicationService({
+      contexts: [],
+      createAgent: () => ({
+        async close() {},
+        async invoke(messages) {
+          invokeCount += 1
+          modelRequests.push(messages.map((message) => message.content))
+          return new Message(MessageType.Assistant, {content: 'unexpected'})
+        },
+      }),
+      cwd: root,
+      logger,
+      repository,
+      settingsSources: [],
+    })
+
+    try {
+      const thread = service.createThread()
+      const result = service.startRun(thread.id, '/help')
+      const commandEvent = service.getEvents().find((event) => event.type === 'command.submitted')
+
+      expect(result).to.include({threadId: thread.id})
+      expect(result.runId).to.be.a('string').and.not.empty
+      expect(invokeCount).to.equal(0)
+      expect(service.getThread(thread.id)?.messages.map((message) => message.content)).to.deep.equal([
+        '/help',
+        guiSlashCommandHelpMessage,
+      ])
+      expect(commandEvent).to.include({level: 'info', runId: result.runId, sessionId: thread.id, threadId: thread.id})
+      expect(commandEvent?.data).to.deep.equal({command: '/help', response: guiSlashCommandHelpMessage})
+      expect(loggedCommands).to.deep.include({diagnosticEvent: JSON.stringify(commandEvent)})
+
+      const sessions = await service.listSessions()
+      expect(sessions.data[0]).to.include({id: thread.id})
+      expect(sessions.data[0].preview).to.equal(undefined)
+
+      const completed = waitForEvent(service, 'run.completed')
+      service.startRun(thread.id, 'Hello after help')
+      await completed
+      expect(modelRequests).to.deep.equal([['Hello after help']])
+      expect(service.getThread(thread.id)?.messages.map((message) => message.content)).to.deep.equal([
+        '/help',
+        guiSlashCommandHelpMessage,
+        'Hello after help',
+      ])
+    } finally {
+      await service.close()
     }
   })
 

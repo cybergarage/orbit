@@ -23,7 +23,7 @@ export {
   SETTINGS_FILE_NAME,
 } from './app.js'
 export type {AppConfig} from './app.js'
-export {OrbitApplicationService} from './application.js'
+export {guiSlashCommandHelpMessage, OrbitApplicationService} from './application.js'
 export type {
   GuiPreferences,
   OrbitApplicationServiceOptions,

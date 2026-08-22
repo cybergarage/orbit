@@ -209,7 +209,8 @@ working directory, and system prompt in the header. Each request reuses the
 same session even when a new provider-specific `Agent` is constructed.
 
 Slash-command notices such as `/help` and `/debug` are local UI messages and
-are not persisted as model-visible conversation. A `/model` change appears in
+are not persisted or sent as model-visible conversation. Submitted commands
+are written to the structured application log. A `/model` change appears in
 the next turn's `turn_context`.
 
 The session recorder is closed when the Ink application exits. Callers can

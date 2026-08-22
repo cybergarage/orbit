@@ -46,6 +46,13 @@ Only one run can be active in a session. The square Stop button cancels the
 current run. Model responses are currently displayed after completion; token
 streaming is not part of the initial implementation.
 
+Inputs beginning with `/` are intercepted before model execution. They are
+excluded from the durable session and model conversation and are emitted as
+`command.submitted` structured log events. The event also appears in the
+diagnostics pane while diagnostic capture is enabled. Command input and output
+remain visible in the current GUI conversation without being persisted. Use
+`/help` to list the GUI commands.
+
 If one session file is corrupt or unreadable, the rest of the Recent list
 continues to load. The session listing API reports the individual file error
 without failing the entire page.

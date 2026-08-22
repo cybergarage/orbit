@@ -29,6 +29,7 @@ export interface InteractiveAgentClass {
 }
 
 export interface InteractiveState {
+  conversationMessages: Message[]
   input: string
   isLoading: boolean
   logger?: Logger
@@ -66,6 +67,7 @@ export function createInitialInteractiveState(
   options: Pick<InteractiveState, 'logger' | 'model' | 'provider' | 'session' | 'settings' | 'systemPrompt'>,
 ): InteractiveState {
   return {
+    conversationMessages: [],
     input: '',
     isLoading: false,
     messages: [],
@@ -79,9 +81,12 @@ export async function submitInteractiveInput(
   rawInput: string,
 ): Promise<InteractiveState> {
   const input = rawInput.trim()
-  if (!input || state.isLoading || input === '/exit') {
+  if (!input || state.isLoading) {
     return state
   }
+
+  if (input.startsWith('/')) state.logger?.info({command: input}, 'interactive command submitted')
+  if (input === '/exit') return state
 
   const commandResult = handleSlashCommand(state, input)
   if (commandResult) {
@@ -97,7 +102,7 @@ export async function submitInteractiveInput(
     : []
   const requestMessages = [
     ...(state.session === undefined ? systemMessages : []),
-    ...(state.session?.getConversationMessages() ?? state.messages),
+    ...(state.session?.getConversationMessages() ?? state.conversationMessages),
     userMessage,
   ]
   const agent = new AgentClass({
@@ -118,6 +123,7 @@ export async function submitInteractiveInput(
 
   return {
     ...state,
+    conversationMessages: [...state.conversationMessages, userMessage, reply],
     messages: [...state.messages, userMessage, reply],
   }
 }
@@ -263,6 +269,7 @@ function InteractiveApp({
     if (key.return) {
       const nextInput = state.input.trim()
       if (!nextInput || state.isLoading) return
+      if (nextInput.startsWith('/')) state.logger?.info({command: nextInput}, 'interactive command submitted')
       if (nextInput === '/exit') {
         exit()
         return
@@ -285,8 +292,8 @@ function InteractiveApp({
         : []
       const requestMessages = [
         ...(state.session === undefined ? systemMessages : []),
-        ...(state.session?.getConversationMessages() ?? nextMessages),
-        ...(state.session === undefined ? [] : [nextMessages.at(-1) as Message]),
+        ...(state.session?.getConversationMessages() ?? state.conversationMessages),
+        nextMessages.at(-1) as Message,
       ]
       setState({
         ...state,
@@ -310,6 +317,7 @@ function InteractiveApp({
         .then((reply) => {
           setState((currentState) => ({
             ...currentState,
+            conversationMessages: [...currentState.conversationMessages, nextMessages.at(-1) as Message, reply],
             isLoading: false,
             messages: [...nextMessages, reply],
           }))
@@ -318,6 +326,7 @@ function InteractiveApp({
           const message = error instanceof Error ? error.message : 'Interactive request failed.'
           setState((currentState) => ({
             ...currentState,
+            conversationMessages: [...currentState.conversationMessages, nextMessages.at(-1) as Message],
             isLoading: false,
             messages: [...nextMessages, new Message(MessageType.Assistant, {content: message})],
           }))

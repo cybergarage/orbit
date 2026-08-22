@@ -9,7 +9,11 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {startGuiServer} from '../../../src/apps/gui/server.js'
-import {OrbitApplicationService, SessionRepository} from '../../../src/core/index.js'
+import {
+  guiSlashCommandHelpMessage,
+  OrbitApplicationService,
+  SessionRepository,
+} from '../../../src/core/index.js'
 
 describe('GUI server', () => {
   it('protects and validates the local application API', async () => {
@@ -49,6 +53,26 @@ describe('GUI server', () => {
         method: 'POST',
       })
       expect(invalidMessage.status).to.equal(400)
+
+      const commandResponse = await fetch(`${baseUrl}/api/threads/${created.id}/messages`, {
+        body: JSON.stringify({content: '/help'}),
+        headers: {...headers, 'Content-Type': 'application/json'},
+        method: 'POST',
+      })
+      expect(commandResponse.status).to.equal(202)
+      const command = (await commandResponse.json()) as {runId: string; threadId: string}
+      expect(command).to.include({threadId: created.id})
+
+      const commandThread = await fetch(`${baseUrl}/api/threads/${created.id}`, {headers})
+      const commandSnapshot = (await commandThread.json()) as {messages: Array<{content: string}>}
+      expect(commandSnapshot.messages.map((message) => message.content)).to.deep.equal([
+        '/help',
+        guiSlashCommandHelpMessage,
+      ])
+      expect(service.getEvents().find((event) => event.type === 'command.submitted')?.data).to.deep.equal({
+        command: '/help',
+        response: guiSlashCommandHelpMessage,
+      })
 
       const preferences = await fetch(`${baseUrl}/api/preferences`, {
         body: JSON.stringify({debugPanelVisible: false, diagnosticCapture: 'metadata'}),
