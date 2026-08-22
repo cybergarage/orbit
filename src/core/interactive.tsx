@@ -5,15 +5,21 @@ import {Box, render, Text, useApp, useInput} from 'ink'
 import {useState} from 'react'
 
 import type {Logger} from './logger/index.js'
+import type {Session, SessionRepository} from './session/index.js'
 import type {WorkspaceSettings} from './settings.js'
 
 import {Agent, type AgentOptions, isProvider, Message, MessageType, type ProviderName, Role} from './models/index.js'
+import {SessionRepository as CoreSessionRepository} from './session/index.js'
+import {State} from './state.js'
 
 export interface InteractiveSessionOptions {
   agentClass: InteractiveAgentClass
+  cwd?: string
   initialModel: string
   initialProvider: ProviderName
   logger?: Logger
+  session?: Session
+  sessionRepository?: SessionRepository
   settings?: WorkspaceSettings
   systemPrompt?: string
 }
@@ -29,6 +35,7 @@ export interface InteractiveState {
   messages: Message[]
   model: string
   provider: ProviderName
+  session?: Session
   settings?: WorkspaceSettings
   systemPrompt?: string
 }
@@ -56,7 +63,7 @@ export const slashCommandHelpMessage = [
 ].join('\n')
 
 export function createInitialInteractiveState(
-  options: Pick<InteractiveState, 'logger' | 'model' | 'provider' | 'settings' | 'systemPrompt'>,
+  options: Pick<InteractiveState, 'logger' | 'model' | 'provider' | 'session' | 'settings' | 'systemPrompt'>,
 ): InteractiveState {
   return {
     input: '',
@@ -85,13 +92,17 @@ export async function submitInteractiveInput(
   }
 
   const userMessage = new Message(MessageType.User, {content: input, role: Role.User})
+  const systemMessages = state.systemPrompt
+    ? [new Message(MessageType.Session, {content: state.systemPrompt, role: Role.System})]
+    : []
   const requestMessages = [
-    ...(state.systemPrompt ? [new Message(MessageType.Session, {content: state.systemPrompt, role: Role.System})] : []),
-    ...state.messages,
+    ...(state.session === undefined ? systemMessages : []),
+    ...(state.session?.getConversationMessages() ?? state.messages),
     userMessage,
   ]
   const agent = new AgentClass({
     logger: state.logger,
+    ...(state.session === undefined ? {} : {messages: systemMessages, state: new State(state.session)}),
     model: {
       name: state.model,
       provider: state.provider,
@@ -227,6 +238,7 @@ function InteractiveApp({
   initialModel,
   initialProvider,
   logger,
+  session,
   settings,
   systemPrompt,
 }: InteractiveSessionOptions) {
@@ -236,6 +248,7 @@ function InteractiveApp({
       logger,
       model: initialModel,
       provider: initialProvider,
+      ...(session === undefined ? {} : {session}),
       settings,
       systemPrompt,
     }),
@@ -267,9 +280,13 @@ function InteractiveApp({
       }
 
       const nextMessages = [...state.messages, new Message(MessageType.User, {content: nextInput, role: Role.User})]
+      const systemMessages = state.systemPrompt
+        ? [new Message(MessageType.Session, {content: state.systemPrompt, role: Role.System})]
+        : []
       const requestMessages = [
-        ...(state.systemPrompt ? [new Message(MessageType.Session, {content: state.systemPrompt, role: Role.System})] : []),
-        ...nextMessages,
+        ...(state.session === undefined ? systemMessages : []),
+        ...(state.session?.getConversationMessages() ?? nextMessages),
+        ...(state.session === undefined ? [] : [nextMessages.at(-1) as Message]),
       ]
       setState({
         ...state,
@@ -280,6 +297,7 @@ function InteractiveApp({
 
       const agent = new AgentClass({
         logger: state.logger,
+        ...(state.session === undefined ? {} : {messages: systemMessages, state: new State(state.session)}),
         model: {
           name: state.model,
           provider: state.provider,
@@ -344,6 +362,21 @@ function InteractiveApp({
 }
 
 export async function runInteractiveSession(options: InteractiveSessionOptions): Promise<void> {
-  const app = render(<InteractiveApp {...options} />)
-  await app.waitUntilExit()
+  const repository = options.sessionRepository ?? new CoreSessionRepository()
+  const session =
+    options.session ??
+    repository.create({
+      cwd: options.cwd,
+      model: options.initialModel,
+      originator: 'orbit-interactive',
+      provider: options.initialProvider,
+      systemPrompt: options.systemPrompt,
+    })
+  const effectiveSystemPrompt = options.systemPrompt ?? session.getMetadata().systemPrompt
+  const app = render(<InteractiveApp {...options} session={session} systemPrompt={effectiveSystemPrompt} />)
+  try {
+    await app.waitUntilExit()
+  } finally {
+    if (options.session === undefined) await session.close()
+  }
 }

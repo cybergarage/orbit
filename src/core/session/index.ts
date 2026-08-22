@@ -3,8 +3,26 @@
 
 export {isMessageType, Message, MessageType, UserMessage} from '../message/index.js'
 export type {MessageOptions, MessagePayload} from '../message/index.js'
+export {encodeSessionEntry, parseSessionFile} from './codec.js'
+export type {ParsedSessionFile} from './codec.js'
+export {SESSION_FORMAT_VERSION, SessionEntryType, TurnPhase} from './entries.js'
+export type {
+  PersistedMessage,
+  SessionEntry,
+  SessionError,
+  SessionHeaderEntry,
+  SessionMessageEntry,
+  SessionMetadata,
+  SessionTurnContextEntry,
+  SessionTurnEventEntry,
+} from './entries.js'
 export {SessionHeader} from './header.js'
 export type {SessionHeaderOptions} from './header.js'
 export {createMessage} from './message-factory.js'
 export type {CreateMessageOptions} from './message-factory.js'
+export {sessionFilePath} from './paths.js'
+export {SessionRecorder} from './recorder.js'
+export {SessionRepository} from './repository.js'
+export type {CreateSessionOptions, SessionRepositoryOptions, SessionSummary} from './repository.js'
 export {Session} from './session.js'
+export type {AppendMessageOptions, RecordTurnContextOptions, RecordTurnEventOptions, SessionOptions} from './session.js'

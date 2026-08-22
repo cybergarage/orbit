@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {expect} from 'chai'
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 import {z} from 'zod'
 
 import type {
@@ -18,6 +21,7 @@ import {
   MessageType,
   ModelAbortError,
   OperatorType,
+  SessionRepository,
   ThreadEventType,
   ThreadManager,
   ThreadStatus,
@@ -197,6 +201,44 @@ describe('ThreadManager', () => {
     expect(await pending).to.be.instanceOf(ModelAbortError)
     expect(closeCalls).to.equal(1)
     expect(manager.getThread('thread-1')).to.equal(undefined)
+  })
+
+  it('persists and resumes a thread with the same conversation history', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-thread-session-'))
+    const calls: Message[][] = []
+    const repository = new SessionRepository({rootDir: root})
+    const createAgent = createAgentFactory(async (messages) => {
+      calls.push(messages)
+      return assistantMessage(`reply-${calls.length}`)
+    })
+    const firstManager = new ThreadManager({createAgent, sessionRepository: repository})
+    const created = firstManager.createThread({
+      agent: {messages: [new Message(MessageType.Session, {content: 'system rules'})]},
+      id: 'thread-1',
+    })
+
+    await firstManager.sendMessage(created.id, 'first')
+    const file = firstManager.getThread(created.id)?.file
+    expect(file).to.be.a('string')
+    await firstManager.close()
+
+    const secondManager = new ThreadManager({createAgent, sessionRepository: repository})
+    const resumed = secondManager.resumeThread(file as string)
+    await secondManager.sendMessage(resumed.id, 'second')
+
+    expect(resumed.id).to.equal('thread-1')
+    expect(calls.map((messages) => messages.map((message) => message.content))).to.deep.equal([
+      ['system rules', 'first'],
+      ['system rules', 'first', 'reply-1', 'second'],
+    ])
+    expect(secondManager.getThread(resumed.id)?.messages.map((message) => message.content)).to.deep.equal([
+      'first',
+      'reply-1',
+      'second',
+      'reply-2',
+    ])
+    await secondManager.close()
+    await fs.rm(root, {force: true, recursive: true})
   })
 })
 

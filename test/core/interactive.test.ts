@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {expect} from 'chai'
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 
 import type {AgentOptions, Model} from '../../src/core/models/index.js'
 
@@ -12,7 +15,15 @@ import {
   slashCommandHelpMessage,
   submitInteractiveInput,
 } from '../../src/core/interactive.js'
-import {Agent, createLogger, Message, MessageType, OperatorType, Role} from '../../src/core/models/index.js'
+import {
+  Agent,
+  createLogger,
+  Message,
+  MessageType,
+  OperatorType,
+  Role,
+  SessionRepository,
+} from '../../src/core/models/index.js'
 
 function createMockAgent(
   invokeImpl: Agent['invoke'],
@@ -335,5 +346,37 @@ describe('interactive helpers', () => {
     expect(calls).to.deep.equal([['system:Workspace rules', 'user:hello']])
     expect(nextState.messages.map((message) => message.content)).to.deep.equal(['hello', 'reply'])
     expect(nextState.messages.map((message) => message.role)).to.deep.equal([Role.User, Role.Assistant])
+  })
+
+  it('uses a persistent session as the canonical interactive history', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-interactive-session-'))
+    const repository = new SessionRepository({rootDir: root})
+    const session = repository.create({id: 'interactive-1', model: 'llama3.1', provider: 'ollama'})
+    const AgentCtor = class extends MockAgent {
+      constructor(options: AgentOptions = {}) {
+        super(async (messages) => new Message(MessageType.Assistant, {content: `reply:${messages.length}`}), options)
+      }
+    }
+    const initial = createInitialInteractiveState({
+      model: 'llama3.1',
+      provider: 'ollama',
+      session,
+    })
+
+    const first = await submitInteractiveInput(AgentCtor, initial, 'hello')
+    const second = await submitInteractiveInput(AgentCtor, first, 'again')
+    const file = session.getFile() as string
+    await session.close()
+
+    const resumed = repository.open(file)
+    expect(second.messages.map((message) => message.content)).to.deep.equal(['hello', 'reply:1', 'again', 'reply:3'])
+    expect(resumed.getConversationMessages().map((message) => message.content)).to.deep.equal([
+      'hello',
+      'reply:1',
+      'again',
+      'reply:3',
+    ])
+    await resumed.close()
+    await fs.rm(root, {force: true, recursive: true})
   })
 })

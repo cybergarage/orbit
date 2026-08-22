@@ -17,10 +17,14 @@ impact of a renderer compromise.
 ```ts
 import {ThreadManager} from 'orbit'
 
+import {SessionRepository, ThreadManager} from 'orbit'
+
+const repository = new SessionRepository()
 const manager = new ThreadManager({
   onEvent(event) {
     mainWindow.webContents.send('orbit:event', event)
   },
+  sessionRepository: repository,
 })
 
 const thread = manager.createThread({
@@ -36,6 +40,18 @@ const reply = await manager.sendMessage(thread.id, 'Inspect the failing test.')
 `ThreadManager` retains user, assistant, tool-call, and tool-result messages so
 subsequent requests receive the complete conversation. Snapshots and events use
 plain `ThreadMessage` objects that can cross an Electron IPC boundary.
+
+Passing a `SessionRepository` persists each thread under
+`~/.orbit/sessions/`. The snapshot's optional `file` property identifies the
+JSONL file. Resume it in a new manager instance with:
+
+```ts
+if (previousSnapshot.file === undefined) throw new Error('Thread is not persistent.')
+const resumed = manager.resumeThread(previousSnapshot.file)
+```
+
+Without `sessionRepository`, threads remain in memory only. Closing a persisted
+thread closes its writer but does not delete the JSONL file.
 
 Only one run can be active in a thread. Independent threads can run in parallel.
 Call `closeThread()` when a window or project closes, and call `close()` during

@@ -12,6 +12,8 @@ import {AgentEventType} from './agent-events.js'
 import {Agent} from './agent.js'
 import {InvalidInputError, ModelAbortError, OrbitError} from './errors/index.js'
 import {Message as CoreMessage, MessageType as CoreMessageType} from './message/index.js'
+import {Session, type SessionRepository} from './session/index.js'
+import {State} from './state.js'
 
 export const ThreadStatus = {
   Idle: 'idle',
@@ -46,6 +48,7 @@ export interface ThreadMessage {
 
 export interface ThreadSnapshot {
   createdAt: string
+  file?: string
   id: string
   messages: ThreadMessage[]
   status: ThreadStatus
@@ -130,6 +133,7 @@ export type ThreadAgentFactory = (options: AgentOptions) => ThreadAgent
 export interface ThreadManagerOptions {
   createAgent?: ThreadAgentFactory
   onEvent?: ThreadEventHandler
+  sessionRepository?: SessionRepository
 }
 
 export interface CreateThreadOptions {
@@ -145,7 +149,7 @@ interface ManagedThread {
   agent: ThreadAgent
   createdAt: string
   id: string
-  messages: Message[]
+  session: Session
   updatedAt: string
 }
 
@@ -161,11 +165,13 @@ export class ThreadManager {
   private readonly activeRuns = new Map<string, ActiveRun>()
   private readonly createAgent: ThreadAgentFactory
   private readonly onEvent?: ThreadEventHandler
+  private readonly sessionRepository?: SessionRepository
   private readonly threads = new Map<string, ManagedThread>()
 
   constructor(options: ThreadManagerOptions = {}) {
     this.createAgent = options.createAgent ?? ((agentOptions) => new Agent(agentOptions))
     this.onEvent = options.onEvent
+    this.sessionRepository = options.sessionRepository
   }
 
   cancelRun(runId: string): boolean {
@@ -190,7 +196,12 @@ export class ThreadManager {
       await run.done
     }
 
-    await thread.agent.close()
+    try {
+      await thread.agent.close()
+    } finally {
+      await thread.session.close()
+    }
+
     return true
   }
 
@@ -200,13 +211,40 @@ export class ThreadManager {
       throw new InvalidInputError(`Thread already exists: ${id}`)
     }
 
-    const timestamp = new Date().toISOString()
+    const session =
+      options.agent?.state?.getSession() ??
+      (this.sessionRepository === undefined
+        ? new Session({metadata: {cwd: options.agent?.cwd, id}})
+        : this.sessionRepository.create({
+            cwd: options.agent?.cwd,
+            id,
+            model: options.agent?.model?.name,
+            originator: 'orbit-thread-manager',
+            provider: options.agent?.model?.provider,
+            systemPrompt: sessionSystemPrompt(options.agent?.messages),
+          }))
+    const metadata = session.getMetadata()
+    const agentOptions: AgentOptions = {
+      ...options.agent,
+      ...(options.agent?.messages === undefined && metadata.systemPrompt !== undefined
+        ? {messages: [new CoreMessage(CoreMessageType.Session, {content: metadata.systemPrompt})]}
+        : {}),
+      state: new State(session),
+    }
+    let agent: ThreadAgent
+    try {
+      agent = this.createAgent(agentOptions)
+    } catch (error) {
+      session.close().catch(() => {})
+      throw error
+    }
+
     const thread: ManagedThread = {
-      agent: this.createAgent(options.agent ?? {}),
-      createdAt: timestamp,
+      agent,
+      createdAt: metadata.createdAt,
       id,
-      messages: [],
-      updatedAt: timestamp,
+      session,
+      updatedAt: metadata.createdAt,
     }
     this.threads.set(id, thread)
     return this.snapshot(thread)
@@ -219,6 +257,45 @@ export class ThreadManager {
 
   listThreads(): ThreadSnapshot[] {
     return [...this.threads.values()].map((thread) => this.snapshot(thread))
+  }
+
+  resumeThread(file: string, options: Omit<CreateThreadOptions, 'id'> = {}): ThreadSnapshot {
+    if (this.sessionRepository === undefined) {
+      throw new InvalidInputError('A session repository is required to resume a thread.')
+    }
+
+    const summary = this.sessionRepository.readSummary(file)
+    const {id} = summary
+    if (this.threads.has(id)) {
+      throw new InvalidInputError(`Thread already exists: ${id}`)
+    }
+
+    const session = this.sessionRepository.open(file)
+    const metadata = session.getMetadata()
+    const agentOptions: AgentOptions = {
+      ...options.agent,
+      ...(options.agent?.messages === undefined && metadata.systemPrompt !== undefined
+        ? {messages: [new CoreMessage(CoreMessageType.Session, {content: metadata.systemPrompt})]}
+        : {}),
+      state: new State(session),
+    }
+    let agent: ThreadAgent
+    try {
+      agent = this.createAgent(agentOptions)
+    } catch (error) {
+      session.close().catch(() => {})
+      throw error
+    }
+
+    const thread: ManagedThread = {
+      agent,
+      createdAt: metadata.createdAt,
+      id,
+      session,
+      updatedAt: session.getConversationMessages().at(-1)?.timestamp ?? metadata.createdAt,
+    }
+    this.threads.set(id, thread)
+    return this.snapshot(thread)
   }
 
   async sendMessage(threadId: string, content: string, options: ThreadRunOptions = {}): Promise<ThreadMessage> {
@@ -239,20 +316,21 @@ export class ThreadManager {
 
     const userMessage = new CoreMessage(CoreMessageType.User, {content})
     try {
-      thread.messages.push(userMessage)
-      thread.updatedAt = userMessage.timestamp
+      const [storedUserMessage] = thread.session.appendMessages([userMessage], {turnId: run.id})
+      thread.updatedAt = storedUserMessage.timestamp
       this.emit({
-        message: serializeMessage(userMessage),
+        message: serializeMessage(storedUserMessage),
         runId: run.id,
         threadId,
         timestamp: new Date().toISOString(),
         type: ThreadEventType.RunStarted,
       })
 
-      const requestMessages = [...thread.messages]
+      const requestMessages = thread.session.getConversationMessages()
       const response = await thread.agent.invoke(requestMessages, {
         onEvent: (event) => this.handleAgentEvent(thread, run.id, event),
         signal: run.controller.signal,
+        turnId: run.id,
       })
       const message = serializeMessage(response)
       this.emit({
@@ -310,7 +388,6 @@ export class ThreadManager {
 
     switch (event.type) {
       case AgentEventType.MessageCompleted: {
-        thread.messages.push(event.message)
         thread.updatedAt = event.message.timestamp
         this.emit({...base, iteration: event.iteration, message: serializeMessage(event.message), type: event.type})
         return
@@ -322,7 +399,6 @@ export class ThreadManager {
       }
 
       case AgentEventType.ToolCompleted: {
-        thread.messages.push(event.message)
         thread.updatedAt = event.message.timestamp
         this.emit({
           ...base,
@@ -352,8 +428,9 @@ export class ThreadManager {
   private snapshot(thread: ManagedThread): ThreadSnapshot {
     return {
       createdAt: thread.createdAt,
+      ...(thread.session.getFile() === undefined ? {} : {file: thread.session.getFile()}),
       id: thread.id,
-      messages: thread.messages.map((message) => serializeMessage(message)),
+      messages: thread.session.getConversationMessages().map((message) => serializeMessage(message)),
       status: this.getActiveRunForThread(thread.id) === undefined ? ThreadStatus.Idle : ThreadStatus.Running,
       updatedAt: thread.updatedAt,
     }
@@ -403,4 +480,12 @@ function serializeError(error: unknown): ThreadError {
   }
 
   return {message: String(error), name: 'Error'}
+}
+
+function sessionSystemPrompt(messages: Message[] | undefined): string | undefined {
+  const contents = messages
+    ?.filter((message) => message.type === CoreMessageType.Session)
+    .flatMap((message) => message.contents)
+    .filter((content) => content.length > 0)
+  return contents === undefined || contents.length === 0 ? undefined : contents.join('\n\n')
 }

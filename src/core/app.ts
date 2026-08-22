@@ -3,6 +3,7 @@
 
 import envPaths from 'env-paths'
 import fs from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 
 export interface AppConfig {
@@ -31,6 +32,5 @@ export async function ensureDir(p: string) {
 }
 
 export function sessionsDir(): string {
-  const p = getPaths()
-  return path.join(p.data, 'sessions')
+  return path.join(os.homedir(), DOT_APP_DIR_NAME, 'sessions')
 }

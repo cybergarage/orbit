@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {expect} from 'chai'
+import os from 'node:os'
+import path from 'node:path'
 
-import {APP_NAME, configureApp, DOT_APP_DIR_NAME, setAppName} from '../../src/core/index.js'
+import {APP_NAME, configureApp, DOT_APP_DIR_NAME, sessionsDir, setAppName} from '../../src/core/index.js'
 
 describe('app config', () => {
   afterEach(() => {
@@ -27,5 +29,13 @@ describe('app config', () => {
 
     expect(APP_NAME).to.equal('acme')
     expect(DOT_APP_DIR_NAME).to.equal('.acme')
+  })
+
+  it('stores sessions under the user dot application directory', () => {
+    expect(sessionsDir()).to.equal(path.join(os.homedir(), '.orbit', 'sessions'))
+
+    setAppName('acme')
+
+    expect(sessionsDir()).to.equal(path.join(os.homedir(), '.acme', 'sessions'))
   })
 })

@@ -1,0 +1,272 @@
+// Copyright (c) 2026 The Orbit Authors
+// SPDX-License-Identifier: Apache-2.0
+
+import {expect} from 'chai'
+import fsSync from 'node:fs'
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
+
+import type {Model} from '../../src/core/index.js'
+
+import {
+  Agent,
+  Message,
+  MessageType,
+  ModelAbortError,
+  OperatorType,
+  parseSessionFile,
+  Role,
+  SessionEntryType,
+  SessionRepository,
+  State,
+  TurnPhase,
+} from '../../src/core/index.js'
+
+describe('session persistence', () => {
+  let root = ''
+
+  beforeEach(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-sessions-'))
+  })
+
+  afterEach(async () => {
+    await fs.rm(root, {force: true, recursive: true})
+  })
+
+  it('writes a versioned JSONL session with ordered turn and message entries', async () => {
+    const repository = new SessionRepository({rootDir: root})
+    const session = repository.create({
+      createdAt: '2026-08-22T01:02:03.004Z',
+      cwd: '/work/orbit',
+      id: 'session-1',
+      model: 'gpt-test',
+      originator: 'test',
+      provider: 'openai',
+      systemPrompt: 'Test instructions',
+    })
+    session.recordTurnContext({
+      cwd: '/work/orbit',
+      maxToolIterations: 5,
+      model: 'gpt-test',
+      provider: 'openai',
+      turnId: 'turn-1',
+    })
+    session.recordTurnEvent({phase: TurnPhase.Started, turnId: 'turn-1'})
+    const [user, assistant] = session.appendMessages(
+      [
+        new Message(MessageType.User, {content: 'hello'}),
+        new Message(MessageType.Assistant, {content: 'hi'}),
+      ],
+      {iteration: 0, turnId: 'turn-1'},
+    )
+    session.recordTurnEvent({phase: TurnPhase.Completed, turnId: 'turn-1'})
+    await session.close()
+
+    const file = session.getFile()
+    expect(file).to.equal(path.join(root, '2026', '08', '22', 'session-2026-08-22T01-02-03-004Z-session-1.jsonl'))
+    const raw = await fs.readFile(file as string, 'utf8')
+    expect(raw.endsWith('\n')).to.equal(true)
+    const parsed = parseSessionFile(raw, file as string)
+
+    expect(parsed.recovered).to.equal(false)
+    expect(parsed.header).to.include({
+      cwd: '/work/orbit',
+      id: 'session-1',
+      model: 'gpt-test',
+      originator: 'test',
+      provider: 'openai',
+      systemPrompt: 'Test instructions',
+      type: SessionEntryType.Session,
+      version: 1,
+    })
+    expect(parsed.entries.map((entry) => entry.type)).to.deep.equal([
+      SessionEntryType.Session,
+      SessionEntryType.TurnContext,
+      SessionEntryType.TurnEvent,
+      SessionEntryType.Message,
+      SessionEntryType.Message,
+      SessionEntryType.TurnEvent,
+    ])
+    expect(user.parentid).to.equal(parsed.header.rootMessageId)
+    expect(assistant.parentid).to.equal(user.id)
+    if (process.platform !== 'win32') {
+      expect(fsSync.statSync(file as string).mode % 0o1000).to.equal(0o600)
+    }
+  })
+
+  it('resumes a session without changing message identity', async () => {
+    const repository = new SessionRepository({rootDir: root})
+    const session = repository.create({id: 'session-1'})
+    const [original] = session.appendMessages([
+      new Message(MessageType.User, {content: 'first', role: Role.User}),
+    ])
+    const file = session.getFile() as string
+    await session.close()
+
+    const resumed = repository.open(file)
+    const loaded = resumed.getConversationMessages()[0]
+    expect(loaded).to.deep.equal(original)
+    const [next] = resumed.appendMessages([new Message(MessageType.Assistant, {content: 'second'})])
+    expect(next.parentid).to.equal(original.id)
+    await resumed.close()
+
+    const reopened = repository.open(file)
+    expect(reopened.getConversationMessages().map((message) => message.content)).to.deep.equal(['first', 'second'])
+    await reopened.close()
+  })
+
+  it('prevents two writers from opening the same session in one process', async () => {
+    const repository = new SessionRepository({rootDir: root})
+    const session = repository.create({id: 'session-1'})
+    const file = session.getFile() as string
+
+    expect(() => repository.open(file)).to.throw('Session file is already open for writing')
+    await session.close()
+
+    const resumed = repository.open(file)
+    await resumed.close()
+  })
+
+  it('repairs one malformed unterminated final line before resuming', async () => {
+    const repository = new SessionRepository({rootDir: root})
+    const session = repository.create({id: 'session-1'})
+    session.appendMessages([new Message(MessageType.User, {content: 'first'})])
+    const file = session.getFile() as string
+    await session.close()
+    await fs.appendFile(file, '{"type":')
+
+    const resumed = repository.open(file)
+    resumed.appendMessages([new Message(MessageType.Assistant, {content: 'second'})])
+    await resumed.close()
+
+    const parsed = parseSessionFile(await fs.readFile(file, 'utf8'), file)
+    expect(parsed.recovered).to.equal(false)
+    expect(parsed.entries.filter((entry) => entry.type === SessionEntryType.Message)).to.have.length(2)
+  })
+
+  it('rejects malformed JSON before the final line', async () => {
+    const repository = new SessionRepository({rootDir: root})
+    const session = repository.create({id: 'session-1'})
+    const file = session.getFile() as string
+    await session.close()
+    await fs.appendFile(file, 'not-json\n{"type":"turn_event"}')
+
+    expect(() => repository.open(file)).to.throw(`Invalid session file ${file} at line 2`)
+  })
+
+  it('rejects values that cannot be represented safely as JSON', async () => {
+    const repository = new SessionRepository({rootDir: root})
+    const session = repository.create({id: 'session-1'})
+
+    expect(() =>
+      session.appendMessages([
+        new Message(MessageType.Tool, {
+          payload: {value: 1n},
+        }),
+      ]),
+    ).to.throw('contains unsupported bigint data')
+    await session.close()
+  })
+
+  it('rejects duplicate ids before appending any part of a batch', async () => {
+    const repository = new SessionRepository({rootDir: root})
+    const session = repository.create({id: 'session-1'})
+    const duplicate = new Message(MessageType.User, {content: 'duplicate'})
+
+    expect(() => session.appendMessages([duplicate, duplicate])).to.throw('Message already exists in session')
+    expect(session.getConversationMessages()).to.deep.equal([])
+    await session.close()
+  })
+
+  it('lists newest sessions with their terminal status', async () => {
+    const repository = new SessionRepository({rootDir: root})
+    const older = repository.create({createdAt: '2026-08-21T00:00:00.000Z', id: 'older'})
+    older.recordTurnEvent({
+      error: {message: 'failed', name: 'Error'},
+      phase: TurnPhase.Failed,
+      turnId: 'turn-old',
+    })
+    await older.close()
+    const newer = repository.create({createdAt: '2026-08-22T00:00:00.000Z', id: 'newer'})
+    newer.recordTurnEvent({phase: TurnPhase.Completed, turnId: 'turn-new'})
+    await newer.close()
+
+    expect(repository.list().map((summary) => ({id: summary.id, status: summary.status}))).to.deep.equal([
+      {id: 'newer', status: 'completed'},
+      {id: 'older', status: 'failed'},
+    ])
+  })
+
+  it('records failed and pre-cancelled agent turns', async () => {
+    const repository = new SessionRepository({rootDir: root})
+    const failedSession = repository.create({id: 'failed'})
+    const failedAgent = new Agent({
+      deps: {createModel: () => testModel(async () => {
+        throw new Error('model failed')
+      })},
+      state: new State(failedSession),
+    })
+
+    try {
+      await failedAgent.invoke([new Message(MessageType.User, {content: 'fail'})])
+      expect.fail('Expected the model invocation to fail.')
+    } catch (error) {
+      expect((error as Error).message).to.equal('model failed')
+    }
+
+    expect(
+      failedSession
+        .getEntries()
+        .filter((entry) => entry.type === SessionEntryType.TurnEvent)
+        .map((entry) => entry.phase),
+    ).to.deep.equal([TurnPhase.Started, TurnPhase.Failed])
+    await failedAgent.close()
+    await failedSession.close()
+
+    const cancelledSession = repository.create({id: 'cancelled'})
+    let modelCalls = 0
+    const cancelledAgent = new Agent({
+      deps: {createModel: () => testModel(async () => {
+        modelCalls += 1
+        return new Message(MessageType.Assistant, {content: 'unexpected'})
+      })},
+      state: new State(cancelledSession),
+    })
+    const controller = new AbortController()
+    controller.abort('cancelled before invoke')
+
+    try {
+      await cancelledAgent.invoke([new Message(MessageType.User, {content: 'cancel'})], {signal: controller.signal})
+      expect.fail('Expected the model invocation to be cancelled.')
+    } catch (error) {
+      expect(error).to.be.instanceOf(ModelAbortError)
+    }
+
+    expect(modelCalls).to.equal(0)
+    expect(cancelledSession.getConversationMessages().map((message) => message.content)).to.deep.equal(['cancel'])
+    expect(
+      cancelledSession
+        .getEntries()
+        .filter((entry) => entry.type === SessionEntryType.TurnEvent)
+        .map((entry) => entry.phase),
+    ).to.deep.equal([TurnPhase.Started, TurnPhase.Cancelled])
+    await cancelledAgent.close()
+    await cancelledSession.close()
+  })
+})
+
+function testModel(invoke: Model['invoke']): Model {
+  return {
+    getModel() {
+      return 'test-model'
+    },
+    getName() {
+      return OperatorType.Model
+    },
+    getProvider() {
+      return 'ollama'
+    },
+    invoke,
+  }
+}

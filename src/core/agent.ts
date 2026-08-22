@@ -3,6 +3,10 @@
 
 import type {z} from 'zod'
 
+import path from 'node:path'
+import process from 'node:process'
+import {v7 as uuidv7} from 'uuid'
+
 import type {AgentEvent, AgentEventHandler} from './agent-events.js'
 import type {Logger} from './logger/index.js'
 import type {McpToolManager, McpToolManagerFactoryOptions} from './mcp.js'
@@ -16,15 +20,16 @@ import type {
   ToolOptions,
 } from './models/index.js'
 import type {Operator} from './processor/index.js'
-import type {Session} from './session/index.js'
+import type {Session, SessionError} from './session/index.js'
 import type {WorkspaceSettings} from './settings.js'
 
 import {AgentEventType} from './agent-events.js'
-import {ModelAbortError} from './errors/index.js'
+import {ModelAbortError, OrbitError} from './errors/index.js'
 import {createNoopLogger} from './logger/index.js'
 import {createMcpToolManager} from './mcp.js'
 import {getModel, Message, MessageType} from './models/index.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
+import {TurnPhase} from './session/index.js'
 import {loadWorkspaceSettingsSync, mergeWorkspaceSettings} from './settings.js'
 import {State} from './state.js'
 
@@ -39,6 +44,7 @@ export interface AgentTool extends Operator<never, unknown, ToolOptions> {
 
 export interface AgentInvokeOptions extends ModelInvokeOptions {
   onEvent?: AgentEventHandler
+  turnId?: string
 }
 
 export interface AgentOptions {
@@ -64,12 +70,14 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   public readonly settings: WorkspaceSettings
   public readonly state: State
   public readonly tools: AgentTool[]
+  private readonly cwd: string
   private readonly mcpToolManager: McpToolManager
   private readonly model: Model
 
   constructor(options: AgentOptions = {}) {
     const createModel = options.deps?.createModel ?? getModel
     this.settings = mergeWorkspaceSettings(loadWorkspaceSettingsSync(options.cwd), options.settings)
+    this.cwd = path.resolve(options.cwd ?? process.cwd())
     this.model = createModel(
       options.model?.provider ?? this.settings.provider,
       options.model?.name ?? this.settings.model,
@@ -109,10 +117,33 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   }
 
   async invoke(messages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message> {
+    return this.invokeSession(this.getSession(), messages, options)
+  }
+
+  async run(session: Session, messages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message> {
+    return this.invokeSession(session, messages, options)
+  }
+
+  // Session recording, tool iteration, and terminal-state handling intentionally share one lifecycle boundary.
+  // eslint-disable-next-line complexity
+  private async invokeSession(
+    session: Session,
+    messages: Message[],
+    options?: Partial<AgentInvokeOptions>,
+  ): Promise<Message> {
+    const turnId = options?.turnId ?? uuidv7()
+    const maxToolIterations = options?.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS
     try {
+      session.recordTurnContext({
+        cwd: this.cwd,
+        maxToolIterations,
+        model: this.model.getModel(),
+        provider: this.model.getProvider(),
+        turnId,
+      })
+      session.recordTurnEvent({phase: TurnPhase.Started, turnId})
+      session.appendNewMessages(messages, {turnId})
       throwIfAborted(options?.signal)
-      const session = this.getSession()
-      session.appendMessages(messages)
       const conversation = [...messages]
       this.logger.debug(
         {
@@ -125,7 +156,6 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       throwIfAborted(options?.signal)
       const tools = [...this.tools, ...mcpTools, ...(options?.tools ?? [])]
       const modelOptions = tools.length > 0 ? {...options, tools} : options
-      const maxToolIterations = options?.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS
       this.logger.debug(
         {
           mcpToolCount: mcpTools.length,
@@ -142,15 +172,23 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         // eslint-disable-next-line no-await-in-loop
         const modelMessage = await this.model.invoke([...this.messages, ...conversation], modelOptions)
         throwIfAborted(options?.signal)
-        session.appendMessages([modelMessage])
-        conversation.push(modelMessage)
-        emitAgentEvent(options?.onEvent, {iteration, message: modelMessage, type: AgentEventType.MessageCompleted})
+        const [storedModelMessage] = session.appendMessages([modelMessage], {iteration, turnId})
+        conversation.push(storedModelMessage)
+        emitAgentEvent(options?.onEvent, {
+          iteration,
+          message: storedModelMessage,
+          type: AgentEventType.MessageCompleted,
+        })
         this.logger.debug({iteration, role: modelMessage.role}, 'agent model iteration completed')
 
-        const toolCalls = getToolCalls(modelMessage)
+        const toolCalls = getToolCalls(storedModelMessage)
         this.logger.debug({iteration, toolCallCount: toolCalls.length}, 'agent tool calls received')
         if (toolCalls.length === 0) {
-          return modelMessage
+          session.recordTurnEvent({phase: TurnPhase.Completed, turnId})
+          // The terminal flush belongs to this iteration and must finish before returning the response.
+          // eslint-disable-next-line no-await-in-loop
+          await session.flush()
+          return storedModelMessage
         }
 
         if (iteration === maxToolIterations) {
@@ -160,25 +198,47 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
 
         // Tool execution for one model turn can run in parallel before the next model call.
         // eslint-disable-next-line no-await-in-loop
-        const toolMessages = await Promise.all(
-          toolCalls.map((toolCall) => this.invokeTool(toolCall, tools, iteration, options)),
+        const toolResults = await Promise.all(
+          toolCalls.map(async (toolCall) => ({
+            message: await this.invokeTool(toolCall, tools, iteration, options),
+            toolCall,
+          })),
         )
-        session.appendMessages(toolMessages)
-        conversation.push(...toolMessages)
+        const storedToolMessages = session.appendMessages(
+          toolResults.map((result) => result.message),
+          {iteration, turnId},
+        )
+        for (const [index, message] of storedToolMessages.entries()) {
+          emitAgentEvent(options?.onEvent, {
+            iteration,
+            message,
+            toolCall: toolResults[index].toolCall,
+            type: AgentEventType.ToolCompleted,
+          })
+        }
+
+        conversation.push(...storedToolMessages)
       }
 
       throw new Error(`Agent exceeded maximum tool iterations: ${maxToolIterations}`)
     } catch (error) {
       if (options?.signal?.aborted && !(error instanceof ModelAbortError)) {
-        throw new ModelAbortError('Agent invocation aborted.', {cause: error})
+        const abortError = new ModelAbortError('Agent invocation aborted.', {cause: error})
+        session.recordTurnEvent({phase: TurnPhase.Cancelled, turnId})
+        await session.flush()
+        throw abortError
       }
 
+      if (error instanceof ModelAbortError) {
+        session.recordTurnEvent({phase: TurnPhase.Cancelled, turnId})
+        await session.flush()
+        throw error
+      }
+
+      session.recordTurnEvent({error: serializeSessionError(error), phase: TurnPhase.Failed, turnId})
+      await session.flush()
       throw error
     }
-  }
-
-  async run(_session: Session, messages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message> {
-    return this.invoke(messages, options)
   }
 
   private async invokeTool(
@@ -192,22 +252,16 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     const tool = tools.find((candidate) => candidate.name === toolCall.name)
 
     if (tool === undefined) {
-      const message = createToolResultMessage(toolCall, `Unknown tool: ${toolCall.name}`, true)
-      emitAgentEvent(options?.onEvent, {iteration, message, toolCall, type: AgentEventType.ToolCompleted})
-      return message
+      return createToolResultMessage(toolCall, `Unknown tool: ${toolCall.name}`, true)
     }
 
     try {
       const output = await tool.invoke(toolCall.input as never, options)
       throwIfAborted(options?.signal)
-      const message = createToolResultMessage(toolCall, output)
-      emitAgentEvent(options?.onEvent, {iteration, message, toolCall, type: AgentEventType.ToolCompleted})
-      return message
+      return createToolResultMessage(toolCall, output)
     } catch (error) {
       throwIfAborted(options?.signal)
-      const message = createToolResultMessage(toolCall, error instanceof Error ? error.message : String(error), true)
-      emitAgentEvent(options?.onEvent, {iteration, message, toolCall, type: AgentEventType.ToolCompleted})
-      return message
+      return createToolResultMessage(toolCall, error instanceof Error ? error.message : String(error), true)
     }
   }
 }
@@ -250,4 +304,17 @@ function isModelToolCallPayload(payload: unknown): payload is ModelToolCallPaylo
   }
 
   return Array.isArray((payload as ModelToolCallPayload).toolCalls)
+}
+
+function serializeSessionError(error: unknown): SessionError {
+  if (error instanceof OrbitError) {
+    return {
+      ...(error.code === undefined ? {} : {code: error.code}),
+      message: error.message,
+      name: error.name,
+    }
+  }
+
+  if (error instanceof Error) return {message: error.message, name: error.name}
+  return {message: String(error), name: 'Error'}
 }

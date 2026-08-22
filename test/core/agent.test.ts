@@ -192,7 +192,14 @@ describe('model helpers', () => {
         },
       })
 
-      expect(await agent.run(new Session(), [new Message(MessageType.User)])).to.equal(response)
+      const session = new Session()
+      const result = await agent.run(session, [new Message(MessageType.User)])
+
+      expect(result).not.to.equal(response)
+      expect(result.content).to.equal(response.content)
+      expect(result.id).to.equal(response.id)
+      expect(result.timestamp).to.equal(response.timestamp)
+      expect(session.getConversationMessages().at(-1)).to.equal(result)
     })
 
     it('prepends Agent messages when running the model', async () => {
@@ -887,14 +894,14 @@ describe('model helpers', () => {
       expect(second.parentid).to.equal(first.id)
     })
 
-    it('uses the same initial parentid for messages appended together', () => {
+    it('links messages appended together in order', () => {
       const session = new Session()
       const header = session.getMessages()[0]
 
       const [first, second] = session.appendMessages([new Message(MessageType.User), new Message(MessageType.Assistant)])
 
       expect(first.parentid).to.equal(header.id)
-      expect(second.parentid).to.equal(header.id)
+      expect(second.parentid).to.equal(first.id)
     })
 
     it('overrides an explicit parentid with the last message id', () => {

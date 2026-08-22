@@ -80,8 +80,37 @@ export type {
   ProcessorOutput,
   ProcessorType,
 } from './processor/index.js'
-export {Session, SessionHeader} from './session/index.js'
-export type {SessionHeaderOptions} from './session/index.js'
+export {
+  encodeSessionEntry,
+  parseSessionFile,
+  Session,
+  SESSION_FORMAT_VERSION,
+  SessionEntryType,
+  sessionFilePath,
+  SessionHeader,
+  SessionRecorder,
+  SessionRepository,
+  TurnPhase,
+} from './session/index.js'
+export type {
+  AppendMessageOptions,
+  CreateSessionOptions,
+  ParsedSessionFile,
+  PersistedMessage,
+  RecordTurnContextOptions,
+  RecordTurnEventOptions,
+  SessionEntry,
+  SessionError,
+  SessionHeaderEntry,
+  SessionHeaderOptions,
+  SessionMessageEntry,
+  SessionMetadata,
+  SessionOptions,
+  SessionRepositoryOptions,
+  SessionSummary,
+  SessionTurnContextEntry,
+  SessionTurnEventEntry,
+} from './session/index.js'
 export {loadWorkspaceSettings, loadWorkspaceSettingsSync, mergeWorkspaceSettings} from './settings.js'
 export type {McpServerSettings, McpSettings, ProviderSettings, WorkspaceSettings} from './settings.js'
 export {Skill} from './skills/index.js'

@@ -1,35 +1,159 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {Message} from '../message/index.js'
+import process from 'node:process'
+import {v7 as uuidv7} from 'uuid'
 
+import type {Message} from '../message/index.js'
+import type {ProviderName} from '../models/provider.js'
+import type {
+  PersistedMessage,
+  SessionEntry,
+  SessionError,
+  SessionMessageEntry,
+  SessionMetadata,
+  SessionTurnContextEntry,
+  SessionTurnEventEntry,
+  TurnPhase,
+} from './entries.js'
+import type {SessionRecorder} from './recorder.js'
+
+import {Message as CoreMessage} from '../message/index.js'
+import {SessionEntryType} from './entries.js'
 import {SessionHeader} from './header.js'
-import {createMessage} from './message-factory.js'
+
+export interface AppendMessageOptions {
+  iteration?: number
+  turnId?: string
+}
+
+export interface RecordTurnContextOptions {
+  cwd: string
+  maxToolIterations: number
+  model: string
+  provider: ProviderName
+  turnId: string
+}
+
+export interface RecordTurnEventOptions {
+  error?: SessionError
+  phase: TurnPhase
+  turnId: string
+}
+
+export interface SessionOptions {
+  entries?: SessionEntry[]
+  messages?: Message[]
+  metadata?: Partial<SessionMetadata>
+  recorder?: SessionRecorder
+}
 
 export class Session {
+  private readonly entries: SessionEntry[]
+  private readonly messageIds = new Set<string>()
   private readonly messages: Message[] = []
+  private readonly metadata: SessionMetadata
+  private readonly recorder?: SessionRecorder
 
-  constructor() {
-    this.messages.push(new SessionHeader())
+  // Metadata hydration keeps all optional persisted fields explicit at this public construction boundary.
+  // eslint-disable-next-line complexity
+  constructor(options: SessionOptions = {}) {
+    const createdAt = options.metadata?.createdAt ?? new Date().toISOString()
+    const id = options.metadata?.id ?? uuidv7()
+    const rootMessageId = options.metadata?.rootMessageId ?? uuidv7()
+    this.metadata = {
+      createdAt,
+      cwd: options.metadata?.cwd ?? process.cwd(),
+      ...(options.metadata?.file === undefined ? {} : {file: options.metadata.file}),
+      id,
+      ...(options.metadata?.model === undefined ? {} : {model: options.metadata.model}),
+      ...(options.metadata?.originator === undefined ? {} : {originator: options.metadata.originator}),
+      ...(options.metadata?.provider === undefined ? {} : {provider: options.metadata.provider}),
+      rootMessageId,
+      ...(options.metadata?.systemPrompt === undefined ? {} : {systemPrompt: options.metadata.systemPrompt}),
+    }
+    this.recorder = options.recorder
+    this.entries = [...(options.entries ?? [])]
+
+    const header = new SessionHeader({
+      id: rootMessageId,
+      payload: {sessionId: id},
+      timestamp: createdAt,
+    })
+    this.messages.push(header)
+    this.messageIds.add(header.id)
+    for (const message of options.messages ?? []) {
+      this.messages.push(message)
+      this.messageIds.add(message.id)
+    }
   }
 
-  appendMessages(messages: Message[]): Message[] {
-    const parentId = this.getLastMessageId()
+  appendMessages(messages: Message[], options: AppendMessageOptions = {}): Message[] {
+    const pendingIds = new Set(this.messageIds)
+    for (const message of messages) {
+      if (pendingIds.has(message.id)) throw new Error(`Message already exists in session: ${message.id}`)
+      pendingIds.add(message.id)
+    }
+
+    let parentId = this.getLastMessageId()
     const appendedMessages = messages.map((message) => {
-      const appendedMessage = createMessage(message.type, {
+      const appendedMessage = new CoreMessage(message.type, {
         contents: message.contents,
+        id: message.id,
         parentid: parentId,
         ...(message.payload === undefined ? {} : {payload: message.payload}),
         role: message.role,
+        timestamp: message.timestamp,
       })
+      const entry: SessionMessageEntry = {
+        ...(options.iteration === undefined ? {} : {iteration: options.iteration}),
+        message: toPersistedMessage(appendedMessage),
+        timestamp: new Date().toISOString(),
+        ...(options.turnId === undefined ? {} : {turnId: options.turnId}),
+        type: SessionEntryType.Message,
+      }
+      this.addEntry(entry)
       this.messages.push(appendedMessage)
+      this.messageIds.add(appendedMessage.id)
+      parentId = appendedMessage.id
       return appendedMessage
     })
     return appendedMessages
   }
 
+  appendNewMessages(messages: Message[], options: AppendMessageOptions = {}): Message[] {
+    return this.appendMessages(
+      messages.filter((message) => !this.messageIds.has(message.id)),
+      options,
+    )
+  }
+
+  async close(): Promise<void> {
+    await this.recorder?.close()
+  }
+
+  async flush(): Promise<void> {
+    await this.recorder?.flush()
+  }
+
+  getConversationMessages(): Message[] {
+    return this.messages.slice(1)
+  }
+
+  getEntries(): SessionEntry[] {
+    return [...this.entries]
+  }
+
+  getFile(): string | undefined {
+    return this.metadata.file
+  }
+
   getFirstMessageId(): null | string {
     return this.messages[0]?.id ?? null
+  }
+
+  getId(): string {
+    return this.metadata.id
   }
 
   getLastMessageId(): null | string {
@@ -38,5 +162,62 @@ export class Session {
 
   getMessages(): Message[] {
     return [...this.messages]
+  }
+
+  getMetadata(): SessionMetadata {
+    return {...this.metadata}
+  }
+
+  hasMessage(id: string): boolean {
+    return this.messageIds.has(id)
+  }
+
+  recordTurnContext(options: RecordTurnContextOptions): void {
+    const entry: SessionTurnContextEntry = {
+      cwd: options.cwd,
+      maxToolIterations: options.maxToolIterations,
+      model: options.model,
+      provider: options.provider,
+      timestamp: new Date().toISOString(),
+      turnId: options.turnId,
+      type: SessionEntryType.TurnContext,
+    }
+    this.addEntry(entry)
+  }
+
+  recordTurnEvent(options: RecordTurnEventOptions): void {
+    if (options.phase === 'failed' && options.error === undefined) {
+      throw new Error('A failed turn event must include an error.')
+    }
+
+    if (options.phase !== 'failed' && options.error !== undefined) {
+      throw new Error('Only a failed turn event may include an error.')
+    }
+
+    const entry: SessionTurnEventEntry = {
+      ...(options.error === undefined ? {} : {error: options.error}),
+      phase: options.phase,
+      timestamp: new Date().toISOString(),
+      turnId: options.turnId,
+      type: SessionEntryType.TurnEvent,
+    }
+    this.addEntry(entry)
+  }
+
+  private addEntry(entry: SessionEntry): void {
+    this.recorder?.append(entry)
+    this.entries.push(entry)
+  }
+}
+
+function toPersistedMessage(message: Message): PersistedMessage {
+  return {
+    contents: [...message.contents],
+    id: message.id,
+    parentid: message.parentid,
+    ...(message.payload === undefined ? {} : {payload: message.payload}),
+    role: message.role,
+    timestamp: message.timestamp,
+    type: message.type,
   }
 }

@@ -19,10 +19,12 @@ export type MessagePayload = unknown
 export interface MessageOptions {
   content?: string
   contents?: string[]
+  id?: string
   parentid?: null | string
   payload?: MessagePayload
   previousMessage?: Message
   role?: Role
+  timestamp?: string
 }
 
 export class Message {
@@ -40,10 +42,10 @@ export class Message {
     }
 
     this.contents = options.contents ?? (options.content === undefined ? [] : [options.content])
-    this.id = uuidv7()
+    this.id = options.id ?? uuidv7()
     this.parentid = options.parentid ?? options.previousMessage?.id ?? null
     this.role = options.role ?? defaultRoleForMessageType(type)
-    this.timestamp = new Date().toISOString()
+    this.timestamp = options.timestamp ?? new Date().toISOString()
     this.type = type
 
     if ('payload' in options) {
