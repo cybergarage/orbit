@@ -77,6 +77,7 @@ commits.
 - `src/core/thread.ts`: event-driven thread API for GUI integrations
 - `test/`: Mocha and Chai tests mirroring the source areas
 - `docs/`: user and developer documentation
+- `docs/analysis/`: dated engineering analysis and design records
 - `bin/`: CLI launchers and repository maintenance scripts
 
 Keep reusable behavior in `src/core/` and CLI-specific behavior in
@@ -107,6 +108,48 @@ must include the standard copyright and SPDX header; run
 Add or update deterministic, isolated tests for every behavioral change. Stub
 model providers, MCP services, and other external boundaries instead of making
 live network requests.
+
+## Engineering analysis documents
+
+Use `docs/analysis/` for durable, point-in-time records of substantial
+engineering investigations, design explorations, trade-offs, and implementation
+directions. These documents preserve the context behind a decision; they are
+not authoritative user documentation and do not replace updates to the README,
+API documentation, or feature-specific guides.
+
+Do not store routine progress reports, chat transcripts, or temporary scratch
+notes in this directory. Before adding a document, check whether an existing
+analysis already covers the topic and update it when the work is a continuation
+of the same investigation.
+
+Name each new analysis document using its creation date and a concise English
+topic slug:
+
+```text
+docs/analysis/YYYY-MM-DD-<topic>.md
+```
+
+Use an ISO 8601 date and lowercase kebab-case for the topic, for example:
+
+```text
+docs/analysis/2026-08-22-session-persistence.md
+```
+
+Keep the original filename when revising the same analysis. Create another
+dated document only for a distinct investigation or a deliberate re-evaluation
+that should preserve the earlier record.
+
+An analysis document should include, as applicable:
+
+- a descriptive title and purpose;
+- the observed current behavior and supporting repository evidence;
+- requirements and constraints;
+- alternatives and their trade-offs;
+- the recommended direction, open questions, and implementation status.
+
+Clearly distinguish verified current behavior from proposals or future work.
+Because an analysis captures a point in time, the current code and maintained
+user documentation take precedence if they later differ from the analysis.
 
 ## Documentation changes
 
