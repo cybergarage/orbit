@@ -8,7 +8,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {Agent, createProvider, Message, MessageType, ToolProfile} from '../../src/core/index.js'
-import {OllamaAgent} from '../../src/core/models/adapters/ollama.js'
+import {OllamaAgent, selectOllamaModel} from '../../src/core/models/adapters/ollama.js'
 import {OpenAIAgent} from '../../src/core/models/adapters/openai.js'
 
 describe('model tool integration', () => {
@@ -147,6 +147,7 @@ describe('model tool integration', () => {
 
   it('runs an Ollama function call and replays thinking and images with the tool result', async () => {
     const requests: Array<{messages: Array<Record<string, unknown>>}> = []
+    const discoveryCalls: string[] = []
     const responses = [
       ollamaResponse({
         content: '',
@@ -162,8 +163,18 @@ describe('model tool integration', () => {
         requests.push(request as {messages: Array<Record<string, unknown>>})
         return responses.shift()
       },
+      async list() {
+        discoveryCalls.push('list')
+        return {models: [{model: 'qwen-test', name: 'qwen-test'}]}
+      },
+      async show(request: {model: string}) {
+        discoveryCalls.push(`show:${request.model}`)
+        return {capabilities: ['completion', 'tools']}
+      },
     }
-    const model = new OllamaAgent('qwen-test', createProvider('ollama'), {client: client as never})
+    const provider = createProvider('ollama')
+    const selectedModel = await selectOllamaModel(provider, {defaultModel: 'llama3.1'}, client as never)
+    const model = new OllamaAgent(selectedModel, provider, {client: client as never})
     const agent = new Agent({
       cwd: root,
       deps: {createModel: () => model},
@@ -174,6 +185,8 @@ describe('model tool integration', () => {
       const response = await agent.invoke([new Message(MessageType.User, {content: 'Read sample.txt'})])
 
       expect(response.content).to.equal('done')
+      expect(selectedModel).to.equal('qwen-test')
+      expect(discoveryCalls).to.deep.equal(['list', 'show:qwen-test'])
       expect(response.payload).to.deep.include({
         parts: [
           {text: 'I found the answer.', type: 'reasoning'},

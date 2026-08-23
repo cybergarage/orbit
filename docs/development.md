@@ -85,6 +85,11 @@ Provider and model flags can be passed to the same command. For example:
 ./bin/run.js gui --provider ollama --model llama3.1
 ```
 
+When Ollama is selected without a model, CLI and GUI startup inspect the local
+Ollama model list. Orbit prefers its installed default and otherwise selects
+the first installed model that reports tool support. See [Settings](settings.md)
+for the complete selection and failure behavior.
+
 Press Ctrl+C in the starting terminal to stop the application and close its
 active agents, MCP clients, and session recorders. Re-run `npm run build` after
 changing the React client or server source. See [Local GUI](gui.md) for session,

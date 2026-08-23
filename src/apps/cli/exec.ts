@@ -8,6 +8,7 @@ import process from 'node:process'
 import {type AgentOptions, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadSystemContexts} from '../../core/context.js'
 import {Agent, createLogger, Message, MessageType, Role, ToolProfile} from '../../core/index.js'
+import {selectOllamaModel} from '../../core/models/adapters/ollama.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
 
@@ -20,6 +21,7 @@ export async function runExecCommand(
   deps: {
     agentClass?: AgentClass
     contextLoader?: typeof loadSystemContexts
+    ollamaModelSelector?: typeof selectOllamaModel
     settingsLoader?: typeof loadWorkspaceSettings
   } = {},
 ): Promise<string> {
@@ -32,7 +34,12 @@ export async function runExecCommand(
     prompt = readFileSync(stdin.fd, 'utf8').trim()
   }
 
-  const resolvedOptions = await resolveWorkspaceAgentOptions(options, cwd, deps.settingsLoader)
+  const resolvedOptions = await resolveWorkspaceAgentOptions(
+    options,
+    cwd,
+    deps.settingsLoader,
+    deps.ollamaModelSelector,
+  )
   const systemContexts = await (deps.contextLoader ?? loadSystemContexts)(cwd)
   const systemPrompts = systemContexts.filter((context) => context.content).map((context) => context.content)
   const systemMessages: Message[] = systemPrompts.map(

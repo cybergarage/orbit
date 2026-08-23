@@ -19,6 +19,11 @@ export interface OllamaAgentOptions {
   client?: Pick<Ollama, 'abort' | 'chat'>
 }
 
+export interface OllamaModelSelectionOptions {
+  defaultModel: string
+  requestedModel?: string
+}
+
 export class OllamaAgent implements Model {
   private readonly abort = () => this.client.abort()
   private readonly client: Pick<Ollama, 'abort' | 'chat'>
@@ -114,6 +119,66 @@ export class OllamaAgent implements Model {
 export function createOllamaOptions(provider: Provider): Partial<Config> {
   const host = provider.getHost()
   return host === undefined ? {} : {host}
+}
+
+export async function selectOllamaModel(
+  provider: Provider,
+  options: OllamaModelSelectionOptions,
+  client: Pick<Ollama, 'list' | 'show'> = new Ollama(createOllamaOptions(provider)),
+): Promise<string> {
+  let models
+  try {
+    models = (await client.list()).models
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    throw new Error(`Unable to list Ollama models: ${detail}`, {cause: error})
+  }
+
+  const installedModels = [
+    ...new Set(models.map((model) => installedModelName(model)).filter((model) => model.length > 0)),
+  ]
+  if (options.requestedModel !== undefined) {
+    const requestedModel = findInstalledModel(installedModels, options.requestedModel)
+    if (requestedModel !== undefined) return requestedModel
+    throw new Error(`Ollama model is not installed: ${options.requestedModel}. Pull the model before starting Orbit.`)
+  }
+
+  const defaultModel = findInstalledModel(installedModels, options.defaultModel)
+  if (defaultModel !== undefined) return defaultModel
+  if (installedModels.length === 0) {
+    throw new Error('Ollama has no installed models. Install a tool-capable model before starting Orbit.')
+  }
+
+  const toolSupport = await Promise.all(installedModels.map(async (model) => supportsTools(client, model)))
+  const supportedModelIndex = toolSupport.indexOf(true)
+  if (supportedModelIndex !== -1) return installedModels[supportedModelIndex]
+
+  throw new Error(
+    'No installed Ollama model reports the tools capability. Install a tool-capable model or select a model explicitly.',
+  )
+}
+
+function findInstalledModel(installedModels: string[], requestedModel: string): string | undefined {
+  return installedModels.find(
+    (installedModel) =>
+      installedModel === requestedModel ||
+      installedModel === `${requestedModel}:latest` ||
+      `${installedModel}:latest` === requestedModel,
+  )
+}
+
+function installedModelName(model: {model: string; name: string}): string {
+  return model.model || model.name
+}
+
+async function supportsTools(client: Pick<Ollama, 'show'>, model: string): Promise<boolean> {
+  try {
+    const details = await client.show({model})
+    return details.capabilities?.includes('tools') === true
+  } catch {
+    // A broken model entry must not prevent Orbit from checking the remaining installed models.
+    return false
+  }
 }
 
 export function toOllamaMessage(message: Message): OllamaMessage {

@@ -6,7 +6,7 @@ import {expect} from 'chai'
 import type {AgentOptions, Model} from '../../../src/core/models/index.js'
 
 import {runExecCommand} from '../../../src/apps/cli/exec.js'
-import {resolveAgentOptions} from '../../../src/core/chat.js'
+import {resolveAgentOptions, resolveWorkspaceAgentOptions} from '../../../src/core/chat.js'
 import {Agent, Message, MessageType, OperatorType, Role} from '../../../src/core/models/index.js'
 
 describe('runExecCommand', () => {
@@ -48,6 +48,7 @@ describe('runExecCommand', () => {
           {content: 'Workspace instructions', source: {kind: 'none'} as const},
           {content: 'Project instructions', source: {kind: 'none'} as const},
         ],
+        ollamaModelSelector: async () => 'test-model',
       },
     )
 
@@ -184,6 +185,37 @@ describe('runExecCommand', () => {
         openai: {apiKeyEnv: 'CLI_OPENAI_KEY'},
       },
     })
+  })
+
+  it('discovers an installed Ollama model when startup settings omit the model', async () => {
+    const calls: Array<Record<string, unknown>> = []
+
+    const resolved = await resolveWorkspaceAgentOptions(
+      {},
+      '/tmp/workspace',
+      async () => ({provider: 'ollama', providers: {ollama: {host: 'http://ollama.test'}}}),
+      async (provider, options) => {
+        calls.push({host: provider.getHost(), options})
+        return 'qwen3:latest'
+      },
+    )
+
+    expect(resolved).to.deep.equal({
+      lang: undefined,
+      model: 'qwen3:latest',
+      provider: 'ollama',
+      settings: {
+        model: 'qwen3:latest',
+        provider: 'ollama',
+        providers: {ollama: {host: 'http://ollama.test'}},
+      },
+    })
+    expect(calls).to.deep.equal([
+      {
+        host: 'http://ollama.test',
+        options: {defaultModel: 'llama3.1'},
+      },
+    ])
   })
 })
 

@@ -215,6 +215,9 @@ The current milestone was implemented on 2026-08-23:
   event.
 - Fake OpenAI and Ollama clients exercise the complete Agent, built-in `read`,
   tool-result, and final-response loop without network access.
+- CLI and GUI startup discover installed Ollama models. Selection preserves an
+  explicit installed model, prefers the installed default, and otherwise uses
+  the first installed model whose metadata reports tool support.
 
 OpenAI Responses API support, normalized model streaming, and general rich
 tool-result capability negotiation remain follow-up milestones. They were not

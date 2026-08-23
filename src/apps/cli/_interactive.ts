@@ -7,6 +7,7 @@ import process from 'node:process'
 import {type AgentOptions, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadSystemContexts} from '../../core/context.js'
 import {Agent, createLogger, runInteractiveSession} from '../../core/index.js'
+import {selectOllamaModel} from '../../core/models/adapters/ollama.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
 
@@ -18,6 +19,7 @@ export async function runInteractiveCommand(
   deps: {
     agentClass?: AgentClass
     contextLoader?: typeof loadSystemContexts
+    ollamaModelSelector?: typeof selectOllamaModel
     settingsLoader?: typeof loadWorkspaceSettings
   } = {},
 ): Promise<void> {
@@ -25,7 +27,12 @@ export async function runInteractiveCommand(
     throw new Error('Interactive mode requires a TTY.')
   }
 
-  const resolvedOptions = await resolveWorkspaceAgentOptions(options, process.cwd(), deps.settingsLoader)
+  const resolvedOptions = await resolveWorkspaceAgentOptions(
+    options,
+    process.cwd(),
+    deps.settingsLoader,
+    deps.ollamaModelSelector,
+  )
   const contexts = await (deps.contextLoader ?? loadSystemContexts)(process.cwd())
   const contextText = contexts.map((c) => c.content).join('\n\n')
   const systemPrompt = contextText
