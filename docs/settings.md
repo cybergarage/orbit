@@ -94,17 +94,15 @@ CLI, interactive, resume, and GUI startup query the configured Ollama host for
 its installed models. Selection uses this order:
 
 1. An explicit CLI or workspace model, if it is installed.
-2. The Orbit default model (`llama3.1`), if it is installed. An installed
-   `:latest` tag matches the untagged default.
-3. The first installed model returned by Ollama whose model metadata reports
-   the `tools` capability.
+2. When no model is specified, the first installed model returned by Ollama
+   whose model metadata reports the `tools` capability.
 
 Orbit does not pull models automatically. An explicit model that is not
 installed produces an error instead of silently selecting another model. If
-there is no explicit model, startup also fails when Ollama has no models or no
-installed fallback model reports tool support. This discovery applies to the
-CLI and GUI startup paths; callers that construct `Agent` or a model adapter
-directly remain responsible for choosing a model.
+there is no explicit model, startup fails when Ollama has no models or no
+installed model reports tool support. Ollama has no hard-coded default model.
+This discovery applies to the CLI and GUI startup paths; callers that construct
+`Agent` or a model adapter directly remain responsible for choosing a model.
 
 The reusable library can register another provider through
 `registerModelProvider()`. Register it before loading settings that use its

@@ -125,6 +125,8 @@ describe('OrbitApplicationService', () => {
       }),
       cwd: root,
       logger,
+      model: 'qwen3:latest',
+      provider: 'ollama',
       repository,
       settingsSources: [],
     })
@@ -145,6 +147,14 @@ describe('OrbitApplicationService', () => {
       expect(commandEvent?.data).to.deep.equal({command: '/help', response: guiSlashCommandHelpMessage})
       expect(loggedCommands).to.deep.include({diagnosticEvent: JSON.stringify(commandEvent)})
 
+      service.startRun(thread.id, '/model')
+      expect(service.getThread(thread.id)?.messages.map((message) => message.content)).to.deep.equal([
+        '/help',
+        guiSlashCommandHelpMessage,
+        '/model',
+        'Current model: ollama:qwen3:latest',
+      ])
+
       const sessions = await service.listSessions()
       expect(sessions.data[0]).to.include({id: thread.id})
       expect(sessions.data[0].preview).to.equal(undefined)
@@ -156,6 +166,8 @@ describe('OrbitApplicationService', () => {
       expect(service.getThread(thread.id)?.messages.map((message) => message.content)).to.deep.equal([
         '/help',
         guiSlashCommandHelpMessage,
+        '/model',
+        'Current model: ollama:qwen3:latest',
         'Hello after help',
       ])
     } finally {
@@ -164,7 +176,13 @@ describe('OrbitApplicationService', () => {
   })
 
   it('updates diagnostics capture independently from pane visibility', async () => {
-    const service = new OrbitApplicationService({contexts: [], cwd: process.cwd(), settingsSources: []})
+    const service = new OrbitApplicationService({
+      contexts: [],
+      cwd: process.cwd(),
+      model: 'test-model',
+      provider: 'ollama',
+      settingsSources: [],
+    })
 
     const preferences = service.updatePreferences({
       debugPanelVisible: false,
@@ -183,6 +201,8 @@ describe('OrbitApplicationService', () => {
       contexts: [],
       createAgent: createAgentFactory([]),
       cwd: root,
+      model: 'test-model',
+      provider: 'ollama',
       repository,
       settingsSources: [],
     })

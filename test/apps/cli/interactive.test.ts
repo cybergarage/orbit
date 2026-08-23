@@ -6,12 +6,13 @@ import {expect} from 'chai'
 import type {AgentOptions, Model} from '../../../src/core/models/index.js'
 
 import {runInteractiveCommand} from '../../../src/apps/cli/_interactive.js'
+import {createInitialInteractiveState, handleModelCommand} from '../../../src/core/interactive.js'
 import {Agent, Message, MessageType, OperatorType} from '../../../src/core/models/index.js'
 
 describe('runInteractiveCommand', () => {
-  it('uses resolved workspace settings for the interactive session', async () => {
+  it('reports the discovered Ollama model through /model', async () => {
     const calls: {options?: AgentOptions}[] = []
-    const sessionCalls: {debugEnabled: boolean; initialModel: string; initialProvider: string; systemPrompt?: string}[] = []
+    const sessionCalls: Array<Record<string, unknown>> = []
 
     class TestAgent extends Agent {
       constructor(options: AgentOptions = {}) {
@@ -51,6 +52,10 @@ describe('runInteractiveCommand', () => {
             debugEnabled: options.logger?.isDebugEnabled() ?? false,
             initialModel: options.initialModel,
             initialProvider: options.initialProvider,
+            modelMessage: handleModelCommand(
+              createInitialInteractiveState({model: options.initialModel, provider: options.initialProvider}),
+              '/model',
+            )?.message,
             systemPrompt: options.systemPrompt,
           })
           const SessionAgent = options.agentClass
@@ -65,7 +70,8 @@ describe('runInteractiveCommand', () => {
         {
           agentClass: TestAgent,
           contextLoader: async () => [{content: 'Workspace context', source: {kind: 'none'} as const}],
-          settingsLoader: async () => ({model: 'workspace-model', provider: 'openai'}),
+          ollamaModelSelector: async () => 'qwen3:latest',
+          settingsLoader: async () => ({provider: 'ollama'}),
         },
       )
     } finally {
@@ -76,8 +82,9 @@ describe('runInteractiveCommand', () => {
     expect(sessionCalls).to.deep.equal([
       {
         debugEnabled: true,
-        initialModel: 'workspace-model',
-        initialProvider: 'openai',
+        initialModel: 'qwen3:latest',
+        initialProvider: 'ollama',
+        modelMessage: 'Current model: ollama:qwen3:latest',
         systemPrompt: 'Workspace context',
       },
     ])
@@ -85,8 +92,8 @@ describe('runInteractiveCommand', () => {
       {
         options: {
           model: {
-            name: 'workspace-model',
-            provider: 'openai',
+            name: 'qwen3:latest',
+            provider: 'ollama',
           },
         },
       },

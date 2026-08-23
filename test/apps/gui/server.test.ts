@@ -27,6 +27,8 @@ describe('GUI server', () => {
         },
       }),
       cwd: root,
+      model: 'test-model',
+      provider: 'ollama',
       repository: new SessionRepository({rootDir: path.join(root, 'sessions')}),
       settingsSources: [],
       version: 'test-version',

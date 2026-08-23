@@ -7,17 +7,13 @@ import {selectOllamaModel} from '../../src/core/models/adapters/ollama.js'
 import {createProvider} from '../../src/core/models/provider.js'
 
 describe('Ollama model selection', () => {
-  it('selects an explicitly requested installed model before the default', async () => {
+  it('selects an explicitly requested installed model', async () => {
     const client = createClient([
       {model: 'llama3.1:latest', name: 'llama3.1:latest'},
       {model: 'qwen3:latest', name: 'qwen3:latest'},
     ])
 
-    const model = await selectOllamaModel(
-      createProvider('ollama'),
-      {defaultModel: 'llama3.1', requestedModel: 'qwen3'},
-      client as never,
-    )
+    const model = await selectOllamaModel(createProvider('ollama'), {requestedModel: 'qwen3'}, client as never)
 
     expect(model).to.equal('qwen3:latest')
     expect(client.showCalls).to.deep.equal([])
@@ -27,25 +23,9 @@ describe('Ollama model selection', () => {
     const client = createClient([{model: 'llama3.1:latest', name: 'llama3.1:latest'}])
 
     await expectRejected(
-      selectOllamaModel(
-        createProvider('ollama'),
-        {defaultModel: 'llama3.1', requestedModel: 'missing-model'},
-        client as never,
-      ),
+      selectOllamaModel(createProvider('ollama'), {requestedModel: 'missing-model'}, client as never),
       'Ollama model is not installed: missing-model',
     )
-  })
-
-  it('selects the installed default model without inspecting capabilities', async () => {
-    const client = createClient([
-      {model: 'qwen3:latest', name: 'qwen3:latest'},
-      {model: 'llama3.1:latest', name: 'llama3.1:latest'},
-    ])
-
-    const model = await selectOllamaModel(createProvider('ollama'), {defaultModel: 'llama3.1'}, client as never)
-
-    expect(model).to.equal('llama3.1:latest')
-    expect(client.showCalls).to.deep.equal([])
   })
 
   it('selects the first installed model that reports tool support', async () => {
@@ -60,7 +40,7 @@ describe('Ollama model selection', () => {
       },
     )
 
-    const model = await selectOllamaModel(createProvider('ollama'), {defaultModel: 'llama3.1'}, client as never)
+    const model = await selectOllamaModel(createProvider('ollama'), {}, client as never)
 
     expect(model).to.equal('qwen3:latest')
     expect(client.showCalls).to.deep.equal(['embedding-model:latest', 'qwen3:latest'])
@@ -68,14 +48,14 @@ describe('Ollama model selection', () => {
 
   it('reports empty and tool-incompatible installations', async () => {
     await expectRejected(
-      selectOllamaModel(createProvider('ollama'), {defaultModel: 'llama3.1'}, createClient([]) as never),
+      selectOllamaModel(createProvider('ollama'), {}, createClient([]) as never),
       'Ollama has no installed models',
     )
 
     await expectRejected(
       selectOllamaModel(
         createProvider('ollama'),
-        {defaultModel: 'llama3.1'},
+        {},
         createClient([{model: 'embed:latest', name: 'embed:latest'}], {'embed:latest': ['embedding']}) as never,
       ),
       'No installed Ollama model reports the tools capability',

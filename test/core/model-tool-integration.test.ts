@@ -173,7 +173,7 @@ describe('model tool integration', () => {
       },
     }
     const provider = createProvider('ollama')
-    const selectedModel = await selectOllamaModel(provider, {defaultModel: 'llama3.1'}, client as never)
+    const selectedModel = await selectOllamaModel(provider, {}, client as never)
     const model = new OllamaAgent(selectedModel, provider, {client: client as never})
     const agent = new Agent({
       cwd: root,

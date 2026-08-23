@@ -12,7 +12,7 @@ import {createProvider, registerProviderName} from './provider.js'
 
 export interface ModelProviderRegistration {
   create(model: string, provider: Provider): Model
-  defaultModel: string
+  defaultModel?: string
   name: ProviderName
 }
 
@@ -22,7 +22,9 @@ export class ModelRegistry {
   create(providerName: ProviderName, model?: string, settings?: WorkspaceSettings): Model {
     const registration = this.registrations.get(providerName)
     if (registration === undefined) throw new Error(`Unsupported model provider: ${providerName}`)
-    return registration.create(model ?? registration.defaultModel, createProvider(providerName, settings))
+    const selectedModel = model ?? registration.defaultModel
+    if (selectedModel === undefined) throw new Error(`No model specified for provider: ${providerName}`)
+    return registration.create(selectedModel, createProvider(providerName, settings))
   }
 
   get(providerName: ProviderName): ModelProviderRegistration | undefined {
@@ -46,26 +48,27 @@ export class ModelRegistry {
   }
 }
 
-export const DEFAULT_MODELS: Record<ProviderName, string> = {
-  anthropic: 'claude-opus-4-6',
-  ollama: 'llama3.1',
-  openai: 'gpt-4o',
+const ANTHROPIC_DEFAULT_MODEL = 'claude-opus-4-6'
+const OPENAI_DEFAULT_MODEL = 'gpt-4o'
+
+export const DEFAULT_MODELS: Partial<Record<ProviderName, string>> = {
+  anthropic: ANTHROPIC_DEFAULT_MODEL,
+  openai: OPENAI_DEFAULT_MODEL,
 }
 
 const modelRegistry = new ModelRegistry()
 modelRegistry.register({
   create: (model, provider) => new AnthropicAgent(model, provider),
-  defaultModel: DEFAULT_MODELS.anthropic,
+  defaultModel: ANTHROPIC_DEFAULT_MODEL,
   name: 'anthropic',
 })
 modelRegistry.register({
   create: (model, provider) => new OllamaAgent(model, provider),
-  defaultModel: DEFAULT_MODELS.ollama,
   name: 'ollama',
 })
 modelRegistry.register({
   create: (model, provider) => new OpenAIAgent(model, provider),
-  defaultModel: DEFAULT_MODELS.openai,
+  defaultModel: OPENAI_DEFAULT_MODEL,
   name: 'openai',
 })
 
@@ -79,6 +82,6 @@ export function getModelRegistry(): ModelRegistry {
 
 export function registerModelProvider(registration: ModelProviderRegistration): void {
   modelRegistry.register(registration)
-  DEFAULT_MODELS[registration.name] = registration.defaultModel
+  if (registration.defaultModel !== undefined) DEFAULT_MODELS[registration.name] = registration.defaultModel
   registerProviderName(registration.name)
 }

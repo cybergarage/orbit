@@ -86,9 +86,9 @@ Provider and model flags can be passed to the same command. For example:
 ```
 
 When Ollama is selected without a model, CLI and GUI startup inspect the local
-Ollama model list. Orbit prefers its installed default and otherwise selects
-the first installed model that reports tool support. See [Settings](settings.md)
-for the complete selection and failure behavior.
+Ollama model list and select the first installed model that reports tool
+support. Orbit has no hard-coded Ollama default. See [Settings](settings.md) for
+the complete selection and failure behavior.
 
 Press Ctrl+C in the starting terminal to stop the application and close its
 active agents, MCP clients, and session recorders. Re-run `npm run build` after
@@ -140,8 +140,8 @@ items directly into a single text message. See
 for the verified protocol differences and follow-up direction.
 
 Model providers are registered through `ModelRegistry` rather than selected by
-a factory switch. A provider registration supplies its name, default model, and
-model constructor:
+a factory switch. A provider registration supplies its name, model constructor,
+and an optional default model:
 
 ```ts
 import {registerModelProvider} from 'orbit'

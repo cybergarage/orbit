@@ -26,6 +26,7 @@ export function resolveAgentOptions(options: AgentOptions, settings: WorkspaceSe
   const mergedSettings = mergeWorkspaceSettings(settings, options.settings)
   const provider = options.provider ?? mergedSettings.provider ?? 'ollama'
   const model = options.model ?? mergedSettings.model ?? DEFAULT_MODELS[provider]
+  if (model === undefined) throw new Error(`No model specified for provider: ${provider}`)
 
   return {
     ...(options.debug === undefined ? {} : {debug: options.debug}),
@@ -43,13 +44,14 @@ export async function resolveWorkspaceAgentOptions(
   ollamaModelSelector: typeof selectOllamaModel = selectOllamaModel,
 ): Promise<ResolvedAgentOptions> {
   const settings = await settingsLoader(cwd)
-  const resolved = resolveAgentOptions(options, settings)
-  if (resolved.provider !== 'ollama') return resolved
+  const mergedSettings = mergeWorkspaceSettings(settings, options.settings)
+  const provider = options.provider ?? mergedSettings.provider ?? 'ollama'
+  if (provider !== 'ollama') return resolveAgentOptions(options, settings)
 
-  const requestedModel = options.model ?? mergeWorkspaceSettings(settings, options.settings).model
-  const model = await ollamaModelSelector(createProvider('ollama', resolved.settings), {
-    defaultModel: DEFAULT_MODELS.ollama,
+  const requestedModel = options.model ?? mergedSettings.model
+  const providerSettings = mergeWorkspaceSettings(mergedSettings, {provider})
+  const model = await ollamaModelSelector(createProvider('ollama', providerSettings), {
     ...(requestedModel === undefined ? {} : {requestedModel}),
   })
-  return resolveAgentOptions({...options, model}, settings)
+  return resolveAgentOptions({...options, model, provider}, settings)
 }

@@ -20,7 +20,6 @@ export interface OllamaAgentOptions {
 }
 
 export interface OllamaModelSelectionOptions {
-  defaultModel: string
   requestedModel?: string
 }
 
@@ -143,8 +142,6 @@ export async function selectOllamaModel(
     throw new Error(`Ollama model is not installed: ${options.requestedModel}. Pull the model before starting Orbit.`)
   }
 
-  const defaultModel = findInstalledModel(installedModels, options.defaultModel)
-  if (defaultModel !== undefined) return defaultModel
   if (installedModels.length === 0) {
     throw new Error('Ollama has no installed models. Install a tool-capable model before starting Orbit.')
   }

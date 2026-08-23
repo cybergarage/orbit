@@ -175,11 +175,11 @@ describe('runExecCommand', () => {
   it('keeps CLI provider settings ahead of workspace settings', () => {
     expect(
       resolveAgentOptions(
-        {settings: {providers: {openai: {apiKeyEnv: 'CLI_OPENAI_KEY'}}}},
+        {model: 'qwen3:latest', settings: {providers: {openai: {apiKeyEnv: 'CLI_OPENAI_KEY'}}}},
         {providers: {openai: {apiKeyEnv: 'WORKSPACE_OPENAI_KEY'}}},
       ).settings,
     ).to.deep.equal({
-      model: 'llama3.1',
+      model: 'qwen3:latest',
       provider: 'ollama',
       providers: {
         openai: {apiKeyEnv: 'CLI_OPENAI_KEY'},
@@ -213,9 +213,13 @@ describe('runExecCommand', () => {
     expect(calls).to.deep.equal([
       {
         host: 'http://ollama.test',
-        options: {defaultModel: 'llama3.1'},
+        options: {},
       },
     ])
+  })
+
+  it('requires an Ollama model in synchronous option resolution', () => {
+    expect(() => resolveAgentOptions({provider: 'ollama'})).to.throw('No model specified for provider: ollama')
   })
 })
 

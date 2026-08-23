@@ -23,7 +23,6 @@ import {Message as CoreMessage, MessageType as CoreMessageType, UserMessage} fro
 import {
   Agent,
   createMcpToolManager,
-  DEFAULT_MODELS,
   getModel,
   getProvider,
   getRoles,
@@ -40,46 +39,12 @@ import {
   ToolProfile,
 } from '../../src/core/models/index.js'
 
+const TEST_OLLAMA_MODEL = 'test-ollama-model'
+
 describe('model helpers', () => {
   describe('Agent', () => {
-    it('resolves the default provider and model when options are omitted', async () => {
-      const calls: {messages: Message[]; model: string; provider: string}[] = []
-      const agent = new Agent({
-        deps: {
-          createModel: (provider, model): Model => ({
-            getModel() {
-              return model ?? DEFAULT_MODELS[provider ?? 'ollama']
-            },
-            getName() {
-              return OperatorType.Model
-            },
-            getProvider() {
-              return provider ?? 'ollama'
-            },
-            async invoke(messages) {
-              calls.push({
-                messages,
-                model: model ?? DEFAULT_MODELS[provider ?? 'ollama'],
-                provider: provider ?? 'ollama',
-              })
-              return new Message(MessageType.Assistant, {content: 'ok'})
-            },
-          }),
-        },
-      })
-
-      expect(agent).to.be.instanceOf(Agent)
-      const prompt = new Message(MessageType.User, {content: 'hello'})
-      const response = await agent.invoke([prompt])
-
-      expect(response).to.be.instanceOf(Message)
-      expect(response.content).to.equal('ok')
-      expect(response.role).to.equal(Role.Assistant)
-      expect(calls).to.have.length(1)
-      expect(calls[0]).to.include({model: DEFAULT_MODELS.ollama, provider: 'ollama'})
-      expect(calls[0].messages.map((message) => ({content: message.content, role: message.role}))).to.deep.equal([
-        {content: 'hello', role: Role.User},
-      ])
+    it('requires a model when using the default Ollama provider directly', () => {
+      expect(() => new Agent()).to.throw('No model specified for provider: ollama')
     })
 
     it('uses the explicitly requested provider and model', async () => {
@@ -118,7 +83,7 @@ describe('model helpers', () => {
         deps: {
           createModel: (): Model => ({
             getModel() {
-              return DEFAULT_MODELS.ollama
+              return TEST_OLLAMA_MODEL
             },
             getName() {
               return OperatorType.Model
@@ -152,7 +117,7 @@ describe('model helpers', () => {
         deps: {
           createModel: (): Model => ({
             getModel() {
-              return DEFAULT_MODELS.ollama
+              return TEST_OLLAMA_MODEL
             },
             getName() {
               return OperatorType.Model
@@ -211,7 +176,7 @@ describe('model helpers', () => {
         deps: {
           createModel: (): Model => ({
             getModel() {
-              return DEFAULT_MODELS.ollama
+              return TEST_OLLAMA_MODEL
             },
             getName() {
               return OperatorType.Model
@@ -243,7 +208,7 @@ describe('model helpers', () => {
         deps: {
           createModel: (): Model => ({
             getModel() {
-              return DEFAULT_MODELS.ollama
+              return TEST_OLLAMA_MODEL
             },
             getName() {
               return OperatorType.Model
@@ -274,7 +239,7 @@ describe('model helpers', () => {
       const systemMessage = new Message(MessageType.Session, {content: 'System context', role: Role.System})
       const appendedMessage = new Message(MessageType.Session, {content: 'Appended context', role: Role.System})
       const messages = [systemMessage]
-      const agent = new Agent({messages})
+      const agent = new Agent({messages, model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}})
 
       messages.push(appendedMessage)
 
@@ -293,7 +258,7 @@ describe('model helpers', () => {
         schema: z.string(),
       })
       const tools = [searchTool]
-      const agent = new Agent({tools})
+      const agent = new Agent({model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}, tools})
 
       tools.push(lookupTool)
 
@@ -409,7 +374,7 @@ describe('model helpers', () => {
         name: 'duplicate',
         schema: z.string(),
       })
-      const agent = new Agent({tools: [first]})
+      const agent = new Agent({model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}, tools: [first]})
 
       try {
         await agent.invoke([new Message(MessageType.User, {content: 'hello'})], {tools: [second]})
@@ -692,7 +657,7 @@ describe('model helpers', () => {
     })
 
     it('treats models as operators and returns the model name', () => {
-      const model = getModel('ollama')
+      const model = getModel('ollama', TEST_OLLAMA_MODEL)
       const operator: Operator<Message[], Message, OperatorOptions> = model
 
       expect(operator.getName()).to.equal(OperatorType.Model)
@@ -700,7 +665,7 @@ describe('model helpers', () => {
     })
 
     it('returns the agent operator name with optional suffixes', () => {
-      const agent = new Agent()
+      const agent = new Agent({model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}})
 
       expect(agent.getName()).to.equal(OperatorType.Agent)
       expect(agent.getName('Suffix')).to.equal(`${OperatorType.Agent}:Suffix`)
@@ -734,7 +699,7 @@ describe('model helpers', () => {
     })
 
     it('returns the State Session from getSession', () => {
-      const agent = new Agent()
+      const agent = new Agent({model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}})
       const firstSession = agent.getSession()
       const secondSession = agent.getSession()
 
@@ -746,7 +711,7 @@ describe('model helpers', () => {
 
     it('returns the provided State Session from getSession', () => {
       const session = new Session()
-      const agent = new Agent({state: new State(session)})
+      const agent = new Agent({model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}, state: new State(session)})
 
       expect(agent.getSession()).to.equal(session)
     })
@@ -1112,11 +1077,8 @@ describe('model helpers', () => {
   })
 
   describe('model metadata', () => {
-    it('returns the provider default model when no model is specified', () => {
-      const model = getModel('ollama')
-
-      expect(model.getProvider()).to.equal('ollama')
-      expect(model.getModel()).to.equal(DEFAULT_MODELS.ollama)
+    it('rejects Ollama model creation when no model is specified', () => {
+      expect(() => getModel('ollama')).to.throw('No model specified for provider: ollama')
     })
 
     it('returns the explicitly requested provider and model', () => {
@@ -1201,7 +1163,7 @@ function createStubModel(
 ): Model {
   return {
     getModel() {
-      return DEFAULT_MODELS.ollama
+      return TEST_OLLAMA_MODEL
     },
     getName() {
       return OperatorType.Model

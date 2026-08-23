@@ -93,7 +93,7 @@ describe('resume command', () => {
     const resumedIds: string[] = []
     const deps = {
       contextLoader: async () => [],
-      ollamaModelSelector: async () => 'llama3.1:latest',
+      ollamaModelSelector: async () => 'qwen3:latest',
       repository,
       async sessionRunner(options: InteractiveSessionOptions) {
         resumedIds.push(options.session?.getMetadata().id ?? '')
