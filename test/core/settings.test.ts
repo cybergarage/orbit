@@ -129,6 +129,35 @@ describe('loadWorkspaceSettings', () => {
     })
   })
 
+  it('loads built-in tool profile settings', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-'))
+    await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
+    await fs.writeFile(
+      path.join(root, '.orbit', SETTINGS_FILE_NAME),
+      JSON.stringify({tools: {exclude: ['bash'], include: ['read'], profile: 'coding'}}),
+    )
+
+    expect(await loadWorkspaceSettings(root)).to.deep.equal({
+      tools: {exclude: ['bash'], include: ['read'], profile: 'coding'},
+    })
+  })
+
+  it('merges nested tool settings by field', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-'))
+    const child = path.join(root, 'child')
+    await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
+    await fs.mkdir(path.join(child, '.orbit'), {recursive: true})
+    await fs.writeFile(
+      path.join(root, '.orbit', SETTINGS_FILE_NAME),
+      JSON.stringify({tools: {include: ['read'], profile: 'none'}}),
+    )
+    await fs.writeFile(path.join(child, '.orbit', SETTINGS_FILE_NAME), JSON.stringify({tools: {exclude: ['bash']}}))
+
+    expect(await loadWorkspaceSettings(child)).to.deep.equal({
+      tools: {exclude: ['bash'], include: ['read'], profile: 'none'},
+    })
+  })
+
   it('merges nested settings from shallowest to deepest workspace', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-'))
     const child = path.join(root, 'child')
@@ -201,6 +230,17 @@ describe('loadWorkspaceSettings', () => {
     await fs.writeFile(path.join(root, '.orbit', SETTINGS_FILE_NAME), JSON.stringify({mcp: {servers: {bad: {args: ['ok']}}}}))
 
     await expectReject(loadWorkspaceSettings(root), 'mcp.servers.bad.command must be a string')
+  })
+
+  it('throws for invalid built-in tool settings', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-'))
+    await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
+    const settingsFile = path.join(root, '.orbit', SETTINGS_FILE_NAME)
+    await fs.writeFile(settingsFile, JSON.stringify({tools: {profile: 'unsafe'}}))
+    await expectReject(loadWorkspaceSettings(root), 'tools.profile must be coding or none')
+
+    await fs.writeFile(settingsFile, JSON.stringify({tools: {include: ['missing']}}))
+    await expectReject(loadWorkspaceSettings(root), 'tools.include must contain built-in tool names')
   })
 
   it('returns the same result from sync and async loaders', async () => {

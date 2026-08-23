@@ -72,7 +72,8 @@ export type {
 } from './mcp.js'
 export {Message, MessageType, UserMessage} from './message/index.js'
 export type {MessageOptions, MessagePayload} from './message/index.js'
-export {DEFAULT_MODELS, getModel} from './models/factory.js'
+export {DEFAULT_MODELS, getModel, getModelRegistry, ModelRegistry, registerModelProvider} from './models/factory.js'
+export type {ModelProviderRegistration} from './models/factory.js'
 export type {
   Model,
   ModelAssistantPayload,
@@ -148,8 +149,10 @@ export {
 export type {
   McpServerSettings,
   McpSettings,
+  ProviderConnectionSettings,
   ProviderSettings,
   ResolvedWorkspaceSettings,
+  ToolSettings,
   WorkspaceSettings,
   WorkspaceSettingsSource,
 } from './settings.js'
@@ -180,7 +183,50 @@ export type {
 } from './thread.js'
 export {GptTokenizer} from './tokenizer/index.js'
 export type {Tokenizer} from './tokenizer/index.js'
-export {tool, Tool} from './tools/index.js'
-export type {ToolConfig, ToolContext, ToolHandler, ToolInput, ToolOptions, ToolOutput} from './tools/index.js'
+export {
+  BuiltinToolName,
+  createBashTool,
+  createBuiltinTools,
+  createEditTool,
+  createGlobTool,
+  createGrepTool,
+  createListTool,
+  createReadTool,
+  createWriteTool,
+  getBuiltinToolNames,
+  tool,
+  Tool,
+  ToolProfile,
+  ToolRegistry,
+  ToolRuntime,
+  ToolSnapshot,
+} from './tools/index.js'
+export type {
+  BashToolInput,
+  BuiltinToolSelection,
+  EditToolInput,
+  GlobToolInput,
+  GrepToolInput,
+  JsonSchema,
+  ListToolInput,
+  ModelToolSpec,
+  ReadToolInput,
+  ToolConfig,
+  ToolContent,
+  ToolContext,
+  ToolDefinition,
+  ToolExecutionContext,
+  ToolExecutionResult,
+  ToolHandler,
+  ToolInput,
+  ToolInputCodec,
+  ToolOptions,
+  ToolOutput,
+  ToolProfileName,
+  ToolResult,
+  ToolScheduling,
+  ToolSource,
+  WriteToolInput,
+} from './tools/index.js'
 export {LocalWorkspaceLocator} from './workspace.js'
 export type {LocalWorkspaceLocatorOptions, WorkspaceLocator} from './workspace.js'

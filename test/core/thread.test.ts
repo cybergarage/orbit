@@ -146,7 +146,7 @@ describe('ThreadManager', () => {
         input: {query: 'orbit'},
         isError: false,
         name: 'search',
-        output: 'result:orbit',
+        output: {content: [{text: 'result:orbit', type: 'text'}]},
         toolCallId: 'call-1',
       })
     }

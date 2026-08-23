@@ -11,6 +11,7 @@ import type {WorkspaceSettings} from './settings.js'
 import {Agent, type AgentOptions, isProvider, Message, MessageType, type ProviderName, Role} from './models/index.js'
 import {SessionRepository as CoreSessionRepository, Session} from './session/index.js'
 import {State} from './state.js'
+import {ToolProfile} from './tools/index.js'
 
 export interface InteractiveSessionOptions {
   agentClass: InteractiveAgentClass
@@ -30,6 +31,7 @@ export interface InteractiveAgentClass {
 
 export interface InteractiveState {
   conversationMessages: Message[]
+  cwd?: string
   input: string
   isLoading: boolean
   logger?: Logger
@@ -64,7 +66,7 @@ export const slashCommandHelpMessage = [
 ].join('\n')
 
 export function createInitialInteractiveState(
-  options: Pick<InteractiveState, 'logger' | 'model' | 'provider' | 'session' | 'settings' | 'systemPrompt'>,
+  options: Pick<InteractiveState, 'cwd' | 'logger' | 'model' | 'provider' | 'session' | 'settings' | 'systemPrompt'>,
 ): InteractiveState {
   const conversationMessages = options.session?.getConversationMessages() ?? []
   return {
@@ -105,6 +107,8 @@ export async function submitInteractiveInput(
     : []
   const session = state.session ?? new Session({messages: state.conversationMessages})
   const agent = new AgentClass({
+    cwd: state.cwd,
+    defaultToolProfile: ToolProfile.Coding,
     logger: state.logger,
     messages: systemMessages,
     model: {
@@ -241,6 +245,7 @@ function parseProvider(value: string): ProviderName | undefined {
 
 function InteractiveApp({
   agentClass: AgentClass,
+  cwd,
   initialModel,
   initialProvider,
   logger,
@@ -251,6 +256,7 @@ function InteractiveApp({
   const {exit} = useApp()
   const [state, setState] = useState<InteractiveState>(() =>
     createInitialInteractiveState({
+      cwd,
       logger,
       model: initialModel,
       provider: initialProvider,
@@ -300,6 +306,8 @@ function InteractiveApp({
       })
 
       const agent = new AgentClass({
+        cwd: state.cwd,
+        defaultToolProfile: ToolProfile.Coding,
         logger: state.logger,
         messages: systemMessages,
         model: {

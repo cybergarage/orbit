@@ -1,10 +1,10 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {AgentTool} from '../agent.js'
 import type {DiagnosticContext, DiagnosticEventBus} from '../diagnostics/index.js'
 import type {Message} from '../message/index.js'
 import type {Operator, OperatorOptions} from '../processor/index.js'
+import type {ModelToolSpec, ToolResult} from '../tools/index.js'
 import type {ProviderName} from './provider.js'
 
 export interface ModelToolCall {
@@ -44,7 +44,7 @@ export interface ModelToolResultPayload {
   input: unknown
   isError?: boolean
   name: string
-  output: unknown
+  output: ToolResult
   toolCallId: string
 }
 
@@ -53,7 +53,7 @@ export interface ModelInvokeOptions extends OperatorOptions {
   diagnostics?: DiagnosticEventBus
   maxToolIterations?: number
   signal?: AbortSignal
-  tools?: AgentTool[]
+  tools?: ModelToolSpec[]
 }
 
 export interface Model extends Operator<Message[], Message, ModelInvokeOptions> {

@@ -27,6 +27,7 @@ import {Message, MessageType, Role} from './models/index.js'
 import {SessionRepository as Repository} from './session/index.js'
 import {loadWorkspaceSettingsWithSources} from './settings.js'
 import {serializeMessage, ThreadEventType, ThreadManager} from './thread.js'
+import {ToolProfile} from './tools/index.js'
 
 const guiSlashCommandHelpItems = [
   {command: '/help', description: 'Show GUI slash commands'},
@@ -148,6 +149,7 @@ export class OrbitApplicationService {
         ((agentOptions) =>
           new Agent({
             ...agentOptions,
+            defaultToolProfile: ToolProfile.Coding,
             diagnostics: this.diagnostics,
             logger: this.logger,
           })),

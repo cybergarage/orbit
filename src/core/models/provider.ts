@@ -3,9 +3,9 @@
 
 import type {WorkspaceSettings} from '../settings.js'
 
-const providers = ['anthropic', 'ollama', 'openai'] as const
+const providers = new Set<string>(['anthropic', 'ollama', 'openai'])
 
-export type ProviderName = (typeof providers)[number]
+export type ProviderName = string
 
 export interface Provider {
   getAPIKey(): string | undefined
@@ -22,7 +22,7 @@ export function getProvider(): ProviderName[] {
 }
 
 export function isProviderName(value: unknown): value is ProviderName {
-  return typeof value === 'string' && providers.includes(value as ProviderName)
+  return typeof value === 'string' && providers.has(value)
 }
 
 export function isProvider(value: unknown): value is ProviderName {
@@ -31,6 +31,11 @@ export function isProvider(value: unknown): value is ProviderName {
 
 export function createProvider(name: ProviderName, settings?: WorkspaceSettings): Provider {
   return new SettingsProvider(name, settings)
+}
+
+export function registerProviderName(name: ProviderName): void {
+  if (!/^[A-Za-z0-9_-]+$/u.test(name)) throw new Error(`Invalid provider name: ${name}`)
+  providers.add(name)
 }
 
 class SettingsProvider implements Provider {
@@ -54,8 +59,7 @@ class SettingsProvider implements Provider {
   }
 
   getHost(): string | undefined {
-    if (this.name !== 'ollama') return undefined
-    return this.settings?.providers?.ollama?.host
+    return this.settings?.providers?.[this.name]?.host
   }
 
   getName(): ProviderName {
@@ -63,14 +67,10 @@ class SettingsProvider implements Provider {
   }
 
   private getAPIKeyEnv(): string | undefined {
-    if (this.name === 'anthropic') return this.settings?.providers?.anthropic?.apiKeyEnv
-    if (this.name === 'openai') return this.settings?.providers?.openai?.apiKeyEnv
-    return undefined
+    return this.settings?.providers?.[this.name]?.apiKeyEnv
   }
 
   private getConfiguredAPIKey(): string | undefined {
-    if (this.name === 'anthropic') return this.settings?.providers?.anthropic?.apiKey
-    if (this.name === 'openai') return this.settings?.providers?.openai?.apiKey
-    return undefined
+    return this.settings?.providers?.[this.name]?.apiKey
   }
 }

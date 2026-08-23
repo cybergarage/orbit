@@ -1,9 +1,10 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {z} from 'zod'
+import {z} from 'zod'
 
 import type {Operator, OperatorOptions} from '../processor/index.js'
+import type {JsonSchema, ToolScheduling} from './definition.js'
 
 import {formatOperatorName, OperatorType} from '../processor/index.js'
 
@@ -13,6 +14,7 @@ export type ToolContext = Record<string, unknown>
 
 export interface ToolOptions extends OperatorOptions {
   context?: ToolContext
+  signal?: AbortSignal
 }
 
 export type ToolHandler<Input, Output, Options extends ToolOptions = ToolOptions> = (
@@ -22,7 +24,9 @@ export type ToolHandler<Input, Output, Options extends ToolOptions = ToolOptions
 
 export interface ToolConfig<Input> {
   description: string
+  inputSchema?: JsonSchema
   name: string
+  scheduling?: ToolScheduling
   schema: z.ZodType<Input>
 }
 
@@ -32,7 +36,9 @@ export class Tool<
   Options extends ToolOptions = ToolOptions,
 > implements Operator<Input, Output, Options> {
   public readonly description: string
+  public readonly inputSchema: JsonSchema
   public readonly name: string
+  public readonly scheduling: ToolScheduling
   public readonly schema: z.ZodType<Input>
 
   constructor(
@@ -40,7 +46,9 @@ export class Tool<
     config: ToolConfig<Input>,
   ) {
     this.description = config.description
+    this.inputSchema = config.inputSchema ?? (z.toJSONSchema(config.schema, {io: 'input'}) as JsonSchema)
     this.name = config.name
+    this.scheduling = config.scheduling ?? 'serial'
     this.schema = config.schema
   }
 

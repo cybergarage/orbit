@@ -8,21 +8,16 @@ import process from 'node:process'
 
 import {DOT_APP_DIR_NAME, SETTINGS_FILE_NAME} from './app.js'
 import {getProvider, isProvider, type ProviderName} from './models/provider.js'
+import {type BuiltinToolSelection, isBuiltinToolName, isToolProfile} from './tools/index.js'
 import {LocalWorkspaceLocator} from './workspace.js'
 
-export interface ProviderSettings {
-  anthropic?: {
-    apiKey?: string
-    apiKeyEnv?: string
-  }
-  ollama?: {
-    host?: string
-  }
-  openai?: {
-    apiKey?: string
-    apiKeyEnv?: string
-  }
+export interface ProviderConnectionSettings {
+  apiKey?: string
+  apiKeyEnv?: string
+  host?: string
 }
+
+export type ProviderSettings = Record<string, ProviderConnectionSettings | undefined>
 
 export interface McpServerSettings {
   args?: string[]
@@ -34,11 +29,14 @@ export interface McpSettings {
   servers?: Record<string, McpServerSettings>
 }
 
+export type ToolSettings = BuiltinToolSelection
+
 export interface WorkspaceSettings {
   mcp?: McpSettings
   model?: string
   provider?: ProviderName
   providers?: ProviderSettings
+  tools?: ToolSettings
 }
 
 export interface WorkspaceSettingsSource {
@@ -168,7 +166,7 @@ function validateWorkspaceSettings(parsed: unknown, file: string): WorkspaceSett
     throw new Error(`Invalid workspace settings in ${file}: settings must be an object.`)
   }
 
-  const {mcp, model, provider, providers} = parsed
+  const {mcp, model, provider, providers, tools} = parsed
   const providerOptions = getProvider().join(', ')
 
   if (provider !== undefined && !isProvider(provider)) {
@@ -184,6 +182,7 @@ function validateWorkspaceSettings(parsed: unknown, file: string): WorkspaceSett
     ...(isProvider(provider) ? {provider} : {}),
     ...(providers === undefined ? {} : {providers: validateProviderSettings(providers, file)}),
     ...(mcp === undefined ? {} : {mcp: validateMcpSettings(mcp, file)}),
+    ...(tools === undefined ? {} : {tools: validateToolSettings(tools, file)}),
   }
 }
 
@@ -202,20 +201,18 @@ function validateProviderSettings(value: unknown, file: string): ProviderSetting
       throw new Error(`Invalid workspace settings in ${file}: providers.${provider} must be an object.`)
     }
 
-    if (provider === 'openai') settings.openai = validateApiKeyEnvSettings(providerSettings, file, provider)
-    if (provider === 'anthropic') settings.anthropic = validateApiKeyEnvSettings(providerSettings, file, provider)
-    if (provider === 'ollama') settings.ollama = validateOllamaSettings(providerSettings, file)
+    settings[provider] = validateProviderConnectionSettings(providerSettings, file, provider)
   }
 
   return settings
 }
 
-function validateApiKeyEnvSettings(
+function validateProviderConnectionSettings(
   value: Record<string, unknown>,
   file: string,
-  provider: 'anthropic' | 'openai',
-): {apiKey?: string; apiKeyEnv?: string} {
-  const {apiKey, apiKeyEnv} = value
+  provider: string,
+): ProviderConnectionSettings {
+  const {apiKey, apiKeyEnv, host} = value
   if (apiKey !== undefined && typeof apiKey !== 'string') {
     throw new Error(`Invalid workspace settings in ${file}: providers.${provider}.apiKey must be a string.`)
   }
@@ -224,19 +221,13 @@ function validateApiKeyEnvSettings(
     throw new Error(`Invalid workspace settings in ${file}: providers.${provider}.apiKeyEnv must be a string.`)
   }
 
+  if (host !== undefined && typeof host !== 'string') {
+    throw new Error(`Invalid workspace settings in ${file}: providers.${provider}.host must be a string.`)
+  }
+
   return {
     ...(typeof apiKey === 'string' ? {apiKey} : {}),
     ...(typeof apiKeyEnv === 'string' ? {apiKeyEnv} : {}),
-  }
-}
-
-function validateOllamaSettings(value: Record<string, unknown>, file: string): {host?: string} {
-  const {host} = value
-  if (host !== undefined && typeof host !== 'string') {
-    throw new Error(`Invalid workspace settings in ${file}: providers.ollama.host must be a string.`)
-  }
-
-  return {
     ...(typeof host === 'string' ? {host} : {}),
   }
 }
@@ -287,22 +278,45 @@ function validateMcpServers(value: Record<string, unknown>, file: string): Recor
   return servers
 }
 
+function validateToolSettings(value: unknown, file: string): ToolSettings {
+  if (!isRecord(value)) throw new Error(`Invalid workspace settings in ${file}: tools must be an object.`)
+  const {exclude, include, profile} = value
+  if (profile !== undefined && !isToolProfile(profile)) {
+    throw new Error(`Invalid workspace settings in ${file}: tools.profile must be coding or none.`)
+  }
+
+  return {
+    ...(profile === undefined ? {} : {profile}),
+    ...(include === undefined ? {} : {include: validateBuiltinToolNames(include, file, 'include')}),
+    ...(exclude === undefined ? {} : {exclude: validateBuiltinToolNames(exclude, file, 'exclude')}),
+  }
+}
+
+function validateBuiltinToolNames(value: unknown, file: string, field: 'exclude' | 'include') {
+  if (!Array.isArray(value) || value.some((name) => !isBuiltinToolName(name))) {
+    throw new Error(`Invalid workspace settings in ${file}: tools.${field} must contain built-in tool names.`)
+  }
+
+  return value
+}
+
 function mergeWorkspaceSettingsInto(target: WorkspaceSettings, source: WorkspaceSettings): void {
   Object.assign(target, {
     ...(source.model === undefined ? {} : {model: source.model}),
     ...(source.provider === undefined ? {} : {provider: source.provider}),
     ...(source.providers === undefined ? {} : {providers: mergeProviderSettings(target.providers, source.providers)}),
     ...(source.mcp === undefined ? {} : {mcp: mergeMcpSettings(target.mcp, source.mcp)}),
+    ...(source.tools === undefined ? {} : {tools: {...target.tools, ...source.tools}}),
   })
 }
 
 function mergeProviderSettings(current: ProviderSettings | undefined, next: ProviderSettings): ProviderSettings {
-  return {
-    ...current,
-    ...(next.anthropic === undefined ? {} : {anthropic: {...current?.anthropic, ...next.anthropic}}),
-    ...(next.ollama === undefined ? {} : {ollama: {...current?.ollama, ...next.ollama}}),
-    ...(next.openai === undefined ? {} : {openai: {...current?.openai, ...next.openai}}),
+  const result: ProviderSettings = {...current}
+  for (const [name, settings] of Object.entries(next)) {
+    if (settings !== undefined) result[name] = {...current?.[name], ...settings}
   }
+
+  return result
 }
 
 function mergeMcpSettings(current: McpSettings | undefined, next: McpSettings): McpSettings {

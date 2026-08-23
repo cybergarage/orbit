@@ -26,7 +26,7 @@ import {
   SessionRepository,
 } from '../../src/core/models/index.js'
 
-function createMockAgent(invokeImpl: Agent['invoke'], options: AgentOptions = {}): Agent {
+function createMockAgent(invokeImpl: Model['invoke'], options: AgentOptions = {}): Agent {
   return new Agent({
     ...options,
     deps: {
@@ -48,7 +48,7 @@ function createMockAgent(invokeImpl: Agent['invoke'], options: AgentOptions = {}
 
 class MockAgent extends Agent {
   constructor(
-    private readonly invokeImpl: Agent['invoke'],
+    private readonly invokeImpl: Model['invoke'],
     options: AgentOptions = {},
   ) {
     super({
@@ -111,7 +111,7 @@ describe('interactive helpers', () => {
     )
     const AgentCtor = class extends MockAgent {
       constructor() {
-        super(agent.invoke.bind(agent))
+        super((messages) => agent.invoke(messages))
       }
     }
 

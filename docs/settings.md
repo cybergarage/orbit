@@ -19,6 +19,11 @@ Orbit discovers workspaces by walking from the current directory to the filesyst
 {
   "provider": "openai",
   "model": "gpt-4o",
+  "tools": {
+    "profile": "coding",
+    "exclude": [],
+    "include": []
+  },
   "providers": {
     "openai": {
       "apiKey": "sk-..."
@@ -50,6 +55,7 @@ Orbit discovers workspaces by walking from the current directory to the filesyst
 - `model`: Model name.
 - `providers`: Provider-specific connection settings.
 - `mcp`: MCP server settings.
+- `tools`: Built-in coding-tool profile and per-tool additions or exclusions.
 
 ## Provider settings
 
@@ -84,6 +90,11 @@ Ollama supports a host setting:
 }
 ```
 
+The reusable library can register another provider through
+`registerModelProvider()`. Register it before loading settings that use its
+name. Custom providers can use the same `apiKey`, `apiKeyEnv`, and `host`
+connection fields; their adapter defines the provider-specific wire protocol.
+
 ## MCP settings
 
 MCP servers are configured under `mcp.servers`. Each server name is user-defined.
@@ -108,9 +119,32 @@ MCP servers are configured under `mcp.servers`. Each server name is user-defined
 - `args`: Optional array of string arguments.
 - `env`: Optional object of string environment variables.
 
+## Tool settings
+
+Built-in tools are configured under `tools`:
+
+```json
+{
+  "tools": {
+    "profile": "coding",
+    "exclude": ["bash"],
+    "include": ["read"]
+  }
+}
+```
+
+- `profile`: `coding` enables all built-ins; `none` starts with none.
+- `include`: Optional built-in names to add after selecting the profile.
+- `exclude`: Optional built-in names to remove after additions.
+
+Valid names are `bash`, `edit`, `glob`, `grep`, `list`, `read`, and `write`.
+CLI, interactive, and GUI entry points use `coding` when no profile is set. The
+reusable `Agent` library retains an empty default unless its caller selects a
+profile. See [Coding Tools](tools.md) for schemas and full-access behavior.
+
 ## Merge behavior
 
-Settings are loaded from the shallowest parent workspace to the deepest workspace. A deeper workspace overrides only the properties it defines; properties it omits remain inherited from shallower workspaces. Nested provider and MCP server settings are merged by provider or server name.
+Settings are loaded from the shallowest parent workspace to the deepest workspace. A deeper workspace overrides only the properties it defines; properties it omits remain inherited from shallower workspaces. Nested provider and MCP server settings are merged by provider or server name. Tool settings are merged by `profile`, `include`, and `exclude` field.
 
 For example, given these settings in `~/.orbit/settings.json`:
 

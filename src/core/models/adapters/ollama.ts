@@ -13,7 +13,7 @@ import type {Provider, ProviderName} from '../provider.js'
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
-import {getToolCalls, getToolResult, stringifyToolOutput, toolInputSchema} from './tools.js'
+import {getToolCalls, getToolResult, stringifyToolOutput} from './tools.js'
 
 export class OllamaAgent implements Model {
   private readonly abort = () => this.client.abort()
@@ -133,7 +133,7 @@ export function toOllamaTool(tool: NonNullable<ModelInvokeOptions['tools']>[numb
     function: {
       description: tool.description,
       name: tool.name,
-      parameters: toolInputSchema(tool) as OllamaTool['function']['parameters'],
+      parameters: tool.inputSchema as OllamaTool['function']['parameters'],
       type: 'object',
     },
     type: 'function',

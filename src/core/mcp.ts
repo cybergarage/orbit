@@ -176,6 +176,7 @@ function wrapMcpTool(serverName: string, client: McpClient, remoteTool: McpToolD
     },
     name: toolName,
     schema: z.unknown(),
+    source: {kind: 'mcp', server: serverName},
   }
 }
 

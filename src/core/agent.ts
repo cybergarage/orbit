@@ -1,15 +1,13 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {z} from 'zod'
-
 import path from 'node:path'
 import {performance} from 'node:perf_hooks'
 import process from 'node:process'
 import {v7 as uuidv7} from 'uuid'
 
 import type {AgentEvent, AgentEventHandler} from './agent-events.js'
-import type {DiagnosticEventBus} from './diagnostics/index.js'
+import type {DiagnosticContext, DiagnosticEventBus} from './diagnostics/index.js'
 import type {Logger} from './logger/index.js'
 import type {McpToolManager, McpToolManagerFactoryOptions} from './mcp.js'
 import type {
@@ -19,11 +17,18 @@ import type {
   ModelToolCallPayload,
   ModelToolResultPayload,
   ProviderName,
-  ToolOptions,
 } from './models/index.js'
-import type {Operator} from './processor/index.js'
+import type {Operator, OperatorOptions} from './processor/index.js'
 import type {Session, SessionContextBuilder as SessionContextBuilderType, SessionError} from './session/index.js'
 import type {WorkspaceSettings} from './settings.js'
+import type {
+  InvokableTool,
+  ToolDefinition,
+  ToolExecutionContext,
+  ToolExecutionResult,
+  ToolProfileName,
+  ToolResult,
+} from './tools/index.js'
 
 import {AgentEventType} from './agent-events.js'
 import {ModelAbortError, OrbitError} from './errors/index.js'
@@ -34,23 +39,25 @@ import {formatOperatorName, OperatorType} from './processor/index.js'
 import {SessionContextBuilder, TurnPhase} from './session/index.js'
 import {loadWorkspaceSettingsSync, mergeWorkspaceSettings} from './settings.js'
 import {State} from './state.js'
+import {adaptInvokableTool, createBuiltinTools, ToolProfile, ToolRegistry, ToolRuntime} from './tools/index.js'
 
 const DEFAULT_MAX_TOOL_ITERATIONS = 5
 
-export interface AgentTool extends Operator<never, unknown, ToolOptions> {
-  readonly description: string
-  readonly inputSchema?: Record<string, unknown>
-  readonly name: string
-  readonly schema: z.ZodType<unknown>
-}
+export type AgentTool = InvokableTool
 
-export interface AgentInvokeOptions extends ModelInvokeOptions {
+export interface AgentInvokeOptions extends OperatorOptions {
+  diagnosticContext?: DiagnosticContext
+  diagnostics?: DiagnosticEventBus
+  maxToolIterations?: number
   onEvent?: AgentEventHandler
+  signal?: AbortSignal
+  tools?: AgentTool[]
   turnId?: string
 }
 
 export interface AgentOptions {
   cwd?: string
+  defaultToolProfile?: ToolProfileName
   deps?: {
     createMcpToolManager?: (settings: WorkspaceSettings, options: McpToolManagerFactoryOptions) => McpToolManager
     createModel?: typeof getModel
@@ -65,6 +72,8 @@ export interface AgentOptions {
   }
   settings?: WorkspaceSettings
   state?: State
+  toolDefinitions?: ToolDefinition[]
+  toolProfile?: ToolProfileName
   tools?: AgentTool[]
 }
 
@@ -79,7 +88,10 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   private readonly mcpToolManager: McpToolManager
   private readonly model: Model
   private readonly sessionContextBuilder: SessionContextBuilderType
+  private readonly toolDefinitions: ToolDefinition[]
 
+  // Model, session, diagnostics, and tool profile dependencies are resolved at one construction boundary.
+  // eslint-disable-next-line complexity
   constructor(options: AgentOptions = {}) {
     const createModel = options.deps?.createModel ?? getModel
     this.settings = mergeWorkspaceSettings(loadWorkspaceSettingsSync(options.cwd), options.settings)
@@ -94,6 +106,13 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     this.messages = [...(options.messages ?? [])]
     this.logger = (options.logger ?? createNoopLogger()).child({component: 'agent'})
     this.state = options.state ?? new State()
+    this.toolDefinitions = [
+      ...createBuiltinTools({
+        ...this.settings.tools,
+        profile: options.toolProfile ?? this.settings.tools?.profile ?? options.defaultToolProfile ?? ToolProfile.None,
+      }),
+      ...(options.toolDefinitions ?? []),
+    ]
     this.tools = [...(options.tools ?? [])]
     this.mcpToolManager = (options.deps?.createMcpToolManager ?? createMcpToolManager)(this.settings, {
       cwd: options.cwd,
@@ -180,9 +199,19 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       const mcpTools = await this.mcpToolManager.getTools()
       throwIfAborted(options?.signal)
       const tools = [...this.tools, ...mcpTools, ...(options?.tools ?? [])]
+      const registry = new ToolRegistry()
+      for (const definition of this.toolDefinitions) registry.register(definition)
+      for (const [index, availableTool] of tools.entries()) {
+        registry.register(
+          adaptInvokableTool(availableTool, availableTool.source ?? {id: `agent:${index}`, kind: 'custom'}),
+        )
+      }
+
+      const toolSnapshot = registry.snapshot()
+      const toolRuntime = new ToolRuntime(toolSnapshot)
       const diagnostics = options?.diagnostics ?? this.diagnostics
       const modelOptions: Partial<ModelInvokeOptions> = {
-        ...options,
+        ...toModelInvokeOptions(options),
         ...(diagnostics === undefined
           ? {}
           : {
@@ -194,12 +223,12 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
               },
               diagnostics,
             }),
-        ...(tools.length > 0 ? {tools} : {}),
+        ...(toolSnapshot.specs().length > 0 ? {tools: toolSnapshot.specs()} : {}),
       }
       this.logger.debug(
         {
           mcpToolCount: mcpTools.length,
-          toolCount: tools.length,
+          toolCount: toolSnapshot.specs().length,
         },
         'agent tools loaded',
       )
@@ -244,15 +273,20 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         }
 
         // Tool execution for one model turn can run in parallel before the next model call.
+        const signal = options?.signal ?? new AbortController().signal
         // eslint-disable-next-line no-await-in-loop
-        const toolResults = await Promise.all(
-          toolCalls.map(async (toolCall) => ({
-            message: await this.invokeTool(toolCall, tools, iteration, options),
-            toolCall,
-          })),
+        const toolResults = await toolRuntime.executeAll(
+          toolCalls,
+          (toolCall): ToolExecutionContext => ({
+            callId: toolCall.id,
+            cwd: this.cwd,
+            emitUpdate() {},
+            signal,
+          }),
+          (toolCall, execute) => this.observeToolExecution(toolCall, execute, iteration, options),
         )
         const storedToolMessages = session.appendMessages(
-          toolResults.map((result) => result.message),
+          toolResults.map((result) => createToolResultMessage(result.toolCall, result.result)),
           {iteration, turnId},
         )
         for (const [index, message] of storedToolMessages.entries()) {
@@ -287,13 +321,12 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   }
 
   // Tool execution, error projection, and diagnostics share one lifecycle boundary.
-  // eslint-disable-next-line complexity
-  private async invokeTool(
+  private async observeToolExecution(
     toolCall: ModelToolCall,
-    tools: AgentTool[],
+    execute: () => Promise<ToolExecutionResult>,
     iteration: number,
     options?: Partial<AgentInvokeOptions>,
-  ): Promise<Message> {
+  ): Promise<ToolExecutionResult> {
     throwIfAborted(options?.signal)
     emitAgentEvent(options?.onEvent, {iteration, toolCall, type: AgentEventType.ToolStarted})
     const diagnostics = options?.diagnostics ?? this.diagnostics
@@ -310,42 +343,17 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       type: 'tool.started',
     })
     const startedAt = performance.now()
-    const tool = tools.find((candidate) => candidate.name === toolCall.name)
-
-    if (tool === undefined) {
-      const output = `Unknown tool: ${toolCall.name}`
-      diagnostics?.emit({
-        ...diagnosticContext,
-        data: {durationMs: performance.now() - startedAt, isError: true, name: toolCall.name, toolCallId: toolCall.id},
-        fullData: {input: toolCall.input, output},
-        level: 'warn',
-        type: 'tool.completed',
-      })
-      return createToolResultMessage(toolCall, output, true)
-    }
-
-    try {
-      const output = await tool.invoke(toolCall.input as never, options)
-      throwIfAborted(options?.signal)
-      diagnostics?.emit({
-        ...diagnosticContext,
-        data: {durationMs: performance.now() - startedAt, isError: false, name: toolCall.name, toolCallId: toolCall.id},
-        fullData: {input: toolCall.input, output},
-        type: 'tool.completed',
-      })
-      return createToolResultMessage(toolCall, output)
-    } catch (error) {
-      throwIfAborted(options?.signal)
-      const output = error instanceof Error ? error.message : String(error)
-      diagnostics?.emit({
-        ...diagnosticContext,
-        data: {durationMs: performance.now() - startedAt, isError: true, name: toolCall.name, toolCallId: toolCall.id},
-        fullData: {input: toolCall.input, output},
-        level: 'error',
-        type: 'tool.completed',
-      })
-      return createToolResultMessage(toolCall, output, true)
-    }
+    const execution = await execute()
+    throwIfAborted(options?.signal)
+    const isError = execution.result.isError === true
+    diagnostics?.emit({
+      ...diagnosticContext,
+      data: {durationMs: performance.now() - startedAt, isError, name: toolCall.name, toolCallId: toolCall.id},
+      fullData: {input: toolCall.input, output: execution.result},
+      ...(isError ? {level: 'error' as const} : {}),
+      type: 'tool.completed',
+    })
+    return execution
   }
 }
 
@@ -359,10 +367,10 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
   }
 }
 
-function createToolResultMessage(toolCall: ModelToolCall, output: unknown, isError = false): Message {
+function createToolResultMessage(toolCall: ModelToolCall, output: ToolResult): Message {
   const payload: ModelToolResultPayload = {
     input: toolCall.input,
-    isError,
+    isError: output.isError === true,
     name: toolCall.name,
     output,
     toolCallId: toolCall.id,
@@ -400,4 +408,12 @@ function serializeSessionError(error: unknown): SessionError {
 
   if (error instanceof Error) return {message: error.message, name: error.name}
   return {message: String(error), name: 'Error'}
+}
+
+function toModelInvokeOptions(options: Partial<AgentInvokeOptions> | undefined): Partial<ModelInvokeOptions> {
+  const result: Record<string, unknown> = {...options}
+  delete result.onEvent
+  delete result.tools
+  delete result.turnId
+  return result as Partial<ModelInvokeOptions>
 }

@@ -1,11 +1,11 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {z} from 'zod'
-
-import type {AgentTool} from '../../agent.js'
 import type {Message} from '../../message/index.js'
+import type {ToolResult} from '../../tools/index.js'
 import type {ModelToolCallPayload, ModelToolResultPayload} from '../model.js'
+
+import {toolResultText} from '../../tools/index.js'
 
 export type JSONSchema = Record<string, unknown>
 
@@ -18,12 +18,8 @@ export function getToolResult(message: Message): ModelToolResultPayload | undefi
 }
 
 export function stringifyToolOutput(output: unknown): string {
+  if (isToolResult(output)) return toolResultText(output)
   return typeof output === 'string' ? output : (JSON.stringify(output) ?? String(output))
-}
-
-export function toolInputSchema(tool: AgentTool): JSONSchema {
-  if (tool.inputSchema !== undefined) return tool.inputSchema
-  return z.toJSONSchema(tool.schema, {io: 'input'}) as JSONSchema
 }
 
 function isModelToolCallPayload(payload: unknown): payload is ModelToolCallPayload {
@@ -41,4 +37,8 @@ function isModelToolResultPayload(payload: unknown): payload is ModelToolResultP
 
   const result = payload as Partial<ModelToolResultPayload>
   return typeof result.toolCallId === 'string' && typeof result.name === 'string'
+}
+
+function isToolResult(value: unknown): value is ToolResult {
+  return typeof value === 'object' && value !== null && 'content' in value && Array.isArray(value.content)
 }

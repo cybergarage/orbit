@@ -20,7 +20,7 @@ import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
 import {splitSystemPrompt} from '../prompt.js'
 import {Role} from '../role.js'
-import {getToolCalls, getToolResult, stringifyToolOutput, toolInputSchema} from './tools.js'
+import {getToolCalls, getToolResult, stringifyToolOutput} from './tools.js'
 
 export class AnthropicAgent implements Model {
   private readonly client: Anthropic
@@ -177,7 +177,7 @@ export function toAnthropicTool(tool: NonNullable<ModelInvokeOptions['tools']>[n
     description: tool.description,
     // Anthropic's SDK expects snake_case for this field.
     // eslint-disable-next-line camelcase
-    input_schema: toolInputSchema(tool) as AnthropicTool.InputSchema,
+    input_schema: tool.inputSchema as AnthropicTool.InputSchema,
     name: tool.name,
   }
 }

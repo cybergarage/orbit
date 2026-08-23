@@ -104,6 +104,7 @@ commits.
 - `src/apps/cli-flags.ts`: shared CLI flag handling
 - `src/core/`: reusable runtime and public library implementation
 - `src/core/models/adapters/`: provider-specific model adapters
+- `src/core/tools/`: tool contracts, registry, runtime, and built-in coding tools
 - `src/core/thread.ts`: event-driven thread API for GUI integrations
 - `test/`: Mocha and Chai tests mirroring the source areas
 - `docs/`: user and developer documentation
@@ -113,6 +114,33 @@ commits.
 Keep reusable behavior in `src/core/` and CLI-specific behavior in
 `src/apps/cli/`. Relative TypeScript imports must use the emitted `.js`
 extension.
+
+Model adapters receive `ModelToolSpec` values and never executable tool
+handlers. `ToolRegistry` combines built-in, custom, turn-scoped, and MCP
+definitions; `ToolRuntime` validates and schedules calls. Add reusable tools
+under `src/core/tools/` and keep provider-specific serialization in the model
+adapter. See [Coding Tools](tools.md) for the public behavior.
+
+Model providers are registered through `ModelRegistry` rather than selected by
+a factory switch. A provider registration supplies its name, default model, and
+model constructor:
+
+```ts
+import {registerModelProvider} from 'orbit'
+
+registerModelProvider({
+  name: 'custom',
+  defaultModel: 'custom-default',
+  create(model, provider) {
+    return new CustomModel(model, provider)
+  },
+})
+```
+
+Register an external provider before loading workspace settings that select its
+name. Provider-specific request serialization remains inside its `Model`
+implementation. Generic `apiKey`, `apiKeyEnv`, and `host` connection fields are
+available through the supplied `Provider`.
 
 ## Tests and validation
 

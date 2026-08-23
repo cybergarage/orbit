@@ -10,7 +10,29 @@ architecture and migration plan for coding-agent workflows.
 
 This is a point-in-time engineering investigation. Findings about Codex, Pi,
 and Orbit describe verified source behavior. The target architecture, tool
-contracts, and migration phases are proposals and have not been implemented.
+contracts, and migration phases were proposals when first recorded; the status
+below records subsequent implementation.
+
+## Implementation status
+
+The implementation following this investigation completed the main Phase 1
+through Phase 5 boundaries on 2026-08-23:
+
+- provider-neutral model tool specifications and normalized tool results;
+- source-aware registration, duplicate rejection, immutable snapshots, and
+  serial/parallel runtime scheduling;
+- compatibility adapters for existing custom tools and MCP tools;
+- the seven-tool `coding` profile, product defaults, and workspace selection;
+- full-access local file, search, edit, write, and Bash implementations;
+- an extensible `ModelRegistry` replacing the hard-coded model factory switch;
+- maintained user documentation and deterministic tests.
+
+The following items remain deferred as originally identified: interactive
+terminal continuation, sandboxing and approvals, HTTP MCP transports, agent-
+visible partial tool-update events, and normalized streaming model events. The
+maintained [Coding Tools](../tools.md), [Settings](../settings.md), and
+[Development](../development.md) documents are authoritative for implemented
+behavior.
 
 ## Executive summary
 

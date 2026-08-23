@@ -59,13 +59,21 @@ export type {
   SessionRepositoryOptions,
   SessionSummary,
 } from '../session/index.js'
-export type {McpServerSettings, McpSettings, ProviderSettings, WorkspaceSettings} from '../settings.js'
+export type {
+  McpServerSettings,
+  McpSettings,
+  ProviderConnectionSettings,
+  ProviderSettings,
+  ToolSettings,
+  WorkspaceSettings,
+} from '../settings.js'
 export {Skill} from '../skills/index.js'
 export type {SkillConfig, SkillMetadata, SkillSource, SkillSourceInfo} from '../skills/index.js'
 export {State} from '../state.js'
-export {tool, Tool} from '../tools/index.js'
+export {tool, Tool, ToolProfile} from '../tools/index.js'
 export type {ToolConfig, ToolContext, ToolHandler, ToolInput, ToolOptions, ToolOutput} from '../tools/index.js'
-export {DEFAULT_MODELS, getModel} from './factory.js'
+export {DEFAULT_MODELS, getModel, getModelRegistry, ModelRegistry, registerModelProvider} from './factory.js'
+export type {ModelProviderRegistration} from './factory.js'
 export type {
   Model,
   ModelAssistantPayload,

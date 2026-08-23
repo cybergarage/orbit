@@ -29,6 +29,7 @@ import {
   getRoles,
   Message,
   MessageType,
+  ModelRegistry,
   OperatorType,
   PromptTemplate,
   Session,
@@ -36,6 +37,7 @@ import {
   splitSystemPrompt,
   State,
   tool,
+  ToolProfile,
 } from '../../src/core/models/index.js'
 
 describe('model helpers', () => {
@@ -317,7 +319,53 @@ describe('model helpers', () => {
 
       await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
 
-      expect(calls[0].options?.tools).to.deep.equal([searchTool])
+      expect(calls[0].options?.tools).to.deep.equal([
+        {description: searchTool.description, inputSchema: searchTool.inputSchema, name: searchTool.name},
+      ])
+    })
+
+    it('loads the coding profile as model specifications', async () => {
+      const calls: {options?: Partial<ModelInvokeOptions>}[] = []
+      const agent = new Agent({
+        deps: {
+          createModel: (): Model => createStubModel(async (_messages, options) => {
+            calls.push({options})
+            return new Message(MessageType.Assistant, {content: 'ok'})
+          }),
+        },
+        toolProfile: ToolProfile.Coding,
+      })
+
+      await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
+
+      expect(calls[0].options?.tools?.map((availableTool) => availableTool.name)).to.deep.equal([
+        'bash',
+        'edit',
+        'glob',
+        'grep',
+        'list',
+        'read',
+        'write',
+      ])
+      expect(calls[0].options?.tools?.every((availableTool) => !('execute' in availableTool))).to.equal(true)
+    })
+
+    it('lets workspace settings override the product default tool profile', async () => {
+      const calls: {options?: Partial<ModelInvokeOptions>}[] = []
+      const agent = new Agent({
+        defaultToolProfile: ToolProfile.Coding,
+        deps: {
+          createModel: (): Model => createStubModel(async (_messages, options) => {
+            calls.push({options})
+            return new Message(MessageType.Assistant, {content: 'ok'})
+          }),
+        },
+        settings: {tools: {include: ['read'], profile: ToolProfile.None}},
+      })
+
+      await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
+
+      expect(calls[0].options?.tools?.map((availableTool) => availableTool.name)).to.deep.equal(['read'])
     })
 
     it('merges invocation tools with constructor tools', async () => {
@@ -344,7 +392,32 @@ describe('model helpers', () => {
 
       await agent.invoke([new Message(MessageType.User, {content: 'hello'})], {tools: [lookupTool]})
 
-      expect(calls[0].options?.tools).to.deep.equal([searchTool, lookupTool])
+      expect(calls[0].options?.tools).to.deep.equal([
+        {description: searchTool.description, inputSchema: searchTool.inputSchema, name: searchTool.name},
+        {description: lookupTool.description, inputSchema: lookupTool.inputSchema, name: lookupTool.name},
+      ])
+    })
+
+    it('rejects duplicate tool names across registration scopes', async () => {
+      const first = tool((input: string) => input, {
+        description: 'First.',
+        name: 'duplicate',
+        schema: z.string(),
+      })
+      const second = tool((input: string) => input, {
+        description: 'Second.',
+        name: 'duplicate',
+        schema: z.string(),
+      })
+      const agent = new Agent({tools: [first]})
+
+      try {
+        await agent.invoke([new Message(MessageType.User, {content: 'hello'})], {tools: [second]})
+        expect.fail('Expected duplicate registration to fail.')
+      } catch (error) {
+        expect(error).to.be.instanceOf(Error)
+        expect((error as Error).message).to.contain('Duplicate tool name: duplicate')
+      }
     })
 
     it('loads configured MCP tools once and passes their input schema to the model', async () => {
@@ -517,7 +590,9 @@ describe('model helpers', () => {
         input: {query: 'orbit'},
         isError: false,
         name: 'search',
-        output: 'result:orbit',
+        output: {
+          content: [{text: 'result:orbit', type: 'text'}],
+        },
         toolCallId: 'call-1',
       })
     })
@@ -555,7 +630,7 @@ describe('model helpers', () => {
         input: {},
         isError: true,
         name: 'fail',
-        output: 'boom',
+        output: {content: [{text: 'boom', type: 'text'}], isError: true},
         toolCallId: 'call-1',
       })
     })
@@ -585,7 +660,7 @@ describe('model helpers', () => {
         input: {},
         isError: true,
         name: 'missing',
-        output: 'Unknown tool: missing',
+        output: {content: [{text: 'Unknown tool: missing', type: 'text'}], isError: true},
         toolCallId: 'call-1',
       })
     })
@@ -1049,6 +1124,46 @@ describe('model helpers', () => {
 
       expect(model.getProvider()).to.equal('anthropic')
       expect(model.getModel()).to.equal('claude-custom')
+    })
+  })
+
+  describe('ModelRegistry', () => {
+    it('creates registered providers with their default model and settings', () => {
+      const registry = new ModelRegistry()
+      registry.register({
+        create: (model, provider): Model => ({
+          getModel: () => model,
+          getName: () => OperatorType.Model,
+          getProvider: () => provider.getName(),
+          async invoke() {
+            return new Message(MessageType.Assistant, {content: provider.getHost() ?? ''})
+          },
+        }),
+        defaultModel: 'custom-default',
+        name: 'custom',
+      })
+
+      const model = registry.create('custom', undefined, {providers: {custom: {host: 'http://custom'}}})
+
+      expect(registry.names()).to.deep.equal(['custom'])
+      expect(model.getModel()).to.equal('custom-default')
+      expect(model.getProvider()).to.equal('custom')
+    })
+
+    it('rejects duplicate and unknown model providers', () => {
+      const registry = new ModelRegistry()
+      const registration = {
+        create: (): Model => createStubModel(async () => new Message(MessageType.Assistant)),
+        defaultModel: 'custom-default',
+        name: 'custom',
+      }
+      registry.register(registration)
+
+      expect(() => registry.register(registration)).to.throw('already registered')
+      expect(() => registry.register({...registration, name: 'invalid provider'})).to.throw(
+        'Invalid model provider name',
+      )
+      expect(() => registry.create('missing')).to.throw('Unsupported model provider: missing')
     })
   })
 

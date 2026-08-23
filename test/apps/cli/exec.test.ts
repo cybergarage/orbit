@@ -72,6 +72,7 @@ describe('runExecCommand', () => {
         ],
         options: {
           cwd: '/tmp/workspace',
+          defaultToolProfile: 'coding',
           messages: [
             {
               content: 'Workspace instructions',
@@ -138,6 +139,7 @@ describe('runExecCommand', () => {
       {
         options: {
           cwd: '/tmp/workspace',
+          defaultToolProfile: 'coding',
           messages: [],
           model: {
             name: 'claude-sonnet',
