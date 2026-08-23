@@ -38,9 +38,35 @@ USAGE
 <!-- usagestop -->
 # Commands
 <!-- commands -->
+* [`orbit delete SESSION`](#orbit-delete-session)
 * [`orbit exec [PROMPT]`](#orbit-exec-prompt)
 * [`orbit gui`](#orbit-gui)
 * [`orbit help [COMMAND]`](#orbit-help-command)
+
+## `orbit delete SESSION`
+
+Permanently delete a saved session
+
+```
+USAGE
+  $ orbit delete SESSION [--force]
+
+ARGUMENTS
+  SESSION  ID of the saved session to delete
+
+FLAGS
+  --force  Delete without asking for confirmation
+
+DESCRIPTION
+  Permanently delete a saved session
+
+EXAMPLES
+  $ orbit delete <SESSION_ID>
+
+  $ orbit delete <SESSION_ID> --force
+```
+
+_See code: [src/cli/delete.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/delete.ts)_
 
 ## `orbit exec [PROMPT]`
 

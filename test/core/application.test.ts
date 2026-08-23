@@ -175,6 +175,40 @@ describe('OrbitApplicationService', () => {
     expect(service.diagnostics.getCapture()).to.equal('metadata')
     await service.close()
   })
+
+  it('closes an active thread before permanently deleting its session', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-application-delete-'))
+    const repository = new SessionRepository({rootDir: path.join(root, 'sessions')})
+    const service = new OrbitApplicationService({
+      contexts: [],
+      createAgent: createAgentFactory([]),
+      cwd: root,
+      repository,
+      settingsSources: [],
+    })
+
+    try {
+      const thread = service.createThread()
+      const file = thread.file as string
+
+      expect(await service.deleteSession(thread.id)).to.equal(true)
+      expect(service.getThread(thread.id)).to.equal(undefined)
+      expect(await repository.findById(thread.id)).to.equal(undefined)
+      expect(service.getEvents().find((event) => event.type === 'session.deleted')).to.include({
+        sessionId: thread.id,
+        threadId: thread.id,
+      })
+      expect(await service.deleteSession(thread.id)).to.equal(false)
+      await fs.access(file).then(
+        () => {
+          throw new Error('Expected deleted session file to be absent.')
+        },
+        () => {},
+      )
+    } finally {
+      await service.close()
+    }
+  })
 })
 
 function createAgentFactory(options: AgentOptions[]): ThreadAgentFactory {

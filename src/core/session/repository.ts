@@ -89,6 +89,35 @@ export class SessionRepository {
     return new Session({metadata: metadataFromHeader(header, file), recorder})
   }
 
+  async delete(sessionId: string): Promise<SessionSummary | undefined> {
+    const summary = await this.findById(sessionId)
+    if (summary === undefined) return
+    if (SessionRecorder.isOpen(summary.file)) {
+      throw new Error(`Session is open for writing: ${sessionId}`)
+    }
+
+    try {
+      await fsPromises.unlink(summary.file)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+      throw error
+    }
+
+    return summary
+  }
+
+  async findById(sessionId: string): Promise<SessionSummary | undefined> {
+    let cursor: string | undefined
+    do {
+      // Pages are sequential because the next cursor is returned by the previous page.
+      // eslint-disable-next-line no-await-in-loop
+      const page = await this.listPage({cursor, limit: 200})
+      const summary = page.data.find((item) => item.id === sessionId)
+      if (summary !== undefined) return summary
+      cursor = page.nextCursor
+    } while (cursor !== undefined)
+  }
+
   list(): SessionSummary[] {
     if (!fs.existsSync(this.rootDir)) return []
     return findSessionFiles(this.rootDir)

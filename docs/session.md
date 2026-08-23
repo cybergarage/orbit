@@ -255,7 +255,16 @@ embedding and tests. A caller-supplied session remains owned by the caller and
 is not closed by `runInteractiveSession()`.
 
 Interactive session selection and a `/resume` command are not currently
-implemented. Resume is available through the library API.
+implemented. Resume is available through the library API. Saved sessions can
+be deleted with the top-level CLI command:
+
+```sh
+orbit delete <SESSION_ID>
+orbit delete <SESSION_ID> --force
+```
+
+The first form asks for confirmation. Use `--force` for scripts and other
+non-interactive environments.
 
 ## ThreadManager persistence
 
@@ -289,8 +298,20 @@ const resumed = manager.resumeThread(snapshot.file)
 
 The resumed thread keeps the original session and thread ID, message IDs,
 timestamps, tool history, and parent chain. `closeThread()` and `close()` close
-the agent and recorder but do not delete the JSONL file. There is no delete API
-in the current release.
+the agent and recorder but do not delete the JSONL file.
+
+Delete a closed persisted session by ID through its repository:
+
+```ts
+const deleted = await repository.delete(snapshot.id)
+```
+
+`delete()` returns the deleted summary, or `undefined` when the session does
+not exist. It refuses to unlink a session that is open for writing in the
+current process. GUI integrations should close the corresponding thread first;
+`OrbitApplicationService.deleteSession()` performs both operations in order.
+Deletion is permanent and removes the JSONL transcript rather than archiving
+or hiding it.
 
 Only one run may be active per thread. Independent threads can run in
 parallel, and each session has its own ordered recorder. `ThreadManager`
@@ -342,13 +363,13 @@ resume the same session concurrently in separate processes.
 
 ## Current scope
 
-Version 1 implements a linear, append-only conversation with resume and
-inspection. It does not yet implement:
+Version 1 implements a linear, append-only conversation with resume,
+inspection, and whole-session deletion. It does not yet implement:
 
 - in-file branches or leaf selection;
 - forked session creation;
 - compaction and branch summaries;
-- labels, titles, archive, or deletion;
+- labels, titles, or archive;
 - a session index or SQLite projection;
 - cross-session shell input history;
 - cross-process writer locks;

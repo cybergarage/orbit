@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /* eslint-disable n/no-unsupported-features/node-builtins */
-/* global document, EventSource, fetch, HTMLDivElement, HTMLElement, HTMLMetaElement, MessageEvent, RequestInit */
+/* global document, EventSource, fetch, HTMLDivElement, HTMLElement, HTMLMetaElement, MessageEvent, RequestInit, window */
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {createRoot} from 'react-dom/client'
@@ -31,6 +31,8 @@ function App() {
   const [runId, setRunId] = useState<string>()
   const [error, setError] = useState<string>()
   const [eventFilter, setEventFilter] = useState('all')
+  const [sessionMenu, setSessionMenu] = useState<{session: SessionSummary; x: number; y: number}>()
+  const [sessionToDelete, setSessionToDelete] = useState<SessionSummary>()
   const messagesEnd = useRef<HTMLDivElement>(null)
   const selectedThreadId = useRef<string | undefined>(undefined)
 
@@ -94,6 +96,22 @@ function App() {
     }
   }
 
+  const deleteSession = async (session: SessionSummary) => {
+    setSessionToDelete(undefined)
+    try {
+      setError(undefined)
+      await api(`/api/sessions/${encodeURIComponent(session.id)}`, {method: 'DELETE'})
+      if (thread?.id === session.id) {
+        setThread(undefined)
+        setRunId(undefined)
+      }
+
+      await loadSessions()
+    } catch (nextError) {
+      showError(setError)(nextError)
+    }
+  }
+
   const submit = async () => {
     if (thread === undefined || prompt.trim().length === 0 || runId !== undefined) return
     try {
@@ -135,14 +153,29 @@ function App() {
   )
 
   return (
-    <main className={`app ${preferences.debugPanelVisible ? '' : 'debug-hidden'}`}>
+    <main className={`app ${preferences.debugPanelVisible ? '' : 'debug-hidden'}`} onClick={() => setSessionMenu(undefined)}>
       <aside className="pane sidebar">
         <div className="brand"><span className="brand-mark">O</span><span>ORBIT</span></div>
         <button className="primary" onClick={createThread}>＋ New Chat</button>
         <div className="section-title">Recent</div>
         <div className="sessions">
           {sessions.map((session) => (
-            <button className={`session ${thread?.id === session.id ? 'active' : ''}`} key={session.id} onClick={() => selectSession(session)}>
+            <button
+              className={`session ${thread?.id === session.id ? 'active' : ''}`}
+              key={session.id}
+              onClick={() => selectSession(session)}
+              onContextMenu={(event) => {
+                event.preventDefault()
+                const bounds = event.currentTarget.getBoundingClientRect()
+                const requestedX = event.clientX || bounds.right
+                const requestedY = event.clientY || bounds.top
+                setSessionMenu({
+                  session,
+                  x: Math.max(8, Math.min(requestedX, window.innerWidth - 188)),
+                  y: Math.max(8, Math.min(requestedY, window.innerHeight - 52)),
+                })
+              }}
+            >
               <span className="session-title">{session.preview || `${session.provider ?? 'Orbit'} session`}</span>
               <span className="session-meta">{formatDate(session.updatedAt)} · {session.model ?? 'default model'}</span>
               <span className="session-meta">{session.cwd}</span>
@@ -216,7 +249,66 @@ function App() {
           </div>
         </aside>
       ) : null}
+      <SessionContextMenu
+        menu={sessionMenu}
+        onDelete={(session) => {
+          setSessionMenu(undefined)
+          setSessionToDelete(session)
+        }}
+      />
+      <DeleteSessionDialog
+        onCancel={() => setSessionToDelete(undefined)}
+        onConfirm={(session) => deleteSession(session).catch(() => {})}
+        session={sessionToDelete}
+      />
     </main>
+  )
+}
+
+function SessionContextMenu({
+  menu,
+  onDelete,
+}: {
+  menu?: {session: SessionSummary; x: number; y: number}
+  onDelete: (session: SessionSummary) => void
+}) {
+  if (menu === undefined) return null
+  return (
+    <div
+      className="context-menu"
+      onClick={(event) => event.stopPropagation()}
+      role="menu"
+      style={{left: menu.x, top: menu.y}}
+    >
+      <button className="context-menu-danger" onClick={() => onDelete(menu.session)} role="menuitem">
+        Delete session…
+      </button>
+    </div>
+  )
+}
+
+function DeleteSessionDialog({
+  onCancel,
+  onConfirm,
+  session,
+}: {
+  onCancel: () => void
+  onConfirm: (session: SessionSummary) => void
+  session?: SessionSummary
+}) {
+  if (session === undefined) return null
+  return (
+    <div className="dialog-backdrop" role="presentation">
+      <section aria-labelledby="delete-session-title" aria-modal="true" className="dialog" role="dialog">
+        <h2 id="delete-session-title">Delete session?</h2>
+        <p>This permanently deletes the session transcript and cannot be undone.</p>
+        <div className="dialog-session">{session.preview ?? session.id}</div>
+        <div className="dialog-actions">
+          <button onClick={onCancel}>Cancel</button>
+          <button autoFocus className="danger" onClick={() => onConfirm(session)}>Delete</button>
+        </div>
+      </section>
+    </div>
   )
 }
 

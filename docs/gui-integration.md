@@ -83,7 +83,9 @@ const resumed = manager.resumeThread(previousSnapshot.file)
 ```
 
 Without `sessionRepository`, threads remain in memory only. Closing a persisted
-thread closes its writer but does not delete the JSONL file.
+thread closes its writer but does not delete the JSONL file. To permanently
+remove a saved GUI session, use `OrbitApplicationService.deleteSession(id)`;
+it closes any loaded thread before deleting the transcript.
 
 Only one run can be active in a thread. Independent threads can run in parallel.
 Call `closeThread()` when a window or project closes, and call `close()` during

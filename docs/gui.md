@@ -42,6 +42,12 @@ resumes its stored working directory, provider, model, system prompt, and
 conversation unless the caller explicitly supplies an override through the
 application API.
 
+Right-click a Recent session and choose **Delete session…** to permanently
+remove it after confirmation. Deleting the selected session clears the
+conversation. If its run is active, Orbit cancels the run and closes the agent
+and recorder before unlinking the JSONL transcript. This operation is not an
+archive and cannot be undone.
+
 Only one run can be active in a session. The square Stop button cancels the
 current run. Model responses are currently displayed after completion; token
 streaming is not part of the initial implementation.
@@ -114,7 +120,8 @@ remote-access or multi-user mode.
 
 ## Current scope
 
-The initial GUI provides session browsing, completed-message rendering, prompt
-submission, cancellation, tool detail cards, response metadata, and diagnostics.
+The initial GUI provides session browsing and deletion, completed-message
+rendering, prompt submission, cancellation, tool detail cards, response
+metadata, and diagnostics.
 Project/worktree management, diff review, terminal panes, approvals, attachments,
 and token-delta streaming are follow-up features rather than part of this release.

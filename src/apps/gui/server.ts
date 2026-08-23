@@ -68,6 +68,10 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
     const limit = limitValue === undefined ? undefined : Number(limitValue)
     response.json(await options.service.listSessions({cursor, limit}))
   })
+  app.delete('/api/sessions/:sessionId', async (request, response) => {
+    const deleted = await options.service.deleteSession(request.params.sessionId)
+    response.status(deleted ? 200 : 404).json({deleted, id: request.params.sessionId})
+  })
   app.post('/api/threads', (_request, response) => response.status(201).json(options.service.createThread()))
   app.post('/api/sessions/:sessionId/resume', async (request, response) => {
     response.json(await options.service.resumeSession(request.params.sessionId))
@@ -237,6 +241,20 @@ button { color:inherit; cursor:pointer; }
 .session:hover, .session.active { background:#252a33; }
 .session-title { display:block; overflow:hidden; color:#e6e8eb; font-size:13px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
 .session-meta { display:block; margin-top:4px; overflow:hidden; color:#858d9b; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.context-menu { position:fixed; z-index:10; min-width:170px; border:1px solid #3a414d; border-radius:8px; background:#20242b; padding:5px; box-shadow:0 12px 32px #0009; }
+.context-menu button { width:100%; border:0; border-radius:5px; background:transparent; padding:8px 10px; text-align:left; }
+.context-menu button:hover { background:#343942; }
+.context-menu .context-menu-danger { color:#ff8c94; }
+.dialog-backdrop { position:fixed; inset:0; z-index:20; display:grid; place-items:center; background:#0009; }
+.dialog { width:min(420px,calc(100vw - 32px)); border:1px solid #424955; border-radius:12px; background:#20242b; padding:20px; box-shadow:0 18px 60px #000b; }
+.dialog h2 { margin:0 0 10px; font-size:17px; }
+.dialog p { margin:0 0 14px; color:#abb2bd; font-size:13px; line-height:1.45; }
+.dialog-session { overflow:hidden; border-radius:7px; background:#171a20; padding:9px 10px; color:#d8dbe0; font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
+.dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+.dialog-actions button { border:1px solid #444b57; border-radius:7px; background:#2b3038; padding:7px 13px; }
+.dialog-actions button:hover { background:#353b45; }
+.dialog-actions .danger { border-color:#9d4149; background:#8b343c; color:white; }
+.dialog-actions .danger:hover { background:#a43e48; }
 .sidebar-footer { border-top:1px solid #292d35; padding:12px 6px 0; color:#a9afba; font-size:12px; }
 .toggle-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .conversation { display:flex; flex-direction:column; background:#111419; }

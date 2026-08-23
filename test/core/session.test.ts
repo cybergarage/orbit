@@ -255,6 +255,35 @@ describe('session persistence', () => {
     expect(firstPage.errors[0].message).to.contain(`Invalid session file ${corruptFile} at line 1`)
   })
 
+  it('finds and permanently deletes a saved session by id', async () => {
+    const repository = new SessionRepository({rootDir: root})
+    const session = repository.create({id: 'session-to-delete'})
+    session.appendMessages([new Message(MessageType.User, {content: 'Delete me'})])
+    const file = session.getFile() as string
+    await session.close()
+
+    expect(await repository.findById('session-to-delete')).to.include({file, id: 'session-to-delete'})
+    expect(await repository.delete('session-to-delete')).to.include({file, id: 'session-to-delete'})
+    expect(await repository.findById('session-to-delete')).to.equal(undefined)
+    expect(fsSync.existsSync(file)).to.equal(false)
+    expect(await repository.delete('session-to-delete')).to.equal(undefined)
+  })
+
+  it('refuses to delete a session that is open for writing', async () => {
+    const repository = new SessionRepository({rootDir: root})
+    const session = repository.create({id: 'open-session'})
+
+    try {
+      await repository.delete('open-session')
+      throw new Error('Expected deletion to fail for an open session.')
+    } catch (error) {
+      expect((error as Error).message).to.equal('Session is open for writing: open-session')
+    }
+
+    await session.close()
+    expect(await repository.delete('open-session')).to.include({id: 'open-session'})
+  })
+
   it('records failed and pre-cancelled agent turns', async () => {
     const repository = new SessionRepository({rootDir: root})
     const failedSession = repository.create({id: 'failed'})

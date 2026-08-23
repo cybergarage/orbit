@@ -210,6 +210,21 @@ export class OrbitApplicationService {
     return thread
   }
 
+  async deleteSession(sessionId: string): Promise<boolean> {
+    await this.threadManager.closeThread(sessionId)
+    const deleted = await this.repository.delete(sessionId)
+    if (deleted === undefined) return false
+
+    this.displayMessages.delete(sessionId)
+    this.diagnostics.emit({
+      data: {file: deleted.file},
+      sessionId,
+      threadId: sessionId,
+      type: 'session.deleted',
+    })
+    return true
+  }
+
   getEvents(afterSequence = 0): DiagnosticEvent[] {
     return this.diagnostics.list(afterSequence)
   }
@@ -342,15 +357,7 @@ export class OrbitApplicationService {
   }
 
   private async findSession(sessionId: string): Promise<SessionSummary | undefined> {
-    let cursor: string | undefined
-    do {
-      // Pages are sequential because the next cursor is returned by the previous page.
-      // eslint-disable-next-line no-await-in-loop
-      const page = await this.repository.listPage({cursor, limit: 200})
-      const summary = page.data.find((item) => item.id === sessionId)
-      if (summary !== undefined) return summary
-      cursor = page.nextCursor
-    } while (cursor !== undefined)
+    return this.repository.findById(sessionId)
   }
 
   private handleGuiSlashCommand(thread: ThreadSnapshot, input: string): string {

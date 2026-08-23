@@ -80,6 +80,14 @@ describe('GUI server', () => {
         method: 'PATCH',
       })
       expect(await preferences.json()).to.deep.equal({debugPanelVisible: false, diagnosticCapture: 'metadata'})
+
+      const deleted = await fetch(`${baseUrl}/api/sessions/${created.id}`, {headers, method: 'DELETE'})
+      expect(deleted.status).to.equal(200)
+      expect(await deleted.json()).to.deep.equal({deleted: true, id: created.id})
+
+      const missing = await fetch(`${baseUrl}/api/sessions/${created.id}`, {headers, method: 'DELETE'})
+      expect(missing.status).to.equal(404)
+      expect(await missing.json()).to.deep.equal({deleted: false, id: created.id})
     } finally {
       await server.close()
       await service.close()

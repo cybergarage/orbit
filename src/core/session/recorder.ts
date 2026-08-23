@@ -33,6 +33,10 @@ export class SessionRecorder {
     }
   }
 
+  static isOpen(file: string): boolean {
+    return openSessionFiles.has(path.resolve(file))
+  }
+
   static open(file: string): SessionRecorder {
     const resolvedFile = path.resolve(file)
     reserveFile(resolvedFile)
