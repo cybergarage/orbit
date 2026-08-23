@@ -5,11 +5,11 @@ import {Box, render, Text, useApp, useInput} from 'ink'
 import {useState} from 'react'
 
 import type {Logger} from './logger/index.js'
-import type {Session, SessionRepository} from './session/index.js'
+import type {SessionRepository} from './session/index.js'
 import type {WorkspaceSettings} from './settings.js'
 
 import {Agent, type AgentOptions, isProvider, Message, MessageType, type ProviderName, Role} from './models/index.js'
-import {SessionRepository as CoreSessionRepository} from './session/index.js'
+import {SessionRepository as CoreSessionRepository, Session} from './session/index.js'
 import {State} from './state.js'
 
 export interface InteractiveSessionOptions {
@@ -100,23 +100,20 @@ export async function submitInteractiveInput(
   const systemMessages = state.systemPrompt
     ? [new Message(MessageType.Session, {content: state.systemPrompt, role: Role.System})]
     : []
-  const requestMessages = [
-    ...(state.session === undefined ? systemMessages : []),
-    ...(state.session?.getConversationMessages() ?? state.conversationMessages),
-    userMessage,
-  ]
+  const session = state.session ?? new Session({messages: state.conversationMessages})
   const agent = new AgentClass({
     logger: state.logger,
-    ...(state.session === undefined ? {} : {messages: systemMessages, state: new State(state.session)}),
+    messages: systemMessages,
     model: {
       name: state.model,
       provider: state.provider,
     },
     settings: state.settings,
+    state: new State(session),
   })
   let reply: Message
   try {
-    reply = await agent.invoke(requestMessages)
+    reply = await agent.invoke([userMessage])
   } finally {
     await agent.close()
   }
@@ -290,11 +287,8 @@ function InteractiveApp({
       const systemMessages = state.systemPrompt
         ? [new Message(MessageType.Session, {content: state.systemPrompt, role: Role.System})]
         : []
-      const requestMessages = [
-        ...(state.session === undefined ? systemMessages : []),
-        ...(state.session?.getConversationMessages() ?? state.conversationMessages),
-        nextMessages.at(-1) as Message,
-      ]
+      const userMessage = nextMessages.at(-1) as Message
+      const session = state.session ?? new Session({messages: state.conversationMessages})
       setState({
         ...state,
         input: '',
@@ -304,16 +298,17 @@ function InteractiveApp({
 
       const agent = new AgentClass({
         logger: state.logger,
-        ...(state.session === undefined ? {} : {messages: systemMessages, state: new State(state.session)}),
+        messages: systemMessages,
         model: {
           name: state.model,
           provider: state.provider,
         },
         settings: state.settings,
+        state: new State(session),
       })
 
       agent
-        .invoke(requestMessages)
+        .invoke([userMessage])
         .then((reply) => {
           setState((currentState) => ({
             ...currentState,

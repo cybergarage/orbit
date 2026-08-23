@@ -185,28 +185,64 @@ An `Agent` writes to the `Session` in its `State`. Every invocation records:
 
 1. effective turn context;
 2. a `started` turn event;
-3. request messages whose IDs are not already present;
+3. messages newly submitted for the turn;
 4. every assistant response, including intermediate tool calls;
 5. every completed tool result;
 6. one terminal `completed`, `cancelled`, or `failed` event;
 7. a recorder flush before the invocation resolves or rejects.
 
-This ID-based append policy permits callers to pass the complete conversation
-on each invocation without duplicating earlier messages in the session.
-`Agent.run(session, messages)` records into the supplied session;
-`Agent.invoke(messages)` records into the agent state's session.
+`Agent.run(session, newMessages)` records into the supplied session.
+`Agent.invoke(newMessages)` records into the agent state's session. Both
+methods expect only messages newly submitted for that invocation. Passing a
+message that already belongs to the session is rejected as a duplicate.
 
-The `Agent` API still accepts the model conversation as `messages`. Direct
-library callers resuming a session should pass
-`session.getConversationMessages()` plus the new user message. Interactive mode
-and `ThreadManager` do this automatically.
+Direct library callers resuming a session should open it through
+`SessionRepository`, inject it through `State`, and pass only the next user
+message. Interactive mode and `ThreadManager` follow this contract
+automatically.
+
+## Model context assembly
+
+`Session` is the canonical source for model-visible conversation history.
+After an agent records new input, `SessionContextBuilder` projects the current
+session into a provider-neutral `SessionModelContext`. The initial linear
+implementation returns copied user, assistant, and tool messages in their
+persisted oldest-to-newest order.
+
+Every model iteration is assembled as:
+
+```text
+Agent.messages
++ SessionContextBuilder.build(session).messages
+```
+
+`Agent.messages` is the stable prefix for system and workspace instructions.
+It is kept outside ordinary session conversation so the same instructions are
+not persisted and sent twice. On resume, `ThreadManager` restores the effective
+system prompt from session metadata unless the caller explicitly overrides
+agent messages.
+
+The agent rebuilds session context before every model call. When an assistant
+requests a tool, the assistant message and completed tool results are recorded
+first; the next iteration therefore receives the same prior conversation plus
+the new call and result records. Provider adapters remain responsible for
+wire-specific serialization, such as moving system messages to Anthropic's
+top-level `system` field.
+
+`SessionContextBuilder` is exported and can be injected through
+`AgentOptions.deps.sessionContextBuilder` for embedding and deterministic
+tests. The version 1 builder does not compact, branch, filter by modality, or
+enforce a token budget. Those policies can be added at this projection
+boundary without changing callers back to complete-history submission.
 
 ## Interactive mode
 
 `runInteractiveSession()` creates a persistent session automatically with the
 default `SessionRepository`. It stores the effective initial provider, model,
 working directory, and system prompt in the header. Each request reuses the
-same session even when a new provider-specific `Agent` is constructed.
+same session even when a new provider-specific `Agent` is constructed. The UI
+submits only the new user message; the agent derives prior model context from
+the session.
 
 Slash-command notices such as `/help` and `/debug` are local UI messages and
 are not persisted or sent as model-visible conversation. Submitted commands
@@ -257,7 +293,9 @@ the agent and recorder but do not delete the JSONL file. There is no delete API
 in the current release.
 
 Only one run may be active per thread. Independent threads can run in
-parallel, and each session has its own ordered recorder.
+parallel, and each session has its own ordered recorder. `ThreadManager`
+submits only the new user message to its agent. The agent records that message
+and derives the complete model context from the thread's session.
 
 ## Listing sessions
 

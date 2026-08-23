@@ -67,9 +67,11 @@ const run = manager.startRun(thread.id, 'Inspect the failing test.')
 const reply = await run.completion
 ```
 
-`ThreadManager` retains user, assistant, tool-call, and tool-result messages so
-subsequent requests receive the complete conversation. Snapshots and events use
-plain `ThreadMessage` objects that can cross an Electron IPC boundary.
+`ThreadManager` retains user, assistant, tool-call, and tool-result messages in
+the thread session. It submits only each new user message to the agent; the
+agent projects the complete model context from that session. Snapshots and
+events use plain `ThreadMessage` objects that can cross an Electron IPC
+boundary.
 
 Passing a `SessionRepository` persists each thread under
 `~/.orbit/sessions/`. The snapshot's optional `file` property identifies the

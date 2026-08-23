@@ -5,6 +5,8 @@ export {isMessageType, Message, MessageType, UserMessage} from '../message/index
 export type {MessageOptions, MessagePayload} from '../message/index.js'
 export {encodeSessionEntry, parseSessionFile} from './codec.js'
 export type {ParsedSessionFile} from './codec.js'
+export {SessionContextBuilder} from './context-builder.js'
+export type {SessionModelContext} from './context-builder.js'
 export {SESSION_FORMAT_VERSION, SessionEntryType, TurnPhase} from './entries.js'
 export type {
   PersistedMessage,

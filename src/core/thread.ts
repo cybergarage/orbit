@@ -128,7 +128,8 @@ export type ThreadEventHandler = (event: ThreadEvent) => void
 
 export interface ThreadAgent {
   close(): Promise<void>
-  invoke(messages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message>
+  /** Records new messages into its configured session and runs one turn. */
+  invoke(newMessages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message>
 }
 
 export type ThreadAgentFactory = (options: AgentOptions) => ThreadAgent
@@ -357,20 +358,21 @@ export class ThreadManager {
     options.signal?.addEventListener('abort', forwardAbort, {once: true})
     if (options.signal?.aborted) forwardAbort()
 
-    const userMessage = new CoreMessage(CoreMessageType.User, {content})
+    const userMessage = new CoreMessage(CoreMessageType.User, {
+      content,
+      parentid: thread.session.getLastMessageId(),
+    })
     try {
-      const [storedUserMessage] = thread.session.appendMessages([userMessage], {turnId: run.id})
-      thread.updatedAt = storedUserMessage.timestamp
+      thread.updatedAt = userMessage.timestamp
       this.emit({
-        message: serializeMessage(storedUserMessage),
+        message: serializeMessage(userMessage),
         runId: run.id,
         threadId,
         timestamp: new Date().toISOString(),
         type: ThreadEventType.RunStarted,
       })
 
-      const requestMessages = thread.session.getConversationMessages()
-      const response = await thread.agent.invoke(requestMessages, {
+      const response = await thread.agent.invoke([userMessage], {
         onEvent: (event) => this.handleAgentEvent(thread, run.id, event),
         signal: run.controller.signal,
         turnId: run.id,

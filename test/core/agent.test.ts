@@ -73,12 +73,10 @@ describe('model helpers', () => {
       expect(response).to.be.instanceOf(Message)
       expect(response.content).to.equal('ok')
       expect(response.role).to.equal(Role.Assistant)
-      expect(calls).to.deep.equal([
-        {
-          messages: [prompt],
-          model: DEFAULT_MODELS.ollama,
-          provider: 'ollama',
-        },
+      expect(calls).to.have.length(1)
+      expect(calls[0]).to.include({model: DEFAULT_MODELS.ollama, provider: 'ollama'})
+      expect(calls[0].messages.map((message) => ({content: message.content, role: message.role}))).to.deep.equal([
+        {content: 'hello', role: Role.User},
       ])
     })
 
@@ -138,7 +136,11 @@ describe('model helpers', () => {
 
       await agent.invoke([prompt], options)
 
-      expect(calls).to.deep.equal([{messages: [prompt], options}])
+      expect(calls).to.have.length(1)
+      expect(calls[0].options).to.deep.include(options)
+      expect(calls[0].messages.map((message) => ({content: message.content, role: message.role}))).to.deep.equal([
+        {content: 'hello', role: Role.User},
+      ])
     })
 
     it('prepends Agent messages when invoking the model', async () => {
@@ -168,7 +170,37 @@ describe('model helpers', () => {
 
       await agent.invoke([prompt])
 
-      expect(calls).to.deep.equal([[systemMessage, prompt]])
+      expect(calls).to.have.length(1)
+      expect(calls[0].map((message) => ({content: message.content, role: message.role}))).to.deep.equal([
+        {content: 'System context', role: Role.System},
+        {content: 'hello', role: Role.User},
+      ])
+    })
+
+    it('builds each model request from canonical session history and new input', async () => {
+      const calls: Message[][] = []
+      const agent = new Agent({
+        deps: {
+          createModel: (): Model => createStubModel(async (messages) => {
+            calls.push(messages)
+            return new Message(MessageType.Assistant, {content: `reply-${calls.length}`})
+          }),
+        },
+      })
+
+      await agent.invoke([new Message(MessageType.User, {content: 'first'})])
+      await agent.invoke([new Message(MessageType.User, {content: 'second'})])
+
+      expect(calls.map((messages) => messages.map((message) => message.content))).to.deep.equal([
+        ['first'],
+        ['first', 'reply-1', 'second'],
+      ])
+      expect(agent.getSession().getConversationMessages().map((message) => message.content)).to.deep.equal([
+        'first',
+        'reply-1',
+        'second',
+        'reply-2',
+      ])
     })
 
     it('returns the model response from run', async () => {
@@ -229,7 +261,11 @@ describe('model helpers', () => {
 
       await agent.run(new Session(), [prompt])
 
-      expect(calls).to.deep.equal([[systemMessage, prompt]])
+      expect(calls).to.have.length(1)
+      expect(calls[0].map((message) => ({content: message.content, role: message.role}))).to.deep.equal([
+        {content: 'System context', role: Role.System},
+        {content: 'hello', role: Role.User},
+      ])
     })
 
     it('copies AgentOptions messages when constructed', () => {

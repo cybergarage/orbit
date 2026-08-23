@@ -22,7 +22,7 @@ import type {
   ToolOptions,
 } from './models/index.js'
 import type {Operator} from './processor/index.js'
-import type {Session, SessionError} from './session/index.js'
+import type {Session, SessionContextBuilder as SessionContextBuilderType, SessionError} from './session/index.js'
 import type {WorkspaceSettings} from './settings.js'
 
 import {AgentEventType} from './agent-events.js'
@@ -31,7 +31,7 @@ import {createNoopLogger} from './logger/index.js'
 import {createMcpToolManager} from './mcp.js'
 import {getModel, Message, MessageType} from './models/index.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
-import {TurnPhase} from './session/index.js'
+import {SessionContextBuilder, TurnPhase} from './session/index.js'
 import {loadWorkspaceSettingsSync, mergeWorkspaceSettings} from './settings.js'
 import {State} from './state.js'
 
@@ -54,6 +54,7 @@ export interface AgentOptions {
   deps?: {
     createMcpToolManager?: (settings: WorkspaceSettings, options: McpToolManagerFactoryOptions) => McpToolManager
     createModel?: typeof getModel
+    sessionContextBuilder?: SessionContextBuilderType
   }
   diagnostics?: DiagnosticEventBus
   logger?: Logger
@@ -77,6 +78,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   private readonly diagnostics?: DiagnosticEventBus
   private readonly mcpToolManager: McpToolManager
   private readonly model: Model
+  private readonly sessionContextBuilder: SessionContextBuilderType
 
   constructor(options: AgentOptions = {}) {
     const createModel = options.deps?.createModel ?? getModel
@@ -87,6 +89,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       options.model?.name ?? this.settings.model,
       this.settings,
     )
+    this.sessionContextBuilder = options.deps?.sessionContextBuilder ?? new SessionContextBuilder()
     this.diagnostics = options.diagnostics
     this.messages = [...(options.messages ?? [])]
     this.logger = (options.logger ?? createNoopLogger()).child({component: 'agent'})
@@ -135,10 +138,12 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     return this.state
   }
 
+  /** Runs one turn from new input and derives prior model context from the agent session. */
   async invoke(messages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message> {
     return this.invokeSession(this.getSession(), messages, options)
   }
 
+  /** Runs one turn from new input and derives prior model context from the supplied session. */
   async run(session: Session, messages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message> {
     return this.invokeSession(session, messages, options)
   }
@@ -161,13 +166,14 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         turnId,
       })
       session.recordTurnEvent({phase: TurnPhase.Started, turnId})
-      session.appendNewMessages(messages, {turnId})
+      session.appendMessages(messages, {turnId})
       throwIfAborted(options?.signal)
-      const conversation = [...messages]
+      const sessionMessageCount = this.sessionContextBuilder.build(session).messages.length
       this.logger.debug(
         {
           initialMessageCount: this.messages.length,
-          requestMessageCount: messages.length,
+          newMessageCount: messages.length,
+          sessionMessageCount,
         },
         'agent invoke started',
       )
@@ -209,12 +215,12 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                 ...modelOptions,
                 diagnosticContext: {...modelOptions.diagnosticContext, iteration},
               }
+        const context = this.sessionContextBuilder.build(session)
         // Tool loops are intentionally sequential because each model response depends on the previous tool results.
         // eslint-disable-next-line no-await-in-loop
-        const modelMessage = await this.model.invoke([...this.messages, ...conversation], iterationOptions)
+        const modelMessage = await this.model.invoke([...this.messages, ...context.messages], iterationOptions)
         throwIfAborted(options?.signal)
         const [storedModelMessage] = session.appendMessages([modelMessage], {iteration, turnId})
-        conversation.push(storedModelMessage)
         emitAgentEvent(options?.onEvent, {
           iteration,
           message: storedModelMessage,
@@ -257,8 +263,6 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
             type: AgentEventType.ToolCompleted,
           })
         }
-
-        conversation.push(...storedToolMessages)
       }
 
       throw new Error(`Agent exceeded maximum tool iterations: ${maxToolIterations}`)

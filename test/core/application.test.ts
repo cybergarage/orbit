@@ -114,11 +114,12 @@ describe('OrbitApplicationService', () => {
     logger.info = (fields) => loggedCommands.push(fields)
     const service = new OrbitApplicationService({
       contexts: [],
-      createAgent: () => ({
+      createAgent: (agentOptions) => ({
         async close() {},
-        async invoke(messages) {
+        async invoke(messages, invokeOptions) {
           invokeCount += 1
           modelRequests.push(messages.map((message) => message.content))
+          agentOptions.state?.getSession().appendMessages(messages, {turnId: invokeOptions?.turnId})
           return new Message(MessageType.Assistant, {content: 'unexpected'})
         },
       }),
@@ -181,8 +182,9 @@ function createAgentFactory(options: AgentOptions[]): ThreadAgentFactory {
     options.push(agentOptions)
     return {
       async close() {},
-      async invoke(_messages, invokeOptions) {
+      async invoke(messages, invokeOptions) {
         invokeOptions?.onEvent?.({iteration: 0, type: 'model-started'})
+        agentOptions.state?.getSession().appendMessages(messages, {turnId: invokeOptions?.turnId})
         const response = new Message(MessageType.Assistant, {content: 'mock response'})
         const [storedResponse] =
           agentOptions.state?.getSession().appendMessages([response], {

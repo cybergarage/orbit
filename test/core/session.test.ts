@@ -17,6 +17,7 @@ import {
   OperatorType,
   parseSessionFile,
   Role,
+  SessionContextBuilder,
   SessionEntryType,
   SessionRepository,
   State,
@@ -114,6 +115,37 @@ describe('session persistence', () => {
     const reopened = repository.open(file)
     expect(reopened.getConversationMessages().map((message) => message.content)).to.deep.equal(['first', 'second'])
     await reopened.close()
+  })
+
+  it('projects copied provider-neutral messages from canonical session history', () => {
+    const session = new State().getSession()
+    const [stored] = session.appendMessages([new Message(MessageType.User, {content: 'hello'})])
+
+    const context = new SessionContextBuilder().build(session)
+
+    expect(context.messages).to.deep.equal([stored])
+    expect(context.messages[0]).not.to.equal(stored)
+    expect(context.messages[0].contents).not.to.equal(stored.contents)
+  })
+
+  it('records turn metadata before appending new input messages', async () => {
+    const session = new State().getSession()
+    const agent = new Agent({
+      deps: {createModel: () => testModel(async () => new Message(MessageType.Assistant, {content: 'response'}))},
+      state: new State(session),
+    })
+
+    await agent.invoke([new Message(MessageType.User, {content: 'prompt'})], {turnId: 'turn-1'})
+
+    expect(session.getEntries().map((entry) => entry.type)).to.deep.equal([
+      SessionEntryType.TurnContext,
+      SessionEntryType.TurnEvent,
+      SessionEntryType.Message,
+      SessionEntryType.Message,
+      SessionEntryType.TurnEvent,
+    ])
+    expect(session.getConversationMessages().map((message) => message.content)).to.deep.equal(['prompt', 'response'])
+    await agent.close()
   })
 
   it('prevents two writers from opening the same session in one process', async () => {

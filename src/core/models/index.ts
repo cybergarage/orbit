@@ -51,8 +51,14 @@ export type {
 } from '../processor/index.js'
 export {PromptTemplate} from '../prompts/template.js'
 export type {PromptTemplateInput} from '../prompts/template.js'
-export {Session, SessionHeader, SessionRepository} from '../session/index.js'
-export type {SessionHeaderOptions, SessionOptions, SessionRepositoryOptions, SessionSummary} from '../session/index.js'
+export {Session, SessionContextBuilder, SessionHeader, SessionRepository} from '../session/index.js'
+export type {
+  SessionHeaderOptions,
+  SessionModelContext,
+  SessionOptions,
+  SessionRepositoryOptions,
+  SessionSummary,
+} from '../session/index.js'
 export type {McpServerSettings, McpSettings, ProviderSettings, WorkspaceSettings} from '../settings.js'
 export {Skill} from '../skills/index.js'
 export type {SkillConfig, SkillMetadata, SkillSource, SkillSourceInfo} from '../skills/index.js'

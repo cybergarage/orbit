@@ -67,6 +67,38 @@ describe('ThreadManager', () => {
     await manager.close()
   })
 
+  it('submits only the new user message to the thread agent boundary', async () => {
+    const calls: Message[][] = []
+    const manager = new ThreadManager({
+      createAgent: (options) => ({
+        async close() {},
+        async invoke(messages, invokeOptions) {
+          calls.push(messages)
+          const session = options.state?.getSession()
+          session?.appendMessages(messages, {turnId: invokeOptions?.turnId})
+          const [response] = session?.appendMessages([assistantMessage(`reply-${calls.length}`)], {
+            iteration: 0,
+            turnId: invokeOptions?.turnId,
+          }) ?? [assistantMessage(`reply-${calls.length}`)]
+          return response
+        },
+      }),
+    })
+    manager.createThread({id: 'thread-1'})
+
+    await manager.sendMessage('thread-1', 'first')
+    await manager.sendMessage('thread-1', 'second')
+
+    expect(calls.map((messages) => messages.map((message) => message.content))).to.deep.equal([['first'], ['second']])
+    expect(manager.getThread('thread-1')?.messages.map((message) => message.content)).to.deep.equal([
+      'first',
+      'reply-1',
+      'second',
+      'reply-2',
+    ])
+    await manager.close()
+  })
+
   it('emits typed run, model, message, and tool lifecycle events', async () => {
     const events: ThreadEvent[] = []
     let modelCallCount = 0
