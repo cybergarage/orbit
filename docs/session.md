@@ -52,7 +52,18 @@ a newline. The entry's top-level `type` is its discriminator.
 The first entry must have `type: "session"`:
 
 ```json
-{"type":"session","version":1,"id":"019d...","rootMessageId":"019d...","timestamp":"2026-08-22T01:02:03.004Z","cwd":"/work/orbit","originator":"orbit-interactive","provider":"openai","model":"gpt-5","systemPrompt":"Effective project instructions"}
+{
+  "type": "session",
+  "version": 1,
+  "id": "019d...",
+  "rootMessageId": "019d...",
+  "timestamp": "2026-08-22T01:02:03.004Z",
+  "cwd": "/work/orbit",
+  "originator": "orbit-interactive",
+  "provider": "openai",
+  "model": "gpt-5",
+  "systemPrompt": "Effective project instructions"
+}
 ```
 
 Fields are:
@@ -76,7 +87,15 @@ identifies the file; message IDs define the conversation chain.
 An `Agent` records the effective execution context for every invocation:
 
 ```json
-{"type":"turn_context","timestamp":"2026-08-22T01:02:04.000Z","turnId":"019d...","cwd":"/work/orbit","provider":"openai","model":"gpt-5","maxToolIterations":5}
+{
+  "type": "turn_context",
+  "timestamp": "2026-08-22T01:02:04.000Z",
+  "turnId": "019d...",
+  "cwd": "/work/orbit",
+  "provider": "openai",
+  "model": "gpt-5",
+  "maxToolIterations": 5
+}
 ```
 
 The turn ID is generated as UUIDv7 unless the caller supplies
@@ -93,7 +112,13 @@ Turn lifecycle entries have `type: "turn_event"` and one of four phases:
 - `failed`.
 
 ```json
-{"type":"turn_event","timestamp":"2026-08-22T01:02:05.000Z","turnId":"019d...","phase":"failed","error":{"name":"Error","message":"Model request failed"}}
+{
+  "type": "turn_event",
+  "timestamp": "2026-08-22T01:02:05.000Z",
+  "turnId": "019d...",
+  "phase": "failed",
+  "error": {"name": "Error", "message": "Model request failed"}
+}
 ```
 
 Failed entries store `name`, `message`, and an optional stable Orbit error
@@ -104,7 +129,20 @@ Failed entries store `name`, `message`, and an optional stable Orbit error
 Model-visible messages use `type: "message"`:
 
 ```json
-{"type":"message","timestamp":"2026-08-22T01:02:04.100Z","turnId":"019d...","iteration":0,"message":{"id":"019d...","parentid":"019d...","timestamp":"2026-08-22T01:02:04.099Z","type":"assistant","role":"assistant","contents":["Done"]}}
+{
+  "type": "message",
+  "timestamp": "2026-08-22T01:02:04.100Z",
+  "turnId": "019d...",
+  "iteration": 0,
+  "message": {
+    "id": "019d...",
+    "parentid": "019d...",
+    "timestamp": "2026-08-22T01:02:04.099Z",
+    "type": "assistant",
+    "role": "assistant",
+    "contents": ["Done"]
+  }
+}
 ```
 
 The nested message preserves Orbit's public message representation:
@@ -164,9 +202,7 @@ const session = repository.create({
   systemPrompt: 'Project instructions',
 })
 
-session.appendMessages([
-  new Message(MessageType.User, {content: 'Hello'}),
-])
+session.appendMessages([new Message(MessageType.User, {content: 'Hello'})])
 
 await session.flush()
 await session.close()
@@ -254,9 +290,33 @@ inject `session` or `sessionRepository` through `InteractiveSessionOptions` for
 embedding and tests. A caller-supplied session remains owned by the caller and
 is not closed by `runInteractiveSession()`.
 
-Interactive session selection and a `/resume` command are not currently
-implemented. Resume is available through the library API. Saved sessions can
-be deleted with the top-level CLI command:
+Plain `orbit` starts a new session. Resume an existing interactive CLI or GUI
+session explicitly with the top-level CLI command:
+
+```sh
+orbit resume --last
+orbit resume <SESSION_ID>
+orbit resume --last --all
+```
+
+`--last` selects the most recently updated eligible session whose saved
+working directory matches the launch directory. Recency uses `updatedAt`, not
+the session creation time. `--all` removes the working-directory filter. An
+exact session ID is resolved across the complete session store and does not
+require `--all`.
+
+Orbit resumes the session in its saved working directory. Workspace settings
+are loaded from that directory. Explicit provider and model flags override
+the persisted session values, which override workspace defaults. The saved
+system prompt is retained; current system contexts are loaded only when an
+older session has no stored system prompt. The TUI displays the persisted user
+and assistant history before accepting another message.
+
+Version 1 requires either an exact ID or `--last`. A bare `orbit resume`
+reports the supported forms; an interactive session picker is not implemented
+yet. Resume failures never create a new session implicitly.
+
+Saved sessions can be deleted with another top-level CLI command:
 
 ```sh
 orbit delete <SESSION_ID>
@@ -307,8 +367,9 @@ const deleted = await repository.delete(snapshot.id)
 ```
 
 `delete()` returns the deleted summary, or `undefined` when the session does
-not exist. It refuses to unlink a session that is open for writing in the
-current process. GUI integrations should close the corresponding thread first;
+not exist. It obtains the same cross-process writer lock used by resume and
+refuses to unlink a session that is open for writing in any Orbit process. GUI
+integrations should close the corresponding thread first;
 `OrbitApplicationService.deleteSession()` performs both operations in order.
 Deletion is permanent and removes the JSONL transcript rather than archiving
 or hiding it.
@@ -337,6 +398,18 @@ Each `SessionSummary` contains:
 The summary is rebuilt from JSONL. No separate index or database is currently
 maintained.
 
+Use `findLatest()` when recency must be based on the last session activity:
+
+```ts
+const latest = await repository.findLatest({
+  cwd: process.cwd(),
+  originators: ['orbit-interactive', 'orbit-thread-manager'],
+})
+```
+
+The optional `cwd` and `originators` filters are applied before returning the
+greatest `updatedAt`. Omitting `cwd` searches all saved working directories.
+
 ## Resume and recovery
 
 `SessionRepository.open(file)` validates every line before returning a writable
@@ -357,9 +430,16 @@ removes that incomplete tail when opening the session, rewrites the valid
 entries with complete newlines, and then resumes appending. Other corruption is
 reported with the file path and line number and is not modified.
 
-Orbit prevents two writers from opening the same resolved file in one process.
-Cross-process file locking is not currently implemented; applications must not
-resume the same session concurrently in separate processes.
+Orbit creates a sidecar lock before creating, opening, repairing, resuming, or
+deleting a session. The lock contains its owning process ID and a unique token.
+Only one writer can own a resolved session file across Orbit processes. A
+session opened by the GUI therefore cannot be resumed concurrently by the CLI;
+the second writer receives an error instead.
+
+Locks whose owner process no longer exists are removed automatically before
+the next open. Malformed locks fail closed because Orbit cannot safely prove
+that their owner is gone. A recorder removes only a lock with its own token,
+so it cannot release a replacement owner's lock.
 
 ## Current scope
 
@@ -372,8 +452,8 @@ inspection, and whole-session deletion. It does not yet implement:
 - labels, titles, or archive;
 - a session index or SQLite projection;
 - cross-session shell input history;
-- cross-process writer locks;
-- interactive session selection commands.
+- an interactive resume picker;
+- cwd selection when the launch and saved directories differ.
 
 These features can be added as new typed entries and repository operations.
 Changes that alter existing fields require an explicit format migration and a

@@ -117,6 +117,7 @@ export {
 export type {
   AppendMessageOptions,
   CreateSessionOptions,
+  FindLatestSessionOptions,
   ParsedSessionFile,
   PersistedMessage,
   RecordTurnContextOptions,

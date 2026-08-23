@@ -55,6 +55,11 @@ export interface SessionListOptions {
   limit?: number
 }
 
+export interface FindLatestSessionOptions {
+  cwd?: string
+  originators?: string[]
+}
+
 export interface SessionListResult {
   data: SessionSummary[]
   errors: SessionListError[]
@@ -92,15 +97,26 @@ export class SessionRepository {
   async delete(sessionId: string): Promise<SessionSummary | undefined> {
     const summary = await this.findById(sessionId)
     if (summary === undefined) return
-    if (SessionRecorder.isOpen(summary.file)) {
-      throw new Error(`Session is open for writing: ${sessionId}`)
+    let guard: SessionRecorder
+    try {
+      guard = SessionRecorder.open(summary.file)
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('Session file is already open for writing:')) {
+        throw new Error(`Session is open for writing: ${sessionId}`)
+      }
+
+      throw error
     }
 
     try {
-      await fsPromises.unlink(summary.file)
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
-      throw error
+      try {
+        await fsPromises.unlink(summary.file)
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+        throw error
+      }
+    } finally {
+      await guard.close()
     }
 
     return summary
@@ -113,6 +129,24 @@ export class SessionRepository {
       // eslint-disable-next-line no-await-in-loop
       const page = await this.listPage({cursor, limit: 200})
       const summary = page.data.find((item) => item.id === sessionId)
+      if (summary !== undefined) return summary
+      cursor = page.nextCursor
+    } while (cursor !== undefined)
+  }
+
+  async findLatest(options: FindLatestSessionOptions = {}): Promise<SessionSummary | undefined> {
+    const cwd = options.cwd === undefined ? undefined : path.resolve(options.cwd)
+    const originators = options.originators === undefined ? undefined : new Set(options.originators)
+    let cursor: string | undefined
+    do {
+      // Pages are sequential because the next cursor is returned by the previous page.
+      // eslint-disable-next-line no-await-in-loop
+      const page = await this.listPage({cursor, limit: 200})
+      const summary = page.data.find(
+        (item) =>
+          (cwd === undefined || path.resolve(item.cwd) === cwd) &&
+          (originators === undefined || (item.originator !== undefined && originators.has(item.originator))),
+      )
       if (summary !== undefined) return summary
       cursor = page.nextCursor
     } while (cursor !== undefined)
@@ -166,10 +200,14 @@ export class SessionRepository {
 
   open(file: string): Session {
     const resolvedFile = path.resolve(file)
-    const parsed = parseSessionFile(fs.readFileSync(resolvedFile, 'utf8'), resolvedFile)
-    if (parsed.recovered) {
-      fs.writeFileSync(resolvedFile, parsed.entries.map((entry) => encodeSessionEntry(entry)).join(''), {mode: 0o600})
-    }
+    let parsed: ReturnType<typeof parseSessionFile> | undefined
+    const recorder = SessionRecorder.open(resolvedFile, () => {
+      parsed = parseSessionFile(fs.readFileSync(resolvedFile, 'utf8'), resolvedFile)
+      if (parsed.recovered) {
+        fs.writeFileSync(resolvedFile, parsed.entries.map((entry) => encodeSessionEntry(entry)).join(''), {mode: 0o600})
+      }
+    })
+    if (parsed === undefined) throw new Error(`Session file could not be loaded: ${resolvedFile}`)
 
     const messages = parsed.entries
       .filter((entry) => entry.type === SessionEntryType.Message)
@@ -184,7 +222,6 @@ export class SessionRepository {
             timestamp: entry.message.timestamp,
           }),
       )
-    const recorder = SessionRecorder.open(resolvedFile)
     return new Session({
       entries: parsed.entries.slice(1),
       messages,

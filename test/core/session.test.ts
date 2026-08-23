@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {expect} from 'chai'
+import {spawn} from 'node:child_process'
 import fsSync from 'node:fs'
 import fs from 'node:fs/promises'
 import os from 'node:os'
@@ -55,10 +56,7 @@ describe('session persistence', () => {
     })
     session.recordTurnEvent({phase: TurnPhase.Started, turnId: 'turn-1'})
     const [user, assistant] = session.appendMessages(
-      [
-        new Message(MessageType.User, {content: 'hello'}),
-        new Message(MessageType.Assistant, {content: 'hi'}),
-      ],
+      [new Message(MessageType.User, {content: 'hello'}), new Message(MessageType.Assistant, {content: 'hi'})],
       {iteration: 0, turnId: 'turn-1'},
     )
     session.recordTurnEvent({phase: TurnPhase.Completed, turnId: 'turn-1'})
@@ -99,9 +97,7 @@ describe('session persistence', () => {
   it('resumes a session without changing message identity', async () => {
     const repository = new SessionRepository({rootDir: root})
     const session = repository.create({id: 'session-1'})
-    const [original] = session.appendMessages([
-      new Message(MessageType.User, {content: 'first', role: Role.User}),
-    ])
+    const [original] = session.appendMessages([new Message(MessageType.User, {content: 'first', role: Role.User})])
     const file = session.getFile() as string
     await session.close()
 
@@ -255,6 +251,61 @@ describe('session persistence', () => {
     expect(firstPage.errors[0].message).to.contain(`Invalid session file ${corruptFile} at line 1`)
   })
 
+  it('finds the most recently updated eligible session', async () => {
+    const repository = new SessionRepository({rootDir: root})
+    const workspace = path.join(root, 'workspace')
+    const otherWorkspace = path.join(root, 'other-workspace')
+    const older = repository.create({
+      createdAt: '2026-08-20T00:00:00.000Z',
+      cwd: workspace,
+      id: 'older-but-updated',
+      originator: 'orbit-interactive',
+    })
+    older.appendMessages([
+      new Message(MessageType.User, {content: 'updated later', timestamp: '2026-08-23T00:00:00.000Z'}),
+    ])
+    await older.close()
+    const newer = repository.create({
+      createdAt: '2026-08-22T00:00:00.000Z',
+      cwd: workspace,
+      id: 'newer',
+      originator: 'orbit-interactive',
+    })
+    await newer.close()
+    const gui = repository.create({
+      createdAt: '2026-08-24T00:00:00.000Z',
+      cwd: otherWorkspace,
+      id: 'gui',
+      originator: 'orbit-thread-manager',
+    })
+    await gui.close()
+
+    expect(
+      await repository.findLatest({cwd: workspace, originators: ['orbit-interactive', 'orbit-thread-manager']}),
+    ).to.include({id: 'older-but-updated'})
+    expect(await repository.findLatest({originators: ['orbit-interactive', 'orbit-thread-manager']})).to.include({
+      id: 'gui',
+    })
+    expect(await repository.findLatest({cwd: workspace, originators: ['other']})).to.equal(undefined)
+  })
+
+  it('honors process lock files and recovers a stale owner', async () => {
+    const repository = new SessionRepository({rootDir: root})
+    const session = repository.create({id: 'locked-session'})
+    const file = session.getFile() as string
+    const lockFile = `${file}.lock`
+    await session.close()
+    await fs.writeFile(lockFile, `${JSON.stringify({pid: process.pid, token: 'external'})}\n`)
+
+    expect(() => repository.open(file)).to.throw('Session file is already open for writing')
+    const stalePid = await exitedProcessId()
+    await fs.writeFile(lockFile, `${JSON.stringify({pid: stalePid, token: 'stale'})}\n`)
+
+    const resumed = repository.open(file)
+    await resumed.close()
+    expect(fsSync.existsSync(lockFile)).to.equal(false)
+  })
+
   it('finds and permanently deletes a saved session by id', async () => {
     const repository = new SessionRepository({rootDir: root})
     const session = repository.create({id: 'session-to-delete'})
@@ -288,9 +339,12 @@ describe('session persistence', () => {
     const repository = new SessionRepository({rootDir: root})
     const failedSession = repository.create({id: 'failed'})
     const failedAgent = new Agent({
-      deps: {createModel: () => testModel(async () => {
-        throw new Error('model failed')
-      })},
+      deps: {
+        createModel: () =>
+          testModel(async () => {
+            throw new Error('model failed')
+          }),
+      },
       state: new State(failedSession),
     })
 
@@ -313,10 +367,13 @@ describe('session persistence', () => {
     const cancelledSession = repository.create({id: 'cancelled'})
     let modelCalls = 0
     const cancelledAgent = new Agent({
-      deps: {createModel: () => testModel(async () => {
-        modelCalls += 1
-        return new Message(MessageType.Assistant, {content: 'unexpected'})
-      })},
+      deps: {
+        createModel: () =>
+          testModel(async () => {
+            modelCalls += 1
+            return new Message(MessageType.Assistant, {content: 'unexpected'})
+          }),
+      },
       state: new State(cancelledSession),
     })
     const controller = new AbortController()
@@ -355,4 +412,15 @@ function testModel(invoke: Model['invoke']): Model {
     },
     invoke,
   }
+}
+
+async function exitedProcessId(): Promise<number> {
+  const child = spawn(process.execPath, ['-e', ''])
+  const {pid} = child
+  if (pid === undefined) throw new Error('Failed to start a child process.')
+  await new Promise<void>((resolve, reject) => {
+    child.once('error', reject)
+    child.once('exit', () => resolve())
+  })
+  return pid
 }

@@ -8,7 +8,9 @@ CLIs, and proposes an implementation contract for resuming Orbit interactive
 sessions by recency or session ID.
 
 The repository findings describe the implementation as of 2026-08-23. The
-Orbit CLI sections are a proposal, not an implemented feature.
+design was subsequently implemented with exact-ID and latest-session resume,
+cwd scoping, interactive history hydration, and cross-process writer locking.
+The picker, session names, cwd selection, and fork behavior remain future work.
 
 ## Executive conclusion
 

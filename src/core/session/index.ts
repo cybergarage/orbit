@@ -27,6 +27,7 @@ export {SessionRecorder} from './recorder.js'
 export {SessionRepository} from './repository.js'
 export type {
   CreateSessionOptions,
+  FindLatestSessionOptions,
   SessionListError,
   SessionListOptions,
   SessionListResult,

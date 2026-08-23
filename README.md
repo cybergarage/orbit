@@ -13,6 +13,7 @@ An agentic CLI for crafting and publishing content workflows.
 
 * [Development](docs/development.md)
 * [Settings](docs/settings.md)
+* [Sessions](docs/session.md)
 * [Interactive Commands](docs/interactive.md)
 * [Local GUI](docs/gui.md)
 * [GUI Integration](docs/gui-integration.md)
@@ -42,6 +43,7 @@ USAGE
 * [`orbit exec [PROMPT]`](#orbit-exec-prompt)
 * [`orbit gui`](#orbit-gui)
 * [`orbit help [COMMAND]`](#orbit-help-command)
+* [`orbit resume [SESSION]`](#orbit-resume-session)
 
 ## `orbit delete SESSION`
 
@@ -148,4 +150,42 @@ DESCRIPTION
 ```
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.37/src/commands/help.ts)_
+
+## `orbit resume [SESSION]`
+
+Resume a saved interactive session
+
+```
+USAGE
+  $ orbit resume [SESSION] [--anthropic-api-key-env <value>] [--debug] [--lang en|ja] [--model <value>]
+    [--ollama-host <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai] [--all] [--last]
+
+ARGUMENTS
+  [SESSION]  Exact ID of the saved session to resume
+
+FLAGS
+  --all                            Search all working directories (requires --last)
+  --anthropic-api-key-env=<value>  Environment variable name for the Anthropic API key
+  --debug                          Enable debug logging
+  --lang=<option>                  Output language
+                                   <options: en|ja>
+  --last                           Resume the most recently updated eligible session
+  --model=<value>                  Model name (overrides workspace setting and provider default)
+  --ollama-host=<value>            Ollama host URL
+  --openai-api-key-env=<value>     Environment variable name for the OpenAI API key
+  --provider=<option>              LLM provider (overrides workspace setting)
+                                   <options: anthropic|ollama|openai>
+
+DESCRIPTION
+  Resume a saved interactive session
+
+EXAMPLES
+  $ orbit resume --last
+
+  $ orbit resume <SESSION_ID>
+
+  $ orbit resume --last --all
+```
+
+_See code: [src/cli/resume.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/resume.ts)_
 <!-- commandsstop -->

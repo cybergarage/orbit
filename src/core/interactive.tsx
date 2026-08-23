@@ -66,11 +66,14 @@ export const slashCommandHelpMessage = [
 export function createInitialInteractiveState(
   options: Pick<InteractiveState, 'logger' | 'model' | 'provider' | 'session' | 'settings' | 'systemPrompt'>,
 ): InteractiveState {
+  const conversationMessages = options.session?.getConversationMessages() ?? []
   return {
-    conversationMessages: [],
+    conversationMessages,
     input: '',
     isLoading: false,
-    messages: [],
+    messages: conversationMessages.filter(
+      (message) => message.type === MessageType.User || message.type === MessageType.Assistant,
+    ),
     ...options,
   }
 }
@@ -354,7 +357,11 @@ function InteractiveApp({
       <Box marginTop={1}>
         <Text color="cyan">{'> '}</Text>
         <Text>{state.input}</Text>
-        {state.isLoading ? null : <Text backgroundColor="white" color="black"> </Text>}
+        {state.isLoading ? null : (
+          <Text backgroundColor="white" color="black">
+            {' '}
+          </Text>
+        )}
       </Box>
       {state.isLoading ? (
         <Box marginTop={1}>

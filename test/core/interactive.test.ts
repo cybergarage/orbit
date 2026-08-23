@@ -26,10 +26,7 @@ import {
   SessionRepository,
 } from '../../src/core/models/index.js'
 
-function createMockAgent(
-  invokeImpl: Agent['invoke'],
-  options: AgentOptions = {},
-): Agent {
+function createMockAgent(invokeImpl: Agent['invoke'], options: AgentOptions = {}): Agent {
   return new Agent({
     ...options,
     deps: {
@@ -86,9 +83,31 @@ describe('interactive helpers', () => {
     })
   })
 
+  it('hydrates visible history from a resumed session', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-interactive-resume-'))
+    const repository = new SessionRepository({rootDir: root})
+    const session = repository.create({id: 'resumed'})
+    session.appendMessages([
+      new Message(MessageType.User, {content: 'previous question', role: Role.User}),
+      new Message(MessageType.Tool, {content: 'internal tool result'}),
+      new Message(MessageType.Assistant, {content: 'previous answer', role: Role.Assistant}),
+    ])
+
+    const state = createInitialInteractiveState({model: 'llama3.1', provider: 'ollama', session})
+
+    expect(state.conversationMessages.map((message) => message.content)).to.deep.equal([
+      'previous question',
+      'internal tool result',
+      'previous answer',
+    ])
+    expect(state.messages.map((message) => message.content)).to.deep.equal(['previous question', 'previous answer'])
+    await session.close()
+    await fs.rm(root, {force: true, recursive: true})
+  })
+
   it('appends user and assistant messages while keeping prior history', async () => {
-    const agent = createMockAgent(async (messages) =>
-      new Message(MessageType.Assistant, {content: `reply:${messages.length}`}),
+    const agent = createMockAgent(
+      async (messages) => new Message(MessageType.Assistant, {content: `reply:${messages.length}`}),
     )
     const AgentCtor = class extends MockAgent {
       constructor() {
@@ -105,12 +124,7 @@ describe('interactive helpers', () => {
 
     expect(first.messages.map((message) => message.content)).to.deep.equal(['hello', 'reply:1'])
     expect(first.messages.map((message) => message.role)).to.deep.equal([Role.User, Role.Assistant])
-    expect(second.messages.map((message) => message.content)).to.deep.equal([
-      'hello',
-      'reply:1',
-      'again',
-      'reply:3',
-    ])
+    expect(second.messages.map((message) => message.content)).to.deep.equal(['hello', 'reply:1', 'again', 'reply:3'])
     expect(second.messages.map((message) => message.role)).to.deep.equal([
       Role.User,
       Role.Assistant,
@@ -321,11 +335,7 @@ describe('interactive helpers', () => {
       'hello',
       'reply:openai:gpt-4o',
     ])
-    expect(replied.messages.map((message) => message.role)).to.deep.equal([
-      Role.Assistant,
-      Role.User,
-      Role.Assistant,
-    ])
+    expect(replied.messages.map((message) => message.role)).to.deep.equal([Role.Assistant, Role.User, Role.Assistant])
   })
 
   it('prepends the system prompt only to the outgoing request', async () => {
