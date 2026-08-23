@@ -23,3 +23,8 @@ doc: doc-touch oclif-docs $(docs)
 run:
 	npm run build
 	node ./bin/run.js $(ARGS)
+
+.PHONY: gui
+gui:
+	npm run build
+	node ./bin/run.js gui $(ARGS)
