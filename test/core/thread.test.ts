@@ -102,11 +102,20 @@ describe('ThreadManager', () => {
   it('emits typed run, model, message, and tool lifecycle events', async () => {
     const events: ThreadEvent[] = []
     let modelCallCount = 0
-    const searchTool = tool(({query}: {query: string}) => `result:${query}`, {
-      description: 'Search for a value.',
-      name: 'search',
-      schema: z.object({query: z.string()}),
-    })
+    const searchTool = tool(
+      ({query}: {query: string}, options) => {
+        const context = options.context as {
+          emitUpdate(update: {content: Array<{text: string; type: 'text'}>}): void
+        }
+        context.emitUpdate({content: [{text: `searching:${query}`, type: 'text'}]})
+        return `result:${query}`
+      },
+      {
+        description: 'Search for a value.',
+        name: 'search',
+        schema: z.object({query: z.string()}),
+      },
+    )
     const manager = new ThreadManager({
       createAgent: createAgentFactory(
         async () => {
@@ -134,12 +143,19 @@ describe('ThreadManager', () => {
       ThreadEventType.ModelStarted,
       ThreadEventType.MessageCompleted,
       ThreadEventType.ToolStarted,
+      ThreadEventType.ToolUpdated,
       ThreadEventType.ToolCompleted,
       ThreadEventType.ModelStarted,
       ThreadEventType.MessageCompleted,
       ThreadEventType.RunCompleted,
     ])
     const completedTool = events.find((event) => event.type === ThreadEventType.ToolCompleted)
+    const updatedTool = events.find((event) => event.type === ThreadEventType.ToolUpdated)
+    expect(updatedTool).to.include({iteration: 0, threadId: 'thread-1'})
+    if (updatedTool?.type === ThreadEventType.ToolUpdated) {
+      expect(updatedTool.update).to.deep.equal({content: [{text: 'searching:orbit', type: 'text'}]})
+    }
+
     expect(completedTool).to.include({iteration: 0, threadId: 'thread-1'})
     if (completedTool?.type === ThreadEventType.ToolCompleted) {
       expect(completedTool.message.payload).to.deep.equal({

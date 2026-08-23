@@ -280,7 +280,14 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           (toolCall): ToolExecutionContext => ({
             callId: toolCall.id,
             cwd: this.cwd,
-            emitUpdate() {},
+            emitUpdate(update) {
+              emitAgentEvent(options?.onEvent, {
+                iteration,
+                toolCall,
+                type: AgentEventType.ToolUpdated,
+                update,
+              })
+            },
             signal,
           }),
           (toolCall, execute) => this.observeToolExecution(toolCall, execute, iteration, options),

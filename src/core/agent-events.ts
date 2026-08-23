@@ -3,12 +3,14 @@
 
 import type {Message} from './message/index.js'
 import type {ModelToolCall} from './models/index.js'
+import type {ToolResult} from './tools/index.js'
 
 export const AgentEventType = {
   MessageCompleted: 'message-completed',
   ModelStarted: 'model-started',
   ToolCompleted: 'tool-completed',
   ToolStarted: 'tool-started',
+  ToolUpdated: 'tool-updated',
 } as const
 
 export type AgentEventType = (typeof AgentEventType)[keyof typeof AgentEventType]
@@ -37,10 +39,18 @@ export interface AgentToolCompletedEvent {
   type: typeof AgentEventType.ToolCompleted
 }
 
+export interface AgentToolUpdatedEvent {
+  iteration: number
+  toolCall: ModelToolCall
+  type: typeof AgentEventType.ToolUpdated
+  update: ToolResult
+}
+
 export type AgentEvent =
   | AgentMessageCompletedEvent
   | AgentModelStartedEvent
   | AgentToolCompletedEvent
   | AgentToolStartedEvent
+  | AgentToolUpdatedEvent
 
 export type AgentEventHandler = (event: AgentEvent) => void

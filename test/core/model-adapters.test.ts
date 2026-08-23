@@ -94,6 +94,36 @@ describe('model adapter tools', () => {
     })
   })
 
+  it('projects normalized tool errors for OpenAI and Ollama', () => {
+    const failedToolResult = new Message(MessageType.Tool, {
+      payload: {
+        input: {},
+        isError: true,
+        name: 'search',
+        output: {
+          content: [
+            {text: 'failed', type: 'text'},
+            {data: 'aW1hZ2U=', mediaType: 'image/png', type: 'image'},
+          ],
+          isError: true,
+        },
+        toolCallId: 'call-1',
+      },
+    })
+
+    expect(toOpenAIMessage(failedToolResult)).to.include({
+      content: 'Tool error: failed\n[image: image/png]',
+      role: 'tool',
+      'tool_call_id': 'call-1',
+    })
+    expect(toOllamaMessage(failedToolResult)).to.deep.include({
+      content: 'Tool error: failed\n[image: image/png]',
+      images: ['aW1hZ2U='],
+      role: 'tool',
+      'tool_name': 'search',
+    })
+  })
+
   it('serializes Anthropic tool definitions and messages', () => {
     const anthropicTool = toAnthropicTool(searchTool)
     const assistantMessage = toAnthropicMessage(toolCallMessage)

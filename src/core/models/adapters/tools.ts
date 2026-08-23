@@ -3,7 +3,7 @@
 
 import type {Message} from '../../message/index.js'
 import type {ToolResult} from '../../tools/index.js'
-import type {ModelToolCallPayload, ModelToolResultPayload} from '../model.js'
+import type {ModelAssistantPayload, ModelOutputPart, ModelToolCallPayload, ModelToolResultPayload} from '../model.js'
 
 import {toolResultText} from '../../tools/index.js'
 
@@ -17,9 +17,25 @@ export function getToolResult(message: Message): ModelToolResultPayload | undefi
   return isModelToolResultPayload(message.payload) ? message.payload : undefined
 }
 
+export function getModelOutputParts(message: Message): ModelOutputPart[] {
+  return isModelAssistantPayload(message.payload) && Array.isArray(message.payload.parts) ? message.payload.parts : []
+}
+
 export function stringifyToolOutput(output: unknown): string {
   if (isToolResult(output)) return toolResultText(output)
   return typeof output === 'string' ? output : (JSON.stringify(output) ?? String(output))
+}
+
+export function getToolResultImages(output: unknown): string[] {
+  if (!isToolResult(output)) return []
+  return output.content.filter((content) => content.type === 'image').map((content) => content.data)
+}
+
+export function stringifyToolResult(result: ModelToolResultPayload): string {
+  const text = stringifyToolOutput(result.output)
+  const isError = result.isError === true || (isToolResult(result.output) && result.output.isError === true)
+  if (!isError) return text
+  return text.length === 0 ? 'Tool error: execution failed.' : `Tool error: ${text}`
 }
 
 function isModelToolCallPayload(payload: unknown): payload is ModelToolCallPayload {
@@ -28,6 +44,10 @@ function isModelToolCallPayload(payload: unknown): payload is ModelToolCallPaylo
   }
 
   return Array.isArray((payload as ModelToolCallPayload).toolCalls)
+}
+
+function isModelAssistantPayload(payload: unknown): payload is ModelAssistantPayload {
+  return typeof payload === 'object' && payload !== null && 'response' in payload
 }
 
 function isModelToolResultPayload(payload: unknown): payload is ModelToolResultPayload {

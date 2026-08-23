@@ -13,6 +13,34 @@ export interface ModelToolCall {
   name: string
 }
 
+export type ModelOutputPart =
+  | {
+      data: string
+      id?: string
+      transcript?: string
+      type: 'audio'
+    }
+  | {
+      data: string
+      mediaType?: string
+      type: 'image'
+    }
+  | {
+      endIndex?: number
+      startIndex?: number
+      title: string
+      type: 'citation'
+      url: string
+    }
+  | {
+      text: string
+      type: 'reasoning' | 'refusal' | 'text'
+    }
+  | {
+      toolCall: ModelToolCall
+      type: 'tool-call'
+    }
+
 export interface ModelToolCallPayload {
   toolCalls: ModelToolCall[]
 }
@@ -30,12 +58,14 @@ export interface ModelResponseMetadata {
   durationMs: number
   model: string
   provider: ProviderName
+  providerMetadata?: Record<string, unknown>
   responseId?: string
   stopReason?: string
   usage?: ModelTokenUsage
 }
 
 export interface ModelAssistantPayload {
+  parts?: ModelOutputPart[]
   response: ModelResponseMetadata
   toolCalls?: ModelToolCall[]
 }

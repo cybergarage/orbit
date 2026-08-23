@@ -138,14 +138,15 @@ describe('coding tools', () => {
     expect(await fs.readFile(outside, 'utf8')).to.equal('outside')
   })
 
-  it('executes Bash commands and reports non-zero exits as completed results', async () => {
+  it('executes Bash commands and reports non-zero exits as model-visible errors', async () => {
     if (process.platform === 'win32' && process.env.ORBIT_BASH_PATH === undefined) return
     const success = await invoke(createBashTool(), {command: "printf 'hello'"}, root)
     expect(toolResultText(success)).to.equal('hello')
     expect(success.details).to.include({exitCode: 0, timedOut: false})
 
     const failure = await invoke(createBashTool(), {command: 'exit 7'}, root)
-    expect(failure.isError).to.not.equal(true)
+    expect(failure.isError).to.equal(true)
+    expect(toolResultText(failure)).to.equal('[command exit code 7]')
     expect(failure.details).to.include({exitCode: 7})
   })
 

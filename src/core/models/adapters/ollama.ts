@@ -7,23 +7,28 @@ import {performance} from 'node:perf_hooks'
 import {Ollama} from 'ollama'
 
 import type {Message} from '../../message/index.js'
-import type {Model, ModelInvokeOptions, ModelResponseMetadata, ModelToolCall} from '../model.js'
+import type {Model, ModelInvokeOptions, ModelOutputPart, ModelResponseMetadata, ModelToolCall} from '../model.js'
 import type {Provider, ProviderName} from '../provider.js'
 
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
-import {getToolCalls, getToolResult, stringifyToolOutput} from './tools.js'
+import {getModelOutputParts, getToolCalls, getToolResult, getToolResultImages, stringifyToolResult} from './tools.js'
+
+export interface OllamaAgentOptions {
+  client?: Pick<Ollama, 'abort' | 'chat'>
+}
 
 export class OllamaAgent implements Model {
   private readonly abort = () => this.client.abort()
-  private readonly client: Ollama
+  private readonly client: Pick<Ollama, 'abort' | 'chat'>
 
   constructor(
     private readonly model: string,
     private readonly provider: Provider,
+    options: OllamaAgentOptions = {},
   ) {
-    this.client = new Ollama(createOllamaOptions(provider))
+    this.client = options.client ?? new Ollama(createOllamaOptions(provider))
   }
 
   getModel(): string {
@@ -72,10 +77,21 @@ export class OllamaAgent implements Model {
 
     const toolCalls = response.message.tool_calls?.map(toOllamaModelToolCall) ?? []
     const {content} = response.message
+    const parts = toOllamaOutputParts(response.message, toolCalls)
     const metadata: ModelResponseMetadata = {
       durationMs: performance.now() - startedAt,
       model: response.model,
       provider: this.getProvider(),
+      providerMetadata: {
+        createdAt:
+          response.created_at instanceof Date ? response.created_at.toISOString() : String(response.created_at),
+        done: response.done,
+        evalDurationNs: response.eval_duration,
+        loadDurationNs: response.load_duration,
+        ...(response.logprobs === undefined ? {} : {logprobs: response.logprobs}),
+        promptEvalDurationNs: response.prompt_eval_duration,
+        totalDurationNs: response.total_duration,
+      },
       ...(response.done_reason === undefined ? {} : {stopReason: response.done_reason}),
       usage: {
         inputTokens: response.prompt_eval_count,
@@ -87,6 +103,7 @@ export class OllamaAgent implements Model {
     return new CoreMessage(MessageType.Assistant, {
       content,
       payload: {
+        ...(parts.length > 0 ? {parts} : {}),
         response: metadata,
         ...(toolCalls.length > 0 ? {toolCalls} : {}),
       },
@@ -102,8 +119,10 @@ export function createOllamaOptions(provider: Provider): Partial<Config> {
 export function toOllamaMessage(message: Message): OllamaMessage {
   const toolResult = getToolResult(message)
   if (message.type === MessageType.Tool && toolResult !== undefined) {
+    const images = getToolResultImages(toolResult.output)
     return {
-      content: stringifyToolOutput(toolResult.output),
+      content: stringifyToolResult(toolResult),
+      ...(images.length > 0 ? {images} : {}),
       role: 'tool',
       // Ollama's SDK expects snake_case for this field.
       // eslint-disable-next-line camelcase
@@ -112,13 +131,20 @@ export function toOllamaMessage(message: Message): OllamaMessage {
   }
 
   const toolCalls = getToolCalls(message)
-  if (toolCalls.length > 0) {
+  const parts = getModelOutputParts(message)
+  const thinking = parts.flatMap((part) => (part.type === 'reasoning' ? [part.text] : [])).join('\n')
+  const images = parts
+    .filter((part): part is Extract<ModelOutputPart, {type: 'image'}> => part.type === 'image')
+    .map((part) => part.data)
+  if (toolCalls.length > 0 || thinking.length > 0 || images.length > 0) {
     return {
       content: message.content,
+      ...(images.length > 0 ? {images} : {}),
       role: 'assistant',
+      ...(thinking.length > 0 ? {thinking} : {}),
       // Ollama's SDK expects snake_case for this field.
       // eslint-disable-next-line camelcase
-      tool_calls: toolCalls.map((toolCall) => toOllamaToolCall(toolCall)),
+      ...(toolCalls.length > 0 ? {tool_calls: toolCalls.map((toolCall) => toOllamaToolCall(toolCall))} : {}),
     }
   }
 
@@ -126,6 +152,24 @@ export function toOllamaMessage(message: Message): OllamaMessage {
     content: message.content,
     role: message.role,
   }
+}
+
+function toOllamaOutputParts(message: OllamaMessage, toolCalls: ModelToolCall[]): ModelOutputPart[] {
+  const parts: ModelOutputPart[] = []
+  if (message.thinking !== undefined && message.thinking.length > 0) {
+    parts.push({text: message.thinking, type: 'reasoning'})
+  }
+
+  if (message.content.length > 0) parts.push({text: message.content, type: 'text'})
+  for (const image of message.images ?? []) {
+    parts.push({
+      data: typeof image === 'string' ? image : Buffer.from(image).toString('base64'),
+      type: 'image',
+    })
+  }
+
+  parts.push(...toolCalls.map((toolCall): ModelOutputPart => ({toolCall, type: 'tool-call'})))
+  return parts
 }
 
 export function toOllamaTool(tool: NonNullable<ModelInvokeOptions['tools']>[number]): OllamaTool {

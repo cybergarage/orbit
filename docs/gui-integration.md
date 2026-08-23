@@ -99,6 +99,7 @@ The event stream reports these lifecycle transitions:
 - `model-started`
 - `message-completed`
 - `tool-started`
+- `tool-updated`
 - `tool-completed`
 - `run-completed`
 - `run-cancelled`
@@ -121,4 +122,5 @@ their invocation options and should stop promptly when it is aborted.
 
 Model responses are currently delivered as completed messages. The lifecycle
 API is designed so token-delta events can be added without changing the IPC
-boundary.
+boundary. Tools can emit `tool-updated` events before their final result; Bash
+uses these updates for incremental stdout and stderr chunks.

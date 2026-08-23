@@ -34,7 +34,14 @@ export function createBashTool() {
       const shell = resolveShell()
       const startedAt = performance.now()
       const execution = await runCommand(shell, input, context)
-      const output = execution.combined || `[command exited with code ${String(execution.exitCode)}]`
+      const failed = execution.timedOut || execution.exitCode !== 0
+      const status = formatCommandStatus(execution)
+      const output =
+        execution.combined.length === 0
+          ? (status ?? '[command completed without output]')
+          : status === undefined
+            ? execution.combined
+            : `${execution.combined}${execution.combined.endsWith('\n') ? '' : '\n'}${status}`
       const truncated = truncateText(output)
       const stdout = truncateText(execution.stdout)
       const stderr = truncateText(execution.stderr)
@@ -48,13 +55,25 @@ export function createBashTool() {
           timedOut: execution.timedOut,
           truncated: execution.truncated || truncated.truncated || stdout.truncated || stderr.truncated,
         },
-        isError: execution.timedOut,
+        isError: failed,
       })
     },
     name: 'bash',
     scheduling: 'serial',
     schema: bashSchema,
   })
+}
+
+function formatCommandStatus(execution: {
+  exitCode: null | number
+  timedOut: boolean
+  truncated: boolean
+}): string | undefined {
+  if (!execution.timedOut && execution.exitCode === 0 && !execution.truncated) return undefined
+  const states = [`exit code ${String(execution.exitCode)}`]
+  if (execution.timedOut) states.push('timed out')
+  if (execution.truncated) states.push('output truncated')
+  return `[command ${states.join(', ')}]`
 }
 
 async function runCommand(

@@ -7,6 +7,7 @@ import type {AgentEvent} from './agent-events.js'
 import type {AgentInvokeOptions, AgentOptions} from './agent.js'
 import type {Message, MessagePayload, MessageType} from './message/index.js'
 import type {ModelToolCall, ProviderName, Role} from './models/index.js'
+import type {ToolResult} from './tools/index.js'
 
 import {AgentEventType} from './agent-events.js'
 import {Agent} from './agent.js'
@@ -31,6 +32,7 @@ export const ThreadEventType = {
   RunStarted: 'run-started',
   ToolCompleted: AgentEventType.ToolCompleted,
   ToolStarted: AgentEventType.ToolStarted,
+  ToolUpdated: AgentEventType.ToolUpdated,
 } as const
 
 export type ThreadEventType = (typeof ThreadEventType)[keyof typeof ThreadEventType]
@@ -94,6 +96,13 @@ export interface ThreadToolCompletedEvent extends ThreadEventBase {
   type: typeof ThreadEventType.ToolCompleted
 }
 
+export interface ThreadToolUpdatedEvent extends ThreadEventBase {
+  iteration: number
+  toolCall: ModelToolCall
+  type: typeof ThreadEventType.ToolUpdated
+  update: ToolResult
+}
+
 export interface ThreadRunCompletedEvent extends ThreadEventBase {
   message: ThreadMessage
   type: typeof ThreadEventType.RunCompleted
@@ -123,6 +132,7 @@ export type ThreadEvent =
   | ThreadRunStartedEvent
   | ThreadToolCompletedEvent
   | ThreadToolStartedEvent
+  | ThreadToolUpdatedEvent
 
 export type ThreadEventHandler = (event: ThreadEvent) => void
 
@@ -453,6 +463,17 @@ export class ThreadManager {
 
       case AgentEventType.ToolStarted: {
         this.emit({...base, iteration: event.iteration, toolCall: event.toolCall, type: event.type})
+        return
+      }
+
+      case AgentEventType.ToolUpdated: {
+        this.emit({
+          ...base,
+          iteration: event.iteration,
+          toolCall: event.toolCall,
+          type: event.type,
+          update: event.update,
+        })
       }
     }
   }

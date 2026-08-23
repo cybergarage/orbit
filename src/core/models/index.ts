@@ -9,6 +9,7 @@ export type {
   AgentModelStartedEvent,
   AgentToolCompletedEvent,
   AgentToolStartedEvent,
+  AgentToolUpdatedEvent,
 } from '../agent-events.js'
 export {Agent} from '../agent.js'
 export type {AgentInvokeOptions, AgentOptions, AgentTool} from '../agent.js'
@@ -78,6 +79,7 @@ export type {
   Model,
   ModelAssistantPayload,
   ModelInvokeOptions,
+  ModelOutputPart,
   ModelResponseMetadata,
   ModelTokenUsage,
   ModelToolCall,

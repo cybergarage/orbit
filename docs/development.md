@@ -121,6 +121,19 @@ definitions; `ToolRuntime` validates and schedules calls. Add reusable tools
 under `src/core/tools/` and keep provider-specific serialization in the model
 adapter. See [Coding Tools](tools.md) for the public behavior.
 
+Completed assistant messages keep their primary text in `Message.content` for
+compatibility and may expose normalized `ModelOutputPart` values in
+`ModelAssistantPayload.parts`. Adapters use these parts to preserve provider
+state needed by later requests, such as Ollama thinking text and images.
+Provider-native metadata that has no shared field belongs under
+`ModelResponseMetadata.providerMetadata` and must remain JSON-serializable.
+
+OpenAI currently uses Chat Completions. Adding a Responses API adapter requires
+ordered output-item and continuation-state support; do not flatten Responses
+items directly into a single text message. See
+[Model Response and Tool Integration](analysis/2026-08-23-model-response-tool-integration.md)
+for the verified protocol differences and follow-up direction.
+
 Model providers are registered through `ModelRegistry` rather than selected by
 a factory switch. A provider registration supplies its name, default model, and
 model constructor:

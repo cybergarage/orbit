@@ -200,4 +200,17 @@ declares parallel scheduling.
 
 Tool execution returns normalized text or image content, optional details, and
 an error marker. Validation failures, unknown names, and thrown errors become
-tool-result messages so the model can recover within the same turn.
+tool-result messages so the model can recover within the same turn. OpenAI Chat
+Completions and Ollama do not expose a native tool-error field, so Orbit adds a
+model-visible `Tool error:` marker when projecting failed results to those
+providers. Non-zero Bash exits include their exit status in model-visible
+content.
+
+Ollama tool-result messages preserve normalized image data through its native
+`images` field. OpenAI Chat Completions currently receives an explicit image
+placeholder because that protocol does not accept image parts in function tool
+results. Rich tool-result capability negotiation remains future work.
+
+Tools may also emit partial updates before returning their final result. Agent
+and thread consumers receive these as `tool-updated` events. Updates are not
+persisted as conversation messages and are not sent back to the model.
