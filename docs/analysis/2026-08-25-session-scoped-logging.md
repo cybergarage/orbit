@@ -19,13 +19,10 @@ storage format, and rollout sequence are not implemented yet.
 
 ## Requested behavior and assumptions
 
-The request names `~/.orbig` as the output directory. Orbit consistently uses
-`~/.orbit` today: sessions default to `~/.orbit/sessions/`, workspace settings
-use `.orbit/settings.json`, and `DOT_APP_DIR_NAME` is derived from the
-application name `orbit`. This proposal therefore treats `~/.orbig` as a typo
-and recommends `~/.orbit/logs/`. If `~/.orbig` is intentional, that path needs
-an explicit product decision before implementation because introducing a second
-application root would conflict with current conventions.
+The log output root is `~/.orbit`, consistent with Orbit's existing conventions:
+sessions default to `~/.orbit/sessions/`, workspace settings use
+`.orbit/settings.json`, and `DOT_APP_DIR_NAME` is derived from the application
+name `orbit`. This proposal places session logs under `~/.orbit/logs/`.
 
 In Orbit's current API, a GUI thread ID and its durable session ID are the same
 UUIDv7. This proposal continues that invariant and uses the term **session ID**
@@ -755,13 +752,12 @@ multi-process access becomes a demonstrated problem.
 
 ## Decisions to confirm before implementation
 
-1. Confirm that `~/.orbig` was a typo and the intended root is `~/.orbit/logs/`.
-2. Decide whether Full diagnostic payloads may ever be persisted, or must remain
+1. Decide whether Full diagnostic payloads may ever be persisted, or must remain
    memory-only.
-3. Decide whether `exec` sessions without resumable transcripts should retain
+2. Decide whether `exec` sessions without resumable transcripts should retain
    log files and for how long.
-4. Select initial per-session row, byte, and age limits.
-5. Decide whether GUI deletion should be permanently destructive or use a
+3. Select initial per-session row, byte, and age limits.
+4. Decide whether GUI deletion should be permanently destructive or use a
    recoverable trash staging area.
 
 None of these decisions changes the recommended interface boundary. They affect
