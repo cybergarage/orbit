@@ -14,6 +14,7 @@ import type {McpToolManager, McpToolManagerFactoryOptions} from './mcp.js'
 import type {
   Model,
   ModelInvokeOptions,
+  ModelResponseMetadata,
   ModelToolCall,
   ModelToolCallPayload,
   ModelToolResultPayload,
@@ -33,7 +34,13 @@ import type {
 
 import {AgentEventType} from './agent-events.js'
 import {ModelAbortError, OrbitError} from './errors/index.js'
-import {FileSessionLogStore, StoreSessionLoggerFactory} from './logs/index.js'
+import {
+  FileSessionLogStore,
+  LogEventType,
+  LogOutcome,
+  runWithLogContext,
+  StoreSessionLoggerFactory,
+} from './logs/index.js'
 import {createMcpToolManager} from './mcp.js'
 import {getModel, Message, MessageType} from './models/index.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
@@ -143,12 +150,33 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       sessionId: this.state.getSession().getId(),
       type: 'model.selected',
     })
+    if (this.diagnostics === undefined) {
+      this.logger.info(
+        {
+          eventType: LogEventType.SessionCreated,
+          model: this.model.getModel(),
+          outcome: LogOutcome.Succeeded,
+          provider: this.model.getProvider(),
+        },
+        'agent session started',
+      )
+    }
   }
 
   async close(): Promise<void> {
     try {
       await this.mcpToolManager.close()
     } finally {
+      const closedEvent = this.diagnostics?.emit({
+        level: 'info',
+        sessionId: this.state.getSession().getId(),
+        threadId: this.state.getSession().getId(),
+        type: LogEventType.SessionClosed,
+      })
+      if (closedEvent === undefined) {
+        this.logger.info({eventType: LogEventType.SessionClosed, outcome: LogOutcome.Succeeded}, 'agent session closed')
+      }
+
       await this.ownedLogStore?.close()
     }
   }
@@ -183,15 +211,71 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     return this.invokeSession(session, messages, options)
   }
 
+  // eslint-disable-next-line max-params
+  private emitTurnTerminal(
+    diagnostics: DiagnosticEventBus | undefined,
+    session: Session,
+    turnId: string,
+    eventType: string,
+    outcome: LogOutcome,
+    startedAt: number,
+    error?: unknown,
+  ): void {
+    const durationMs = performance.now() - startedAt
+    const event = diagnostics?.emit({
+      data: {
+        durationMs,
+        ...(error === undefined ? {} : {error: error instanceof Error ? error.message : String(error)}),
+      },
+      level: outcome === LogOutcome.Failed ? 'error' : 'warn',
+      runId: turnId,
+      sessionId: session.getId(),
+      threadId: session.getId(),
+      turnId,
+      type: eventType,
+    })
+    if (event === undefined) {
+      this.logger[outcome === LogOutcome.Failed ? 'error' : 'warn'](
+        {
+          durationMs,
+          ...(error === undefined ? {} : {error: error instanceof Error ? error.message : String(error)}),
+          eventType,
+          outcome,
+        },
+        eventType,
+      )
+    }
+  }
+
   // Session recording, tool iteration, and terminal-state handling intentionally share one lifecycle boundary.
-  // eslint-disable-next-line complexity
+
   private async invokeSession(
     session: Session,
     messages: Message[],
     options?: Partial<AgentInvokeOptions>,
   ): Promise<Message> {
     const turnId = options?.turnId ?? uuidv7()
+    return runWithLogContext(
+      {
+        runId: turnId,
+        sessionId: session.getId(),
+        threadId: session.getId(),
+        turnId,
+      },
+      () => this.invokeSessionWithTurn(session, messages, turnId, options),
+    )
+  }
+
+  // eslint-disable-next-line complexity
+  private async invokeSessionWithTurn(
+    session: Session,
+    messages: Message[],
+    turnId: string,
+    options?: Partial<AgentInvokeOptions>,
+  ): Promise<Message> {
     const maxToolIterations = options?.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS
+    const diagnostics = options?.diagnostics ?? this.diagnostics
+    const turnStartedAt = performance.now()
     try {
       session.recordTurnContext({
         cwd: this.cwd,
@@ -202,6 +286,22 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       })
       session.recordTurnEvent({phase: TurnPhase.Started, turnId})
       session.appendMessages(messages, {turnId})
+      const turnStarted = diagnostics?.emit({
+        data: {messageCount: messages.length},
+        level: 'info',
+        runId: turnId,
+        sessionId: session.getId(),
+        threadId: session.getId(),
+        turnId,
+        type: LogEventType.TurnStarted,
+      })
+      if (turnStarted === undefined) {
+        this.logger.info(
+          {eventType: LogEventType.TurnStarted, messageCount: messages.length, outcome: LogOutcome.Started},
+          'agent turn started',
+        )
+      }
+
       throwIfAborted(options?.signal)
       const sessionMessageCount = this.sessionContextBuilder.build(session).messages.length
       this.logger.debug(
@@ -225,7 +325,6 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
 
       const toolSnapshot = registry.snapshot()
       const toolRuntime = new ToolRuntime(toolSnapshot)
-      const diagnostics = options?.diagnostics ?? this.diagnostics
       const modelOptions: Partial<ModelInvokeOptions> = {
         ...toModelInvokeOptions(options),
         ...(diagnostics === undefined
@@ -236,6 +335,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                 runId: turnId,
                 sessionId: session.getId(),
                 threadId: session.getId(),
+                turnId,
               },
               diagnostics,
             }),
@@ -261,9 +361,46 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                 diagnosticContext: {...modelOptions.diagnosticContext, iteration},
               }
         const context = this.sessionContextBuilder.build(session)
-        // Tool loops are intentionally sequential because each model response depends on the previous tool results.
-        // eslint-disable-next-line no-await-in-loop
-        const modelMessage = await this.model.invoke([...this.messages, ...context.messages], iterationOptions)
+        const modelStartedAt = performance.now()
+        if (diagnostics === undefined) {
+          this.logger.info(
+            {
+              eventType: LogEventType.ModelRequestStarted,
+              iteration,
+              messageCount: context.messages.length,
+              model: this.model.getModel(),
+              outcome: LogOutcome.Started,
+              provider: this.model.getProvider(),
+              toolCount: toolSnapshot.specs().length,
+            },
+            'model request started',
+          )
+        }
+
+        let modelMessage: Message
+        try {
+          // Tool loops are sequential because each model response depends on the previous tool results.
+          // eslint-disable-next-line no-await-in-loop
+          modelMessage = await this.model.invoke([...this.messages, ...context.messages], iterationOptions)
+        } catch (error) {
+          if (diagnostics === undefined) {
+            this.logger.error(
+              {
+                durationMs: performance.now() - modelStartedAt,
+                error: error instanceof Error ? error.message : String(error),
+                eventType: LogEventType.ModelRequestFailed,
+                iteration,
+                model: this.model.getModel(),
+                outcome: LogOutcome.Failed,
+                provider: this.model.getProvider(),
+              },
+              'model request failed',
+            )
+          }
+
+          throw error
+        }
+
         throwIfAborted(options?.signal)
         const [storedModelMessage] = session.appendMessages([modelMessage], {iteration, turnId})
         emitAgentEvent(options?.onEvent, {
@@ -272,6 +409,22 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           type: AgentEventType.MessageCompleted,
         })
         this.logger.debug({iteration, role: modelMessage.role}, 'agent model iteration completed')
+        if (diagnostics === undefined) {
+          const response = modelResponseMetadata(modelMessage)
+          this.logger.info(
+            {
+              durationMs: response?.durationMs ?? performance.now() - modelStartedAt,
+              eventType: LogEventType.ModelRequestCompleted,
+              iteration,
+              model: response?.model ?? this.model.getModel(),
+              outcome: LogOutcome.Succeeded,
+              provider: response?.provider ?? this.model.getProvider(),
+              ...(response?.responseId === undefined ? {} : {requestId: response.responseId}),
+              ...(response?.usage === undefined ? {} : {usage: {...response.usage}}),
+            },
+            'model request completed',
+          )
+        }
 
         const toolCalls = getToolCalls(storedModelMessage)
         this.logger.debug({iteration, toolCallCount: toolCalls.length}, 'agent tool calls received')
@@ -280,6 +433,27 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           // The terminal flush belongs to this iteration and must finish before returning the response.
           // eslint-disable-next-line no-await-in-loop
           await session.flush()
+          const turnCompleted = diagnostics?.emit({
+            data: {durationMs: performance.now() - turnStartedAt, iteration},
+            level: 'info',
+            runId: turnId,
+            sessionId: session.getId(),
+            threadId: session.getId(),
+            turnId,
+            type: LogEventType.TurnCompleted,
+          })
+          if (turnCompleted === undefined) {
+            this.logger.info(
+              {
+                durationMs: performance.now() - turnStartedAt,
+                eventType: LogEventType.TurnCompleted,
+                iteration,
+                outcome: LogOutcome.Succeeded,
+              },
+              'agent turn completed',
+            )
+          }
+
           return storedModelMessage
         }
 
@@ -328,22 +502,48 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         const abortError = new ModelAbortError('Agent invocation aborted.', {cause: error})
         session.recordTurnEvent({phase: TurnPhase.Cancelled, turnId})
         await session.flush()
+        this.emitTurnTerminal(
+          diagnostics,
+          session,
+          turnId,
+          LogEventType.TurnCancelled,
+          LogOutcome.Cancelled,
+          turnStartedAt,
+        )
         throw abortError
       }
 
       if (error instanceof ModelAbortError) {
         session.recordTurnEvent({phase: TurnPhase.Cancelled, turnId})
         await session.flush()
+        this.emitTurnTerminal(
+          diagnostics,
+          session,
+          turnId,
+          LogEventType.TurnCancelled,
+          LogOutcome.Cancelled,
+          turnStartedAt,
+        )
         throw error
       }
 
       session.recordTurnEvent({error: serializeSessionError(error), phase: TurnPhase.Failed, turnId})
       await session.flush()
+      this.emitTurnTerminal(
+        diagnostics,
+        session,
+        turnId,
+        LogEventType.TurnFailed,
+        LogOutcome.Failed,
+        turnStartedAt,
+        error,
+      )
       throw error
     }
   }
 
   // Tool execution, error projection, and diagnostics share one lifecycle boundary.
+  // eslint-disable-next-line complexity
   private async observeToolExecution(
     toolCall: ModelToolCall,
     execute: () => Promise<ToolExecutionResult>,
@@ -358,24 +558,85 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       iteration,
       runId: options?.turnId ?? options?.diagnosticContext?.runId,
       sessionId: options?.diagnosticContext?.sessionId ?? this.state.getSession().getId(),
+      turnId: options?.turnId ?? options?.diagnosticContext?.turnId,
     }
-    diagnostics?.emit({
+    const started = diagnostics?.emit({
       ...diagnosticContext,
       data: {name: toolCall.name, toolCallId: toolCall.id},
       fullData: {input: toolCall.input},
+      level: 'info',
       type: 'tool.started',
     })
+    if (started === undefined) {
+      this.logger.info(
+        {
+          eventType: LogEventType.ToolCallStarted,
+          iteration,
+          name: toolCall.name,
+          outcome: LogOutcome.Started,
+          toolCallId: toolCall.id,
+        },
+        'tool call started',
+      )
+    }
+
     const startedAt = performance.now()
-    const execution = await execute()
+    let execution: ToolExecutionResult
+    try {
+      execution = await runWithLogContext({iteration, toolCallId: toolCall.id}, execute)
+    } catch (error) {
+      const failed = diagnostics?.emit({
+        ...diagnosticContext,
+        data: {
+          durationMs: performance.now() - startedAt,
+          error: String(error),
+          name: toolCall.name,
+          toolCallId: toolCall.id,
+        },
+        level: 'error',
+        type: 'tool.completed',
+      })
+      if (failed === undefined) {
+        this.logger.error(
+          {
+            durationMs: performance.now() - startedAt,
+            error: error instanceof Error ? error.message : String(error),
+            eventType: LogEventType.ToolCallFailed,
+            iteration,
+            name: toolCall.name,
+            outcome: LogOutcome.Failed,
+            toolCallId: toolCall.id,
+          },
+          'tool call failed',
+        )
+      }
+
+      throw error
+    }
+
     throwIfAborted(options?.signal)
     const isError = execution.result.isError === true
-    diagnostics?.emit({
+    const completed = diagnostics?.emit({
       ...diagnosticContext,
       data: {durationMs: performance.now() - startedAt, isError, name: toolCall.name, toolCallId: toolCall.id},
       fullData: {input: toolCall.input, output: execution.result},
-      ...(isError ? {level: 'error' as const} : {}),
+      level: isError ? 'error' : 'info',
       type: 'tool.completed',
     })
+    if (completed === undefined) {
+      this.logger[isError ? 'error' : 'info'](
+        {
+          durationMs: performance.now() - startedAt,
+          eventType: isError ? LogEventType.ToolCallFailed : LogEventType.ToolCallCompleted,
+          iteration,
+          name: toolCall.name,
+          outcome: isError ? LogOutcome.Failed : LogOutcome.Succeeded,
+          toolCallId: toolCall.id,
+        },
+        isError ? 'tool call failed' : 'tool call completed',
+      )
+    }
+
     return execution
   }
 }
@@ -410,6 +671,14 @@ function getToolCalls(message: Message): ModelToolCall[] {
   }
 
   return message.payload.toolCalls
+}
+
+function modelResponseMetadata(message: Message): ModelResponseMetadata | undefined {
+  const {payload} = message
+  if (typeof payload !== 'object' || payload === null || !('response' in payload)) return undefined
+  const {response} = payload
+  if (typeof response !== 'object' || response === null) return undefined
+  return response as ModelResponseMetadata
 }
 
 function isModelToolCallPayload(payload: unknown): payload is ModelToolCallPayload {

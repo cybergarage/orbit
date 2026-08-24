@@ -8,7 +8,7 @@ import {v7 as uuidv7} from 'uuid'
 import type {Context} from './context.js'
 import type {DiagnosticCapture, DiagnosticEvent, DiagnosticEventBus} from './diagnostics/index.js'
 import type {Logger, LogLevel} from './logger/index.js'
-import type {LogPage, LogQuery, LogRecord, SessionLoggerFactory, SessionLogStore} from './logs/index.js'
+import type {LogPage, LogQuery, LogRecord, LogStoreHealth, SessionLoggerFactory, SessionLogStore} from './logs/index.js'
 import type {ProviderName} from './models/index.js'
 import type {SessionListOptions, SessionListResult, SessionRepository, SessionSummary} from './session/index.js'
 import type {WorkspaceSettings, WorkspaceSettingsSource} from './settings.js'
@@ -24,7 +24,7 @@ import {
   DiagnosticEventBus as EventBus,
 } from './diagnostics/index.js'
 import {createCompositeLogger} from './logger/index.js'
-import {FileSessionLogStore, StoreSessionLoggerFactory} from './logs/index.js'
+import {FileSessionLogStore, LogEventType, LogOutcome, StoreSessionLoggerFactory} from './logs/index.js'
 import {Message, MessageType, Role} from './models/index.js'
 import {SessionRepository as Repository, SessionDeletionService} from './session/index.js'
 import {loadWorkspaceSettingsWithSources} from './settings.js'
@@ -216,13 +216,28 @@ export class OrbitApplicationService {
         settings: this.settings,
       },
     })
-    this.diagnostics.emit({
+    const event = this.diagnostics.emit({
       data: {cwd: this.runtime.cwd, model: this.runtime.model, provider: this.runtime.provider},
       level: 'info',
       sessionId: thread.id,
       threadId: thread.id,
-      type: 'session.created',
+      type: LogEventType.SessionCreated,
     })
+    if (event === undefined) {
+      this.logger.info(
+        {
+          cwd: this.runtime.cwd,
+          eventType: LogEventType.SessionCreated,
+          model: this.runtime.model,
+          outcome: LogOutcome.Succeeded,
+          provider: this.runtime.provider,
+          sessionId: thread.id,
+          threadId: thread.id,
+        },
+        LogEventType.SessionCreated,
+      )
+    }
+
     return thread
   }
 
@@ -242,7 +257,12 @@ export class OrbitApplicationService {
     return this.diagnostics.list(afterSequence)
   }
 
+  getLogHealth(): LogStoreHealth {
+    return this.logs.getHealth()
+  }
+
   getPreferences(): GuiPreferences {
+    this.preferences.diagnosticCapture = this.diagnostics.getCapture()
     return {...this.preferences}
   }
 
@@ -273,13 +293,28 @@ export class OrbitApplicationService {
         settings: this.settings,
       },
     })
-    this.diagnostics.emit({
+    const event = this.diagnostics.emit({
       data: {cwd: summary.cwd, model: summary.model, provider: summary.provider},
       level: 'info',
       sessionId: thread.id,
       threadId: thread.id,
-      type: 'session.resumed',
+      type: LogEventType.SessionResumed,
     })
+    if (event === undefined) {
+      this.logger.info(
+        {
+          cwd: summary.cwd,
+          eventType: LogEventType.SessionResumed,
+          model: summary.model,
+          outcome: LogOutcome.Succeeded,
+          provider: summary.provider,
+          sessionId: thread.id,
+          threadId: thread.id,
+        },
+        LogEventType.SessionResumed,
+      )
+    }
+
     return thread
   }
 
@@ -291,7 +326,12 @@ export class OrbitApplicationService {
       const response = this.handleGuiSlashCommand(thread, content)
       this.appendLocalCommandMessages(thread, content, response)
       const event = this.diagnostics.emit({
-        data: {command: content, response},
+        data: {
+          commandLength: content.length,
+          commandName: content.split(/\s+/u)[0],
+          responseLength: response.length,
+        },
+        fullData: {command: content, response},
         level: 'info',
         runId,
         sessionId: threadId,
@@ -299,7 +339,18 @@ export class OrbitApplicationService {
         type: 'command.submitted',
       })
       if (event === undefined) {
-        this.logger.info({command: content, response, runId, sessionId: threadId, threadId}, 'command.submitted')
+        this.logger.info(
+          {
+            commandLength: content.length,
+            commandName: content.split(/\s+/u)[0],
+            eventType: 'command.submitted',
+            responseLength: response.length,
+            runId,
+            sessionId: threadId,
+            threadId,
+          },
+          'command.submitted',
+        )
       }
 
       return {runId, threadId}
@@ -319,11 +370,25 @@ export class OrbitApplicationService {
   }
 
   updatePreferences(update: Partial<GuiPreferences>): GuiPreferences {
-    if (update.diagnosticCapture !== undefined) this.diagnostics.setCapture(update.diagnosticCapture)
+    if (update.diagnosticCapture !== undefined) {
+      this.diagnostics.setCapture(update.diagnosticCapture)
+      if (update.diagnosticCapture === Capture.Full) {
+        this.logger.warn(
+          {
+            captureDurationMinutes: 15,
+            eventType: 'security.full-capture.enabled',
+            logDestination:
+              this.logs instanceof FileSessionLogStore ? this.logs.rootDir : 'configured session log store',
+          },
+          'full diagnostic capture enabled temporarily',
+        )
+      }
+    }
+
     this.preferences = {
       ...this.preferences,
       ...update,
-      diagnosticCapture: update.diagnosticCapture ?? this.diagnostics.getCapture(),
+      diagnosticCapture: this.diagnostics.getCapture(),
     }
     return this.getPreferences()
   }
@@ -450,12 +515,19 @@ function summarizeSettingsSource(source: WorkspaceSettingsSource): RuntimeSettin
   }
 }
 
-function eventContext(event: ThreadEvent): {iteration?: number; runId: string; sessionId: string; threadId: string} {
+function eventContext(event: ThreadEvent): {
+  iteration?: number
+  runId: string
+  sessionId: string
+  threadId: string
+  turnId: string
+} {
   return {
     ...('iteration' in event ? {iteration: event.iteration} : {}),
     runId: event.runId,
     sessionId: event.threadId,
     threadId: event.threadId,
+    turnId: event.runId,
   }
 }
 

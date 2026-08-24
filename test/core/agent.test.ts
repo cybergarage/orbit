@@ -99,7 +99,15 @@ describe('model helpers', () => {
         'agent invoke started',
         'agent model iteration completed',
       ])
-      expect(records.data.every((record) => record.sessionId === agent.getSession().getId())).to.equal(true)
+      expect(records.data.map((record) => record.eventType)).to.include.members([
+        'session.created',
+        'turn.started',
+        'model.request.started',
+        'model.request.completed',
+        'turn.completed',
+      ])
+      expect(JSON.stringify(records.data)).not.to.contain('hello')
+      expect(records.data.every((record) => record.correlation.sessionId === agent.getSession().getId())).to.equal(true)
       await agent.close()
       await logs.close()
     })

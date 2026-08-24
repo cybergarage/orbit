@@ -34,6 +34,7 @@ function App() {
   const [prompt, setPrompt] = useState('')
   const [runId, setRunId] = useState<string>()
   const [error, setError] = useState<string>()
+  const [categoryFilter, setCategoryFilter] = useState('all')
   const [eventFilter, setEventFilter] = useState('all')
   const [sessionMenu, setSessionMenu] = useState<{session: SessionSummary; x: number; y: number}>()
   const [sessionToDelete, setSessionToDelete] = useState<SessionSummary>()
@@ -68,7 +69,7 @@ function App() {
     })
     source.addEventListener('log', (message) => {
       const record = JSON.parse((message as MessageEvent).data) as LogRecord
-      if (record.sessionId !== selectedThreadId.current) return
+      if (record.correlation.sessionId !== selectedThreadId.current) return
       setLogs((current) => appendUniqueLog(current, record))
     })
     source.addEventListener('error', () => setError('The diagnostics stream disconnected. Reconnecting…'))
@@ -170,8 +171,13 @@ function App() {
   }
 
   const visibleLogs = useMemo(
-    () => logs.filter((record) => eventFilter === 'all' || record.level === eventFilter),
-    [eventFilter, logs],
+    () =>
+      logs.filter(
+        (record) =>
+          (eventFilter === 'all' || record.level === eventFilter) &&
+          (categoryFilter === 'all' || record.category === categoryFilter),
+      ),
+    [categoryFilter, eventFilter, logs],
   )
 
   return (
@@ -256,8 +262,11 @@ function App() {
               <select onChange={(event) => setEventFilter(event.target.value)} value={eventFilter}>
                 <option value="all">All levels</option><option value="info">Info</option><option value="debug">Debug</option><option value="warn">Warn</option><option value="error">Error</option>
               </select>
+              <select onChange={(event) => setCategoryFilter(event.target.value)} value={categoryFilter}>
+                <option value="all">All categories</option><option value="lifecycle">Lifecycle</option><option value="model">Model</option><option value="tool">Tool</option><option value="mcp">MCP</option><option value="storage">Storage</option><option value="runtime">Runtime</option><option value="security">Security</option>
+              </select>
               <select aria-label="Global diagnostic capture" onChange={(event) => updatePreferences({diagnosticCapture: event.target.value as DiagnosticCapture})} value={preferences.diagnosticCapture}>
-                <option value="full">Global: Full</option><option value="metadata">Global: Metadata</option><option value="off">Global: Off</option>
+                <option value="full">Global: Full (15 min)</option><option value="metadata">Global: Metadata</option><option value="off">Global: Off</option>
               </select>
             </div>
           </header>
@@ -266,7 +275,7 @@ function App() {
             {thread !== undefined && visibleLogs.length === 0 ? <div className="empty">No logs for this session.</div> : null}
             {visibleLogs.map((record) => (
               <details className={`event ${record.level}`} key={record.id}>
-                <summary><span className="event-time">{formatTime(record.timestamp)}</span><span className="event-type">{record.message}</span><span className="event-level">{record.level}</span></summary>
+                <summary><span className="event-time">{formatTime(record.timestamp)}</span><span className="event-type">{record.eventType}</span><span className="event-level">{record.level}</span></summary>
                 <pre>{JSON.stringify(record, null, 2)}</pre>
               </details>
             ))}
@@ -325,7 +334,7 @@ function DeleteSessionDialog({
     <div className="dialog-backdrop" role="presentation">
       <section aria-labelledby="delete-session-title" aria-modal="true" className="dialog" role="dialog">
         <h2 id="delete-session-title">Delete session?</h2>
-        <p>This permanently deletes the session transcript and cannot be undone.</p>
+        <p>This permanently deletes the session transcript and all diagnostic log segments. It cannot be undone.</p>
         <div className="dialog-session">{session.preview ?? session.id}</div>
         <div className="dialog-actions">
           <button onClick={onCancel}>Cancel</button>

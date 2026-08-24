@@ -29,9 +29,12 @@ export interface GuiServer {
 
 const messageSchema = z.object({content: z.string().trim().min(1)})
 const logQuerySchema = z.object({
-  after: z.string().min(1).optional(),
+  after: z.string().min(1).max(1024).optional(),
+  category: z.enum(['lifecycle', 'mcp', 'model', 'runtime', 'security', 'storage', 'tool']).optional(),
+  eventType: z.string().min(1).max(120).optional(),
   level: z.enum(['debug', 'error', 'fatal', 'info', 'trace', 'warn']).optional(),
   limit: z.coerce.number().int().min(1).max(1000).optional(),
+  outcome: z.enum(['cancelled', 'denied', 'failed', 'started', 'succeeded']).optional(),
   search: z.string().max(200).optional(),
 })
 const preferencesSchema = z
@@ -64,6 +67,7 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
 
   app.use('/api', requireToken(token))
   app.get('/api/runtime', (_request, response) => response.json(options.service.runtime))
+  app.get('/api/logs/health', (_request, response) => response.json(options.service.getLogHealth()))
   app.get('/api/preferences', (_request, response) => response.json(options.service.getPreferences()))
   app.patch('/api/preferences', (request, response) => {
     response.json(options.service.updatePreferences(preferencesSchema.parse(request.body)))
@@ -78,8 +82,11 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
     const query = logQuerySchema.parse(request.query)
     const page = await options.service.getSessionLogs(request.params.sessionId, {
       ...(query.after === undefined ? {} : {after: query.after}),
+      ...(query.category === undefined ? {} : {categories: [query.category]}),
+      ...(query.eventType === undefined ? {} : {eventTypes: [query.eventType]}),
       ...(query.level === undefined ? {} : {levels: [query.level]}),
       ...(query.limit === undefined ? {} : {limit: query.limit}),
+      ...(query.outcome === undefined ? {} : {outcomes: [query.outcome]}),
       ...(query.search === undefined ? {} : {search: query.search}),
     })
     if (page === undefined) return response.status(404).json({error: 'Session not found.'})

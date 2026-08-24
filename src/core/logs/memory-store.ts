@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type {LogPage, LogQuery, LogRecord, LogRecordHandler} from './records.js'
-import type {SessionLogStore} from './store.js'
+import type {LogStoreHealth, SessionLogStore} from './store.js'
 
 import {matchesLogQuery, resolveLogQueryLimit} from './records.js'
 
@@ -15,6 +15,14 @@ export interface MemorySessionLogStoreOptions {
 export class MemorySessionLogStore implements SessionLogStore {
   private closed = false
   private readonly handlers = new Set<LogRecordHandler>()
+  private readonly health: LogStoreHealth = {
+    accepted: 0,
+    dropped: 0,
+    failed: 0,
+    redacted: 0,
+    rotated: 0,
+    written: 0,
+  }
   private readonly maxRecordsPerSession: number
   private readonly partitions = new Map<string, LogRecord[]>()
   private readonly tombstones = new Set<string>()
@@ -28,14 +36,22 @@ export class MemorySessionLogStore implements SessionLogStore {
 
   append(record: LogRecord): void {
     if (this.closed) throw new Error('The session log store is closed.')
-    const partition = record.sessionId ?? APPLICATION_PARTITION
-    if (record.sessionId !== undefined && this.tombstones.has(record.sessionId)) {
-      throw new Error(`Session log partition has been deleted: ${record.sessionId}`)
+    const {sessionId} = record.correlation
+    const partition = sessionId ?? APPLICATION_PARTITION
+    if (sessionId !== undefined && this.tombstones.has(sessionId)) {
+      throw new Error(`Session log partition has been deleted: ${sessionId}`)
     }
 
+    this.health.accepted += 1
     const records = this.partitions.get(partition) ?? []
     records.push(record)
-    if (records.length > this.maxRecordsPerSession) records.splice(0, records.length - this.maxRecordsPerSession)
+    if (records.length > this.maxRecordsPerSession) {
+      const dropped = records.length - this.maxRecordsPerSession
+      records.splice(0, dropped)
+      this.health.dropped += dropped
+    }
+
+    this.health.written += 1
     this.partitions.set(partition, records)
     for (const handler of this.handlers) handler(record)
   }
@@ -54,6 +70,10 @@ export class MemorySessionLogStore implements SessionLogStore {
 
   async flush(_sessionId?: string): Promise<void> {}
 
+  getHealth(): LogStoreHealth {
+    return {...this.health}
+  }
+
   async list(sessionId: string, query: LogQuery = {}): Promise<LogPage> {
     const limit = resolveLogQueryLimit(query.limit)
     const records = this.partitions.get(sessionId) ?? []
@@ -67,6 +87,10 @@ export class MemorySessionLogStore implements SessionLogStore {
         ? {next: data.at(-1)?.id}
         : {}),
     }
+  }
+
+  recordRedactions(count: number): void {
+    this.health.redacted += count
   }
 
   subscribe(handler: LogRecordHandler): () => void {

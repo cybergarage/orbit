@@ -11,6 +11,7 @@ import type {AgentOptions, DiagnosticEvent, ThreadAgentFactory} from '../../src/
 import {
   createNoopLogger,
   DiagnosticCapture,
+  DiagnosticEventBus,
   guiSlashCommandHelpMessage,
   MemorySessionLogStore,
   Message,
@@ -149,11 +150,16 @@ describe('OrbitApplicationService', () => {
         guiSlashCommandHelpMessage,
       ])
       expect(commandEvent).to.include({level: 'info', runId: result.runId, sessionId: thread.id, threadId: thread.id})
-      expect(commandEvent?.data).to.deep.equal({command: '/help', response: guiSlashCommandHelpMessage})
+      expect(commandEvent?.data).to.deep.equal({
+        commandLength: 5,
+        commandName: '/help',
+        responseLength: guiSlashCommandHelpMessage.length,
+      })
       expect(loggedCommands.at(-1)).to.deep.include({
-        command: '/help',
+        commandLength: 5,
+        commandName: '/help',
         eventType: 'command.submitted',
-        response: guiSlashCommandHelpMessage,
+        responseLength: guiSlashCommandHelpMessage.length,
         runId: result.runId,
         sessionId: thread.id,
         threadId: thread.id,
@@ -207,6 +213,26 @@ describe('OrbitApplicationService', () => {
     await service.close()
   })
 
+  it('keeps required session events when diagnostic capture is off', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-application-capture-off-'))
+    const logs = new MemorySessionLogStore()
+    const service = new OrbitApplicationService({
+      contexts: [],
+      cwd: root,
+      diagnostics: new DiagnosticEventBus({capture: DiagnosticCapture.Off}),
+      logStore: logs,
+      model: 'test-model',
+      provider: 'ollama',
+      repository: new SessionRepository({rootDir: path.join(root, 'sessions')}),
+      settingsSources: [],
+    })
+
+    const thread = service.createThread()
+
+    expect((await logs.list(thread.id)).data.map((record) => record.eventType)).to.include('session.created')
+    await service.close()
+  })
+
   it('closes an active thread before permanently deleting its session', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-application-delete-'))
     const repository = new SessionRepository({rootDir: path.join(root, 'sessions')})
@@ -257,11 +283,10 @@ function createAgentFactory(options: AgentOptions[]): ThreadAgentFactory {
         invokeOptions?.onEvent?.({iteration: 0, type: 'model-started'})
         agentOptions.state?.getSession().appendMessages(messages, {turnId: invokeOptions?.turnId})
         const response = new Message(MessageType.Assistant, {content: 'mock response'})
-        const [storedResponse] =
-          agentOptions.state?.getSession().appendMessages([response], {
-            iteration: 0,
-            turnId: invokeOptions?.turnId,
-          }) ?? [response]
+        const [storedResponse] = agentOptions.state?.getSession().appendMessages([response], {
+          iteration: 0,
+          turnId: invokeOptions?.turnId,
+        }) ?? [response]
         invokeOptions?.onEvent?.({iteration: 0, message: storedResponse, type: 'message-completed'})
         return storedResponse
       },

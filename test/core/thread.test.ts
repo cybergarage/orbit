@@ -45,6 +45,7 @@ describe('ThreadManager', () => {
 
     expect((await logs.list('thread-1')).data.map((record) => record.message)).to.deep.equal([
       'thread agent created',
+      'agent session started',
     ])
     await manager.close()
     await logs.close()

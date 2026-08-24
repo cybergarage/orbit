@@ -74,18 +74,26 @@ describe('GUI server', () => {
         guiSlashCommandHelpMessage,
       ])
       expect(service.getEvents().find((event) => event.type === 'command.submitted')?.data).to.deep.equal({
-        command: '/help',
-        response: guiSlashCommandHelpMessage,
+        commandLength: 5,
+        commandName: '/help',
+        responseLength: guiSlashCommandHelpMessage.length,
       })
 
-      const logs = await fetch(`${baseUrl}/api/sessions/${created.id}/logs?limit=20`, {headers})
+      const logs = await fetch(
+        `${baseUrl}/api/sessions/${created.id}/logs?category=lifecycle&outcome=succeeded&limit=20`,
+        {headers},
+      )
       expect(logs.status).to.equal(200)
-      const logPage = (await logs.json()) as {data: Array<{message: string; sessionId?: string}>}
-      expect(logPage.data.map((record) => record.message)).to.include.members([
-        'session.created',
-        'command.submitted',
-      ])
-      expect(logPage.data.every((record) => record.sessionId === created.id)).to.equal(true)
+      const logPage = (await logs.json()) as {
+        data: Array<{correlation: {sessionId?: string}; eventType: string; message: string; version: number}>
+      }
+      expect(logPage.data.map((record) => record.eventType)).to.include('session.created')
+      expect(logPage.data.every((record) => record.correlation.sessionId === created.id)).to.equal(true)
+      expect(logPage.data.every((record) => record.version === 2)).to.equal(true)
+
+      const health = await fetch(`${baseUrl}/api/logs/health`, {headers})
+      expect(health.status).to.equal(200)
+      expect(await health.json()).to.include({failed: 0})
 
       const preferences = await fetch(`${baseUrl}/api/preferences`, {
         body: JSON.stringify({debugPanelVisible: false, diagnosticCapture: 'metadata'}),

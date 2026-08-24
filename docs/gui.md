@@ -55,9 +55,11 @@ streaming is not part of the initial implementation.
 Inputs beginning with `/` are intercepted before model execution. They are
 excluded from the durable session and model conversation and are emitted as
 `command.submitted` structured log events. The event also appears in the log
-pane while diagnostic capture is enabled. Command input and output
-remain visible in the current GUI conversation without being persisted. Use
-`/help` to list the GUI commands.
+pane while diagnostic capture is enabled. Metadata capture persists only the
+command name and input/output lengths. Full capture can persist the command and
+response for up to 15 minutes. Both remain visible in the current GUI
+conversation without entering the durable session transcript. Use `/help` to
+list the GUI commands.
 
 If one session file is corrupt or unreadable, the rest of the Recent list
 continues to load. The session listing API reports the individual file error
@@ -66,16 +68,18 @@ without failing the entire page.
 ## Session logs and diagnostics
 
 The log pane can be shown or hidden from the sidebar. It loads a bounded
-backfill from `~/.orbit/logs/<session-id>/events.jsonl` and then receives live
-records through Server-Sent Events. Selecting another session clears the prior
-records, and records from other sessions are ignored. Visibility does not
-change collection.
+backfill from the active and rotated JSONL segments under
+`~/.orbit/logs/<session-id>/` and then receives live records through
+Server-Sent Events. Selecting another session clears the prior records, and
+records from other sessions are ignored. The pane filters by level and typed
+category. Visibility does not change collection.
 
 The capture selector is global and controls which diagnostic events are
 adapted into session logs:
 
 - **Full** records metadata plus request payloads, response payloads, context
-  text, tool inputs, and tool outputs in the in-memory event buffer.
+  text, tool inputs, and tool outputs for at most 15 minutes before returning to
+  Metadata automatically.
 - **Metadata** records event identities, timing, model and provider details,
   usage, stop reasons, sizes, and errors without full payloads.
 - **Off** stops collecting new diagnostic events.
@@ -83,14 +87,18 @@ adapted into session logs:
 Metadata capture is the default. Full capture is intended for explicit local
 model/tool debugging because it can contain prompts, source context, model
 output, and tool data. Do not share screenshots, copied records, or log files
-without reviewing them. Credential values, authorization headers, API keys,
-and MCP environment values are not included in settings and startup summaries.
+without reviewing them. Credential values, authorization headers, API keys, and
+MCP environment values are not included in settings and startup summaries.
+Common credential fields and token-shaped string values are redacted before
+file and live-log delivery, and oversized values are truncated.
 
 Diagnostics are separate from the durable session transcript: turning capture
 off does not disable normal session persistence, and hiding the pane does not
 delete sessions or log files. The same typed events are forwarded through the
 session-bound `Logger`; use `--debug` when debug-level records should also be
-written to the session log.
+written to the session log. Version 2 records expose stable event type,
+category, outcome, duration, usage, and nested correlation fields. Per-session
+logs are independently bounded by byte, record-count, and age limits.
 
 ## Startup inspection
 

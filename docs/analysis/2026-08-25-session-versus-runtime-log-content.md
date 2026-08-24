@@ -397,12 +397,13 @@ removed.
 
 ## Implementation status
 
-As of 2026-08-25, Orbit has the transcript/log separation, memory and file log
-stores, default per-session file output, session binding, selected-session GUI
-display, metadata-default diagnostics, owner-only file permissions, and unified
-session/log deletion. The event catalog, richer correlation, robust content
-policy, retention/rotation, scalable cursor, and sink-health recommendations in
-this document are future work.
+As of 2026-08-25, Orbit implements the local recommendations in this document:
+version 2 typed records with a version 1 reader, the metadata-only lifecycle
+catalog, asynchronous correlation, value-aware redaction and size limits,
+temporary Full capture, segmented retention and rotation, opaque cursors,
+selected-session GUI filtering, sink-health counters, owner-only permissions,
+and unified session/log deletion. Optional external telemetry export and an
+alternative SQLite store remain future work.
 
 ## Sources
 

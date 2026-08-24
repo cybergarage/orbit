@@ -9,7 +9,11 @@ describe('diagnostics', () => {
   it('keeps metadata and omits full data by default', () => {
     const bus = new DiagnosticEventBus()
 
-    const event = bus.emit({data: {model: 'test-model'}, fullData: {request: 'secret prompt'}, type: 'model.request.started'})
+    const event = bus.emit({
+      data: {model: 'test-model'},
+      fullData: {request: 'secret prompt'},
+      type: 'model.request.started',
+    })
 
     expect(event?.data).to.deep.equal({model: 'test-model'})
   })
@@ -17,9 +21,27 @@ describe('diagnostics', () => {
   it('includes full data when full capture is enabled', () => {
     const bus = new DiagnosticEventBus({capture: DiagnosticCapture.Full})
 
-    const event = bus.emit({data: {model: 'test-model'}, fullData: {request: 'full prompt'}, type: 'model.request.started'})
+    const event = bus.emit({
+      data: {model: 'test-model'},
+      fullData: {request: 'full prompt'},
+      type: 'model.request.started',
+    })
 
     expect(event?.data).to.deep.equal({model: 'test-model', request: 'full prompt'})
+  })
+
+  it('returns temporary full capture to metadata automatically', () => {
+    let now = 1000
+    const bus = new DiagnosticEventBus({
+      capture: DiagnosticCapture.Full,
+      fullCaptureDurationMs: 100,
+      now: () => now,
+    })
+
+    expect(bus.emit({fullData: {request: 'first'}, type: 'first'})?.data).to.deep.equal({request: 'first'})
+    now = 1100
+    expect(bus.getCapture()).to.equal(DiagnosticCapture.Metadata)
+    expect(bus.emit({fullData: {request: 'second'}, type: 'second'})?.data).to.deep.equal({})
   })
 
   it('does not record or publish events when capture is off', () => {

@@ -62,13 +62,26 @@ export type {
 } from './interactive.js'
 export {createCompositeLogger, createLogger, createNoopLogger} from './logger/index.js'
 export type {LogFields, Logger, LoggerBindings, LoggerOptions, LogLevel, LogMethod, LogValue} from './logger/index.js'
-export {FileSessionLogStore, MemorySessionLogStore, StoreSessionLoggerFactory} from './logs/index.js'
+export {
+  FileSessionLogStore,
+  getLogContext,
+  LogCategory,
+  LogEventType,
+  LogOutcome,
+  MemorySessionLogStore,
+  runWithLogContext,
+  StoreSessionLoggerFactory,
+} from './logs/index.js'
 export type {
   FileSessionLogStoreOptions,
+  LegacyLogRecord,
+  LogCorrelation,
   LogPage,
   LogQuery,
   LogRecord,
   LogRecordHandler,
+  LogStoreHealth,
+  LogUsage,
   MemorySessionLogStoreOptions,
   SessionLoggerFactory,
   SessionLogStore,

@@ -5,6 +5,7 @@ import envPaths from 'env-paths'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import process from 'node:process'
 
 export interface AppConfig {
   appName?: string
@@ -36,5 +37,5 @@ export function sessionsDir(): string {
 }
 
 export function logsDir(): string {
-  return path.join(os.homedir(), DOT_APP_DIR_NAME, 'logs')
+  return path.resolve(process.env.ORBIT_LOG_DIR ?? path.join(os.homedir(), DOT_APP_DIR_NAME, 'logs'))
 }

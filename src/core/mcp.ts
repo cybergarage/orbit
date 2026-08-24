@@ -100,6 +100,7 @@ class StdioMcpToolManager implements McpToolManager {
   private async connectServer(serverName: string, serverSettings: McpServerSettings): Promise<McpConnection> {
     const client = (this.options.clientFactory ?? createMcpClient)(serverName, serverSettings)
     const transport = (this.options.transportFactory ?? createMcpTransport)(serverSettings, this.options)
+    const startedAt = performance.now()
     this.options.diagnostics?.emit({
       ...this.options.diagnosticContext,
       data: {serverName},
@@ -108,6 +109,7 @@ class StdioMcpToolManager implements McpToolManager {
         command: serverSettings.command,
         envNames: Object.keys(serverSettings.env ?? {}),
       },
+      level: 'info',
       type: 'mcp.server.connecting',
     })
 
@@ -116,8 +118,9 @@ class StdioMcpToolManager implements McpToolManager {
       const result = await client.listTools()
       this.options.diagnostics?.emit({
         ...this.options.diagnosticContext,
-        data: {serverName, toolCount: result.tools.length},
+        data: {durationMs: performance.now() - startedAt, serverName, toolCount: result.tools.length},
         fullData: {tools: result.tools.map((tool) => ({description: tool.description, name: tool.name}))},
+        level: 'info',
         type: 'mcp.server.connected',
       })
       return {
@@ -129,7 +132,7 @@ class StdioMcpToolManager implements McpToolManager {
       const message = error instanceof Error ? error.message : String(error)
       this.options.diagnostics?.emit({
         ...this.options.diagnosticContext,
-        data: {error: message, serverName},
+        data: {durationMs: performance.now() - startedAt, error: message, serverName},
         level: 'error',
         type: 'mcp.server.failed',
       })

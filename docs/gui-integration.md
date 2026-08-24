@@ -35,6 +35,11 @@ const unsubscribeLogs = application.subscribeLogs((record) => {
 })
 
 const backfill = await application.getSessionLogs(thread.id, {limit: 200})
+const toolFailures = await application.getSessionLogs(thread.id, {
+  categories: ['tool'],
+  outcomes: ['failed'],
+})
+const logHealth = application.getLogHealth()
 
 // Use run.runId for immediate cancellation.
 application.cancelRun(run.runId)
@@ -48,7 +53,16 @@ The application service intentionally returns a run ID without waiting for the
 model. Completion, failure, and cancellation are projected through diagnostic
 events so command responses and asynchronous notifications remain separate.
 Use `getPreferences()` and `updatePreferences()` to manage diagnostics pane
-visibility independently from diagnostic capture.
+visibility independently from diagnostic capture. Full capture is temporary and
+returns to Metadata after 15 minutes.
+
+Session log records use the version 2 event schema documented in
+[Session Logging](logging.md). Backfill returns an opaque `next` cursor that
+can be supplied as `after`; record IDs remain accepted for version 1
+compatibility. The loopback server accepts `level`, `category`, `eventType`,
+`outcome`, `search`, `limit`, and `after` on
+`GET /api/sessions/:sessionId/logs`. `GET /api/logs/health` returns sink
+counters.
 
 ## Thread lifecycle
 

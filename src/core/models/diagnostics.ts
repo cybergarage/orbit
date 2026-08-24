@@ -12,6 +12,7 @@ export function emitModelRequest(
     ...options.diagnosticContext,
     data: metadata,
     fullData: {request},
+    level: 'info',
     type: 'model.request.started',
   })
 }
@@ -29,6 +30,7 @@ export function emitModelResponse(
       toolCallCount: toolCalls.length,
     },
     fullData: {content, response, toolCalls},
+    level: 'info',
     type: 'model.response.completed',
   })
 }

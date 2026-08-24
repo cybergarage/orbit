@@ -4,6 +4,7 @@
 import {expect} from 'chai'
 import os from 'node:os'
 import path from 'node:path'
+import process from 'node:process'
 
 import {APP_NAME, configureApp, DOT_APP_DIR_NAME, logsDir, sessionsDir, setAppName} from '../../src/core/index.js'
 
@@ -40,10 +41,20 @@ describe('app config', () => {
   })
 
   it('stores logs under the user dot application directory', () => {
-    expect(logsDir()).to.equal(path.join(os.homedir(), '.orbit', 'logs'))
+    const override = process.env.ORBIT_LOG_DIR
+    delete process.env.ORBIT_LOG_DIR
+    try {
+      expect(logsDir()).to.equal(path.join(os.homedir(), '.orbit', 'logs'))
 
-    setAppName('acme')
+      setAppName('acme')
 
-    expect(logsDir()).to.equal(path.join(os.homedir(), '.acme', 'logs'))
+      expect(logsDir()).to.equal(path.join(os.homedir(), '.acme', 'logs'))
+    } finally {
+      if (override !== undefined) process.env.ORBIT_LOG_DIR = override
+    }
+  })
+
+  it('allows the log root to be overridden for isolated runtimes', () => {
+    expect(logsDir()).to.equal(path.resolve(process.env.ORBIT_LOG_DIR as string))
   })
 })
