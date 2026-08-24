@@ -2,6 +2,9 @@
 
 # orbit
 
+Orbit is an experimental project for exploring and understanding how AI agents
+work.
+
 ## Documentation
 
 * [Development](docs/development.md)
