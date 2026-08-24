@@ -1,15 +1,8 @@
-orbit
-=================
+![](https://img.shields.io/badge/status-Work%20In%20Progress-8A2BE2)
 
-An agentic CLI for crafting and publishing content workflows.
+# orbit
 
-
-[![oclif](https://img.shields.io/badge/cli-oclif-brightgreen.svg)](https://oclif.io)
-[![Version](https://img.shields.io/npm/v/orbit.svg)](https://npmjs.org/package/orbit)
-[![Downloads/week](https://img.shields.io/npm/dw/orbit.svg)](https://npmjs.org/package/orbit)
-
-
-# Documentation
+## Documentation
 
 * [Development](docs/development.md)
 * [Settings](docs/settings.md)
@@ -24,7 +17,7 @@ An agentic CLI for crafting and publishing content workflows.
 * [Usage](#usage)
 * [Commands](#commands)
 <!-- tocstop -->
-# Usage
+## Usage
 <!-- usage -->
 ```sh-session
 $ npm install -g orbit
@@ -38,7 +31,7 @@ USAGE
 ...
 ```
 <!-- usagestop -->
-# Commands
+## Commands
 <!-- commands -->
 * [`orbit delete SESSION`](#orbit-delete-session)
 * [`orbit exec [PROMPT]`](#orbit-exec-prompt)
@@ -46,7 +39,7 @@ USAGE
 * [`orbit help [COMMAND]`](#orbit-help-command)
 * [`orbit resume [SESSION]`](#orbit-resume-session)
 
-## `orbit delete SESSION`
+### `orbit delete SESSION`
 
 Permanently delete a saved session
 
@@ -71,7 +64,7 @@ EXAMPLES
 
 _See code: [src/cli/delete.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/delete.ts)_
 
-## `orbit exec [PROMPT]`
+### `orbit exec [PROMPT]`
 
 Send a prompt to the agent and print the response
 
@@ -105,7 +98,7 @@ EXAMPLES
 
 _See code: [src/cli/exec.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/exec.ts)_
 
-## `orbit gui`
+### `orbit gui`
 
 Start the local Orbit graphical interface
 
@@ -132,7 +125,7 @@ DESCRIPTION
 
 _See code: [src/cli/gui.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/gui.ts)_
 
-## `orbit help [COMMAND]`
+### `orbit help [COMMAND]`
 
 Display help for orbit.
 
@@ -152,7 +145,7 @@ DESCRIPTION
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.37/src/commands/help.ts)_
 
-## `orbit resume [SESSION]`
+### `orbit resume [SESSION]`
 
 Resume a saved interactive session
 
