@@ -9,6 +9,7 @@ import {v7 as uuidv7} from 'uuid'
 import type {AgentEvent, AgentEventHandler} from './agent-events.js'
 import type {DiagnosticContext, DiagnosticEventBus} from './diagnostics/index.js'
 import type {Logger} from './logger/index.js'
+import type {SessionLogStore} from './logs/index.js'
 import type {McpToolManager, McpToolManagerFactoryOptions} from './mcp.js'
 import type {
   Model,
@@ -32,7 +33,7 @@ import type {
 
 import {AgentEventType} from './agent-events.js'
 import {ModelAbortError, OrbitError} from './errors/index.js'
-import {createNoopLogger} from './logger/index.js'
+import {FileSessionLogStore, StoreSessionLoggerFactory} from './logs/index.js'
 import {createMcpToolManager} from './mcp.js'
 import {getModel, Message, MessageType} from './models/index.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
@@ -65,6 +66,7 @@ export interface AgentOptions {
   }
   diagnostics?: DiagnosticEventBus
   logger?: Logger
+  logStore?: SessionLogStore
   messages?: Message[]
   model?: {
     name?: string
@@ -87,6 +89,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   private readonly diagnostics?: DiagnosticEventBus
   private readonly mcpToolManager: McpToolManager
   private readonly model: Model
+  private readonly ownedLogStore?: SessionLogStore
   private readonly sessionContextBuilder: SessionContextBuilderType
   private readonly toolDefinitions: ToolDefinition[]
 
@@ -104,8 +107,17 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     this.sessionContextBuilder = options.deps?.sessionContextBuilder ?? new SessionContextBuilder()
     this.diagnostics = options.diagnostics
     this.messages = [...(options.messages ?? [])]
-    this.logger = (options.logger ?? createNoopLogger()).child({component: 'agent'})
     this.state = options.state ?? new State()
+    if (options.logger === undefined) {
+      const store = options.logStore ?? new FileSessionLogStore()
+      if (options.logStore === undefined) this.ownedLogStore = store
+      this.logger = new StoreSessionLoggerFactory(store).forSession(this.state.getSession().getId(), {
+        component: 'agent',
+      })
+    } else {
+      this.logger = options.logger.child({component: 'agent'})
+    }
+
     this.toolDefinitions = [
       ...createBuiltinTools({
         ...this.settings.tools,
@@ -134,7 +146,11 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   }
 
   async close(): Promise<void> {
-    await this.mcpToolManager.close()
+    try {
+      await this.mcpToolManager.close()
+    } finally {
+      await this.ownedLogStore?.close()
+    }
   }
 
   getModel(): Model {

@@ -50,6 +50,61 @@ export function createNoopLogger(): Logger {
   return new NoopLogger()
 }
 
+export function createCompositeLogger(loggers: Logger[]): Logger {
+  if (loggers.length === 0) return createNoopLogger()
+  if (loggers.length === 1) return loggers[0]
+  return new CompositeLogger(loggers)
+}
+
+class CompositeLogger implements Logger {
+  constructor(private readonly loggers: Logger[]) {}
+
+  get debug(): LogMethod {
+    return this.method('debug')
+  }
+
+  get error(): LogMethod {
+    return this.method('error')
+  }
+
+  get fatal(): LogMethod {
+    return this.method('fatal')
+  }
+
+  get info(): LogMethod {
+    return this.method('info')
+  }
+
+  get trace(): LogMethod {
+    return this.method('trace')
+  }
+
+  get warn(): LogMethod {
+    return this.method('warn')
+  }
+
+  child(bindings: LoggerBindings): Logger {
+    return new CompositeLogger(this.loggers.map((logger) => logger.child(bindings)))
+  }
+
+  isDebugEnabled(): boolean {
+    return this.loggers.some((logger) => logger.isDebugEnabled())
+  }
+
+  setDebugEnabled(enabled: boolean): void {
+    for (const logger of this.loggers) logger.setDebugEnabled(enabled)
+  }
+
+  private method(level: LogLevel): LogMethod {
+    return ((fieldsOrMessage: Error | LogFields | string, message?: string) => {
+      for (const logger of this.loggers) {
+        if (typeof fieldsOrMessage === 'string') logger[level](fieldsOrMessage)
+        else logger[level](fieldsOrMessage, message)
+      }
+    }) as LogMethod
+  }
+}
+
 class PinoLogger implements Logger {
   constructor(
     private readonly logger: pino.Logger,

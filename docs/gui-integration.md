@@ -16,8 +16,9 @@ expand the impact of a renderer compromise.
 ## Application service
 
 `OrbitApplicationService` is the recommended boundary for a complete GUI. It
-resolves settings and context sources, manages durable sessions, returns runtime
-inspection data, owns the diagnostic event buffer, and delegates thread runs.
+resolves settings and context sources, manages durable sessions and their log
+partitions, returns runtime inspection data, owns the diagnostic event buffer,
+and delegates thread runs.
 
 ```ts
 import {OrbitApplicationService} from 'orbit'
@@ -29,11 +30,17 @@ const run = application.startRun(thread.id, 'Inspect the failing test.')
 const unsubscribe = application.subscribe((event) => {
   sendToRenderer(event)
 })
+const unsubscribeLogs = application.subscribeLogs((record) => {
+  sendLogToRenderer(record)
+})
+
+const backfill = await application.getSessionLogs(thread.id, {limit: 200})
 
 // Use run.runId for immediate cancellation.
 application.cancelRun(run.runId)
 
 unsubscribe()
+unsubscribeLogs()
 await application.close()
 ```
 
@@ -85,7 +92,8 @@ const resumed = manager.resumeThread(previousSnapshot.file)
 Without `sessionRepository`, threads remain in memory only. Closing a persisted
 thread closes its writer but does not delete the JSONL file. To permanently
 remove a saved GUI session, use `OrbitApplicationService.deleteSession(id)`;
-it closes any loaded thread before deleting the transcript.
+it closes any loaded thread, deletes the session log partition, and then deletes
+the transcript.
 
 Only one run can be active in a thread. Independent threads can run in parallel.
 Call `closeThread()` when a window or project closes, and call `close()` during

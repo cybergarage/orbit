@@ -7,7 +7,7 @@ import process from 'node:process'
 
 import {type AgentOptions, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadSystemContexts} from '../../core/context.js'
-import {Agent, createLogger, Message, MessageType, Role, ToolProfile} from '../../core/index.js'
+import {Agent, Message, MessageType, Role, ToolProfile} from '../../core/index.js'
 import {selectOllamaModel} from '../../core/models/adapters/ollama.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
@@ -47,11 +47,9 @@ export async function runExecCommand(
   )
 
   const AgentClass = deps.agentClass ?? Agent
-  const logger = createLogger({destination: process.stderr, level: resolvedOptions.debug ? 'debug' : 'info'})
   const agent = new AgentClass({
     cwd,
     defaultToolProfile: ToolProfile.Coding,
-    logger,
     messages: systemMessages,
     model: {
       name: resolvedOptions.model,
@@ -59,6 +57,7 @@ export async function runExecCommand(
     },
     settings: resolvedOptions.settings,
   })
+  agent.logger.setDebugEnabled(resolvedOptions.debug === true)
   const userMessages: Message[] = [new Message(MessageType.User, {content: prompt, role: Role.User})]
   try {
     const response = await agent.invoke(userMessages)

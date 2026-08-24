@@ -19,6 +19,7 @@ export {
   DOT_APP_DIR_NAME,
   ensureDir,
   getPaths,
+  logsDir,
   sessionsDir,
   setAppName,
   SETTINGS_FILE_NAME,
@@ -59,8 +60,21 @@ export type {
   InteractiveState,
   ModelCommandResult,
 } from './interactive.js'
-export {createLogger, createNoopLogger} from './logger/index.js'
+export {createCompositeLogger, createLogger, createNoopLogger} from './logger/index.js'
 export type {LogFields, Logger, LoggerBindings, LoggerOptions, LogLevel, LogMethod, LogValue} from './logger/index.js'
+export {FileSessionLogStore, MemorySessionLogStore, StoreSessionLoggerFactory} from './logs/index.js'
+export type {
+  FileSessionLogStoreOptions,
+  LogPage,
+  LogQuery,
+  LogRecord,
+  LogRecordHandler,
+  MemorySessionLogStoreOptions,
+  SessionLoggerFactory,
+  SessionLogStore,
+  SessionLogStoreOptions,
+  StoreSessionLoggerFactoryOptions,
+} from './logs/index.js'
 export {createMcpClient, createMcpToolManager, createMcpTransport, mcpToolName} from './mcp.js'
 export type {
   McpClient,
@@ -110,6 +124,7 @@ export {
   Session,
   SESSION_FORMAT_VERSION,
   SessionContextBuilder,
+  SessionDeletionService,
   SessionEntryType,
   sessionFilePath,
   SessionHeader,
@@ -138,6 +153,7 @@ export type {
   SessionOptions,
   SessionRepositoryOptions,
   SessionSummary,
+  SessionThreadCloser,
   SessionTurnContextEntry,
   SessionTurnEventEntry,
 } from './session/index.js'

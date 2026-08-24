@@ -5,17 +5,16 @@ import {Command, Flags} from '@oclif/core'
 import process from 'node:process'
 
 import {type AgentOptions, resolveWorkspaceAgentOptions} from '../../core/chat.js'
-import {createLogger, OrbitApplicationService} from '../../core/index.js'
+import {OrbitApplicationService} from '../../core/index.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
 import {startGuiServer} from '../gui/server.js'
 
 export async function runGuiCommand(options: AgentOptions & {port?: number; version?: string}): Promise<void> {
   const cwd = process.cwd()
   const resolved = await resolveWorkspaceAgentOptions(options, cwd)
-  const logger = createLogger({destination: process.stderr, level: resolved.debug ? 'debug' : 'info'})
   const service = await OrbitApplicationService.create({
     cwd,
-    logger,
+    logLevel: resolved.debug ? 'debug' : 'info',
     model: resolved.model,
     provider: resolved.provider,
     settings: resolved.settings,

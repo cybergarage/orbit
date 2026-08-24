@@ -17,11 +17,13 @@ import type {
 
 import {
   Agent,
+  MemorySessionLogStore,
   Message,
   MessageType,
   ModelAbortError,
   OperatorType,
   SessionRepository,
+  StoreSessionLoggerFactory,
   ThreadEventType,
   ThreadManager,
   ThreadStatus,
@@ -29,6 +31,25 @@ import {
 } from '../../src/core/index.js'
 
 describe('ThreadManager', () => {
+  it('binds the configured logger factory to new thread sessions', async () => {
+    const logs = new MemorySessionLogStore()
+    const manager = new ThreadManager({
+      createAgent(options) {
+        options.logger?.info('thread agent created')
+        return createAgentFactory(async () => assistantMessage('ok'))(options)
+      },
+      loggerFactory: new StoreSessionLoggerFactory(logs),
+    })
+
+    manager.createThread({id: 'thread-1'})
+
+    expect((await logs.list('thread-1')).data.map((record) => record.message)).to.deep.equal([
+      'thread agent created',
+    ])
+    await manager.close()
+    await logs.close()
+  })
+
   it('creates and lists serializable thread snapshots', async () => {
     const manager = new ThreadManager({createAgent: createAgentFactory(async () => assistantMessage('ok'))})
 

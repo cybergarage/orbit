@@ -5,6 +5,7 @@ import {v7 as uuidv7} from 'uuid'
 
 import type {AgentEvent} from './agent-events.js'
 import type {AgentInvokeOptions, AgentOptions} from './agent.js'
+import type {SessionLoggerFactory} from './logs/index.js'
 import type {Message, MessagePayload, MessageType} from './message/index.js'
 import type {ModelToolCall, ProviderName, Role} from './models/index.js'
 import type {ToolResult} from './tools/index.js'
@@ -146,6 +147,7 @@ export type ThreadAgentFactory = (options: AgentOptions) => ThreadAgent
 
 export interface ThreadManagerOptions {
   createAgent?: ThreadAgentFactory
+  loggerFactory?: SessionLoggerFactory
   onEvent?: ThreadEventHandler
   sessionRepository?: SessionRepository
 }
@@ -185,12 +187,14 @@ export class ThreadManager {
   private readonly activeRuns = new Map<string, ActiveRun>()
   private readonly createAgent: ThreadAgentFactory
   private readonly eventHandlers = new Set<ThreadEventHandler>()
+  private readonly loggerFactory?: SessionLoggerFactory
   private readonly sessionRepository?: SessionRepository
   private readonly threads = new Map<string, ManagedThread>()
 
   constructor(options: ThreadManagerOptions = {}) {
     this.createAgent = options.createAgent ?? ((agentOptions) => new Agent(agentOptions))
     if (options.onEvent !== undefined) this.eventHandlers.add(options.onEvent)
+    this.loggerFactory = options.loggerFactory
     this.sessionRepository = options.sessionRepository
   }
 
@@ -250,6 +254,7 @@ export class ThreadManager {
         ? {messages: [new CoreMessage(CoreMessageType.Session, {content: metadata.systemPrompt})]}
         : {}),
       state: new State(session),
+      ...this.sessionLoggerOptions(id, options.agent),
     }
     let agent: ThreadAgent
     try {
@@ -308,6 +313,7 @@ export class ThreadManager {
         ? {messages: [new CoreMessage(CoreMessageType.Session, {content: metadata.systemPrompt})]}
         : {}),
       state: new State(session),
+      ...this.sessionLoggerOptions(id, options.agent),
     }
     let agent: ThreadAgent
     try {
@@ -485,6 +491,11 @@ export class ThreadManager {
     }
 
     return thread
+  }
+
+  private sessionLoggerOptions(id: string, options: AgentOptions | undefined): Partial<Pick<AgentOptions, 'logger'>> {
+    if (options?.logger !== undefined || this.loggerFactory === undefined) return {}
+    return {logger: this.loggerFactory.forSession(id)}
   }
 
   private snapshot(thread: ManagedThread): ThreadSnapshot {

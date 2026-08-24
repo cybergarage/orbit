@@ -11,6 +11,8 @@ import type {
   DiagnosticCapture,
   DiagnosticEvent,
   GuiPreferences,
+  LogPage,
+  LogRecord,
   RuntimeSnapshot,
   SessionListResult,
   SessionSummary,
@@ -21,12 +23,14 @@ import type {
 
 const token = document.querySelector<HTMLMetaElement>('meta[name="orbit-token"]')?.content ?? ''
 
+// Session selection coordinates conversation, backfill, live logs, and deletion in one renderer boundary.
+// eslint-disable-next-line complexity
 function App() {
   const [runtime, setRuntime] = useState<RuntimeSnapshot>()
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [thread, setThread] = useState<ThreadSnapshot>()
-  const [events, setEvents] = useState<DiagnosticEvent[]>([])
-  const [preferences, setPreferences] = useState<GuiPreferences>({debugPanelVisible: true, diagnosticCapture: 'full'})
+  const [logs, setLogs] = useState<LogRecord[]>([])
+  const [preferences, setPreferences] = useState<GuiPreferences>({debugPanelVisible: true, diagnosticCapture: 'metadata'})
   const [prompt, setPrompt] = useState('')
   const [runId, setRunId] = useState<string>()
   const [error, setError] = useState<string>()
@@ -57,11 +61,15 @@ function App() {
     const source = new EventSource(`/api/events?token=${encodeURIComponent(token)}`)
     source.addEventListener('diagnostic', (message) => {
       const event = JSON.parse((message as MessageEvent).data) as DiagnosticEvent
-      setEvents((current) => [...current.slice(-999), event])
       if (event.threadId !== undefined && event.threadId === selectedThreadId.current) refreshThread(event.threadId).catch(() => {})
       if (event.type === 'run.completed' || event.type === 'session.created' || event.type === 'session.resumed') {
         loadSessions().catch(() => {})
       }
+    })
+    source.addEventListener('log', (message) => {
+      const record = JSON.parse((message as MessageEvent).data) as LogRecord
+      if (record.sessionId !== selectedThreadId.current) return
+      setLogs((current) => appendUniqueLog(current, record))
     })
     source.addEventListener('error', () => setError('The diagnostics stream disconnected. Reconnecting…'))
     return () => source.close()
@@ -69,6 +77,16 @@ function App() {
 
   useEffect(() => {
     selectedThreadId.current = thread?.id
+    setLogs([])
+    if (thread === undefined) return
+    const threadId = thread.id
+    api<LogPage>(`/api/sessions/${encodeURIComponent(threadId)}/logs?limit=200`)
+      .then((page) => {
+        if (selectedThreadId.current === threadId) {
+          setLogs((current) => mergeLogs(page.data, current))
+        }
+      })
+      .catch(showError(setError))
   }, [thread?.id])
 
   useEffect(() => {
@@ -79,6 +97,7 @@ function App() {
     try {
       setError(undefined)
       const created = await api<ThreadSnapshot>('/api/threads', {method: 'POST'})
+      selectedThreadId.current = created.id
       setThread(created)
       await loadSessions()
     } catch (nextError) {
@@ -89,6 +108,8 @@ function App() {
   const selectSession = async (session: SessionSummary) => {
     try {
       setError(undefined)
+      selectedThreadId.current = session.id
+      setLogs([])
       const resumed = await api<ThreadSnapshot>(`/api/sessions/${encodeURIComponent(session.id)}/resume`, {method: 'POST'})
       setThread(resumed)
     } catch (nextError) {
@@ -103,6 +124,7 @@ function App() {
       await api(`/api/sessions/${encodeURIComponent(session.id)}`, {method: 'DELETE'})
       if (thread?.id === session.id) {
         setThread(undefined)
+        setLogs([])
         setRunId(undefined)
       }
 
@@ -147,9 +169,9 @@ function App() {
     }
   }
 
-  const visibleEvents = useMemo(
-    () => events.filter((event) => eventFilter === 'all' || event.level === eventFilter),
-    [eventFilter, events],
+  const visibleLogs = useMemo(
+    () => logs.filter((record) => eventFilter === 'all' || record.level === eventFilter),
+    [eventFilter, logs],
   )
 
   return (
@@ -184,7 +206,7 @@ function App() {
         </div>
         <div className="sidebar-footer">
           <label className="toggle-row">
-            <span>Diagnostics</span>
+            <span>Logs</span>
             <input checked={preferences.debugPanelVisible} onChange={(event) => updatePreferences({debugPanelVisible: event.target.checked})} type="checkbox"/>
           </label>
         </div>
@@ -229,21 +251,23 @@ function App() {
       {preferences.debugPanelVisible ? (
         <aside className="diagnostics">
           <header className="topbar">
-            <div className="title">Diagnostics</div>
+            <div className="title">Logs{thread === undefined ? '' : ` · ${thread.id.slice(0, 8)}`}</div>
             <div className="filters">
               <select onChange={(event) => setEventFilter(event.target.value)} value={eventFilter}>
                 <option value="all">All levels</option><option value="info">Info</option><option value="debug">Debug</option><option value="warn">Warn</option><option value="error">Error</option>
               </select>
-              <select onChange={(event) => updatePreferences({diagnosticCapture: event.target.value as DiagnosticCapture})} value={preferences.diagnosticCapture}>
-                <option value="full">Full</option><option value="metadata">Metadata</option><option value="off">Off</option>
+              <select aria-label="Global diagnostic capture" onChange={(event) => updatePreferences({diagnosticCapture: event.target.value as DiagnosticCapture})} value={preferences.diagnosticCapture}>
+                <option value="full">Global: Full</option><option value="metadata">Global: Metadata</option><option value="off">Global: Off</option>
               </select>
             </div>
           </header>
           <div className="events">
-            {visibleEvents.map((event) => (
-              <details className={`event ${event.level}`} key={event.sequence}>
-                <summary><span className="event-time">{formatTime(event.timestamp)}</span><span className="event-type">{event.type}</span><span className="event-level">{event.level}</span></summary>
-                <pre>{JSON.stringify(event, null, 2)}</pre>
+            {thread === undefined ? <div className="empty">Select a session to view its logs.</div> : null}
+            {thread !== undefined && visibleLogs.length === 0 ? <div className="empty">No logs for this session.</div> : null}
+            {visibleLogs.map((record) => (
+              <details className={`event ${record.level}`} key={record.id}>
+                <summary><span className="event-time">{formatTime(record.timestamp)}</span><span className="event-type">{record.message}</span><span className="event-level">{record.level}</span></summary>
+                <pre>{JSON.stringify(record, null, 2)}</pre>
               </details>
             ))}
           </div>
@@ -352,6 +376,17 @@ function formatDate(timestamp: string): string {
 
 function formatTime(timestamp: string): string {
   return new Intl.DateTimeFormat(undefined, {hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(timestamp))
+}
+
+function appendUniqueLog(records: LogRecord[], record: LogRecord): LogRecord[] {
+  if (records.some((existing) => existing.id === record.id)) return records
+  return [...records.slice(-999), record]
+}
+
+function mergeLogs(backfill: LogRecord[], live: LogRecord[]): LogRecord[] {
+  let records = backfill
+  for (const record of live) records = appendUniqueLog(records, record)
+  return records
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

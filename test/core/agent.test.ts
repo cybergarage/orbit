@@ -18,7 +18,7 @@ import type {
 } from '../../src/core/models/index.js'
 import type {MessageType as MessageTypeName} from '../../src/core/session/message.js'
 
-import {Role, SETTINGS_FILE_NAME} from '../../src/core/index.js'
+import {MemorySessionLogStore, Role, SETTINGS_FILE_NAME} from '../../src/core/index.js'
 import {Message as CoreMessage, MessageType as CoreMessageType, UserMessage} from '../../src/core/message/index.js'
 import {
   Agent,
@@ -75,6 +75,33 @@ describe('model helpers', () => {
 
       await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
       expect(calls).to.deep.equal([{model: 'claude-custom', provider: 'anthropic'}])
+    })
+
+    it('automatically binds an injected log store to the agent session', async () => {
+      const logs = new MemorySessionLogStore()
+      const agent = new Agent({
+        deps: {
+          createModel: (): Model => ({
+            getModel: () => TEST_OLLAMA_MODEL,
+            getName: () => OperatorType.Model,
+            getProvider: () => 'ollama',
+            invoke: async () => new Message(MessageType.Assistant, {content: 'ok'}),
+          }),
+        },
+        logStore: logs,
+      })
+      agent.logger.setDebugEnabled(true)
+
+      await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
+
+      const records = await logs.list(agent.getSession().getId())
+      expect(records.data.map((record) => record.message)).to.include.members([
+        'agent invoke started',
+        'agent model iteration completed',
+      ])
+      expect(records.data.every((record) => record.sessionId === agent.getSession().getId())).to.equal(true)
+      await agent.close()
+      await logs.close()
     })
 
     it('passes operator options through to the model invoke call', async () => {

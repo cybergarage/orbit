@@ -7,7 +7,7 @@ import {createServer, type Server} from 'node:http'
 import {fileURLToPath} from 'node:url'
 import {z} from 'zod'
 
-import type {DiagnosticEvent, OrbitApplicationService} from '../../core/index.js'
+import type {DiagnosticEvent, LogRecord, OrbitApplicationService} from '../../core/index.js'
 
 import {DiagnosticCapture} from '../../core/index.js'
 
@@ -28,6 +28,12 @@ export interface GuiServer {
 }
 
 const messageSchema = z.object({content: z.string().trim().min(1)})
+const logQuerySchema = z.object({
+  after: z.string().min(1).optional(),
+  level: z.enum(['debug', 'error', 'fatal', 'info', 'trace', 'warn']).optional(),
+  limit: z.coerce.number().int().min(1).max(1000).optional(),
+  search: z.string().max(200).optional(),
+})
 const preferencesSchema = z
   .object({
     debugPanelVisible: z.boolean().optional(),
@@ -67,6 +73,17 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
     const limitValue = stringQuery(request.query.limit)
     const limit = limitValue === undefined ? undefined : Number(limitValue)
     response.json(await options.service.listSessions({cursor, limit}))
+  })
+  app.get('/api/sessions/:sessionId/logs', async (request, response) => {
+    const query = logQuerySchema.parse(request.query)
+    const page = await options.service.getSessionLogs(request.params.sessionId, {
+      ...(query.after === undefined ? {} : {after: query.after}),
+      ...(query.level === undefined ? {} : {levels: [query.level]}),
+      ...(query.limit === undefined ? {} : {limit: query.limit}),
+      ...(query.search === undefined ? {} : {search: query.search}),
+    })
+    if (page === undefined) return response.status(404).json({error: 'Session not found.'})
+    return response.json(page)
   })
   app.delete('/api/sessions/:sessionId', async (request, response) => {
     const deleted = await options.service.deleteSession(request.params.sessionId)
@@ -122,16 +139,22 @@ function streamEvents(request: Request, response: Response, service: OrbitApplic
   const lastEventId = Number(request.get('last-event-id') ?? request.query.after ?? 0)
   const afterSequence = Number.isSafeInteger(lastEventId) && lastEventId >= 0 ? lastEventId : 0
   for (const event of service.getEvents(afterSequence)) writeEvent(response, event)
-  const unsubscribe = service.subscribe((event) => writeEvent(response, event))
+  const unsubscribeDiagnostics = service.subscribe((event) => writeEvent(response, event))
+  const unsubscribeLogs = service.subscribeLogs((record) => writeLogRecord(response, record))
   const heartbeat = setInterval(() => response.write(': heartbeat\n\n'), 15_000)
   request.once('close', () => {
     clearInterval(heartbeat)
-    unsubscribe()
+    unsubscribeDiagnostics()
+    unsubscribeLogs()
   })
 }
 
 function writeEvent(response: Response, event: DiagnosticEvent): void {
   response.write(`id: ${event.sequence}\nevent: diagnostic\ndata: ${JSON.stringify(event)}\n\n`)
+}
+
+function writeLogRecord(response: Response, record: LogRecord): void {
+  response.write(`event: log\ndata: ${JSON.stringify(record)}\n\n`)
 }
 
 function requireToken(expected: string) {

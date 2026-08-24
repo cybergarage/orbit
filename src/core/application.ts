@@ -7,7 +7,8 @@ import {v7 as uuidv7} from 'uuid'
 
 import type {Context} from './context.js'
 import type {DiagnosticCapture, DiagnosticEvent, DiagnosticEventBus} from './diagnostics/index.js'
-import type {Logger} from './logger/index.js'
+import type {Logger, LogLevel} from './logger/index.js'
+import type {LogPage, LogQuery, LogRecord, SessionLoggerFactory, SessionLogStore} from './logs/index.js'
 import type {ProviderName} from './models/index.js'
 import type {SessionListOptions, SessionListResult, SessionRepository, SessionSummary} from './session/index.js'
 import type {WorkspaceSettings, WorkspaceSettingsSource} from './settings.js'
@@ -22,9 +23,10 @@ import {
   DiagnosticCapture as Capture,
   DiagnosticEventBus as EventBus,
 } from './diagnostics/index.js'
-import {createNoopLogger} from './logger/index.js'
+import {createCompositeLogger} from './logger/index.js'
+import {FileSessionLogStore, StoreSessionLoggerFactory} from './logs/index.js'
 import {Message, MessageType, Role} from './models/index.js'
-import {SessionRepository as Repository} from './session/index.js'
+import {SessionRepository as Repository, SessionDeletionService} from './session/index.js'
 import {loadWorkspaceSettingsWithSources} from './settings.js'
 import {serializeMessage, ThreadEventType, ThreadManager} from './thread.js'
 import {ToolProfile} from './tools/index.js'
@@ -77,6 +79,8 @@ export interface OrbitApplicationServiceOptions {
   cwd?: string
   diagnostics?: DiagnosticEventBus
   logger?: Logger
+  logLevel?: LogLevel
+  logStore?: SessionLogStore
   model?: string
   provider?: ProviderName
   repository?: SessionRepository
@@ -92,11 +96,14 @@ export interface StartApplicationRunResult {
 
 export class OrbitApplicationService {
   readonly diagnostics: DiagnosticEventBus
+  readonly logs: SessionLogStore
   readonly repository: SessionRepository
   readonly runtime: RuntimeSnapshot
+  private readonly deletionService: SessionDeletionService
   private readonly detachDiagnosticLogger: () => void
   private readonly displayMessages = new Map<string, ThreadMessage[]>()
   private readonly logger: Logger
+  private readonly loggerFactory: SessionLoggerFactory
   private preferences: GuiPreferences
   private readonly settings: WorkspaceSettings
   private readonly systemPrompt?: string
@@ -115,8 +122,13 @@ export class OrbitApplicationService {
       options.settings,
     )
     this.settings = resolved.settings
-    this.logger = options.logger ?? createNoopLogger()
-    this.diagnostics = options.diagnostics ?? new EventBus({capture: Capture.Full})
+    this.logs = options.logStore ?? new FileSessionLogStore()
+    this.loggerFactory = new StoreSessionLoggerFactory(this.logs, {level: options.logLevel ?? 'info'})
+    this.logger = createCompositeLogger([
+      this.loggerFactory.forApplication(),
+      ...(options.logger === undefined ? [] : [options.logger]),
+    ])
+    this.diagnostics = options.diagnostics ?? new EventBus({capture: Capture.Metadata})
     this.detachDiagnosticLogger = attachDiagnosticLogger(
       this.diagnostics,
       this.logger.child({component: 'diagnostics'}),
@@ -151,11 +163,12 @@ export class OrbitApplicationService {
             ...agentOptions,
             defaultToolProfile: ToolProfile.Coding,
             diagnostics: this.diagnostics,
-            logger: this.logger,
           })),
+      loggerFactory: this.loggerFactory,
       onEvent: (event) => this.handleThreadEvent(event),
       sessionRepository: this.repository,
     })
+    this.deletionService = new SessionDeletionService(this.repository, this.logs, this.threadManager)
     this.emitStartupDiagnostics(options.contexts, options.settingsSources)
   }
 
@@ -185,6 +198,7 @@ export class OrbitApplicationService {
     } finally {
       this.displayMessages.clear()
       this.detachDiagnosticLogger()
+      await this.logs.close()
     }
   }
 
@@ -197,7 +211,6 @@ export class OrbitApplicationService {
       agent: {
         cwd: this.runtime.cwd,
         diagnostics: this.diagnostics,
-        logger: this.logger,
         messages: systemMessages,
         model: {name: this.runtime.model, provider: this.runtime.provider},
         settings: this.settings,
@@ -205,6 +218,7 @@ export class OrbitApplicationService {
     })
     this.diagnostics.emit({
       data: {cwd: this.runtime.cwd, model: this.runtime.model, provider: this.runtime.provider},
+      level: 'info',
       sessionId: thread.id,
       threadId: thread.id,
       type: 'session.created',
@@ -213,15 +227,12 @@ export class OrbitApplicationService {
   }
 
   async deleteSession(sessionId: string): Promise<boolean> {
-    await this.threadManager.closeThread(sessionId)
-    const deleted = await this.repository.delete(sessionId)
+    const deleted = await this.deletionService.delete(sessionId)
     if (deleted === undefined) return false
 
     this.displayMessages.delete(sessionId)
     this.diagnostics.emit({
-      data: {file: deleted.file},
-      sessionId,
-      threadId: sessionId,
+      data: {deletedSessionId: sessionId, file: deleted.file},
       type: 'session.deleted',
     })
     return true
@@ -233,6 +244,12 @@ export class OrbitApplicationService {
 
   getPreferences(): GuiPreferences {
     return {...this.preferences}
+  }
+
+  async getSessionLogs(sessionId: string, query: LogQuery = {}): Promise<LogPage | undefined> {
+    const known =
+      this.threadManager.getThread(sessionId) !== undefined || (await this.findSession(sessionId)) !== undefined
+    return known ? this.logs.list(sessionId, query) : undefined
   }
 
   getThread(threadId: string): ThreadSnapshot | undefined {
@@ -253,12 +270,12 @@ export class OrbitApplicationService {
     const thread = this.threadManager.resumeThread(summary.file, {
       agent: {
         diagnostics: this.diagnostics,
-        logger: this.logger,
         settings: this.settings,
       },
     })
     this.diagnostics.emit({
       data: {cwd: summary.cwd, model: summary.model, provider: summary.provider},
+      level: 'info',
       sessionId: thread.id,
       threadId: thread.id,
       type: 'session.resumed',
@@ -295,6 +312,10 @@ export class OrbitApplicationService {
 
   subscribe(handler: (event: DiagnosticEvent) => void): () => void {
     return this.diagnostics.subscribe(handler)
+  }
+
+  subscribeLogs(handler: (record: LogRecord) => void): () => void {
+    return this.logs.subscribe(handler)
   }
 
   updatePreferences(update: Partial<GuiPreferences>): GuiPreferences {
@@ -396,6 +417,9 @@ export class OrbitApplicationService {
       fullData: {event},
       ...(event.type === ThreadEventType.RunFailed ? {level: 'error' as const} : {}),
       ...(event.type === ThreadEventType.RunCancelled ? {level: 'warn' as const} : {}),
+      ...(event.type === ThreadEventType.RunStarted || event.type === ThreadEventType.RunCompleted
+        ? {level: 'info' as const}
+        : {}),
       ...eventContext(event),
       type: event.type.replaceAll('-', '.'),
     })

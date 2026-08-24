@@ -5,7 +5,7 @@ import {expect} from 'chai'
 import os from 'node:os'
 import path from 'node:path'
 
-import {APP_NAME, configureApp, DOT_APP_DIR_NAME, sessionsDir, setAppName} from '../../src/core/index.js'
+import {APP_NAME, configureApp, DOT_APP_DIR_NAME, logsDir, sessionsDir, setAppName} from '../../src/core/index.js'
 
 describe('app config', () => {
   afterEach(() => {
@@ -37,5 +37,13 @@ describe('app config', () => {
     setAppName('acme')
 
     expect(sessionsDir()).to.equal(path.join(os.homedir(), '.acme', 'sessions'))
+  })
+
+  it('stores logs under the user dot application directory', () => {
+    expect(logsDir()).to.equal(path.join(os.homedir(), '.orbit', 'logs'))
+
+    setAppName('acme')
+
+    expect(logsDir()).to.equal(path.join(os.homedir(), '.acme', 'logs'))
   })
 })

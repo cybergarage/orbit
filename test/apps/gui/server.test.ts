@@ -11,6 +11,7 @@ import path from 'node:path'
 import {startGuiServer} from '../../../src/apps/gui/server.js'
 import {
   guiSlashCommandHelpMessage,
+  MemorySessionLogStore,
   OrbitApplicationService,
   SessionRepository,
 } from '../../../src/core/index.js'
@@ -27,6 +28,7 @@ describe('GUI server', () => {
         },
       }),
       cwd: root,
+      logStore: new MemorySessionLogStore(),
       model: 'test-model',
       provider: 'ollama',
       repository: new SessionRepository({rootDir: path.join(root, 'sessions')}),
@@ -76,6 +78,15 @@ describe('GUI server', () => {
         response: guiSlashCommandHelpMessage,
       })
 
+      const logs = await fetch(`${baseUrl}/api/sessions/${created.id}/logs?limit=20`, {headers})
+      expect(logs.status).to.equal(200)
+      const logPage = (await logs.json()) as {data: Array<{message: string; sessionId?: string}>}
+      expect(logPage.data.map((record) => record.message)).to.include.members([
+        'session.created',
+        'command.submitted',
+      ])
+      expect(logPage.data.every((record) => record.sessionId === created.id)).to.equal(true)
+
       const preferences = await fetch(`${baseUrl}/api/preferences`, {
         body: JSON.stringify({debugPanelVisible: false, diagnosticCapture: 'metadata'}),
         headers: {...headers, 'Content-Type': 'application/json'},
@@ -90,6 +101,9 @@ describe('GUI server', () => {
       const missing = await fetch(`${baseUrl}/api/sessions/${created.id}`, {headers, method: 'DELETE'})
       expect(missing.status).to.equal(404)
       expect(await missing.json()).to.deep.equal({deleted: false, id: created.id})
+
+      const missingLogs = await fetch(`${baseUrl}/api/sessions/${created.id}/logs`, {headers})
+      expect(missingLogs.status).to.equal(404)
     } finally {
       await server.close()
       await service.close()

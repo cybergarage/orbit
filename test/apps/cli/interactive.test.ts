@@ -49,7 +49,7 @@ describe('runInteractiveCommand', () => {
         {debug: true, lang: 'ja'},
         async (options) => {
           sessionCalls.push({
-            debugEnabled: options.logger?.isDebugEnabled() ?? false,
+            debugEnabled: options.debug ?? false,
             initialModel: options.initialModel,
             initialProvider: options.initialProvider,
             modelMessage: handleModelCommand(

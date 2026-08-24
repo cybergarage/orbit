@@ -34,3 +34,7 @@ export async function ensureDir(p: string) {
 export function sessionsDir(): string {
   return path.join(os.homedir(), DOT_APP_DIR_NAME, 'sessions')
 }
+
+export function logsDir(): string {
+  return path.join(os.homedir(), DOT_APP_DIR_NAME, 'logs')
+}

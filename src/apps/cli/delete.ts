@@ -5,13 +5,14 @@ import {Args, Command, Flags} from '@oclif/core'
 import process from 'node:process'
 import readline from 'node:readline'
 
-import type {SessionSummary} from '../../core/index.js'
+import type {SessionLogStore, SessionSummary} from '../../core/index.js'
 
-import {SessionRepository} from '../../core/index.js'
+import {FileSessionLogStore, SessionDeletionService, SessionRepository} from '../../core/index.js'
 
 export interface DeleteSessionCommandOptions {
   confirm?: (session: SessionSummary) => Promise<boolean>
   force?: boolean
+  logStore?: SessionLogStore
   repository?: SessionRepository
 }
 
@@ -31,9 +32,14 @@ export async function runDeleteSessionCommand(
   const confirmed = options.force === true || (await (options.confirm ?? confirmDeletion)(session))
   if (!confirmed) return {deleted: false, session}
 
-  const deleted = await repository.delete(sessionId)
-  if (deleted === undefined) throw new Error(`Session no longer exists: ${sessionId}`)
-  return {deleted: true, session: deleted}
+  const logs = options.logStore ?? new FileSessionLogStore()
+  try {
+    const deleted = await new SessionDeletionService(repository, logs).delete(sessionId)
+    if (deleted === undefined) throw new Error(`Session no longer exists: ${sessionId}`)
+    return {deleted: true, session: deleted}
+  } finally {
+    if (options.logStore === undefined) await logs.close()
+  }
 }
 
 export default class Delete extends Command {

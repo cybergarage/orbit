@@ -1,7 +1,7 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {Logger} from '../logger/index.js'
+import type {LogFields, Logger} from '../logger/index.js'
 
 export const DiagnosticCapture = {
   Full: 'full',
@@ -111,6 +111,15 @@ export class DiagnosticEventBus {
 
 export function attachDiagnosticLogger(bus: DiagnosticEventBus, logger: Logger): () => void {
   return bus.subscribe((event) => {
-    logger[event.level]({diagnosticEvent: JSON.stringify(event)}, event.type)
+    const fields = {
+      ...event.data,
+      diagnosticSequence: event.sequence,
+      eventType: event.type,
+      ...(event.iteration === undefined ? {} : {iteration: event.iteration}),
+      ...(event.runId === undefined ? {} : {runId: event.runId}),
+      ...(event.sessionId === undefined ? {} : {sessionId: event.sessionId}),
+      ...(event.threadId === undefined ? {} : {threadId: event.threadId}),
+    } as LogFields
+    logger[event.level](fields, event.type)
   })
 }

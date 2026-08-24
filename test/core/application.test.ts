@@ -12,6 +12,7 @@ import {
   createNoopLogger,
   DiagnosticCapture,
   guiSlashCommandHelpMessage,
+  MemorySessionLogStore,
   Message,
   MessageType,
   OrbitApplicationService,
@@ -27,6 +28,7 @@ describe('OrbitApplicationService', () => {
       contexts: [{content: 'Project guidance', source: {file: path.join(root, 'AGENTS.md'), kind: 'compat'}}],
       createAgent: createAgentFactory(agentOptions),
       cwd: root,
+      logStore: new MemorySessionLogStore(),
       model: 'test-model',
       provider: 'openai',
       repository,
@@ -72,6 +74,7 @@ describe('OrbitApplicationService', () => {
       contexts: [],
       createAgent: createAgentFactory(firstOptions),
       cwd: root,
+      logStore: new MemorySessionLogStore(),
       model: 'persisted-model',
       provider: 'anthropic',
       repository,
@@ -86,6 +89,7 @@ describe('OrbitApplicationService', () => {
       contexts: [],
       createAgent: createAgentFactory(resumedOptions),
       cwd: path.join(root, 'other'),
+      logStore: new MemorySessionLogStore(),
       model: 'current-default',
       provider: 'ollama',
       repository,
@@ -125,6 +129,7 @@ describe('OrbitApplicationService', () => {
       }),
       cwd: root,
       logger,
+      logStore: new MemorySessionLogStore(),
       model: 'qwen3:latest',
       provider: 'ollama',
       repository,
@@ -145,7 +150,14 @@ describe('OrbitApplicationService', () => {
       ])
       expect(commandEvent).to.include({level: 'info', runId: result.runId, sessionId: thread.id, threadId: thread.id})
       expect(commandEvent?.data).to.deep.equal({command: '/help', response: guiSlashCommandHelpMessage})
-      expect(loggedCommands).to.deep.include({diagnosticEvent: JSON.stringify(commandEvent)})
+      expect(loggedCommands.at(-1)).to.deep.include({
+        command: '/help',
+        eventType: 'command.submitted',
+        response: guiSlashCommandHelpMessage,
+        runId: result.runId,
+        sessionId: thread.id,
+        threadId: thread.id,
+      })
 
       service.startRun(thread.id, '/model')
       expect(service.getThread(thread.id)?.messages.map((message) => message.content)).to.deep.equal([
@@ -179,6 +191,7 @@ describe('OrbitApplicationService', () => {
     const service = new OrbitApplicationService({
       contexts: [],
       cwd: process.cwd(),
+      logStore: new MemorySessionLogStore(),
       model: 'test-model',
       provider: 'ollama',
       settingsSources: [],
@@ -201,6 +214,7 @@ describe('OrbitApplicationService', () => {
       contexts: [],
       createAgent: createAgentFactory([]),
       cwd: root,
+      logStore: new MemorySessionLogStore(),
       model: 'test-model',
       provider: 'ollama',
       repository,
@@ -210,14 +224,17 @@ describe('OrbitApplicationService', () => {
     try {
       const thread = service.createThread()
       const file = thread.file as string
+      expect((await service.getSessionLogs(thread.id))?.data.map((record) => record.message)).to.include(
+        'session.created',
+      )
 
       expect(await service.deleteSession(thread.id)).to.equal(true)
       expect(service.getThread(thread.id)).to.equal(undefined)
       expect(await repository.findById(thread.id)).to.equal(undefined)
-      expect(service.getEvents().find((event) => event.type === 'session.deleted')).to.include({
-        sessionId: thread.id,
-        threadId: thread.id,
+      expect(service.getEvents().find((event) => event.type === 'session.deleted')?.data).to.include({
+        deletedSessionId: thread.id,
       })
+      expect((await service.logs.list(thread.id)).data).to.deep.equal([])
       expect(await service.deleteSession(thread.id)).to.equal(false)
       await fs.access(file).then(
         () => {

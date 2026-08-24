@@ -11,7 +11,7 @@ import type {Session, SessionSummary} from '../../core/index.js'
 
 import {resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadSystemContexts} from '../../core/context.js'
-import {Agent, createLogger, runInteractiveSession, SessionRepository} from '../../core/index.js'
+import {Agent, runInteractiveSession, SessionRepository} from '../../core/index.js'
 import {selectOllamaModel} from '../../core/models/adapters/ollama.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
@@ -59,13 +59,12 @@ export async function runResumeSessionCommand(
       deps.ollamaModelSelector,
     )
     const systemPrompt = metadata.systemPrompt ?? (await loadContextText(metadata.cwd, deps.contextLoader))
-    const logger = createLogger({destination: process.stderr, level: resolvedOptions.debug ? 'debug' : 'info'})
     await (deps.sessionRunner ?? runInteractiveSession)({
       agentClass: deps.agentClass ?? Agent,
       cwd: metadata.cwd,
+      debug: resolvedOptions.debug,
       initialModel: resolvedOptions.model,
       initialProvider: resolvedOptions.provider,
-      logger,
       session,
       settings: resolvedOptions.settings,
       systemPrompt,

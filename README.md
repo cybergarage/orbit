@@ -11,6 +11,7 @@ work.
 * [Settings](docs/settings.md)
 * [Coding Tools](docs/tools.md)
 * [Sessions](docs/session.md)
+* [Session logs](docs/logging.md)
 * [Interactive Commands](docs/interactive.md)
 * [Local GUI](docs/gui.md)
 * [GUI Integration](docs/gui-integration.md)

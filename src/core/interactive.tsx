@@ -8,6 +8,7 @@ import type {Logger} from './logger/index.js'
 import type {SessionRepository} from './session/index.js'
 import type {WorkspaceSettings} from './settings.js'
 
+import {FileSessionLogStore, StoreSessionLoggerFactory} from './logs/index.js'
 import {Agent, type AgentOptions, isProvider, Message, MessageType, type ProviderName, Role} from './models/index.js'
 import {SessionRepository as CoreSessionRepository, Session} from './session/index.js'
 import {State} from './state.js'
@@ -16,6 +17,7 @@ import {ToolProfile} from './tools/index.js'
 export interface InteractiveSessionOptions {
   agentClass: InteractiveAgentClass
   cwd?: string
+  debug?: boolean
   initialModel: string
   initialProvider: ProviderName
   logger?: Logger
@@ -392,10 +394,21 @@ export async function runInteractiveSession(options: InteractiveSessionOptions):
       systemPrompt: options.systemPrompt,
     })
   const effectiveSystemPrompt = options.systemPrompt ?? session.getMetadata().systemPrompt
-  const app = render(<InteractiveApp {...options} session={session} systemPrompt={effectiveSystemPrompt} />)
+  let ownedLogStore: FileSessionLogStore | undefined
+  let {logger} = options
+  if (logger === undefined) {
+    ownedLogStore = new FileSessionLogStore()
+    logger = new StoreSessionLoggerFactory(ownedLogStore).forSession(session.getId())
+  }
+
+  if (options.debug !== undefined) logger.setDebugEnabled(options.debug)
+  const app = render(
+    <InteractiveApp {...options} logger={logger} session={session} systemPrompt={effectiveSystemPrompt} />,
+  )
   try {
     await app.waitUntilExit()
   } finally {
     if (options.session === undefined) await session.close()
+    await ownedLogStore?.close()
   }
 }

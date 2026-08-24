@@ -7,8 +7,7 @@ focuses on three areas:
 - a left sidebar with **New Chat** and sessions from `~/.orbit/sessions/`;
 - a center conversation pane with message history, a prompt composer, and run
   cancellation;
-- an optional diagnostics pane with startup, model, tool, MCP, session, and run
-  events.
+- an optional log pane scoped to the selected session.
 
 ## Start the GUI
 
@@ -32,7 +31,7 @@ Ollama host, and `--debug` flags as other agent commands. Explicit command
 options override workspace settings, which override provider defaults.
 
 Press Ctrl+C in the starting terminal to stop the server. Shutdown cancels
-active runs and closes agents, MCP clients, and session recorders.
+active runs and closes agents, MCP clients, session recorders, and log writers.
 
 ## Sessions and runs
 
@@ -44,9 +43,10 @@ application API.
 
 Right-click a Recent session and choose **Delete session…** to permanently
 remove it after confirmation. Deleting the selected session clears the
-conversation. If its run is active, Orbit cancels the run and closes the agent
-and recorder before unlinking the JSONL transcript. This operation is not an
-archive and cannot be undone.
+conversation and log pane. If its run is active, Orbit cancels the run and
+closes the agent and recorder. Orbit deletes the session log partition before
+unlinking the JSONL transcript, so a log cleanup failure leaves the transcript
+available for retry. This operation is not an archive and cannot be undone.
 
 Only one run can be active in a session. The square Stop button cancels the
 current run. Model responses are currently displayed after completion; token
@@ -54,8 +54,8 @@ streaming is not part of the initial implementation.
 
 Inputs beginning with `/` are intercepted before model execution. They are
 excluded from the durable session and model conversation and are emitted as
-`command.submitted` structured log events. The event also appears in the
-diagnostics pane while diagnostic capture is enabled. Command input and output
+`command.submitted` structured log events. The event also appears in the log
+pane while diagnostic capture is enabled. Command input and output
 remain visible in the current GUI conversation without being persisted. Use
 `/help` to list the GUI commands.
 
@@ -63,10 +63,16 @@ If one session file is corrupt or unreadable, the rest of the Recent list
 continues to load. The session listing API reports the individual file error
 without failing the entire page.
 
-## Diagnostics
+## Session logs and diagnostics
 
-The diagnostics pane can be shown or hidden from the sidebar. Visibility does
-not change collection. Select a capture level in the diagnostics header:
+The log pane can be shown or hidden from the sidebar. It loads a bounded
+backfill from `~/.orbit/logs/<session-id>/events.jsonl` and then receives live
+records through Server-Sent Events. Selecting another session clears the prior
+records, and records from other sessions are ignored. Visibility does not
+change collection.
+
+The capture selector is global and controls which diagnostic events are
+adapted into session logs:
 
 - **Full** records metadata plus request payloads, response payloads, context
   text, tool inputs, and tool outputs in the in-memory event buffer.
@@ -74,19 +80,17 @@ not change collection. Select a capture level in the diagnostics header:
   usage, stop reasons, sizes, and errors without full payloads.
 - **Off** stops collecting new diagnostic events.
 
-Full capture is the GUI default because the interface is intended for local
-development and model/tool debugging. It can contain prompts, source context,
-model output, and tool data. Do not share screenshots or copied events without
-reviewing them. Credential values, authorization headers, API keys, and MCP
-environment values are not included in the settings and startup summaries.
+Metadata capture is the default. Full capture is intended for explicit local
+model/tool debugging because it can contain prompts, source context, model
+output, and tool data. Do not share screenshots, copied records, or log files
+without reviewing them. Credential values, authorization headers, API keys,
+and MCP environment values are not included in settings and startup summaries.
 
-The pane receives typed events through Server-Sent Events and can replay the
-bounded in-memory buffer after reconnecting. Diagnostics are separate from the
-durable session transcript: turning capture off does not disable normal session
-persistence, and hiding the pane does not delete either sessions or events.
-The same typed events are forwarded through the configured `Logger`; use
-`--debug` when debug-level diagnostic records should also be written to the
-terminal log destination.
+Diagnostics are separate from the durable session transcript: turning capture
+off does not disable normal session persistence, and hiding the pane does not
+delete sessions or log files. The same typed events are forwarded through the
+session-bound `Logger`; use `--debug` when debug-level records should also be
+written to the session log.
 
 ## Startup inspection
 
@@ -122,6 +126,6 @@ remote-access or multi-user mode.
 
 The initial GUI provides session browsing and deletion, completed-message
 rendering, prompt submission, cancellation, tool detail cards, response
-metadata, and diagnostics.
+metadata, and selected-session logs.
 Project/worktree management, diff review, terminal panes, approvals, attachments,
 and token-delta streaming are follow-up features rather than part of this release.

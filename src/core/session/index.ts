@@ -7,6 +7,8 @@ export {encodeSessionEntry, parseSessionFile} from './codec.js'
 export type {ParsedSessionFile} from './codec.js'
 export {SessionContextBuilder} from './context-builder.js'
 export type {SessionModelContext} from './context-builder.js'
+export {SessionDeletionService} from './deletion-service.js'
+export type {SessionThreadCloser} from './deletion-service.js'
 export {SESSION_FORMAT_VERSION, SessionEntryType, TurnPhase} from './entries.js'
 export type {
   PersistedMessage,

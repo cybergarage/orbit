@@ -12,10 +12,11 @@ proposes how Orbit should add durable logs that are:
 - displayed for the selected session in the GUI's right pane; and
 - deleted when the corresponding session is deleted.
 
-This is an implementation direction, not an implementation status report. The
-repository evidence and external implementation findings are verified against
-the source revisions listed in [Sources](#sources). The proposed Orbit APIs,
-storage format, and rollout sequence are not implemented yet.
+The repository evidence and external implementation findings are verified
+against the source revisions listed in [Sources](#sources). The initial design
+described here was implemented on 2026-08-25 with JSONL and memory stores,
+automatic session binding, selected-session GUI logs, and unified deletion.
+Retention rotation and optional alternative stores remain follow-up work.
 
 ## Requested behavior and assumptions
 
@@ -83,7 +84,10 @@ Agent / model / MCP / tools
   selected-session GUI pane
 ```
 
-## Current Orbit implementation
+## Pre-implementation Orbit baseline
+
+This section records the repository state observed during the investigation;
+it is retained as historical evidence for the implemented design.
 
 ### Logging is partly abstracted already
 
