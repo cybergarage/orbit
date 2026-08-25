@@ -100,23 +100,52 @@ the final hash of the commit that includes that file.
 
 ### Request the complete workflow
 
-A single request may authorize the entire lifecycle, but it must preserve the
-decision and commit boundaries:
+A single request may authorize the entire lifecycle. A separate acceptance or
+rejection request is not required when the original request explicitly
+delegates that decision, but the `proposed` to `accepted` or `rejected` state
+transition is still required. Never implement an ADR while it remains
+`proposed`.
+
+The coding agent must perform the complete workflow in this order:
+
+1. Research the repository, relevant external implementations, and primary
+   sources.
+2. Create and commit the ADR with `status: proposed`, `decision-date: null`, and
+   `implementation-status: not-started`.
+3. Review the proposal against its evidence, decision drivers, constraints,
+   alternatives, risks, and unresolved questions.
+4. If the proposal is supported, change it to `accepted`, set `decision-date`,
+   and commit the decision before implementation. If it is not supported,
+   change it to `rejected`, set `decision-date`, record the rationale, commit
+   the rejection, and stop.
+5. Implement only the accepted scope, including tests and maintained
+   documentation, then run the repository validation set.
+6. Commit the implementation without claiming that the ADR itself contains
+   that commit's final hash.
+7. In a later documentation commit, record the full implementation commit
+   hashes, completion date, confirmation evidence, remaining follow-up work,
+   and `implementation-status: completed`.
+
+Use this request template:
 
 ```text
 $architecture-decision-record
 
-Research and deliver an ADR for <decision>. If the evidence supports it,
-complete these steps in order:
+Research and deliver an ADR for <describe the architectural decision>.
+
+I delegate the acceptance or rejection decision for this workflow. Complete
+these steps in order:
 
 1. Create and commit a proposed ADR.
-2. Review it, accept it explicitly, set decision-date, and commit the decision.
-3. Implement the accepted scope with tests and maintained documentation.
-4. Validate and commit the implementation.
-5. Finalize the ADR with the implementation commit hashes in a later commit.
+2. Review the proposal against the gathered evidence.
+3. If supported, accept it explicitly, set decision-date, and commit the
+   decision. If unsupported, reject it with a rationale and stop.
+4. Implement only the accepted scope with tests and maintained documentation.
+5. Validate and commit the implementation.
+6. Finalize the ADR with the implementation commit hashes in a later commit.
 
-Stop before acceptance or implementation if a material question remains
-unresolved.
+Do not implement while the ADR remains proposed. Stop before acceptance if a
+material question remains unresolved.
 ```
 
 For decisions that need human review, prefer separate proposal and
