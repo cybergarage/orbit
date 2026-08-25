@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-08-25
 decision-date: 2026-08-25
-implementation-status: not-started
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-08-25
+implementation-commits:
+  - 0b52d36d83f2d9ac352f87f3c6231ea75a960243
 superseded-by: []
 ---
 
@@ -335,8 +336,8 @@ Acceptance requires the implementation to keep inspection read-only, reuse a
 single summary contract, preserve exact-ID output, test active-runtime
 precedence, and update maintained CLI and GUI documentation.
 
-No implementation existed at acceptance. Its implementation status remains
-`not-started`.
+No implementation existed at acceptance, so the acceptance commit recorded
+the implementation status as `not-started`. Completion is recorded below.
 
 Implementation should proceed through the existing boundaries:
 
@@ -375,6 +376,50 @@ validation set, a later ADR-only commit must record the full implementation
 commit hashes, completion date, confirmation evidence, and updated
 implementation status.
 
+### Implementation completion
+
+Implementation was completed on 2026-08-25 in commit
+`0b52d36d83f2d9ac352f87f3c6231ea75a960243`.
+
+The implementation follows the accepted boundaries:
+
+- `SessionInformation` is the shared core read model used by saved-session,
+  interactive, and GUI projections. Active runtime provider, model, working
+  directory, and update time override stale persisted values where applicable.
+- `/session` reports the active interactive session locally without a model
+  request or transcript entry. `orbit session` supports exact ID, `--last`,
+  `--last --all`, `--json`, and `--id-only` through selection logic shared with
+  `resume`.
+- The GUI exposes `Copy session ID` and `Session details…` from both the Recent
+  session context menu and the selected conversation's top-bar overflow menu.
+  The dialog keeps the full ID selectable, warns about local-path privacy, and
+  restores focus after Escape.
+- Maintained CLI, interactive, GUI, session, and generated oclif documentation
+  describes the new interfaces and their privacy and read-only behavior.
+
+Confirmation evidence:
+
+- Focused CLI, resume, and interactive tests passed with 23 tests; focused GUI
+  session-information and GUI-server tests also passed.
+- `npm run headers:check`, `npm run build`, and `npm test` passed on 2026-08-25;
+  the complete suite reported 289 passing tests.
+- CLI tests confirm exact-ID output, human and JSON shapes, `--last` selection,
+  transcript and modification-time preservation, and release of the writer
+  lock. Interactive tests confirm active runtime precedence and local-only
+  command handling. GUI helper tests confirm exact clipboard input and failure
+  propagation, while existing server tests retain capability-token and origin
+  enforcement coverage.
+- Local GUI verification confirmed both action-menu entry points, dialog
+  fields and privacy warning, success feedback, initial focus, Escape behavior,
+  and focus restoration. The browser harness could not read back its system
+  clipboard, so exact copied content is confirmed by the deterministic GUI
+  helper test instead.
+
+No persistence format, resume behavior, authentication boundary, transcript
+export, session naming, listing, deletion, or support-bundle scope was added.
+The broader command taxonomy and optional diagnostic expansions remain the
+follow-up work below.
+
 ## Follow-up Work
 
 - Decide separately whether multiple session operations justify a nested
@@ -388,8 +433,8 @@ implementation status.
   differently by CLI and GUI.
 - Consider a user-visible session name independently from durable identity;
   names must never replace the exact ID in diagnostic or machine output.
-- Re-check the Codex App UI manually before implementation if product parity is
-  still a decision driver; this ADR intentionally records the current result as
+- Re-check the Codex App UI before treating product parity as a driver for a
+  future revision; this ADR intentionally records the current result as
   inconclusive.
 
 ## References

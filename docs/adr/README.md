@@ -273,17 +273,17 @@ its own final hash in a tracked file.
 
 ## Decision index
 
-| Proposed | Status | Implementation | Decision |
-| --- | --- | --- | --- |
-| 2026-08-22 | accepted | completed | [GUI Application Architecture](2026-08-22-gui-application.md) |
-| 2026-08-22 | accepted | completed | [Session Persistence Design](2026-08-22-session-persistence.md) |
-| 2026-08-23 | accepted | completed | [Model Response and Tool Integration](2026-08-23-model-response-tool-integration.md) |
-| 2026-08-23 | accepted | completed | [Session History and Model Context Assembly](2026-08-23-session-context-assembly.md) |
-| 2026-08-23 | accepted | completed | [Session Resume Behavior and CLI Design](2026-08-23-session-resume-cli.md) |
-| 2026-08-23 | accepted | completed | [Vibe Coding Tool Architecture](2026-08-23-vibe-coding-tools.md) |
-| 2026-08-25 | accepted | completed | [Session-scoped Logging Architecture](2026-08-25-session-scoped-logging.md) |
-| 2026-08-25 | accepted | completed | [Session Records versus Runtime Logs](2026-08-25-session-versus-runtime-log-content.md) |
-| 2026-08-25 | accepted | not-started | [User-Accessible Session Information](2026-08-25-session-information-access.md) |
+| Proposed   | Status   | Implementation | Decision                                                                                |
+| ---------- | -------- | -------------- | --------------------------------------------------------------------------------------- |
+| 2026-08-22 | accepted | completed      | [GUI Application Architecture](2026-08-22-gui-application.md)                           |
+| 2026-08-22 | accepted | completed      | [Session Persistence Design](2026-08-22-session-persistence.md)                         |
+| 2026-08-23 | accepted | completed      | [Model Response and Tool Integration](2026-08-23-model-response-tool-integration.md)    |
+| 2026-08-23 | accepted | completed      | [Session History and Model Context Assembly](2026-08-23-session-context-assembly.md)    |
+| 2026-08-23 | accepted | completed      | [Session Resume Behavior and CLI Design](2026-08-23-session-resume-cli.md)              |
+| 2026-08-23 | accepted | completed      | [Vibe Coding Tool Architecture](2026-08-23-vibe-coding-tools.md)                        |
+| 2026-08-25 | accepted | completed      | [Session-scoped Logging Architecture](2026-08-25-session-scoped-logging.md)             |
+| 2026-08-25 | accepted | completed      | [Session Records versus Runtime Logs](2026-08-25-session-versus-runtime-log-content.md) |
+| 2026-08-25 | accepted | completed      | [User-Accessible Session Information](2026-08-25-session-information-access.md)         |
 
 ## Background
 
