@@ -254,6 +254,7 @@ its own final hash in a tracked file.
 | 2026-08-23 | accepted | completed | [Vibe Coding Tool Architecture](2026-08-23-vibe-coding-tools.md) |
 | 2026-08-25 | accepted | completed | [Session-scoped Logging Architecture](2026-08-25-session-scoped-logging.md) |
 | 2026-08-25 | accepted | completed | [Session Records versus Runtime Logs](2026-08-25-session-versus-runtime-log-content.md) |
+| 2026-08-25 | proposed | not-started | [User-Accessible Session Information](2026-08-25-session-information-access.md) |
 
 ## Background
 
