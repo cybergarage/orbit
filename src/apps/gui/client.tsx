@@ -21,6 +21,20 @@ import type {
   ThreadSnapshot,
 } from '../../core/index.js'
 
+import {
+  acceptGuiRun,
+  activeGuiRunId,
+  beginGuiRun,
+  GuiRunPhase,
+  type GuiRunPresentation,
+  guiRunStatusText,
+  idleGuiRunPresentation,
+  isGuiRunActive,
+  reconcileGuiRunWithThread,
+  requestGuiRunStop,
+  restoreGuiRunAfterStopFailure,
+  updateGuiRunFromEvent,
+} from './run-presentation.js'
 import {copySessionId, selectedSessionSummary} from './session-information.js'
 
 const token = document.querySelector<HTMLMetaElement>('meta[name="orbit-token"]')?.content ?? ''
@@ -37,7 +51,7 @@ function App() {
     diagnosticCapture: 'metadata',
   })
   const [prompt, setPrompt] = useState('')
-  const [runId, setRunId] = useState<string>()
+  const [runPresentations, setRunPresentations] = useState<Record<string, GuiRunPresentation>>({})
   const [error, setError] = useState<string>()
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [eventFilter, setEventFilter] = useState('all')
@@ -46,6 +60,7 @@ function App() {
   const [sessionToDelete, setSessionToDelete] = useState<SessionSummary>()
   const [notice, setNotice] = useState<string>()
   const messagesEnd = useRef<HTMLDivElement>(null)
+  const pendingSubmissions = useRef(new Set<string>())
   const sessionDetailsReturnFocus = useRef<HTMLElement | null>(null)
   const selectedThreadId = useRef<string | undefined>(undefined)
 
@@ -56,8 +71,11 @@ function App() {
 
   const refreshThread = useCallback(async (threadId: string) => {
     const next = await api<ThreadSnapshot>(`/api/threads/${encodeURIComponent(threadId)}`)
-    setThread(next)
-    if (next.status === 'idle') setRunId(undefined)
+    if (selectedThreadId.current === threadId) setThread(next)
+    setRunPresentations((current) => ({
+      ...current,
+      [threadId]: reconcileGuiRunWithThread(current[threadId], next.status),
+    }))
   }, [])
 
   useEffect(() => {
@@ -70,6 +88,14 @@ function App() {
     const source = new EventSource(`/api/events?token=${encodeURIComponent(token)}`)
     source.addEventListener('diagnostic', (message) => {
       const event = JSON.parse((message as MessageEvent).data) as DiagnosticEvent
+      if (event.threadId !== undefined) {
+        const {threadId} = event
+        setRunPresentations((current) => ({
+          ...current,
+          [threadId]: updateGuiRunFromEvent(current[threadId] ?? idleGuiRunPresentation, event),
+        }))
+      }
+
       if (event.threadId !== undefined && event.threadId === selectedThreadId.current)
         refreshThread(event.threadId).catch(() => {})
       if (event.type === 'run.completed' || event.type === 'session.created' || event.type === 'session.resumed') {
@@ -115,6 +141,10 @@ function App() {
       const created = await api<ThreadSnapshot>('/api/threads', {method: 'POST'})
       selectedThreadId.current = created.id
       setThread(created)
+      setRunPresentations((current) => ({
+        ...current,
+        [created.id]: reconcileGuiRunWithThread(current[created.id], created.status),
+      }))
       await loadSessions()
     } catch (nextError) {
       showError(setError)(nextError)
@@ -130,6 +160,10 @@ function App() {
         method: 'POST',
       })
       setThread(resumed)
+      setRunPresentations((current) => ({
+        ...current,
+        [resumed.id]: reconcileGuiRunWithThread(current[resumed.id], resumed.status),
+      }))
     } catch (nextError) {
       showError(setError)(nextError)
     }
@@ -143,8 +177,13 @@ function App() {
       if (thread?.id === session.id) {
         setThread(undefined)
         setLogs([])
-        setRunId(undefined)
       }
+
+      setRunPresentations((current) => {
+        const next = {...current}
+        delete next[session.id]
+        return next
+      })
 
       await loadSessions()
     } catch (nextError) {
@@ -153,25 +192,54 @@ function App() {
   }
 
   const submit = async () => {
-    if (thread === undefined || prompt.trim().length === 0 || runId !== undefined) return
+    if (thread === undefined || prompt.trim().length === 0) return
+    const threadId = thread.id
+    const presentation = runPresentations[threadId] ?? reconcileGuiRunWithThread(undefined, thread.status)
+    if (isGuiRunActive(presentation) || pendingSubmissions.current.has(threadId)) return
+    const content = prompt
+    pendingSubmissions.current.add(threadId)
     try {
       setError(undefined)
-      const result = await api<StartApplicationRunResult>(`/api/threads/${encodeURIComponent(thread.id)}/messages`, {
-        body: JSON.stringify({content: prompt}),
+      setPrompt('')
+      setRunPresentations((current) => ({...current, [threadId]: beginGuiRun()}))
+      const result = await api<StartApplicationRunResult>(`/api/threads/${encodeURIComponent(threadId)}/messages`, {
+        body: JSON.stringify({content}),
         headers: {'Content-Type': 'application/json'},
         method: 'POST',
       })
-      setPrompt('')
-      setRunId(result.runId)
+      setRunPresentations((current) => ({
+        ...current,
+        [threadId]: acceptGuiRun(current[threadId] ?? idleGuiRunPresentation, result.runId),
+      }))
       await refreshThread(result.threadId)
     } catch (nextError) {
+      setPrompt((current) => (current.length === 0 ? content : `${content}\n${current}`))
+      setRunPresentations((current) => ({...current, [threadId]: idleGuiRunPresentation}))
       showError(setError)(nextError)
+    } finally {
+      pendingSubmissions.current.delete(threadId)
     }
   }
 
   const stop = async () => {
+    if (thread === undefined) return
+    const threadId = thread.id
+    const presentation = runPresentations[threadId] ?? idleGuiRunPresentation
+    const runId = activeGuiRunId(presentation)
     if (runId === undefined) return
-    await api(`/api/runs/${encodeURIComponent(runId)}/cancel`, {method: 'POST'}).catch(showError(setError))
+    setRunPresentations((current) => ({
+      ...current,
+      [threadId]: requestGuiRunStop(current[threadId] ?? presentation),
+    }))
+    try {
+      await api(`/api/runs/${encodeURIComponent(runId)}/cancel`, {method: 'POST'})
+    } catch (nextError) {
+      setRunPresentations((current) => ({
+        ...current,
+        [threadId]: restoreGuiRunAfterStopFailure(current[threadId] ?? presentation),
+      }))
+      showError(setError)(nextError)
+    }
   }
 
   const updatePreferences = async (update: Partial<GuiPreferences>) => {
@@ -222,6 +290,20 @@ function App() {
     [categoryFilter, eventFilter, logs],
   )
   const selectedSession = useMemo(() => selectedSessionSummary(thread, sessions), [sessions, thread])
+  const runPresentation =
+    thread === undefined
+      ? idleGuiRunPresentation
+      : (runPresentations[thread.id] ?? reconcileGuiRunWithThread(undefined, thread.status))
+  const runActive = isGuiRunActive(runPresentation)
+  const runStatus = guiRunStatusText(runPresentation)
+  const runId = activeGuiRunId(runPresentation)
+  const selectedThreadIdValue = thread?.id
+
+  useEffect(() => {
+    if (selectedThreadIdValue === undefined || !runActive || runPresentation.phase === GuiRunPhase.Sending) return
+    const interval = globalThis.setInterval(() => refreshThread(selectedThreadIdValue).catch(() => {}), 1000)
+    return () => globalThis.clearInterval(interval)
+  }, [refreshThread, runActive, runPresentation.phase, selectedThreadIdValue])
 
   return (
     <main
@@ -307,8 +389,8 @@ function App() {
           </div>
         </header>
         {error === undefined ? null : <div className="error-banner">{error}</div>}
-        <div className="messages">
-          {thread === undefined || thread.messages.length === 0 ? (
+        <div aria-busy={runActive} className="messages">
+          {thread === undefined || (thread.messages.length === 0 && runStatus === undefined) ? (
             <div className="empty">
               <div>
                 <strong>What should Orbit work on?</strong>
@@ -319,31 +401,64 @@ function App() {
           ) : (
             thread.messages.map((message) => <MessageView key={message.id} message={message} />)
           )}
+          {runStatus === undefined ? null : (
+            <div aria-live="polite" className={`run-status ${runPresentation.phase}`} role="status">
+              <div className="message-label">Orbit</div>
+              <div className="run-status-body">
+                {runActive ? <span aria-hidden="true" className="run-status-dot" /> : null}
+                <span>{runStatus}</span>
+              </div>
+            </div>
+          )}
           <div ref={messagesEnd} />
         </div>
         <div className="composer-wrap">
-          <div className="composer">
+          <div className={`composer ${runActive ? 'drafting' : ''}`}>
             <textarea
+              aria-describedby="composer-instructions"
+              aria-label="Message Orbit"
               disabled={thread === undefined}
               onChange={(event) => setPrompt(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) {
+                if (event.key === 'Enter' && !event.shiftKey && !runActive) {
                   event.preventDefault()
                   submit().catch(() => {})
                 }
               }}
-              placeholder={thread === undefined ? 'Create or select a chat first' : 'Ask Orbit anything…'}
+              placeholder={
+                thread === undefined
+                  ? 'Create or select a chat first'
+                  : runActive
+                    ? 'Draft your next message…'
+                    : 'Ask Orbit anything…'
+              }
               value={prompt}
             />
             <div className="composer-actions">
-              <span>Enter to send · Shift+Enter for a new line</span>
-              {runId === undefined ? (
-                <button className="send" disabled={thread === undefined || prompt.trim().length === 0} onClick={submit}>
-                  ↑
+              <span id="composer-instructions">
+                {runActive
+                  ? 'Orbit is working · Send this draft when it finishes'
+                  : 'Enter to send · Shift+Enter for a new line'}
+              </span>
+              {runActive ? (
+                <button
+                  aria-label={runPresentation.phase === GuiRunPhase.Stopping ? 'Stopping response' : 'Stop response'}
+                  className="send stop"
+                  disabled={runId === undefined || runPresentation.phase === GuiRunPhase.Stopping}
+                  onClick={stop}
+                  title={runId === undefined ? 'Stop is unavailable for this recovered run' : 'Stop response'}
+                >
+                  ■
                 </button>
               ) : (
-                <button className="send stop" onClick={stop}>
-                  ■
+                <button
+                  aria-label="Send message"
+                  className="send"
+                  disabled={thread === undefined || prompt.trim().length === 0}
+                  onClick={submit}
+                  title="Send message"
+                >
+                  ↑
                 </button>
               )}
             </div>
@@ -512,7 +627,9 @@ function SessionDetailsDialog({
         </p>
         <div className="session-id-row">
           <code>{session.id}</code>
-          <button onClick={() => onCopy(session)} ref={copyButton}>Copy ID</button>
+          <button onClick={() => onCopy(session)} ref={copyButton}>
+            Copy ID
+          </button>
         </div>
         <dl>
           <SessionDetail label="Status" value={session.status} />

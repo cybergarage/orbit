@@ -62,9 +62,14 @@ may continue to use its first eight characters as a compact visual cue. Local
 paths can disclose private workspace information, so review the dialog before
 sharing screenshots or copied details.
 
-Only one run can be active in a session. The square Stop button cancels the
-current run. Model responses are currently displayed after completion; token
-streaming is not part of the initial implementation.
+Only one run can be active in a session. While a run is active, the conversation
+shows whether Orbit is sending, thinking, using a tool, working, or stopping.
+The composer remains available as an explicitly labeled draft for the next
+message; Enter inserts a line break while the draft cannot yet be sent. The
+square Stop button cancels the current run and becomes unavailable while the
+stop request is being processed. Cancellation and background failures are shown
+in the conversation. Model responses are currently displayed after completion;
+token streaming is not part of the initial implementation.
 
 Inputs beginning with `/` are intercepted before model execution. They are
 excluded from the durable session and model conversation and are emitted as

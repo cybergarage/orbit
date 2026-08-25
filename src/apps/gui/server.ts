@@ -309,11 +309,18 @@ button { color:inherit; cursor:pointer; }
 .message-label { margin-bottom:7px; color:#858d99; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
 .message-body { line-height:1.58; overflow-wrap:anywhere; white-space:pre-wrap; }
 .message.user .message-body { display:inline-block; border-radius:14px 14px 4px 14px; background:#262c36; padding:10px 14px; }
+.run-status { margin:0 auto 22px; max-width:860px; color:#c5cbd4; }
+.run-status-body { display:flex; align-items:center; gap:9px; min-height:24px; line-height:1.5; }
+.run-status-dot { width:8px; height:8px; flex:0 0 auto; border-radius:50%; background:#87d7ff; animation:run-status-pulse 1.4s ease-in-out infinite; }
+.run-status.cancelled { color:#969eaa; }
+.run-status.failed { color:#ff9da4; }
+@keyframes run-status-pulse { 0%,100% { opacity:.35; transform:scale(.82); } 50% { opacity:1; transform:scale(1); } }
 .tool-card { margin-top:9px; border:1px solid #303743; border-radius:8px; background:#15191f; }
 .tool-card summary { cursor:pointer; padding:8px 10px; color:#b5bdc9; font-size:12px; }
 .tool-card pre { margin:0; border-top:1px solid #303743; padding:10px; overflow:auto; color:#a8d5ba; font-size:11px; white-space:pre-wrap; }
 .composer-wrap { padding:12px max(18px,7%) 18px; }
 .composer { margin:auto; max-width:900px; border:1px solid #3a424f; border-radius:14px; background:#1a1e25; box-shadow:0 10px 35px #0005; }
+.composer.drafting { border-color:#49566a; }
 .composer textarea { display:block; width:100%; min-height:76px; resize:none; border:0; outline:0; background:transparent; color:#eef0f2; padding:14px 15px; }
 .composer-actions { display:flex; align-items:center; justify-content:space-between; padding:0 9px 9px 13px; color:#858d99; font-size:11px; }
 .send { display:grid; width:32px; height:32px; place-items:center; border:0; border-radius:9px; background:#d8dde6; color:#111419; font-weight:800; }
@@ -334,5 +341,6 @@ select { max-width:130px; border:1px solid #303743; border-radius:7px; backgroun
 .event pre { margin:0; border-top:1px solid #262c35; padding:9px; overflow:auto; color:#9fc7ad; white-space:pre-wrap; }
 .error-banner { margin:8px 18px; border:1px solid #723b42; border-radius:7px; background:#3a2024; padding:8px 10px; color:#f2b4b8; font-size:12px; }
 .toast { position:fixed; right:20px; bottom:20px; z-index:30; border:1px solid #445061; border-radius:8px; background:#252b34; padding:9px 13px; color:#e8ebef; font-size:12px; box-shadow:0 10px 32px #0008; }
+@media (prefers-reduced-motion: reduce) { .run-status-dot { animation:none; } }
 @media (max-width:1100px) { .app { grid-template-columns:220px minmax(400px,1fr) 320px; } }
 `
