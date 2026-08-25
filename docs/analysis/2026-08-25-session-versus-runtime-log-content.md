@@ -1,3 +1,14 @@
+---
+status: accepted
+proposed-date: 2026-08-25
+decision-date: null
+implementation-status: completed
+implementation-completed-date: 2026-08-25
+implementation-commits:
+  - "4b8740d3df084b82e8e26bf81c3044e1eab6d436"
+superseded-by: []
+---
+
 # Session records versus runtime logs in Codex, Pi, and Orbit
 
 ## Purpose
@@ -6,6 +17,31 @@ This investigation compares what Codex and Pi persist as session records with
 what they emit as ordinary runtime or debug logs. It then evaluates Orbit's
 current implementation and recommends a clearer content boundary, schema, and
 retention policy.
+
+## Decision
+
+Orbit will treat replayable session records, local operational logs, and future
+external telemetry as distinct data products. Runtime logs use versioned typed
+events, metadata-first capture, structured correlation, value-aware redaction,
+bounded segmented storage, opaque cursors, sink-health reporting, and explicit
+temporary opt-in for full content.
+
+## Consequences
+
+- Positive: default logs can explain model, tool, MCP, and lifecycle behavior
+  without duplicating complete prompts, reasoning, or tool payloads.
+- Negative: event taxonomy, correlation propagation, redaction, rotation,
+  cursors, compatibility reads, and sink health become maintained contracts.
+- Neutral: external telemetry export and an alternative SQLite store remain
+  future products rather than requirements of the local log format.
+
+## Implementation and Confirmation
+
+The typed event, privacy, retention, cursor, and sink-health scope was
+implemented on 2026-08-25 by commit
+`4b8740d3df084b82e8e26bf81c3044e1eab6d436`. Log, diagnostics, agent,
+application, GUI, session-deletion, and compatibility tests confirm the defined
+content and lifecycle boundaries.
 
 The central finding is that a session record and a runtime log are different
 data products:

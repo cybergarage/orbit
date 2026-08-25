@@ -82,9 +82,10 @@ Orbit is an agentic CLI and reusable TypeScript library for content workflows. I
 ## Documentation and Generated Files
 
 - Update user documentation when changing CLI behavior, settings, public APIs, or integration contracts.
-- Store durable, point-in-time engineering investigations, design explorations, trade-offs, and implementation directions in `docs/analysis/`. Do not use this directory for routine progress reports, chat transcripts, or temporary scratch notes, and do not treat analysis documents as a substitute for maintained user documentation.
-- Name new analysis documents `docs/analysis/YYYY-MM-DD-<topic>.md`, using the creation date and a concise lowercase English kebab-case topic. Keep the original filename when continuing the same analysis; create a new dated file only for a distinct investigation or deliberate re-evaluation.
-- Give each analysis document a descriptive title and purpose. Clearly distinguish verified current behavior and repository evidence from proposals, open questions, and future work; record relevant constraints, trade-offs, recommendations, and implementation status when applicable.
+- Record architecturally significant decisions as research-backed ADRs in `docs/analysis/` before implementation. Use `.agents/skills/architecture-decision-record/SKILL.md` to create, review, migrate, finalize, or supersede them, and follow `docs/analysis/README.md` for the authoritative format and lifecycle.
+- For agent runtime, model, tool, session, context, CLI or GUI agent workflow, persistence, and observability decisions, investigate Codex and Pi Coding Agent at pinned source revisions by default. State why either comparison is not applicable instead of omitting it silently.
+- Keep accepted decision rationale intact. Record implementation completion and full commit hashes in a later documentation commit; use a new linked ADR when a decision is materially replaced.
+- Do not store routine progress reports, chat transcripts, temporary plans, or local implementation details in `docs/analysis/`, and do not treat ADRs as a substitute for maintained user documentation.
 - Treat `README.md` command sections and `oclif.manifest.json` as oclif-generated content. Use `npm run prepack` or `make oclif-docs` when command metadata changes, then review generated differences.
 - Update `docs/data/interactive.csv` or `docs/interactive.adoc` when changing the interactive command reference, and regenerate `docs/interactive.md` from those sources.
 - Do not run `make doc` unless an automatic documentation commit is explicitly intended: the current Makefile can invoke `git commit` while regenerating AsciiDoc-derived Markdown. Prefer running the individual generation command and reviewing changes before committing.

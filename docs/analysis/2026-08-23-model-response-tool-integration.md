@@ -1,3 +1,16 @@
+---
+status: accepted
+proposed-date: 2026-08-23
+decision-date: null
+implementation-status: completed
+implementation-completed-date: 2026-08-23
+implementation-commits:
+  - "fa72eeeb7a1764c981baeb5a73d131345e160810"
+  - "eedcf99fcbfc7dc7aa4c4adcae4807e1471eb22c"
+  - "6df23ae55dfad84e76b22630b041d7009d7ee7b7"
+superseded-by: []
+---
+
 # Model Response and Tool Integration
 
 ## Purpose
@@ -11,6 +24,32 @@ The investigation covers the OpenAI Chat Completions and Responses APIs and
 the native Ollama chat API. It focuses on custom function tools executed by
 Orbit. Provider-hosted tools, realtime audio, and embedding APIs are outside
 the current implementation scope.
+
+## Decision
+
+Orbit will preserve normalized, ordered model output parts and JSON-serializable
+provider metadata instead of flattening every response into message text. Tool
+failures and provider-relevant assistant state remain model-visible, and agent
+and thread APIs forward tool updates without exposing provider SDK types through
+the public model contract.
+
+## Consequences
+
+- Positive: refusal, reasoning, media, citations, tool calls, and provider state
+  survive adapter normalization and later tool iterations.
+- Negative: adapters and tests must maintain richer ordered response contracts
+  and explicit mappings for provider-specific capabilities.
+- Neutral: Responses API continuation, normalized model streaming, and general
+  rich tool-result negotiation remain follow-up decisions.
+
+## Implementation and Confirmation
+
+The defined milestone was completed on 2026-08-23 by commits
+`fa72eeeb7a1764c981baeb5a73d131345e160810`,
+`eedcf99fcbfc7dc7aa4c4adcae4807e1471eb22c`, and
+`6df23ae55dfad84e76b22630b041d7009d7ee7b7`. Adapter and agent integration
+tests confirm output preservation, tool-result projection, tool updates, and
+Ollama model selection without live provider calls.
 
 ## Sources and versions
 

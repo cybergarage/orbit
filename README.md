@@ -8,6 +8,7 @@ work.
 ## Documentation
 
 * [Development](docs/development.md)
+* [Architecture Decisions](docs/analysis/README.md)
 * [Settings](docs/settings.md)
 * [Coding Tools](docs/tools.md)
 * [Sessions](docs/session.md)

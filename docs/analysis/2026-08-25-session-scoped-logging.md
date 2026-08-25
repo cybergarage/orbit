@@ -1,3 +1,14 @@
+---
+status: accepted
+proposed-date: 2026-08-25
+decision-date: null
+implementation-status: completed
+implementation-completed-date: 2026-08-25
+implementation-commits:
+  - "98c358b6e4787759680cb1174abb03585cdfc9dc"
+superseded-by: []
+---
+
 # Session-scoped logging architecture
 
 ## Purpose
@@ -17,6 +28,29 @@ against the source revisions listed in [Sources](#sources). The initial design
 described here was implemented on 2026-08-25 with JSONL and memory stores,
 automatic session binding, selected-session GUI logs, and unified deletion.
 Retention rotation and optional alternative stores remain follow-up work.
+
+## Decision
+
+Orbit will separate log emission from storage through a session-aware logger and
+store contract, provide memory and per-session JSONL implementations, bind logs
+automatically at agent construction, expose only the selected session's logs in
+the GUI, and delete logs through the same lifecycle service as transcripts.
+
+## Consequences
+
+- Positive: CLI, interactive, resume, and GUI paths share one correlation,
+  storage, query, and deletion contract while tests can use a memory store.
+- Negative: asynchronous writes, flush and deletion ordering, sink failures,
+  privacy, permissions, and retention require explicit lifecycle handling.
+- Neutral: alternative SQLite storage and externally exported telemetry remain
+  optional follow-up work behind the same interface.
+
+## Implementation and Confirmation
+
+The initial storage, binding, GUI, and deletion scope was implemented on
+2026-08-25 by commit `98c358b6e4787759680cb1174abb03585cdfc9dc`.
+Store-contract, agent, thread, application, GUI, and deletion tests confirm the
+shared lifecycle behavior.
 
 ## Requested behavior and assumptions
 

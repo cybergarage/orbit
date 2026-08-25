@@ -1,3 +1,14 @@
+---
+status: accepted
+proposed-date: 2026-08-22
+decision-date: null
+implementation-status: completed
+implementation-completed-date: 2026-08-22
+implementation-commits:
+  - "14ee99f4d2b036fc6d8836f0c041a00bb576e1b2"
+superseded-by: []
+---
+
 # Session Persistence Design
 
 ## Purpose
@@ -7,10 +18,34 @@ Orbit should persist each agent session as JSON Lines (JSONL) under
 resume the same conversation, and add future operations such as fork, archive,
 and compaction without replacing the file format.
 
-This document records Orbit's current implementation, lessons from Pi's
-`session.jsonl` and Codex's rollout files, the proposed Orbit format, and the
-work required to implement it. It is a design document, not a description of
-an already implemented persistence feature.
+This document records Orbit's pre-implementation behavior, lessons from Pi's
+`session.jsonl` and Codex's rollout files, the selected Orbit format, and the
+work that was required to implement it. The detailed baseline and proposal are
+retained as historical evidence for the implemented decision.
+
+## Decision
+
+Orbit will persist each session as a versioned append-only JSONL aggregate under
+the application session root. Domain objects remain separate from the disk
+codec, session and thread identities are aligned, runtime activity is recorded
+as typed entries, and load and recovery behavior explicitly validates corrupt
+or incomplete data.
+
+## Consequences
+
+- Positive: sessions can be inspected and resumed across processes without
+  flattening model-visible history or losing tool-call relationships.
+- Negative: every session mutation now carries ordered asynchronous persistence,
+  validation, recovery, sensitive-data, and cleanup responsibilities.
+- Neutral: branching, archive, compaction, and indexing can extend the versioned
+  envelope later without being part of the initial linear-session decision.
+
+## Implementation and Confirmation
+
+The initial persistence scope was implemented on 2026-08-22 by commit
+`14ee99f4d2b036fc6d8836f0c041a00bb576e1b2`. Session codec, repository,
+recorder, agent, interactive, and thread tests confirm recording, recovery,
+listing, and resume behavior.
 
 ## Terminology
 

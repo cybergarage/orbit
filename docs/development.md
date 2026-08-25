@@ -187,45 +187,64 @@ live network requests.
 
 ## Engineering analysis documents
 
-Use `docs/analysis/` for durable, point-in-time records of substantial
-engineering investigations, design explorations, trade-offs, and implementation
-directions. These documents preserve the context behind a decision; they are
+Use `docs/analysis/` for research-backed Architecture Decision Records (ADRs).
+These records preserve the evidence, alternatives, rationale, consequences, and
+implementation history behind architecturally significant decisions. They are
 not authoritative user documentation and do not replace updates to the README,
 API documentation, or feature-specific guides.
 
-Do not store routine progress reports, chat transcripts, or temporary scratch
-notes in this directory. Before adding a document, check whether an existing
-analysis already covers the topic and update it when the work is a continuation
-of the same investigation.
+An ADR is appropriate when a choice materially affects system structure,
+public or provider contracts, persistent formats, security or privacy
+boundaries, cross-cutting runtime behavior, major dependencies, or something
+costly to reverse. Do not create ADRs for routine fixes, local refactors,
+progress reports, chat transcripts, or temporary plans.
 
-Name each new analysis document using its creation date and a concise English
-topic slug:
+Before adding a record, search the existing decisions and use the repository
+skill at `.agents/skills/architecture-decision-record/SKILL.md`. The
+[Architecture Decision Records](analysis/README.md) index defines the complete
+metadata schema, required sections, status values, and lifecycle.
+
+Name a new record using its proposal date and a concise lowercase English topic
+slug:
 
 ```text
 docs/analysis/YYYY-MM-DD-<topic>.md
 ```
 
-Use an ISO 8601 date and lowercase kebab-case for the topic, for example:
+Keep the filename while the decision advances from proposal through
+implementation. Create a new dated record only for a distinct decision or a
+material re-evaluation that supersedes an accepted decision.
 
-```text
-docs/analysis/2026-08-22-session-persistence.md
-```
+Every ADR must separate decision status from implementation status. A proposal
+can be accepted before it is implemented, rejected without implementation, or
+only partially delivered. Use ISO 8601 dates and full 40-character commit
+hashes. Do not infer missing historical acceptance dates or source revisions.
 
-Keep the original filename when revising the same analysis. Create another
-dated document only for a distinct investigation or a deliberate re-evaluation
-that should preserve the earlier record.
+Put `Purpose`, `Decision`, and `Consequences` before detailed research. Follow
+them with the problem context, decision drivers, external implementation
+research, considered options, implementation and confirmation evidence,
+follow-up work, and references. Keep one cohesive decision per record and
+clearly distinguish verified facts, inferences, proposals, and future work.
 
-An analysis document should include, as applicable:
+For decisions about agent runtimes, models, tools, sessions, context assembly,
+CLI or GUI agent workflows, persistence, or observability, investigate Codex
+and Pi Coding Agent by default. Pin inspected source to an exact version, tag,
+or full commit; list the relevant source files; and state both what Orbit should
+adopt and what it should not. If either implementation is not relevant, explain
+why rather than silently omitting it. Use primary source and official
+documentation wherever possible.
 
-- a descriptive title and purpose;
-- the observed current behavior and supporting repository evidence;
-- requirements and constraints;
-- alternatives and their trade-offs;
-- the recommended direction, open questions, and implementation status.
+Commit the proposed ADR before implementation. After implementation commits
+exist, use a later documentation commit to record their full hashes, the
+completion date, confirmation evidence, and completed implementation status. A
+separate finalization commit is necessary because a commit cannot record its
+own final hash in a tracked file.
 
-Clearly distinguish verified current behavior from proposals or future work.
-Because an analysis captures a point in time, the current code and maintained
-user documentation take precedence if they later differ from the analysis.
+Preserve the accepted context, decision, and original rationale. Metadata,
+implementation evidence, confirmation results, and newly observed consequences
+may be added later, but a material change requires a new ADR that marks and
+links the original as superseded. Current code and maintained documentation
+remain authoritative for implemented behavior.
 
 ## Documentation changes
 

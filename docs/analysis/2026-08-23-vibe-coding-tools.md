@@ -1,6 +1,15 @@
-# Vibe Coding Tool Architecture
+---
+status: accepted
+proposed-date: 2026-08-23
+decision-date: null
+implementation-status: completed
+implementation-completed-date: 2026-08-23
+implementation-commits:
+  - "9a0d5ab19662ead3d809da59dfb131264c1af174"
+superseded-by: []
+---
 
-Date: 2026-08-23
+# Vibe Coding Tool Architecture
 
 ## Purpose
 
@@ -12,6 +21,30 @@ This is a point-in-time engineering investigation. Findings about Codex, Pi,
 and Orbit describe verified source behavior. The target architecture, tool
 contracts, and migration phases were proposals when first recorded; the status
 below records subsequent implementation.
+
+## Decision
+
+Orbit will separate serializable model tool specifications from executable
+handlers, combine tools through a source-aware registry, and execute validated
+calls through a scheduling runtime. The initial coding profile contains seven
+full-access local tools, while model providers are registered through an open
+registry instead of a provider-selection switch.
+
+## Consequences
+
+- Positive: built-in, custom, turn-scoped, and MCP tools share one duplicate,
+  validation, scheduling, and result-normalization boundary.
+- Negative: full-access execution remains an explicit security limitation until
+  sandboxing, approvals, and network policy are designed and implemented.
+- Neutral: richer patching, interactive terminals, HTTP MCP, deferred search,
+  and streaming updates remain compatible follow-up work.
+
+## Implementation and Confirmation
+
+The defined registry, runtime, coding-profile, and provider-registration scope
+was implemented on 2026-08-23 by commit
+`9a0d5ab19662ead3d809da59dfb131264c1af174`. Deterministic tool, registry,
+runtime, adapter, settings, agent, and entry-point tests confirm the decision.
 
 ## Implementation status
 

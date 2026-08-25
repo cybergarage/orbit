@@ -1,6 +1,43 @@
+---
+status: accepted
+proposed-date: 2026-08-22
+decision-date: null
+implementation-status: completed
+implementation-completed-date: 2026-08-22
+implementation-commits:
+  - "9380f399842182417c627ed518c330775143b8a7"
+superseded-by: []
+---
+
 # GUI Application Architecture
 
-Date: 2026-08-22
+## Purpose
+
+This ADR records the architecture and initial product boundary for Orbit's
+local graphical application.
+
+## Decision
+
+Orbit will expose its reusable runtime through a loopback-only application
+service and an Express and React client. The client will use validated REST
+commands and Server-Sent Events instead of calling model adapters or session
+files directly, and it will present conversations, sessions, and typed
+diagnostics in a three-pane interface.
+
+## Consequences
+
+- Positive: GUI behavior remains testable through provider-neutral application
+  contracts, and model, tool, session, and startup activity is inspectable.
+- Negative: Orbit owns an additional web build, transport DTOs, event replay,
+  and a security boundary that must remain loopback-only and token protected.
+- Neutral: projects, worktrees, terminals, previews, remote execution, and
+  multi-agent orchestration remain separate future decisions.
+
+## Implementation and Confirmation
+
+The initial scope was implemented on 2026-08-22 by commit
+`9380f399842182417c627ed518c330775143b8a7`, with deterministic application,
+server, diagnostics, and session tests plus maintained GUI documentation.
 
 ## Summary
 

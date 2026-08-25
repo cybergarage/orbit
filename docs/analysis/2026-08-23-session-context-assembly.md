@@ -1,6 +1,15 @@
-# Session History and Model Context Assembly
+---
+status: accepted
+proposed-date: 2026-08-23
+decision-date: null
+implementation-status: completed
+implementation-completed-date: 2026-08-23
+implementation-commits:
+  - "e72fb72e72f1419c5e146746394df0c232d9e353"
+superseded-by: []
+---
 
-Date: 2026-08-23
+# Session History and Model Context Assembly
 
 ## Purpose
 
@@ -10,7 +19,31 @@ then compares those implementations with Orbit and recommends an Orbit design.
 
 This is a point-in-time engineering investigation. Statements under the Pi,
 Codex, and Orbit findings describe verified source behavior. The Orbit design
-section is a proposal and has not been implemented unless stated otherwise.
+section preserves the proposal that led to the implemented decision.
+
+## Decision
+
+Orbit entry points will submit only new turn input. `Agent` will record that
+input in the canonical session, and one provider-neutral context builder will
+derive the complete model-visible history before each model request. Provider
+adapters remain responsible only for projecting that ordered context into their
+native request formats.
+
+## Consequences
+
+- Positive: live and resumed sessions use the same explicit context boundary,
+  and callers cannot accidentally duplicate or omit prior messages.
+- Negative: session recording order, model-visibility rules, copying, and
+  concurrent snapshots become core invariants requiring dedicated tests.
+- Neutral: compaction and transport-specific continuation can be added later on
+  top of the same projection boundary.
+
+## Implementation and Confirmation
+
+The linear context-assembly scope was implemented on 2026-08-23 by commit
+`e72fb72e72f1419c5e146746394df0c232d9e353`. Agent, session, interactive,
+application, and thread tests confirm new-input-only entry points and
+session-derived model context.
 
 ## Executive summary
 

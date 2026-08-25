@@ -1,3 +1,14 @@
+---
+status: accepted
+proposed-date: 2026-08-23
+decision-date: null
+implementation-status: completed
+implementation-completed-date: 2026-08-23
+implementation-commits:
+  - "36dca19d8e5ec575577d970810ce9ba5d5b60c6e"
+superseded-by: []
+---
+
 # Session Resume Behavior and CLI Design
 
 ## Purpose
@@ -11,6 +22,29 @@ The repository findings describe the implementation as of 2026-08-23. The
 design was subsequently implemented with exact-ID and latest-session resume,
 cwd scoping, interactive history hydration, and cross-process writer locking.
 The picker, session names, cwd selection, and fork behavior remain future work.
+
+## Decision
+
+Orbit will make CLI resume explicit through `orbit resume <SESSION_ID>` and
+`orbit resume --last`, with `--all` expanding latest-session search beyond the
+current working directory. Resume restores persisted history and runtime
+context, applies deterministic precedence rules, and prevents concurrent
+cross-process writers.
+
+## Consequences
+
+- Positive: users can resume an exact or recent session predictably without an
+  ordinary Orbit launch silently selecting prior state.
+- Negative: eligibility, working-directory scope, configuration precedence,
+  history hydration, locking, and failure ownership become public CLI contracts.
+- Neutral: an interactive picker, session names, cwd selection, and fork remain
+  separate enhancements.
+
+## Implementation and Confirmation
+
+The exact-ID and latest-session scope was implemented on 2026-08-23 by commit
+`36dca19d8e5ec575577d970810ce9ba5d5b60c6e`. Repository, CLI, and interactive
+tests confirm selection, scoping, hydration, and writer-lock behavior.
 
 ## Executive conclusion
 
