@@ -21,6 +21,106 @@ Use the repository skill at
 `.agents/skills/architecture-decision-record/SKILL.md` to create, review,
 migrate, finalize, or supersede an ADR.
 
+## Requesting ADR work from coding agents
+
+Codex can select the ADR skill automatically when a request clearly matches its
+description. For an architecturally significant task, prefer explicit
+invocation by starting the request with `$architecture-decision-record`. Codex
+CLI and the IDE extension support `$` mentions and `/skills`, while the ChatGPT
+desktop app exposes project skills in its Skills sidebar; see the [official
+OpenAI skill documentation](https://learn.chatgpt.com/docs/build-skills).
+
+Creating an ADR does not approve it and does not authorize implementation.
+State the intended lifecycle boundary and whether commits are required in every
+request.
+
+### Propose an ADR without implementation
+
+```text
+$architecture-decision-record
+
+Create an ADR for migrating Orbit from OpenAI Chat Completions to the
+Responses API.
+
+Investigate the current Orbit implementation, pinned Codex and Pi Coding Agent
+revisions, and official OpenAI documentation. Consider ordered output items,
+continuation state, tool calling, session persistence, and compatibility.
+
+Create and commit only the proposed ADR. Do not implement it.
+```
+
+This request leaves `status` as `proposed`, `decision-date` as `null`, and
+`implementation-status` as `not-started`.
+
+### Accept or reject an ADR
+
+After reviewing a proposal, identify the exact record and state the decision
+explicitly:
+
+```text
+$architecture-decision-record
+
+Accept docs/adr/YYYY-MM-DD-openai-responses-api.md. Set its status and
+decision-date, confirm its unresolved questions and implementation conditions,
+and commit only the ADR update. Do not start implementation.
+```
+
+For a rejection, request `rejected` instead and require the rationale to remain
+in the record.
+
+### Implement an accepted ADR
+
+```text
+$architecture-decision-record
+
+Implement the accepted decision in
+docs/adr/YYYY-MM-DD-openai-responses-api.md.
+
+Keep the change within the ADR scope, update tests and maintained
+documentation, run the repository validation set, and commit the
+implementation. After that commit exists, record its full hash, the completion
+date, confirmation evidence, and remaining follow-up work in the ADR, then
+create a separate ADR finalization commit.
+```
+
+The finalization must be a later commit because a tracked file cannot contain
+the final hash of the commit that includes that file.
+
+### Request the complete workflow
+
+A single request may authorize the entire lifecycle, but it must preserve the
+decision and commit boundaries:
+
+```text
+$architecture-decision-record
+
+Research and deliver an ADR for <decision>. If the evidence supports it,
+complete these steps in order:
+
+1. Create and commit a proposed ADR.
+2. Review it, accept it explicitly, set decision-date, and commit the decision.
+3. Implement the accepted scope with tests and maintained documentation.
+4. Validate and commit the implementation.
+5. Finalize the ADR with the implementation commit hashes in a later commit.
+
+Stop before acceptance or implementation if a material question remains
+unresolved.
+```
+
+For decisions that need human review, prefer separate proposal and
+implementation requests. The shortest useful requests are:
+
+```text
+$architecture-decision-record
+Create and commit an ADR for <decision>. Do not implement it.
+```
+
+```text
+$architecture-decision-record
+Accept and implement docs/adr/YYYY-MM-DD-<topic>.md. Commit the implementation,
+then finalize the ADR in a separate commit.
+```
+
 ## File names
 
 Name decision records using the proposal date and a concise lowercase English
