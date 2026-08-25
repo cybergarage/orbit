@@ -17,10 +17,22 @@
 </thead>
 <tbody>
 <tr>
+<td style="text-align: left;"><p>/help</p></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><p>Show slash commands</p></td>
+<td style="text-align: left;"><p>Prints the available slash commands</p></td>
+</tr>
+<tr>
 <td style="text-align: left;"><p>/exit</p></td>
 <td style="text-align: left;"></td>
 <td style="text-align: left;"><p>Exit interactive mode</p></td>
 <td style="text-align: left;"><p>Ends the interactive session</p></td>
+</tr>
+<tr>
+<td style="text-align: left;"><p>/session</p></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><p>Show the current session information</p></td>
+<td style="text-align: left;"><p>Prints the full session ID and diagnostic summary</p></td>
 </tr>
 <tr>
 <td style="text-align: left;"><p>/model</p></td>

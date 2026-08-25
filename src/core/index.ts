@@ -132,7 +132,9 @@ export type {
   ProcessorType,
 } from './processor/index.js'
 export {
+  createSessionInformation,
   encodeSessionEntry,
+  formatSessionInformation,
   parseSessionFile,
   Session,
   SESSION_FORMAT_VERSION,
@@ -157,6 +159,8 @@ export type {
   SessionError,
   SessionHeaderEntry,
   SessionHeaderOptions,
+  SessionInformation,
+  SessionInformationOverrides,
   SessionListError,
   SessionListOptions,
   SessionListResult,
@@ -165,6 +169,7 @@ export type {
   SessionModelContext,
   SessionOptions,
   SessionRepositoryOptions,
+  SessionStatus,
   SessionSummary,
   SessionThreadCloser,
   SessionTurnContextEntry,

@@ -22,6 +22,8 @@ export type {
 } from './entries.js'
 export {SessionHeader} from './header.js'
 export type {SessionHeaderOptions} from './header.js'
+export {createSessionInformation, formatSessionInformation} from './information.js'
+export type {SessionInformation, SessionInformationOverrides, SessionStatus} from './information.js'
 export {createMessage} from './message-factory.js'
 export type {CreateMessageOptions} from './message-factory.js'
 export {sessionFilePath} from './paths.js'

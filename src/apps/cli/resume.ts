@@ -15,10 +15,9 @@ import {Agent, runInteractiveSession, SessionRepository} from '../../core/index.
 import {selectOllamaModel} from '../../core/models/adapters/ollama.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
+import {selectSessionSummary} from '../session-selection.js'
 
 type AgentClass = typeof Agent
-
-const resumableOriginators = ['orbit-interactive', 'orbit-thread-manager']
 
 export interface ResumeSessionCommandOptions extends AgentOptions {
   all?: boolean
@@ -42,11 +41,10 @@ export async function runResumeSessionCommand(
   options: ResumeSessionCommandOptions = {},
   deps: ResumeSessionCommandDependencies = {},
 ): Promise<SessionSummary> {
-  validateSelection(sessionId, options)
   requireTty(deps)
   const repository = deps.repository ?? new SessionRepository()
   const launchCwd = path.resolve(options.cwd ?? process.cwd())
-  const summary = await selectSession(repository, sessionId, options, launchCwd)
+  const summary = await selectSessionSummary(repository, sessionId, options, launchCwd)
   await requireDirectory(summary.cwd)
   const session = openSession(repository, summary)
 
@@ -155,37 +153,4 @@ async function requireDirectory(cwd: string): Promise<void> {
   } catch {}
 
   throw new Error(`Saved session working directory does not exist: ${cwd}`)
-}
-
-async function selectSession(
-  repository: SessionRepository,
-  sessionId: string | undefined,
-  options: ResumeSessionCommandOptions,
-  launchCwd: string,
-): Promise<SessionSummary> {
-  const summary =
-    sessionId === undefined
-      ? await repository.findLatest({
-          ...(options.all === true ? {} : {cwd: launchCwd}),
-          originators: resumableOriginators,
-        })
-      : await repository.findById(sessionId)
-  if (summary !== undefined) return summary
-  if (sessionId !== undefined) throw new Error(`Unknown session: ${sessionId}`)
-  if (options.all === true) throw new Error('No saved interactive sessions found.')
-  throw new Error(`No saved interactive sessions found for ${launchCwd}.`)
-}
-
-function validateSelection(sessionId: string | undefined, options: ResumeSessionCommandOptions): void {
-  if (sessionId !== undefined && options.last === true) {
-    throw new Error('Pass either a session ID or --last, not both.')
-  }
-
-  if (sessionId === undefined && options.last !== true) {
-    throw new Error('Pass a session ID or --last. Interactive session selection is not available yet.')
-  }
-
-  if (options.all === true && options.last !== true) {
-    throw new Error('--all requires --last.')
-  }
 }

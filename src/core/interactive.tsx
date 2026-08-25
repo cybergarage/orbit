@@ -10,7 +10,12 @@ import type {WorkspaceSettings} from './settings.js'
 
 import {FileSessionLogStore, StoreSessionLoggerFactory} from './logs/index.js'
 import {Agent, type AgentOptions, isProvider, Message, MessageType, type ProviderName, Role} from './models/index.js'
-import {SessionRepository as CoreSessionRepository, Session} from './session/index.js'
+import {
+  SessionRepository as CoreSessionRepository,
+  createSessionInformation,
+  formatSessionInformation,
+  Session,
+} from './session/index.js'
 import {State} from './state.js'
 import {ToolProfile} from './tools/index.js'
 
@@ -55,6 +60,7 @@ export type SlashCommandResult = ModelCommandResult
 const slashCommandHelpItems = [
   {command: '/help', description: 'Show slash commands'},
   {command: '/exit', description: 'Exit interactive mode'},
+  {command: '/session', description: 'Show the current session information'},
   {command: '/model', description: 'Show the current model'},
   {command: '/model provider:model', description: 'Switch the current model'},
   {command: '/debug', description: 'Show debug logging state'},
@@ -192,6 +198,29 @@ export function handleSlashCommand(state: InteractiveState, input: string): Slas
 
   if (commandName === '/model') {
     return handleModelCommand(state, input)
+  }
+
+  if (commandName === '/session') {
+    if (input !== '/session') {
+      return {
+        message: 'Invalid session command. Use /session',
+        nextState: state,
+      }
+    }
+
+    if (state.session === undefined) {
+      return {
+        message: 'Session information is unavailable.',
+        nextState: state,
+      }
+    }
+
+    return {
+      message: formatSessionInformation(
+        createSessionInformation(state.session, {model: state.model, provider: state.provider}),
+      ),
+      nextState: state,
+    }
   }
 
   if (commandName === '/debug') {

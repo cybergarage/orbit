@@ -157,6 +157,39 @@ describe('interactive helpers', () => {
     })
   })
 
+  it('shows the active session with current runtime provider and model', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-interactive-information-'))
+    const repository = new SessionRepository({rootDir: root})
+    const session = repository.create({
+      createdAt: '2026-08-25T01:02:03.000Z',
+      cwd: root,
+      id: 'session-information',
+      model: 'persisted-model',
+      originator: 'orbit-interactive',
+      provider: 'ollama',
+    })
+    session.appendMessages([new Message(MessageType.User, {content: 'Investigate a failure', role: Role.User})])
+    const state = createInitialInteractiveState({
+      model: 'gpt-5',
+      provider: 'openai',
+      session,
+    })
+
+    const result = handleSlashCommand(state, '/session')
+
+    expect(result?.nextState).to.equal(state)
+    expect(result?.message).to.include('Session ID: session-information')
+    expect(result?.message).to.include('Status: interrupted')
+    expect(result?.message).to.include('Originator: orbit-interactive')
+    expect(result?.message).to.include('Provider: openai')
+    expect(result?.message).to.include('Model: gpt-5')
+    expect(result?.message).to.include(`Transcript file: ${session.getFile()}`)
+    expect(result?.message).to.include('Preview: Investigate a failure')
+    expect(handleSlashCommand(state, '/session extra')?.message).to.equal('Invalid session command. Use /session')
+    await session.close()
+    await fs.rm(root, {force: true, recursive: true})
+  })
+
   it('updates provider and model for /model provider:model', () => {
     const initial = createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'})
     const result = handleModelCommand(initial, '/model anthropic:claude-opus-4-6')
@@ -234,6 +267,7 @@ describe('interactive helpers', () => {
         'Slash commands:',
         '/help - Show slash commands',
         '/exit - Exit interactive mode',
+        '/session - Show the current session information',
         '/model - Show the current model',
         '/model provider:model - Switch the current model',
         '/debug - Show debug logging state',

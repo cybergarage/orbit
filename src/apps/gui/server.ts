@@ -271,10 +271,11 @@ button { color:inherit; cursor:pointer; }
 .session:hover, .session.active { background:#252a33; }
 .session-title { display:block; overflow:hidden; color:#e6e8eb; font-size:13px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
 .session-meta { display:block; margin-top:4px; overflow:hidden; color:#858d9b; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
-.context-menu { position:fixed; z-index:10; min-width:170px; border:1px solid #3a414d; border-radius:8px; background:#20242b; padding:5px; box-shadow:0 12px 32px #0009; }
+.context-menu { position:fixed; z-index:10; min-width:196px; border:1px solid #3a414d; border-radius:8px; background:#20242b; padding:5px; box-shadow:0 12px 32px #0009; }
 .context-menu button { width:100%; border:0; border-radius:5px; background:transparent; padding:8px 10px; text-align:left; }
 .context-menu button:hover { background:#343942; }
 .context-menu .context-menu-danger { color:#ff8c94; }
+.context-menu-separator { height:1px; margin:5px 4px; background:#3a414d; }
 .dialog-backdrop { position:fixed; inset:0; z-index:20; display:grid; place-items:center; background:#0009; }
 .dialog { width:min(420px,calc(100vw - 32px)); border:1px solid #424955; border-radius:12px; background:#20242b; padding:20px; box-shadow:0 18px 60px #000b; }
 .dialog h2 { margin:0 0 10px; font-size:17px; }
@@ -285,12 +286,23 @@ button { color:inherit; cursor:pointer; }
 .dialog-actions button:hover { background:#353b45; }
 .dialog-actions .danger { border-color:#9d4149; background:#8b343c; color:white; }
 .dialog-actions .danger:hover { background:#a43e48; }
+.session-details { width:min(620px,calc(100vw - 32px)); }
+.session-id-row { display:flex; align-items:center; gap:8px; border-radius:7px; background:#171a20; padding:9px 10px; }
+.session-id-row code { flex:1; overflow:auto; color:#d8dbe0; font-size:12px; user-select:text; white-space:nowrap; }
+.session-id-row button { border:1px solid #444b57; border-radius:6px; background:#2b3038; padding:5px 9px; white-space:nowrap; }
+.session-details dl { margin:14px 0 0; }
+.session-detail { display:grid; grid-template-columns:135px minmax(0,1fr); gap:12px; border-top:1px solid #303641; padding:9px 0; font-size:12px; }
+.session-detail dt { color:#8f98a6; }
+.session-detail dd { margin:0; overflow-wrap:anywhere; color:#d8dbe0; user-select:text; }
 .sidebar-footer { border-top:1px solid #292d35; padding:12px 6px 0; color:#a9afba; font-size:12px; }
 .toggle-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .conversation { display:flex; flex-direction:column; background:#111419; }
 .topbar { display:flex; align-items:center; justify-content:space-between; min-height:54px; border-bottom:1px solid #292d35; padding:9px 18px; }
 .title { min-width:0; font-size:14px; font-weight:650; }
+.topbar-actions { display:flex; align-items:center; gap:7px; }
 .badge { border:1px solid #343b47; border-radius:999px; padding:4px 8px; color:#aab1bd; font-size:11px; }
+.icon-button { display:grid; width:30px; height:30px; place-items:center; border:1px solid #343b47; border-radius:8px; background:#1a1e25; color:#aab1bd; font-size:18px; line-height:1; }
+.icon-button:hover { background:#292f39; color:#eef0f2; }
 .messages { flex:1; overflow:auto; padding:28px max(22px,8%); }
 .empty { display:grid; height:100%; place-items:center; color:#858d99; text-align:center; }
 .message { margin:0 auto 22px; max-width:860px; }
@@ -321,5 +333,6 @@ select { max-width:130px; border:1px solid #303743; border-radius:7px; backgroun
 .event.warn { border-color:#665533; }.event.warn .event-level { color:#e3bd68; }
 .event pre { margin:0; border-top:1px solid #262c35; padding:9px; overflow:auto; color:#9fc7ad; white-space:pre-wrap; }
 .error-banner { margin:8px 18px; border:1px solid #723b42; border-radius:7px; background:#3a2024; padding:8px 10px; color:#f2b4b8; font-size:12px; }
+.toast { position:fixed; right:20px; bottom:20px; z-index:30; border:1px solid #445061; border-radius:8px; background:#252b34; padding:9px 13px; color:#e8ebef; font-size:12px; box-shadow:0 10px 32px #0008; }
 @media (max-width:1100px) { .app { grid-template-columns:220px minmax(400px,1fr) 320px; } }
 `

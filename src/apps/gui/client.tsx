@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /* eslint-disable n/no-unsupported-features/node-builtins */
-/* global document, EventSource, fetch, HTMLDivElement, HTMLElement, HTMLMetaElement, MessageEvent, RequestInit, window */
+/* global document, EventSource, fetch, HTMLButtonElement, HTMLDivElement, HTMLElement, HTMLMetaElement, KeyboardEvent, MessageEvent, navigator, RequestInit, window */
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {createRoot} from 'react-dom/client'
@@ -21,6 +21,8 @@ import type {
   ThreadSnapshot,
 } from '../../core/index.js'
 
+import {copySessionId, selectedSessionSummary} from './session-information.js'
+
 const token = document.querySelector<HTMLMetaElement>('meta[name="orbit-token"]')?.content ?? ''
 
 // Session selection coordinates conversation, backfill, live logs, and deletion in one renderer boundary.
@@ -30,15 +32,21 @@ function App() {
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [thread, setThread] = useState<ThreadSnapshot>()
   const [logs, setLogs] = useState<LogRecord[]>([])
-  const [preferences, setPreferences] = useState<GuiPreferences>({debugPanelVisible: true, diagnosticCapture: 'metadata'})
+  const [preferences, setPreferences] = useState<GuiPreferences>({
+    debugPanelVisible: true,
+    diagnosticCapture: 'metadata',
+  })
   const [prompt, setPrompt] = useState('')
   const [runId, setRunId] = useState<string>()
   const [error, setError] = useState<string>()
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [eventFilter, setEventFilter] = useState('all')
   const [sessionMenu, setSessionMenu] = useState<{session: SessionSummary; x: number; y: number}>()
+  const [sessionToInspect, setSessionToInspect] = useState<SessionSummary>()
   const [sessionToDelete, setSessionToDelete] = useState<SessionSummary>()
+  const [notice, setNotice] = useState<string>()
   const messagesEnd = useRef<HTMLDivElement>(null)
+  const sessionDetailsReturnFocus = useRef<HTMLElement | null>(null)
   const selectedThreadId = useRef<string | undefined>(undefined)
 
   const loadSessions = useCallback(async () => {
@@ -62,7 +70,8 @@ function App() {
     const source = new EventSource(`/api/events?token=${encodeURIComponent(token)}`)
     source.addEventListener('diagnostic', (message) => {
       const event = JSON.parse((message as MessageEvent).data) as DiagnosticEvent
-      if (event.threadId !== undefined && event.threadId === selectedThreadId.current) refreshThread(event.threadId).catch(() => {})
+      if (event.threadId !== undefined && event.threadId === selectedThreadId.current)
+        refreshThread(event.threadId).catch(() => {})
       if (event.type === 'run.completed' || event.type === 'session.created' || event.type === 'session.resumed') {
         loadSessions().catch(() => {})
       }
@@ -94,6 +103,12 @@ function App() {
     messagesEnd.current?.scrollIntoView({behavior: 'smooth'})
   }, [thread?.messages.length])
 
+  useEffect(() => {
+    if (notice === undefined) return
+    const timeout = globalThis.setTimeout(() => setNotice(undefined), 2400)
+    return () => globalThis.clearTimeout(timeout)
+  }, [notice])
+
   const createThread = async () => {
     try {
       setError(undefined)
@@ -111,7 +126,9 @@ function App() {
       setError(undefined)
       selectedThreadId.current = session.id
       setLogs([])
-      const resumed = await api<ThreadSnapshot>(`/api/sessions/${encodeURIComponent(session.id)}/resume`, {method: 'POST'})
+      const resumed = await api<ThreadSnapshot>(`/api/sessions/${encodeURIComponent(session.id)}/resume`, {
+        method: 'POST',
+      })
       setThread(resumed)
     } catch (nextError) {
       showError(setError)(nextError)
@@ -170,6 +187,31 @@ function App() {
     }
   }
 
+  const openSessionDetails = (session: SessionSummary) => {
+    if (document.activeElement instanceof HTMLElement && document.activeElement.closest('.context-menu') === null) {
+      sessionDetailsReturnFocus.current = document.activeElement
+    }
+
+    setSessionToInspect(session)
+  }
+
+  const copyId = async (session: SessionSummary) => {
+    setSessionMenu(undefined)
+    try {
+      await copySessionId(session, navigator.clipboard)
+      setNotice('Session ID copied')
+      if (sessionToInspect === undefined) globalThis.setTimeout(() => sessionDetailsReturnFocus.current?.focus(), 0)
+    } catch {
+      if (sessionToInspect === undefined) openSessionDetails(session)
+      setError('Could not copy the session ID. Select the full ID in Session details and copy it manually.')
+    }
+  }
+
+  const closeSessionDetails = useCallback(() => {
+    setSessionToInspect(undefined)
+    globalThis.setTimeout(() => sessionDetailsReturnFocus.current?.focus(), 0)
+  }, [])
+
   const visibleLogs = useMemo(
     () =>
       logs.filter(
@@ -179,12 +221,21 @@ function App() {
       ),
     [categoryFilter, eventFilter, logs],
   )
+  const selectedSession = useMemo(() => selectedSessionSummary(thread, sessions), [sessions, thread])
 
   return (
-    <main className={`app ${preferences.debugPanelVisible ? '' : 'debug-hidden'}`} onClick={() => setSessionMenu(undefined)}>
+    <main
+      className={`app ${preferences.debugPanelVisible ? '' : 'debug-hidden'}`}
+      onClick={() => setSessionMenu(undefined)}
+    >
       <aside className="pane sidebar">
-        <div className="brand"><span className="brand-mark">O</span><span>ORBIT</span></div>
-        <button className="primary" onClick={createThread}>＋ New Chat</button>
+        <div className="brand">
+          <span className="brand-mark">O</span>
+          <span>ORBIT</span>
+        </div>
+        <button className="primary" onClick={createThread}>
+          ＋ New Chat
+        </button>
         <div className="section-title">Recent</div>
         <div className="sessions">
           {sessions.map((session) => (
@@ -194,18 +245,21 @@ function App() {
               onClick={() => selectSession(session)}
               onContextMenu={(event) => {
                 event.preventDefault()
+                sessionDetailsReturnFocus.current = event.currentTarget
                 const bounds = event.currentTarget.getBoundingClientRect()
                 const requestedX = event.clientX || bounds.right
                 const requestedY = event.clientY || bounds.top
                 setSessionMenu({
                   session,
-                  x: Math.max(8, Math.min(requestedX, window.innerWidth - 188)),
-                  y: Math.max(8, Math.min(requestedY, window.innerHeight - 52)),
+                  x: Math.max(8, Math.min(requestedX, window.innerWidth - 204)),
+                  y: Math.max(8, Math.min(requestedY, window.innerHeight - 150)),
                 })
               }}
             >
               <span className="session-title">{session.preview || `${session.provider ?? 'Orbit'} session`}</span>
-              <span className="session-meta">{formatDate(session.updatedAt)} · {session.model ?? 'default model'}</span>
+              <span className="session-meta">
+                {formatDate(session.updatedAt)} · {session.model ?? 'default model'}
+              </span>
               <span className="session-meta">{session.cwd}</span>
             </button>
           ))}
@@ -213,7 +267,11 @@ function App() {
         <div className="sidebar-footer">
           <label className="toggle-row">
             <span>Logs</span>
-            <input checked={preferences.debugPanelVisible} onChange={(event) => updatePreferences({debugPanelVisible: event.target.checked})} type="checkbox"/>
+            <input
+              checked={preferences.debugPanelVisible}
+              onChange={(event) => updatePreferences({debugPanelVisible: event.target.checked})}
+              type="checkbox"
+            />
           </label>
         </div>
       </aside>
@@ -221,14 +279,47 @@ function App() {
       <section className="pane conversation">
         <header className="topbar">
           <div className="title">{thread === undefined ? 'New conversation' : sessionTitle(thread, sessions)}</div>
-          <span className="badge">{thread?.provider ?? runtime?.provider ?? '…'} · {thread?.model ?? runtime?.model ?? '…'}</span>
+          <div className="topbar-actions">
+            <span className="badge">
+              {thread?.provider ?? runtime?.provider ?? '…'} · {thread?.model ?? runtime?.model ?? '…'}
+            </span>
+            {selectedSession === undefined ? null : (
+              <button
+                aria-expanded={sessionMenu?.session.id === selectedSession.id}
+                aria-haspopup="menu"
+                aria-label="Session actions"
+                className="icon-button"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  sessionDetailsReturnFocus.current = event.currentTarget
+                  const bounds = event.currentTarget.getBoundingClientRect()
+                  setSessionMenu({
+                    session: selectedSession,
+                    x: Math.max(8, Math.min(bounds.right - 196, window.innerWidth - 204)),
+                    y: Math.max(8, Math.min(bounds.bottom + 6, window.innerHeight - 150)),
+                  })
+                }}
+                title="Session actions"
+              >
+                ⋯
+              </button>
+            )}
+          </div>
         </header>
         {error === undefined ? null : <div className="error-banner">{error}</div>}
         <div className="messages">
           {thread === undefined || thread.messages.length === 0 ? (
-            <div className="empty"><div><strong>What should Orbit work on?</strong><br/>Start a new chat or open a recent session.</div></div>
-          ) : thread.messages.map((message) => <MessageView key={message.id} message={message}/>) }
-          <div ref={messagesEnd}/>
+            <div className="empty">
+              <div>
+                <strong>What should Orbit work on?</strong>
+                <br />
+                Start a new chat or open a recent session.
+              </div>
+            </div>
+          ) : (
+            thread.messages.map((message) => <MessageView key={message.id} message={message} />)
+          )}
+          <div ref={messagesEnd} />
         </div>
         <div className="composer-wrap">
           <div className="composer">
@@ -247,8 +338,14 @@ function App() {
             <div className="composer-actions">
               <span>Enter to send · Shift+Enter for a new line</span>
               {runId === undefined ? (
-                <button className="send" disabled={thread === undefined || prompt.trim().length === 0} onClick={submit}>↑</button>
-              ) : <button className="send stop" onClick={stop}>■</button>}
+                <button className="send" disabled={thread === undefined || prompt.trim().length === 0} onClick={submit}>
+                  ↑
+                </button>
+              ) : (
+                <button className="send stop" onClick={stop}>
+                  ■
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -260,22 +357,45 @@ function App() {
             <div className="title">Logs{thread === undefined ? '' : ` · ${thread.id.slice(0, 8)}`}</div>
             <div className="filters">
               <select onChange={(event) => setEventFilter(event.target.value)} value={eventFilter}>
-                <option value="all">All levels</option><option value="info">Info</option><option value="debug">Debug</option><option value="warn">Warn</option><option value="error">Error</option>
+                <option value="all">All levels</option>
+                <option value="info">Info</option>
+                <option value="debug">Debug</option>
+                <option value="warn">Warn</option>
+                <option value="error">Error</option>
               </select>
               <select onChange={(event) => setCategoryFilter(event.target.value)} value={categoryFilter}>
-                <option value="all">All categories</option><option value="lifecycle">Lifecycle</option><option value="model">Model</option><option value="tool">Tool</option><option value="mcp">MCP</option><option value="storage">Storage</option><option value="runtime">Runtime</option><option value="security">Security</option>
+                <option value="all">All categories</option>
+                <option value="lifecycle">Lifecycle</option>
+                <option value="model">Model</option>
+                <option value="tool">Tool</option>
+                <option value="mcp">MCP</option>
+                <option value="storage">Storage</option>
+                <option value="runtime">Runtime</option>
+                <option value="security">Security</option>
               </select>
-              <select aria-label="Global diagnostic capture" onChange={(event) => updatePreferences({diagnosticCapture: event.target.value as DiagnosticCapture})} value={preferences.diagnosticCapture}>
-                <option value="full">Global: Full (15 min)</option><option value="metadata">Global: Metadata</option><option value="off">Global: Off</option>
+              <select
+                aria-label="Global diagnostic capture"
+                onChange={(event) => updatePreferences({diagnosticCapture: event.target.value as DiagnosticCapture})}
+                value={preferences.diagnosticCapture}
+              >
+                <option value="full">Global: Full (15 min)</option>
+                <option value="metadata">Global: Metadata</option>
+                <option value="off">Global: Off</option>
               </select>
             </div>
           </header>
           <div className="events">
             {thread === undefined ? <div className="empty">Select a session to view its logs.</div> : null}
-            {thread !== undefined && visibleLogs.length === 0 ? <div className="empty">No logs for this session.</div> : null}
+            {thread !== undefined && visibleLogs.length === 0 ? (
+              <div className="empty">No logs for this session.</div>
+            ) : null}
             {visibleLogs.map((record) => (
               <details className={`event ${record.level}`} key={record.id}>
-                <summary><span className="event-time">{formatTime(record.timestamp)}</span><span className="event-type">{record.eventType}</span><span className="event-level">{record.level}</span></summary>
+                <summary>
+                  <span className="event-time">{formatTime(record.timestamp)}</span>
+                  <span className="event-type">{record.eventType}</span>
+                  <span className="event-level">{record.level}</span>
+                </summary>
                 <pre>{JSON.stringify(record, null, 2)}</pre>
               </details>
             ))}
@@ -284,38 +404,139 @@ function App() {
       ) : null}
       <SessionContextMenu
         menu={sessionMenu}
+        onClose={() => {
+          setSessionMenu(undefined)
+          globalThis.setTimeout(() => sessionDetailsReturnFocus.current?.focus(), 0)
+        }}
+        onCopy={(session) => copyId(session).catch(showError(setError))}
         onDelete={(session) => {
           setSessionMenu(undefined)
           setSessionToDelete(session)
         }}
+        onDetails={(session) => {
+          setSessionMenu(undefined)
+          openSessionDetails(session)
+        }}
+      />
+      <SessionDetailsDialog
+        onClose={closeSessionDetails}
+        onCopy={(session) => copyId(session).catch(showError(setError))}
+        session={sessionToInspect}
       />
       <DeleteSessionDialog
         onCancel={() => setSessionToDelete(undefined)}
         onConfirm={(session) => deleteSession(session).catch(() => {})}
         session={sessionToDelete}
       />
+      {notice === undefined ? null : (
+        <div aria-live="polite" className="toast" role="status">
+          {notice}
+        </div>
+      )}
     </main>
   )
 }
 
 function SessionContextMenu({
   menu,
+  onClose,
+  onCopy,
   onDelete,
+  onDetails,
 }: {
   menu?: {session: SessionSummary; x: number; y: number}
+  onClose: () => void
+  onCopy: (session: SessionSummary) => void
   onDelete: (session: SessionSummary) => void
+  onDetails: (session: SessionSummary) => void
 }) {
   if (menu === undefined) return null
   return (
     <div
+      aria-label="Session actions"
       className="context-menu"
       onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') onClose()
+      }}
       role="menu"
       style={{left: menu.x, top: menu.y}}
     >
+      <button autoFocus onClick={() => onCopy(menu.session)} role="menuitem">
+        Copy session ID
+      </button>
+      <button onClick={() => onDetails(menu.session)} role="menuitem">
+        Session details…
+      </button>
+      <div className="context-menu-separator" role="separator" />
       <button className="context-menu-danger" onClick={() => onDelete(menu.session)} role="menuitem">
         Delete session…
       </button>
+    </div>
+  )
+}
+
+function SessionDetailsDialog({
+  onClose,
+  onCopy,
+  session,
+}: {
+  onClose: () => void
+  onCopy: (session: SessionSummary) => void
+  session?: SessionSummary
+}) {
+  const copyButton = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (session === undefined) return
+    copyButton.current?.focus()
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [onClose, session])
+  if (session === undefined) return null
+  return (
+    <div className="dialog-backdrop" role="presentation">
+      <section
+        aria-describedby="session-details-privacy"
+        aria-labelledby="session-details-title"
+        aria-modal="true"
+        className="dialog session-details"
+        role="dialog"
+      >
+        <h2 id="session-details-title">Session details</h2>
+        <p id="session-details-privacy">
+          Local paths can reveal private workspace information. Review these details before sharing them.
+        </p>
+        <div className="session-id-row">
+          <code>{session.id}</code>
+          <button onClick={() => onCopy(session)} ref={copyButton}>Copy ID</button>
+        </div>
+        <dl>
+          <SessionDetail label="Status" value={session.status} />
+          <SessionDetail label="Created" value={formatFullDate(session.createdAt)} />
+          <SessionDetail label="Updated" value={formatFullDate(session.updatedAt)} />
+          <SessionDetail label="Working directory" value={session.cwd} />
+          <SessionDetail label="Originator" value={session.originator ?? 'Not recorded'} />
+          <SessionDetail label="Provider" value={session.provider ?? 'Not recorded'} />
+          <SessionDetail label="Model" value={session.model ?? 'Not recorded'} />
+          <SessionDetail label="Transcript file" value={session.file} />
+        </dl>
+        <div className="dialog-actions">
+          <button onClick={onClose}>Close</button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function SessionDetail({label, value}: {label: string; value: string}) {
+  return (
+    <div className="session-detail">
+      <dt>{label}</dt>
+      <dd>{value}</dd>
     </div>
   )
 }
@@ -338,7 +559,9 @@ function DeleteSessionDialog({
         <div className="dialog-session">{session.preview ?? session.id}</div>
         <div className="dialog-actions">
           <button onClick={onCancel}>Cancel</button>
-          <button autoFocus className="danger" onClick={() => onConfirm(session)}>Delete</button>
+          <button autoFocus className="danger" onClick={() => onConfirm(session)}>
+            Delete
+          </button>
         </div>
       </section>
     </div>
@@ -359,8 +582,18 @@ function MessageView({message}: {message: ThreadMessage}) {
           <pre>{JSON.stringify(call, null, 2)}</pre>
         </details>
       ))}
-      {message.type === 'tool' && payload !== undefined ? <details className="tool-card"><summary>Tool result details</summary><pre>{JSON.stringify(payload, null, 2)}</pre></details> : null}
-      {isRecord(payload?.response) ? <details className="tool-card"><summary>Model response metadata</summary><pre>{JSON.stringify(payload.response, null, 2)}</pre></details> : null}
+      {message.type === 'tool' && payload !== undefined ? (
+        <details className="tool-card">
+          <summary>Tool result details</summary>
+          <pre>{JSON.stringify(payload, null, 2)}</pre>
+        </details>
+      ) : null}
+      {isRecord(payload?.response) ? (
+        <details className="tool-card">
+          <summary>Model response metadata</summary>
+          <pre>{JSON.stringify(payload.response, null, 2)}</pre>
+        </details>
+      ) : null}
     </article>
   )
 }
@@ -371,7 +604,10 @@ async function api<T = unknown>(pathname: string, init: RequestInit = {}): Promi
     headers: {'X-Orbit-Token': token, ...init.headers},
   })
   const body = (await response.json()) as T | {error?: string}
-  if (!response.ok) throw new Error(isRecord(body) && typeof body.error === 'string' ? body.error : `Request failed: ${response.status}`)
+  if (!response.ok)
+    throw new Error(
+      isRecord(body) && typeof body.error === 'string' ? body.error : `Request failed: ${response.status}`,
+    )
   return body as T
 }
 
@@ -380,11 +616,22 @@ function sessionTitle(thread: ThreadSnapshot, sessions: SessionSummary[]): strin
 }
 
 function formatDate(timestamp: string): string {
-  return new Intl.DateTimeFormat(undefined, {day: '2-digit', hour: '2-digit', minute: '2-digit', month: 'short'}).format(new Date(timestamp))
+  return new Intl.DateTimeFormat(undefined, {
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: 'short',
+  }).format(new Date(timestamp))
 }
 
 function formatTime(timestamp: string): string {
-  return new Intl.DateTimeFormat(undefined, {hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(timestamp))
+  return new Intl.DateTimeFormat(undefined, {hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(
+    new Date(timestamp),
+  )
+}
+
+function formatFullDate(timestamp: string): string {
+  return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium', timeStyle: 'medium'}).format(new Date(timestamp))
 }
 
 function appendUniqueLog(records: LogRecord[], record: LogRecord): LogRecord[] {
@@ -406,4 +653,4 @@ function showError(setError: (message: string) => void) {
   return (error: unknown) => setError(error instanceof Error ? error.message : String(error))
 }
 
-createRoot(document.querySelector('#root') as HTMLElement).render(<App/>)
+createRoot(document.querySelector('#root') as HTMLElement).render(<App />)

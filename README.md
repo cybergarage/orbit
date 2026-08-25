@@ -18,9 +18,7 @@ work.
 * [GUI Integration](docs/gui-integration.md)
 
 <!-- toc -->
-* [Documentation](#documentation)
-* [Usage](#usage)
-* [Commands](#commands)
+* [orbit](#orbit)
 <!-- tocstop -->
 ## Usage
 <!-- usage -->
@@ -43,8 +41,9 @@ USAGE
 * [`orbit gui`](#orbit-gui)
 * [`orbit help [COMMAND]`](#orbit-help-command)
 * [`orbit resume [SESSION]`](#orbit-resume-session)
+* [`orbit session [SESSION]`](#orbit-session-session)
 
-### `orbit delete SESSION`
+## `orbit delete SESSION`
 
 Permanently delete a saved session
 
@@ -69,7 +68,7 @@ EXAMPLES
 
 _See code: [src/cli/delete.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/delete.ts)_
 
-### `orbit exec [PROMPT]`
+## `orbit exec [PROMPT]`
 
 Send a prompt to the agent and print the response
 
@@ -103,7 +102,7 @@ EXAMPLES
 
 _See code: [src/cli/exec.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/exec.ts)_
 
-### `orbit gui`
+## `orbit gui`
 
 Start the local Orbit graphical interface
 
@@ -130,7 +129,7 @@ DESCRIPTION
 
 _See code: [src/cli/gui.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/gui.ts)_
 
-### `orbit help [COMMAND]`
+## `orbit help [COMMAND]`
 
 Display help for orbit.
 
@@ -150,7 +149,7 @@ DESCRIPTION
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.37/src/commands/help.ts)_
 
-### `orbit resume [SESSION]`
+## `orbit resume [SESSION]`
 
 Resume a saved interactive session
 
@@ -187,4 +186,36 @@ EXAMPLES
 ```
 
 _See code: [src/cli/resume.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/resume.ts)_
+
+## `orbit session [SESSION]`
+
+Show saved session information
+
+```
+USAGE
+  $ orbit session [SESSION] [--all] [--id-only] [--json] [--last]
+
+ARGUMENTS
+  [SESSION]  Exact ID of the saved session to inspect
+
+FLAGS
+  --all      Search all working directories (requires --last)
+  --id-only  Print only the full session ID
+  --json     Print the session summary as JSON
+  --last     Inspect the most recently updated eligible session
+
+DESCRIPTION
+  Show saved session information
+
+EXAMPLES
+  $ orbit session <SESSION_ID>
+
+  $ orbit session --last
+
+  $ orbit session --last --all --id-only
+
+  $ orbit session <SESSION_ID> --json
+```
+
+_See code: [src/cli/session.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/session.ts)_
 <!-- commandsstop -->

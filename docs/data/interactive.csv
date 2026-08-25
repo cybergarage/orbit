@@ -1,6 +1,7 @@
 command,arguments,description,effect
 "/help","",Show slash commands,Prints the available slash commands
 "/exit","",Exit interactive mode,Ends the interactive session
+"/session","",Show the current session information,Prints the full session ID and diagnostic summary
 "/model","",Show the current model,Prints the current provider and model
 "/model","provider:model",Switch the current model,Updates the provider and model for subsequent requests
 "/debug","",Show debug logging state,Prints whether debug logging is on or off

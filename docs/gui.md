@@ -48,6 +48,20 @@ closes the agent and recorder. Orbit deletes the session log partition before
 unlinking the JSONL transcript, so a log cleanup failure leaves the transcript
 available for retry. This operation is not an archive and cannot be undone.
 
+The same context menu provides **Copy session ID** and **Session details…**.
+The selected conversation's top-bar **Session actions** button exposes the same
+commands for keyboard and pointer users without requiring right-click.
+**Copy session ID** writes the complete durable ID to the clipboard and confirms
+success. If clipboard access fails, Orbit opens the details dialog so the full
+selectable ID can be copied manually.
+
+The details dialog shows status, creation and update times, working directory,
+originator, current provider and model, and transcript file. The UUID is not
+shown permanently in the sidebar or conversation header; the diagnostics pane
+may continue to use its first eight characters as a compact visual cue. Local
+paths can disclose private workspace information, so review the dialog before
+sharing screenshots or copied details.
+
 Only one run can be active in a session. The square Stop button cancels the
 current run. Model responses are currently displayed after completion; token
 streaming is not part of the initial implementation.
@@ -132,8 +146,8 @@ remote-access or multi-user mode.
 
 ## Current scope
 
-The initial GUI provides session browsing and deletion, completed-message
-rendering, prompt submission, cancellation, tool detail cards, response
-metadata, and selected-session logs.
+The initial GUI provides session browsing, identity copying, diagnostic detail
+inspection, deletion, completed-message rendering, prompt submission,
+cancellation, tool detail cards, response metadata, and selected-session logs.
 Project/worktree management, diff review, terminal panes, approvals, attachments,
 and token-delta streaming are follow-up features rather than part of this release.

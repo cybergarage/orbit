@@ -8,12 +8,14 @@ import process from 'node:process'
 import {v7 as uuidv7} from 'uuid'
 
 import type {ProviderName} from '../models/provider.js'
-import type {SessionEntry, SessionHeaderEntry, SessionMetadata, SessionTurnEventEntry} from './entries.js'
+import type {SessionHeaderEntry, SessionMetadata} from './entries.js'
+import type {SessionInformation} from './information.js'
 
 import {sessionsDir} from '../app.js'
 import {Message} from '../message/index.js'
 import {encodeSessionEntry, parseSessionFile} from './codec.js'
 import {SESSION_FORMAT_VERSION, SessionEntryType} from './entries.js'
+import {createSessionInformationFromSource} from './information.js'
 import {sessionFilePath} from './paths.js'
 import {SessionRecorder} from './recorder.js'
 import {Session} from './session.js'
@@ -32,17 +34,8 @@ export interface SessionRepositoryOptions {
   rootDir?: string
 }
 
-export interface SessionSummary {
-  createdAt: string
-  cwd: string
+export interface SessionSummary extends SessionInformation {
   file: string
-  id: string
-  model?: string
-  originator?: string
-  preview?: string
-  provider?: ProviderName
-  status: 'cancelled' | 'completed' | 'failed' | 'interrupted' | 'new'
-  updatedAt: string
 }
 
 export interface SessionListError {
@@ -238,23 +231,17 @@ export class SessionRepository {
 }
 
 function summaryFromParsed(parsed: ReturnType<typeof parseSessionFile>, file: string): SessionSummary {
-  const lastEntry = parsed.entries.at(-1)
-  const lastTurnEvent = findLastTurnEvent(parsed.entries)
-  const previewEntry = parsed.entries.find(
-    (entry) =>
-      entry.type === SessionEntryType.Message && entry.message.type === 'user' && entry.message.contents.length > 0,
-  )
   return {
-    createdAt: parsed.header.timestamp,
-    cwd: parsed.header.cwd,
+    ...createSessionInformationFromSource({
+      createdAt: parsed.header.timestamp,
+      cwd: parsed.header.cwd,
+      entries: parsed.entries.slice(1),
+      id: parsed.header.id,
+      ...(parsed.header.model === undefined ? {} : {model: parsed.header.model}),
+      ...(parsed.header.originator === undefined ? {} : {originator: parsed.header.originator}),
+      ...(parsed.header.provider === undefined ? {} : {provider: parsed.header.provider}),
+    }),
     file,
-    id: parsed.header.id,
-    ...(parsed.header.model === undefined ? {} : {model: parsed.header.model}),
-    ...(parsed.header.originator === undefined ? {} : {originator: parsed.header.originator}),
-    ...(previewEntry?.type === SessionEntryType.Message ? {preview: previewEntry.message.contents[0]} : {}),
-    ...(parsed.header.provider === undefined ? {} : {provider: parsed.header.provider}),
-    status: summaryStatus(parsed.entries, lastTurnEvent),
-    updatedAt: lastEntry?.timestamp ?? parsed.header.timestamp,
   }
 }
 
@@ -300,22 +287,4 @@ function parseCursor(cursor: string | undefined): number {
   const offset = Number(cursor)
   if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Invalid session list cursor.')
   return offset
-}
-
-function findLastTurnEvent(entries: SessionEntry[]): SessionTurnEventEntry | undefined {
-  for (let index = entries.length - 1; index >= 0; index -= 1) {
-    const entry = entries[index]
-    if (entry.type === SessionEntryType.TurnEvent) return entry
-  }
-}
-
-function summaryStatus(
-  entries: SessionEntry[],
-  lastTurnEvent: SessionTurnEventEntry | undefined,
-): SessionSummary['status'] {
-  if (lastTurnEvent?.phase === 'cancelled') return 'cancelled'
-  if (lastTurnEvent?.phase === 'completed') return 'completed'
-  if (lastTurnEvent?.phase === 'failed') return 'failed'
-  if (entries.length > 1) return 'interrupted'
-  return 'new'
 }

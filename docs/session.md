@@ -283,7 +283,10 @@ the session.
 Slash-command notices such as `/help` and `/debug` are local UI messages and
 are not persisted or sent as model-visible conversation. Submitted commands
 are written to the structured application log. A `/model` change appears in
-the next turn's `turn_context`.
+the next turn's `turn_context`. Use `/session` to print the active session ID,
+status, timestamps, working directory, originator, current provider and model,
+transcript file, and preview. The command uses the current runtime provider and
+model when they differ from the persisted header.
 
 The session recorder is closed when the Ink application exits. Callers can
 inject `session` or `sessionRepository` through `InteractiveSessionOptions` for
@@ -315,6 +318,33 @@ and assistant history before accepting another message.
 Version 1 requires either an exact ID or `--last`. A bare `orbit resume`
 reports the supported forms; an interactive session picker is not implemented
 yet. Resume failures never create a new session implicitly.
+
+Inspect a saved session without resuming it or obtaining its writer lock:
+
+```sh
+orbit session <SESSION_ID>
+orbit session --last
+orbit session --last --all
+```
+
+The selection rules match `orbit resume`: exact IDs are global, `--last` is
+scoped to the launch working directory, and `--last --all` searches all saved
+working directories. Bare `orbit session` reports the supported forms instead
+of guessing.
+
+Human-readable output is the default. Scripts can request the same
+`SessionSummary` fields as JSON or print only the full ID:
+
+```sh
+orbit session <SESSION_ID> --json
+orbit session --last --id-only
+```
+
+`--json` and `--id-only` are mutually exclusive. Inspection is read-only: it
+does not send a model request, resume the conversation, change status or
+recency, or modify the transcript. JSON and human output include local working
+directory and transcript paths; review them before pasting output into a public
+issue.
 
 Saved sessions can be deleted with another top-level CLI command:
 
@@ -397,6 +427,23 @@ Each `SessionSummary` contains:
 
 The summary is rebuilt from JSONL. No separate index or database is currently
 maintained.
+
+`SessionSummary` extends the shared `SessionInformation` read model. Library
+integrations can derive the same fields from an active `Session` and format the
+same human-readable output used by the CLI:
+
+```ts
+import {createSessionInformation, formatSessionInformation} from 'orbit'
+
+const information = createSessionInformation(session, {
+  model: currentModel,
+  provider: currentProvider,
+})
+console.log(formatSessionInformation(information))
+```
+
+The optional overrides represent active runtime values; they do not mutate the
+session header or transcript.
 
 Use `findLatest()` when recency must be based on the last session activity:
 

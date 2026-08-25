@@ -255,6 +255,7 @@ describe('session persistence', () => {
     const repository = new SessionRepository({rootDir: root})
     const workspace = path.join(root, 'workspace')
     const otherWorkspace = path.join(root, 'other-workspace')
+    const globalCreatedAt = new Date(Date.now() + 60_000).toISOString()
     const older = repository.create({
       createdAt: '2026-08-20T00:00:00.000Z',
       cwd: workspace,
@@ -273,7 +274,7 @@ describe('session persistence', () => {
     })
     await newer.close()
     const gui = repository.create({
-      createdAt: '2026-08-24T00:00:00.000Z',
+      createdAt: globalCreatedAt,
       cwd: otherWorkspace,
       id: 'gui',
       originator: 'orbit-thread-manager',
