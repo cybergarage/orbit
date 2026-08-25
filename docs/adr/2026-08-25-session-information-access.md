@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-08-25
-decision-date: null
+decision-date: 2026-08-25
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -309,11 +309,36 @@ or logs when only an identifier is needed. This option is rejected.
 
 ## Implementation and Confirmation
 
-No implementation is authorized by this proposed ADR. Its implementation
-status remains `not-started`.
+### Acceptance review
 
-When this decision is accepted, implementation should proceed through the
-existing boundaries:
+This decision was accepted on 2026-08-25 after reviewing the proposal against
+the pinned external evidence, Orbit's current session and client boundaries,
+the stated decision drivers, and the considered alternatives.
+
+The review found no material unresolved question:
+
+- `SessionSummary`, `SessionRepository.findById()`, and
+  `SessionRepository.findLatest()` provide the saved-session read model and
+  selection semantics without a persistence change.
+- The active `Session` and interactive state provide the exact ID and current
+  runtime provider/model needed by `/session`.
+- The GUI already receives session summaries and has a session action menu, so
+  copy and details can remain within the existing loopback security boundary.
+- The inconclusive Codex App UI result is not a dependency of the decision;
+  pinned Codex CLI and Pi behavior plus verified Claude Code and Claude App
+  behavior provide sufficient external evidence.
+- The privacy risk of local paths is bounded by explicit output, existing local
+  access controls, and documentation rather than requiring a different
+  architecture.
+
+Acceptance requires the implementation to keep inspection read-only, reuse a
+single summary contract, preserve exact-ID output, test active-runtime
+precedence, and update maintained CLI and GUI documentation.
+
+No implementation existed at acceptance. Its implementation status remains
+`not-started`.
+
+Implementation should proceed through the existing boundaries:
 
 1. Define or extract a core formatter/projection whose minimum fields match
    `SessionSummary`, with an active-runtime override for current provider and
