@@ -478,5 +478,5 @@ alternative SQLite store remain future work.
   capture policy and model-event metadata.
 - `src/core/application.ts` and `src/apps/gui/` for session correlation, query,
   streaming, and selected-session display.
-- `docs/analysis/2026-08-25-session-scoped-logging.md` for the prior architecture
+- `docs/adr/2026-08-25-session-scoped-logging.md` for the prior architecture
   investigation and implemented foundation.

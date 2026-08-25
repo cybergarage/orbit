@@ -113,7 +113,7 @@ commits.
 - `src/core/thread.ts`: event-driven thread API for GUI integrations
 - `test/`: Mocha and Chai tests mirroring the source areas
 - `docs/`: user and developer documentation
-- `docs/analysis/`: dated engineering analysis and design records
+- `docs/adr/`: research-backed Architecture Decision Records
 - `bin/`: CLI launchers and repository maintenance scripts
 
 Keep reusable behavior in `src/core/` and CLI-specific behavior in
@@ -136,7 +136,7 @@ Provider-native metadata that has no shared field belongs under
 OpenAI currently uses Chat Completions. Adding a Responses API adapter requires
 ordered output-item and continuation-state support; do not flatten Responses
 items directly into a single text message. See
-[Model Response and Tool Integration](analysis/2026-08-23-model-response-tool-integration.md)
+[Model Response and Tool Integration](adr/2026-08-23-model-response-tool-integration.md)
 for the verified protocol differences and follow-up direction.
 
 Model providers are registered through `ModelRegistry` rather than selected by
@@ -185,9 +185,9 @@ Add or update deterministic, isolated tests for every behavioral change. Stub
 model providers, MCP services, and other external boundaries instead of making
 live network requests.
 
-## Engineering analysis documents
+## Architecture decision records
 
-Use `docs/analysis/` for research-backed Architecture Decision Records (ADRs).
+Use `docs/adr/` for research-backed Architecture Decision Records (ADRs).
 These records preserve the evidence, alternatives, rationale, consequences, and
 implementation history behind architecturally significant decisions. They are
 not authoritative user documentation and do not replace updates to the README,
@@ -201,14 +201,14 @@ progress reports, chat transcripts, or temporary plans.
 
 Before adding a record, search the existing decisions and use the repository
 skill at `.agents/skills/architecture-decision-record/SKILL.md`. The
-[Architecture Decision Records](analysis/README.md) index defines the complete
+[Architecture Decision Records](adr/README.md) index defines the complete
 metadata schema, required sections, status values, and lifecycle.
 
 Name a new record using its proposal date and a concise lowercase English topic
 slug:
 
 ```text
-docs/analysis/YYYY-MM-DD-<topic>.md
+docs/adr/YYYY-MM-DD-<topic>.md
 ```
 
 Keep the filename while the decision advances from proposal through
@@ -217,8 +217,14 @@ material re-evaluation that supersedes an accepted decision.
 
 Every ADR must separate decision status from implementation status. A proposal
 can be accepted before it is implemented, rejected without implementation, or
-only partially delivered. Use ISO 8601 dates and full 40-character commit
-hashes. Do not infer missing historical acceptance dates or source revisions.
+only partially delivered. Keep `decision-date` null while the ADR is proposed
+and set it to the explicit acceptance or rejection date when changing a new ADR
+to either status. Do not derive it automatically from
+`implementation-completed-date`; those dates match only when the events occur
+on the same day. Migrated historical ADRs may retain a null `decision-date`
+when the original decision date was not recorded. Use ISO 8601 dates and full
+40-character commit hashes. Do not infer missing historical acceptance dates
+or source revisions.
 
 Put `Purpose`, `Decision`, and `Consequences` before detailed research. Follow
 them with the problem context, decision drivers, external implementation

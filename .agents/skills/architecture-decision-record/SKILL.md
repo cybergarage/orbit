@@ -1,6 +1,6 @@
 ---
 name: architecture-decision-record
-description: Create, review, migrate, finalize, or supersede Orbit Architecture Decision Records in docs/analysis for architecturally significant changes. Use for durable decisions about architecture, public contracts, persistence, agent runtime behavior, security boundaries, or costly-to-reverse choices; do not use for routine progress notes or local implementation details.
+description: Create, review, migrate, finalize, or supersede Orbit Architecture Decision Records in docs/adr for architecturally significant changes. Use for durable decisions about architecture, public contracts, persistence, agent runtime behavior, security boundaries, or costly-to-reverse choices; do not use for routine progress notes or local implementation details.
 ---
 
 # Architecture Decision Records
@@ -10,15 +10,15 @@ implementation state are easy for people and coding agents to retrieve.
 
 ## Start with the repository convention
 
-Read `../../../docs/analysis/README.md` completely before changing an ADR. Also
-inspect the Engineering analysis documents section of
+Read `../../../docs/adr/README.md` completely before changing an ADR. Also
+inspect the Architecture decision records section of
 `../../../docs/development.md`. Those files define the authoritative metadata,
 format, lifecycle, and external-research requirements; do not duplicate or
 silently weaken them here.
 
 ## Determine the operation
 
-- For a new decision, search `docs/analysis/` for an existing record covering
+- For a new decision, search `docs/adr/` for an existing record covering
   the same decision. Create a dated ADR only when the decision is distinct.
 - For a review or migration, preserve historical evidence and links. Do not
   invent acceptance dates, source revisions, or implementation evidence.
@@ -50,10 +50,12 @@ English, list meaningful alternatives and decision drivers, and record
 positive, negative, and neutral consequences. Keep detailed research after the
 purpose, decision, and consequences so the outcome remains quickly legible.
 
-Use `proposed` until an explicit decision is recorded. Keep decision status
-separate from implementation status. Use ISO dates and full 40-character commit
-hashes. Leave unknown historical metadata as `null`; never infer it merely to
-complete the template.
+Use `proposed` with a null `decision-date` until an explicit decision is
+recorded. Set `decision-date` when changing a new ADR to `accepted` or
+`rejected`; do not copy the implementation completion date automatically. Keep
+decision status separate from implementation status. Use ISO dates and full
+40-character commit hashes. Leave unknown metadata in migrated historical ADRs
+as `null`; never infer it merely to complete the template.
 
 ## Finalize implementation
 

@@ -27,7 +27,7 @@ Name decision records using the proposal date and a concise lowercase English
 topic slug:
 
 ```text
-docs/analysis/YYYY-MM-DD-<topic>.md
+docs/adr/YYYY-MM-DD-<topic>.md
 ```
 
 Keep the original filename while a decision advances through its lifecycle.
@@ -55,10 +55,18 @@ and `superseded`. Allowed implementation statuses are `not-started`,
 `in-progress`, `partial`, `completed`, and `not-applicable`.
 
 Use ISO 8601 dates and full 40-character commit hashes. `decision-date` records
-the date of an explicit acceptance or rejection. Do not infer an unrecorded
-decision date when migrating a historical document. `implementation-commits`
-lists the commits that completed the decision's defined scope, not every later
-change in the same area.
+the date of an explicit acceptance or rejection and is required when a new ADR
+moves to either status. It remains `null` while the ADR is proposed. Do not set
+it from `implementation-completed-date`: decision and implementation are
+separate lifecycle events and share a date only when both actually occur on the
+same day.
+
+Historical ADRs migrated after implementation may retain a null
+`decision-date` when no acceptance or rejection date was recorded. This is a
+legacy-data exception, not the normal accepted or rejected state. Do not infer
+the missing date from an implementation commit. `implementation-commits` lists
+the commits that completed the decision's defined scope, not every later change
+in the same area.
 
 ## Required structure
 
