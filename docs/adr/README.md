@@ -39,12 +39,24 @@ request.
 ```text
 $architecture-decision-record
 
-Create an ADR for migrating Orbit from OpenAI Chat Completions to the
-Responses API.
+Create an ADR for <describe the architectural decision to be made>.
 
-Investigate the current Orbit implementation, pinned Codex and Pi Coding Agent
-revisions, and official OpenAI documentation. Consider ordered output items,
-continuation state, tool calling, session persistence, and compatibility.
+Purpose:
+- <describe the problem, goal, or expected outcome>
+
+Scope and constraints:
+- <identify the affected components, contracts, or workflows>
+- <list important technical, compatibility, security, or delivery constraints>
+
+Research:
+- <identify the Orbit source, tests, and documentation to inspect>
+- <identify relevant external implementations and pinned source revisions>
+- <identify official documentation or other primary sources>
+
+Consider:
+- <list the decision drivers>
+- <list known options or alternatives>
+- <list trade-offs, risks, and open questions that must be evaluated>
 
 Create and commit only the proposed ADR. Do not implement it.
 ```
