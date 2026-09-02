@@ -256,6 +256,13 @@ does not apply, state the reason instead of adding a ceremonial comparison.
 Never describe a moving branch as point-in-time source evidence without pinning
 its revision.
 
+Reusable or extensive point-in-time investigations may be stored separately in
+`docs/research/` under the rules in
+[Engineering Research](../research/README.md). An ADR may link those notes as
+supporting evidence, but its purpose, decision, consequences, decision-relevant
+facts, and rationale must remain understandable without opening another file.
+Research notes are non-binding and never authorize implementation.
+
 ## Lifecycle
 
 1. Create and commit a `proposed` ADR before implementation.

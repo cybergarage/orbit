@@ -9,6 +9,7 @@ work.
 
 * [Development](docs/development.md)
 * [Architecture Decisions](docs/adr/README.md)
+* [Engineering Research](docs/research/README.md)
 * [Settings](docs/settings.md)
 * [Coding Tools](docs/tools.md)
 * [Sessions](docs/session.md)

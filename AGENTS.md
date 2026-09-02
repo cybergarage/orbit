@@ -25,6 +25,8 @@ Orbit is an agentic CLI and reusable TypeScript library for content workflows. I
 - `src/core/thread.ts` provides the event-driven thread API used by GUI clients.
 - `test/` mirrors the source areas with Mocha/Chai unit tests.
 - `docs/` contains user-facing documentation. `docs/interactive.adoc` and `docs/data/interactive.csv` are sources for the generated `docs/interactive.md`.
+- `docs/research/` contains dated, point-in-time engineering investigations that may inform one or more later decisions but do not approve architecture or implementation.
+- `docs/adr/` contains architecture decisions and their lifecycle evidence. Research notes may support ADRs, but they do not replace them.
 - `bin/` contains CLI launchers and repository maintenance scripts.
 
 ## Development Environment
@@ -82,6 +84,8 @@ Orbit is an agentic CLI and reusable TypeScript library for content workflows. I
 ## Documentation and Generated Files
 
 - Update user documentation when changing CLI behavior, settings, public APIs, or integration contracts.
+- Store reusable, point-in-time implementation research in `docs/research/` and follow `docs/research/README.md`. Use dated English filenames, pin inspected source revisions, distinguish verified facts from inferences and proposals, and preserve notes as historical evidence.
+- Treat research notes as non-binding decision inputs. When Orbit adopts or rejects an architecturally significant option, create or update a self-contained ADR in `docs/adr/` and link the related research rather than turning the research note into the decision record.
 - Record architecturally significant decisions as research-backed ADRs in `docs/adr/` before implementation. Use `.agents/skills/architecture-decision-record/SKILL.md` to create, review, migrate, finalize, or supersede them, and follow `docs/adr/README.md` for the authoritative format and lifecycle.
 - For agent runtime, model, tool, session, context, CLI or GUI agent workflow, persistence, and observability decisions, investigate Codex and Pi Coding Agent at pinned source revisions by default. State why either comparison is not applicable instead of omitting it silently.
 - Keep accepted decision rationale intact. Record implementation completion and full commit hashes in a later documentation commit; use a new linked ADR when a decision is materially replaced.
