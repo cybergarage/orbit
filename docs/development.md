@@ -112,8 +112,13 @@ commits.
 - `src/core/tools/`: tool contracts, registry, runtime, and built-in coding tools
 - `src/core/thread.ts`: event-driven thread API for GUI integrations
 - `test/`: Mocha and Chai tests mirroring the source areas
-- `docs/`: user and developer documentation
+- `docs/README.md`: documentation map and content ownership rules
+- `docs/architecture.md`: current implemented system and module map
+- `docs/concepts/`: durable terminology, mental models, and explicitly labeled
+  direction
+- `docs/`: user and developer feature documentation
 - `docs/adr/`: research-backed Architecture Decision Records
+- `docs/research/`: dated, non-binding engineering investigations
 - `bin/`: CLI launchers and repository maintenance scripts
 
 Keep reusable behavior in `src/core/` and CLI-specific behavior in
@@ -184,6 +189,21 @@ must include the standard copyright and SPDX header; run
 Add or update deterministic, isolated tests for every behavioral change. Stub
 model providers, MCP services, and other external boundaries instead of making
 live network requests.
+
+## Documentation model
+
+Use the [Documentation Map](README.md) to choose the authoritative home for a
+change:
+
+- concepts define durable vocabulary, mental models, and invariants;
+- current architecture describes the repository as implemented today;
+- feature guides describe current user and integration behavior;
+- research preserves dated evidence and non-binding analysis; and
+- ADRs preserve significant decisions, rationale, and lifecycle evidence.
+
+Directional concepts must be labeled explicitly. Do not add an unimplemented
+target design to `architecture.md`, and do not turn a research recommendation
+or concept page into an implicit decision.
 
 ## Architecture decision records
 
@@ -258,6 +278,12 @@ Update the relevant documentation when changing CLI behavior, settings, public
 APIs, or integration contracts. The interactive command reference is generated
 from `docs/interactive.adoc` and `docs/data/interactive.csv`; update those
 sources rather than editing only `docs/interactive.md`.
+
+When runtime structure changes, update `docs/architecture.md`. When a change
+affects shared terminology or invariants, update the relevant document under
+`docs/concepts/` and its glossary entry. Record the decision history in an ADR
+when the change is architecturally significant; keep dated investigation
+evidence in `docs/research/`.
 
 Command metadata changes may require regenerating oclif documentation with
 `npm run prepack` or `make oclif-docs`. Review all generated differences before

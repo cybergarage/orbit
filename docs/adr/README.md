@@ -8,6 +8,8 @@ understand why Orbit has its current shape.
 
 ADRs supplement maintained product and API documentation. Current code and
 maintained documentation remain authoritative for implemented behavior.
+Concept documents under `docs/concepts/` define durable vocabulary and mental
+models but do not approve architecture or replace decision rationale.
 
 ## When to write an ADR
 
@@ -262,6 +264,12 @@ Reusable or extensive point-in-time investigations may be stored separately in
 supporting evidence, but its purpose, decision, consequences, decision-relevant
 facts, and rationale must remain understandable without opening another file.
 Research notes are non-binding and never authorize implementation.
+
+When an accepted ADR changes maintained terminology, invariants, or runtime
+structure, its implementation must also update the relevant concept documents
+and `docs/architecture.md`. Link those maintained documents from the ADR when
+they help readers locate the resulting contract; keep the full rationale in the
+ADR.
 
 ## Lifecycle
 

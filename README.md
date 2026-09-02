@@ -7,6 +7,9 @@ work.
 
 ## Documentation
 
+* [Documentation Map](docs/README.md)
+* [Concepts](docs/concepts/README.md)
+* [Current Architecture](docs/architecture.md)
 * [Development](docs/development.md)
 * [Architecture Decisions](docs/adr/README.md)
 * [Engineering Research](docs/research/README.md)

@@ -371,6 +371,13 @@ Potential decisions should be separated rather than approved as one package:
 - evaluation and candidate promotion; and
 - the boundary between open-source runtime and commercial services.
 
+Related directional concept pages:
+
+- [Concept Overview](../concepts/overview.md)
+- [Processor Model](../concepts/processor-model.md)
+- [Processor Graph](../concepts/processor-graph.md)
+- [Adaptive Execution](../concepts/adaptive-execution.md)
+
 ## References
 
 ### Orbit

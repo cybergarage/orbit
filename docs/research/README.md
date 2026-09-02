@@ -21,10 +21,16 @@ temporary plans, unverified idea dumps, release notes, or current product
 documentation. Keep narrowly scoped research inside an ADR when extracting it
 would add indirection without meaningful reuse.
 
-## Relationship to ADRs
+## Relationship to concepts and ADRs
 
 Research notes preserve evidence and analysis. ADRs preserve decisions made
 from that evidence.
+
+Concept documents under `docs/concepts/` may synthesize durable terminology,
+mental models, and invariants from several investigations. They must link the
+supporting research, label unimplemented behavior as directional, and leave the
+dated research note intact as historical evidence. Concepts do not approve an
+architecture.
 
 When Orbit adopts, rejects, or materially constrains an architecturally
 significant option, create or update an ADR under `docs/adr/` before

@@ -24,7 +24,10 @@ Orbit is an agentic CLI and reusable TypeScript library for content workflows. I
 - `src/core/logs/` contains session-scoped structured log stores and records.
 - `src/core/thread.ts` provides the event-driven thread API used by GUI clients.
 - `test/` mirrors the source areas with Mocha/Chai unit tests.
-- `docs/` contains user-facing documentation. `docs/interactive.adoc` and `docs/data/interactive.csv` are sources for the generated `docs/interactive.md`.
+- `docs/README.md` is the documentation map and defines the ownership boundaries among maintained concepts, current architecture, feature guides, research, and decisions.
+- `docs/concepts/` contains durable vocabulary, mental models, and invariants. Directional behavior must be labeled explicitly and must not be presented as implemented or approved.
+- `docs/architecture.md` maps only the currently implemented system and module boundaries. Keep speculative target designs out of this file.
+- `docs/` also contains user-facing feature documentation. `docs/interactive.adoc` and `docs/data/interactive.csv` are sources for the generated `docs/interactive.md`.
 - `docs/research/` contains dated, point-in-time engineering investigations that may inform one or more later decisions but do not approve architecture or implementation.
 - `docs/adr/` contains architecture decisions and their lifecycle evidence. Research notes may support ADRs, but they do not replace them.
 - `bin/` contains CLI launchers and repository maintenance scripts.
@@ -84,11 +87,15 @@ Orbit is an agentic CLI and reusable TypeScript library for content workflows. I
 ## Documentation and Generated Files
 
 - Update user documentation when changing CLI behavior, settings, public APIs, or integration contracts.
+- Follow the documentation ownership model in `docs/README.md` and keep one authoritative home for each fact. Link across document types instead of copying detailed definitions, evidence, or rationale.
+- Store durable terminology, mental models, and invariants in `docs/concepts/`. Separate `Current Orbit Implementation` from `Directional Model`, and keep shared definitions in `docs/concepts/glossary.md`.
+- Keep `docs/architecture.md` in present tense and synchronized with the implemented repository. Describe unimplemented architecture only in clearly labeled concepts, research, or proposed ADRs.
 - Store reusable, point-in-time implementation research in `docs/research/` and follow `docs/research/README.md`. Use dated English filenames, pin inspected source revisions, distinguish verified facts from inferences and proposals, and preserve notes as historical evidence.
 - Treat research notes as non-binding decision inputs. When Orbit adopts or rejects an architecturally significant option, create or update a self-contained ADR in `docs/adr/` and link the related research rather than turning the research note into the decision record.
 - Record architecturally significant decisions as research-backed ADRs in `docs/adr/` before implementation. Use `.agents/skills/architecture-decision-record/SKILL.md` to create, review, migrate, finalize, or supersede them, and follow `docs/adr/README.md` for the authoritative format and lifecycle.
 - For agent runtime, model, tool, session, context, CLI or GUI agent workflow, persistence, and observability decisions, investigate Codex and Pi Coding Agent at pinned source revisions by default. State why either comparison is not applicable instead of omitting it silently.
 - Keep accepted decision rationale intact. Record implementation completion and full commit hashes in a later documentation commit; use a new linked ADR when a decision is materially replaced.
+- After implementing an accepted architectural change, update the current architecture, relevant concepts, glossary, and feature guides in the same change when their maintained claims are affected.
 - Do not store routine progress reports, chat transcripts, temporary plans, or local implementation details in `docs/adr/`, and do not treat ADRs as a substitute for maintained user documentation.
 - Treat `README.md` command sections and `oclif.manifest.json` as oclif-generated content. Use `npm run prepack` or `make oclif-docs` when command metadata changes, then review generated differences.
 - Update `docs/data/interactive.csv` or `docs/interactive.adoc` when changing the interactive command reference, and regenerate `docs/interactive.md` from those sources.
