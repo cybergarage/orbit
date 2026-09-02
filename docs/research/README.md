@@ -115,6 +115,7 @@ at pinned revisions by default. If either is not relevant, record why.
 
 ## Research index
 
-| Investigated | Status  | Topic                                                                              |
-| ------------ | ------- | ---------------------------------------------------------------------------------- |
-| 2026-09-02   | current | [Adaptive Processor Graph Runtime](2026-09-02-adaptive-processor-graph-runtime.md) |
+| Investigated | Status  | Topic                                                                                  |
+| ------------ | ------- | -------------------------------------------------------------------------------------- |
+| 2026-09-02   | current | [Adaptive Processor Graph Runtime](2026-09-02-adaptive-processor-graph-runtime.md)     |
+| 2026-09-02   | current | [Agent Workflow Optimization Papers](2026-09-02-agent-workflow-optimization-papers.md) |

@@ -171,6 +171,10 @@ workflows as a search space and uses execution feedback to explore alternative
 workflows. EvoAgentX combines workflow construction, evaluation, and
 optimization facilities.
 
+A detailed comparison of their contributions, architectures, evaluation
+results, and limitations is preserved in
+[Agent Workflow Optimization Papers](2026-09-02-agent-workflow-optimization-papers.md).
+
 These systems provide evidence that graph structure can be an optimization
 target rather than only a manually authored execution plan. They do not
 establish that unrestricted live self-modification is safe, general, or
