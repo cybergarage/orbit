@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Orbit Research'
+  short_description: 'Create evidence-backed Orbit research notes'
+  default_prompt: 'Use $orbit-research to investigate this topic and write a dated Orbit research note.'
