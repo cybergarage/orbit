@@ -186,6 +186,28 @@ rewrite files, so review the resulting diff afterward. New TypeScript files
 must include the standard copyright and SPDX header; run
 `npm run headers:apply` to add missing headers.
 
+## Releases and npm publication
+
+Pushes to `main` do not create releases or publish packages. Both operations
+require an explicit manual workflow dispatch so that an ordinary documentation
+or maintenance commit cannot start a publication chain.
+
+To prepare a release:
+
+1. Replace the placeholder `0.0.0` version in `package.json`, update
+   `package-lock.json`, and commit the version change.
+2. Create and push a `v<package-version>` tag for that commit.
+3. Run the `Create GitHub release` workflow with the existing tag. The workflow
+   validates the version and tag, runs the complete validation set, and creates
+   release notes only after those checks pass.
+4. If npm publication is intended, run the separate `Publish npm package`
+   workflow with the same released tag and enter `publish` as the confirmation.
+
+The npm workflow requires the repository `NPM_TOKEN` secret. It rejects the
+placeholder version, a tag/version mismatch, a missing GitHub release, or a
+confirmation value other than the exact word `publish`. It runs the complete
+validation set again immediately before `npm publish`.
+
 Add or update deterministic, isolated tests for every behavioral change. Stub
 model providers, MCP services, and other external boundaries instead of making
 live network requests.
