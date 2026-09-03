@@ -543,6 +543,7 @@ Related directional material:
 - [Processor Model](../concepts/processor-model.md)
 - [Processor Graph](../concepts/processor-graph.md)
 - [Adaptive Processor Graph Runtime](2026-09-02-adaptive-processor-graph-runtime.md)
+- [LangGraph Concepts, Intermediate Representations, and Orbit Processors](2026-09-03-langgraph-concepts-intermediate-representations.md)
 - [Current Architecture](../architecture.md)
 
 ## References
