@@ -45,7 +45,8 @@ and may be exposed read-only for diagnosis.
 
 | Record kind             | Required information and acknowledgement point                                                                                                                                                                                            |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `run-admitted`          | Request ID and keyed input digest, configuration/policy/catalog identities, finite limits; acknowledged before returning accepted admission.                                                                                              |
+| `run-admitted`          | Request ID and keyed input digest, frozen configuration/policy and declared source identities, finite limits; acknowledged before returning accepted admission, with no resolved remote catalog claim.                                    |
+| `run-ready`             | Resolved validated catalog identity and initialization completion; acknowledged after required MCP discovery and before the first model invocation.                                                                                       |
 | `approval-requested`    | Opaque operation/request IDs, keyed descriptor digest, policy rule/reason code, generation, expiry, responder scope; acknowledged before exposing a pending decision.                                                                     |
 | `authorization-decided` | Allow/deny/ask reply identity, rule/responder identity, operation binding, and validity; acknowledged before an allow can be consumed.                                                                                                    |
 | `operation-intent`      | Operation/call/source identity, authorization reference, keyed descriptor digest, effect class, budget reservation; acknowledged before handler dispatch.                                                                                 |
@@ -56,30 +57,54 @@ and may be exposed read-only for diagnosis.
 
 A result references transcript entries or other application-owned artifacts
 rather than duplicating full prompts, tool output, patches, or credentials.
+MCP startup records carry a core startup ID and configured server identity;
+model call ID and resolved catalog fields are absent, not invented. Tool-call
+records bind the catalog acknowledged by `run-ready`. Replay validation enforces
+this ordering and never infers startup permission from later catalog membership.
 Application-specific evaluation data remains a separate concern.
 
 ### Acknowledgement and file ownership
 
-`append` resolves only after complete record bytes and prior records are written
-and the file synchronization barrier succeeds. Initial file creation also
-synchronizes the directory where supported; unsupported durability capabilities
-must be reported. A memory acknowledgement means retained in that instance.
-Neither result claims universal survival of hardware/controller/power failure.
-This is stronger than the current queue/append completion and requires explicit
-fault-injection tests for the new writer.
+`append` resolves only after the selected acknowledgement level succeeds for
+complete record bytes and all preceding records. File mode requires an explicit
+level: `file-sync` or `file-and-directory-sync`; memory mode uses `memory`.
+Record mode, selected level, and achieved capability in admission and returned
+recording status. Default persistent product configuration requests
+`file-and-directory-sync`. If that level cannot be provided, reject admission;
+selecting a weaker level is an explicit application-owner setting, never a
+fallback after an I/O error. Directory synchronization covers newly created
+ancestor entries needed to reach the session/key/run files, not just the final
+JSONL directory. Report filesystem capabilities rather than assuming an OS name
+proves them. No level claims universal survival of hardware/controller failure.
 
-One writer owns a session's journal admission index and active run. Hold an
-exclusive local session writer lock while admitting/appending; another process
-must receive busy/read-only rather than append concurrently. Use atomic lock
-creation with owner identity and an explicit stale-lock reconciliation path;
-do not automatically break a lock solely from elapsed time. This lock protects
-that session's records, not all files in the workspace. Durable mode also requires
-all writes to that session's transcript through the same managed owner.
+Required synchronization includes a newly created session HMAC key before any
+acknowledged record refers to it. Reuse a valid existing key; never regenerate
+one while records bound to the old key remain. Inability to read/create/sync the
+key rejects durable admission. A memory acknowledgement means retained by that
+instance. All acknowledgement waits share the supervisor deadline and retain
+writer ownership when a timed-out write may still complete.
+
+One owner holds session write authority for transcript, admission index, and
+journal. Extend or coordinate the existing SessionRecorder writer lock; do not
+introduce a second uncoordinated owner that can deadlock against an already-open
+Session. A borrowed persistent Session must explicitly delegate that same lease
+or be rejected for managed durable execution before starting work. Another
+process gets busy/read-only rather than a concurrent writer. The managed owner
+retains leases across incomplete close while any write/cleanup remains active.
+Stale-lock reconciliation requires evidence the owner is gone, never elapsed
+time alone, and checks unresolved journal entries before allowing new work.
+This protects session records, not all files in the workspace or arbitrary
+legacy code that bypasses the managed API.
 
 Keep per-session request-ID mappings for as long as the corresponding journal
 is retained. Rebuild them from admitted records, so a crash between indexing and
 acknowledgement does not create a second run. An acknowledged request with the
-same keyed input returns the recorded run; conflicting input is rejected.
+same keyed submitted input/options returns the recorded run; conflicting input
+is rejected. This request digest excludes later ambient configuration resolution
+and the discovered catalog. Those have their own frozen identities in the
+records. Perform duplicate lookup before resolving a new configuration or
+starting any resource, so retrying an accepted request cannot start a second MCP
+client after an environment change.
 A persisted admission without any operation intent is still incomplete after a
 restart, and its request ID returns that state rather than starting work. IDs
 are unique client-generated values, not reusable prompt shortcuts. After session
@@ -127,6 +152,12 @@ result means the effect may or may not have happened, even if the handler might
 not have started. Pending approvals expire on restart. Reconcile by inspecting
 the target and explicitly starting a new run; do not replay recorded commands.
 A recovery observation may resolve uncertainty but does not invent a past result.
+Incomplete local writes/cleanup must settle or be reconciled before releasing
+writer ownership. Unknown external completion additionally needs evidence from
+the target/resource owner; acknowledging the warning is not proof of termination.
+Validated records can be re-exposed as recovered evidence. Their presence alone
+does not prove the original caller received an acknowledgement or that an
+unconfirmed synchronization barrier completed.
 
 When storage is unavailable, the in-memory terminal result is still returned
 with failed recording and known effects. Core must not promise that the failure
@@ -154,10 +185,20 @@ Do not apply the optional diagnostic store's drop/rotation policy to required
 records. Retain complete run journals until explicit session deletion in the
 initial version; a full filesystem stops new admission. A capacity limit reports
 failure rather than dropping evidence. Retention automation is deferred.
-Session deletion closes admission, rejects active/quarantined sessions, acquires
-the writer lock, and removes transcript, journal/key, and optional logs through
-the shared deletion service. Partial deletion returns affected/remaining
-artifacts and is retryable; it never reports success while files remain.
+Session deletion closes admission, rejects active/quarantined sessions, and
+acquires the same session writer ownership. Before removing data, acknowledge a
+minimal deletion marker at `~/.orbit/runs/deletions/<session-id>.json`, outside
+the artifacts being removed. It contains only schema, session ID, and deletion
+state; its synchronization follows the selected file level. If that marker
+cannot be saved, remove nothing. Admission/resume consult the marker first.
+Remove transcript, optional logs, then run records/key through the deletion
+service. Partial deletion returns affected/remaining artifacts and can retry
+after restart from the marker even when the transcript or key is already gone.
+Report success only after absence of all target artifacts is confirmed, then
+retain a minimal completed marker to prevent that session ID from being reused.
+The marker is disclosed as retained deletion metadata, not described as complete
+erasure of every identifier. Automated marker retention is a separate policy;
+no undeclared transcript or secret content may remain in it.
 Existing sessions with no journal remain readable and may start new managed
 runs, but old operations have unknown authorization provenance.
 
@@ -233,12 +274,30 @@ Inject faults deterministically first. Add subprocess restart tests showing that
 unknown effects never trigger redispatch. Physical power-loss behavior and
 platform-specific synchronization must be measured separately, not inferred from
 passing mocked I/O tests. Measure acknowledgement overhead before product limits
-are finalized.
+are finalized. Additional required cases cover unsupported acknowledgement levels
+with no silent downgrade, ancestor/key synchronization failure before admission,
+existing Session lease delegation, a write settling after close returns, deletion
+interrupted after each removed artifact, and duplicate requests after ambient
+configuration changes. These are unimplemented acceptance criteria, not tests
+performed by the document review.
+
+### Minimal scope and trade-off after review
+
+A separate journal remains recommended over reusing droppable logs. Its minimum
+recoverable scope includes admission/ready ordering, key ownership, session writer
+coordination, and partial-deletion handling; none is implied by choosing JSONL.
+A smaller memory-only first implementation is an alternative, provided it is
+explicitly labeled ephemeral and does not claim persisted confirmed execution.
+A database may simplify local transactions but does not remove uncertainty about
+external effects, and still requires a separate storage decision. The author
+should assess this concrete cost rather than treat JSONL as cost-free durability.
 
 ## Follow-up Work
 
 The author should judge a separate journal, fail-closed durable admission,
-metadata-only evidence after restart, and retention until explicit deletion.
+metadata-only evidence after restart, retention until explicit deletion, and
+the minimal retained deletion marker. The selected acknowledgement level and
+its rejection on unsupported storage also require an explicit product choice.
 Storage primitives, supported-platform sync capabilities, and key/lock recovery
 need implementation confirmation. This proposal does not select automated
 retention, encrypted full payload archives, global workspace locking, or a

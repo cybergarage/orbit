@@ -32,10 +32,13 @@ mutating or remote effects. It may perform policy-authorized metadata/preimage
 reads; if a read itself needs approval, it is a separate operation. Raw model
 arguments and arbitrary tool descriptions are never authority.
 
-The descriptor carries schema version, operation ID, run/session/call IDs,
-source identity, tool/catalog generation, normalized input, canonical cwd,
-policy/configuration generation, declared effect kind, and applicable targets.
-MCP identity includes configured server ID and the original remote tool name,
+The descriptor is a discriminated union. Both variants carry schema version,
+operation ID, run/session IDs, normalized input, canonical cwd, policy/configuration
+generation, effect kind, and targets. A `tool-call` also binds the model call ID,
+source identity, and resolved catalog generation. An `mcp-startup` binds a core
+startup ID and configured server/transport identity, with no model call ID or
+resolved catalog yet. It is available during initialization before `run-ready`.
+For tool calls, MCP identity includes configured server ID and the original remote tool name,
 not just the flattened model alias. A trusted executor closure is retained in
 core and receives the prepared input exactly once; no public callback receives
 a reusable `execute` continuation.
@@ -48,22 +51,26 @@ approval authorizes that invocation; it cannot describe every file/network effec
 of the program. MCP startup includes resolved executable/args, cwd, effective
 environment identity, server identity, and transport generation.
 
-Use a versioned canonical JSON encoding and SHA-256 descriptor digest for
-comparison, not as an authorization credential. Reject unsupported/non-finite
-values before approval. Keep the full immutable descriptor private to the
-runtime; send the authorized UI a redacted display projection with a digest.
+Use a versioned canonical JSON encoding and the journal's per-session keyed
+descriptor digest for comparison, not as an authorization credential. Reject
+unsupported/non-finite values before approval. Keep the full immutable descriptor
+private to the runtime; send the authorized UI a redacted display projection,
+opaque operation ID, and keyed digest. Do not publish an unkeyed hash of
+secret-bearing input. Memory mode generates an ephemeral key with the same
+binding semantics but no restart guarantee.
 Secret values must not be copied into diagnostic events. The display explicitly
 identifies redacted inputs and the credential/environment binding without
 revealing values. If those omissions prevent an informed decision, policy must
 deny or require application-owner configuration rather than accepting a vague
-confirmation. The private digest
-includes effective values, while durable/public references use an opaque
-operation ID and a keyed digest as specified by the journal ADR.
+confirmation. The keyed digest includes effective values while public records
+omit those values. Approval replies echo the same opaque ID and keyed digest.
 
 The proposed sequence is:
 
-1. Validate unique call IDs, resolve the catalog entry, parse input, and prepare
-   its descriptor. Invalid calls produce `invalid` without handler invocation.
+1. For a tool call, validate its unique call ID, resolve the catalog entry, parse
+   input, and prepare the descriptor. For MCP startup, resolve the frozen server
+   configuration and prepare the startup variant without a catalog lookup.
+   Invalid operations produce `invalid` without handler invocation.
 2. Evaluate the immutable application policy against that descriptor. Return
    `allow`, `deny`, or `ask`; policy errors fail closed. A tool or Skill cannot
    alter the policy, trusted descriptor adapter, or approval responder.
@@ -75,10 +82,16 @@ The proposed sequence is:
    preimage, path resolution, environment identity, catalog, or policy differs,
    invalidate the permit, release the lease, and prepare a new request. Do not
    keep a mutation lease locked while waiting for human input.
-5. Acknowledge an operation-intent record, then atomically consume the permit
-   and register/start the handler with respect to the supervisor's stop check.
-   If stop wins during the acknowledgement, append not-started evidence and do
-   not execute. Record the outcome even if the caller has disconnected.
+5. Acknowledge the operation-intent record while retaining the mutation lease.
+   After that asynchronous wait, revalidate target identity/preimage and all
+   permit conditions again. Immediately before invocation, core synchronously
+   checks the descriptor binding, unconsumed permit, approval expiry, policy
+   revocation, run deadline, counters, and stop state, then consumes/registers/
+   starts without an intervening await. If any check fails, do not execute;
+   record not-started evidence when possible. Changed content needs a new
+   descriptor, approval when required, and intent; the old intent is not reused.
+   If storing the non-dispatch outcome fails, return failed recording while
+   retaining the live fact that no handler was invoked.
 
 Only the trusted adapter may derive the actual dispatch arguments. Rechecking
 path identity/preimages is required but does not eliminate filesystem TOCTOU
@@ -88,6 +101,13 @@ In-process leases prevent cooperating Orbit operations from racing, not arbitrar
 external edits. Custom code is trusted: it must obey the descriptor/executor
 contract. Calling arbitrary exported JavaScript functions outside the managed
 runtime is not a supported policy-enforced execution path.
+
+Policy revocation and target invalidation can occur while acknowledgement or
+revalidation is awaited, so every await returns to the final dispatch checks.
+Holding an Orbit lease does not prevent an external filesystem writer from
+changing the target after the last check; the existing TOCTOU limitation remains.
+Metadata/preimage preparation is constrained by the policy's read rules before
+reading content, even when the later write would need confirmation.
 
 ### Approval replies and waiting
 
@@ -99,8 +119,11 @@ cannot submit approval replies.
 
 `replyApproval` accepts approve or deny once, validates the authenticated local
 application channel and all identifiers, and returns a stable acknowledgement.
-Identical transport retries return the previous reply acknowledgement; an
-opposite reply or mismatched digest is a conflict. A second GUI tab does not
+An approval response becomes usable only after its authorization record is
+acknowledged. Identical transport retries return the prior committed reply
+acknowledgement, or pending/recording-failed while it remains unconfirmed;
+an opposite reply or mismatched digest is a conflict. Never acknowledge a usable
+grant merely because the reply reached memory. A second GUI tab does not
 create a second execution. Knowledge of a digest alone grants no permission.
 
 The initial scope is one operation in one live run. Denial, expiry, cancellation,
@@ -138,7 +161,7 @@ unsupported schema constructs explicitly instead of accepting arbitrary input.
 The implementation must select and test a compatible validator; a major new
 dependency would need its own justification before adding it.
 
-The catalog is fixed for the run. Reject alias collisions and unsupported names
+The catalog is fixed after initialization acknowledges `run-ready`. Reject alias collisions and unsupported names
 with original identity in the error; do not silently select one tool. A stable
 renaming/migration scheme and richer MCP content handling are separate decisions.
 Calling an MCP tool requires its own policy decision; permission to start the
@@ -166,6 +189,27 @@ transcripts do not import past permission. Migrating product defaults from full
 access is an intentional compatibility change requiring author approval and
 release/migration documentation before implementation. No existing accepted ADR
 is marked superseded while this proposal remains undecided.
+
+### Compatibility conditions
+
+`unrestricted` changes the policy result, not lifecycle, parsing, recording,
+deadlines, or one-time dispatch. It is not complete behavioral compatibility:
+turn limits, SDK retry defaults, resource ownership, and close/error reporting
+still follow the managed lifecycle. Existing library calls with no tools remain
+usable with explicit ephemeral recording and do not acquire built-ins.
+
+Legacy custom Tool/AgentTool definitions without a preparation adapter are
+rejected before model exposure under `workspace-confirm`. Applications may
+explicitly register them through a legacy adapter under `unrestricted`: bind the
+validated serializable input and source/handler identity, mark effects as opaque,
+serialize the call, and reserve the whole managed workspace. This adapter does
+not claim path containment, a precise edit preview, or forced cancellation.
+Nonserializable parsed input or side-effecting preparation is not adaptable by
+silently skipping validation; such integrations require a new trusted adapter.
+Inherited tools must never gain unrestricted access just because migration failed.
+The implementation must document these cases and test both source compatibility
+and observable behavior rather than describing the policy flag as a universal
+legacy-mode switch.
 
 ## Consequences
 
@@ -234,7 +278,11 @@ between journal acknowledgement and dispatch; two GUI clients; unauthorized MCP
 startup; remote timeout with unknown effects; and a library invocation with no UI.
 Use counters and deferred operations to prove dispatch counts. Separate core
 contract tests, confirmation UI application tests, and the edited project's tests.
-Real MCP, OS race resistance, Windows, and real browser behavior remain untested.
+Also test startup descriptors before a resolved catalog exists, expired approval
+and changed targets during the intent-write wait, policy revocation immediately
+before dispatch, pending/failed reply acknowledgements, and legacy custom tools
+under both policies. Real MCP, OS race resistance, Windows, and real browser
+behavior remain untested.
 
 ## Follow-up Work
 

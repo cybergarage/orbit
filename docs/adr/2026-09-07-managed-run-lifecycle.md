@@ -31,20 +31,25 @@ in this ADR.
 
 Names below specify proposed contracts, not existing exports or fixed filenames.
 
-- `startRun` validates input, finite limits, and policy/recording configuration
-  before admitting work. It returns a handle with run ID, session ID, snapshot
+- `startRun` validates the request envelope and checks for an existing request ID
+  first. For a new run it validates input, finite limits, and policy/recording
+  configuration before admitting work. It returns a handle with run ID, session ID, snapshot
   access, `requestStop`, and a `finished` promise returning `RunResult`.
 - One Agent and one session admit at most one active run per supervisor. Busy
   submissions return a typed rejection; this proposal adds no task queue.
-  Admission keeps a single immutable configuration generation containing cwd,
-  model selection, tool catalog, policy, and budget. The caller supplies the
+  Admission freezes cwd, model selection, declared tool/MCP sources, policy,
+  and budget. The remote tool catalog is not yet known. The caller supplies the
   resolved settings for a resumed session; redesigning setting precedence is
-  separate work, and mixing two generations during a run is prohibited.
+  separate work, and mixing configuration generations during a run is prohibited.
 - For persistent mode, admission is acknowledged only after the journal stores
   the request ID, input digest, configuration identity, and run ID. A per-session
   request ID is mandatory at retryable transport boundaries. Identical retries
   return the existing handle/snapshot; the same ID with different input returns
-  a conflict. Recovery never restarts the old operation automatically.
+  a conflict. Recovery never restarts the old operation automatically. Resolve an existing
+  request ID before configuration loading, MCP startup, or other execution work.
+  Compare normalized submitted input/options, not newly resolved ambient
+  settings, to its stored keyed request digest; the original resolved generation
+  is separate evidence and is not recomputed to admit a duplicate.
 - Core exposes `getRun` and a versioned snapshot. Snapshots include run ID,
   session ID, phase, pending approval IDs, budget use, stop request, and terminal
   result when present. REST responses project these values; SSE events include
@@ -54,10 +59,31 @@ Names below specify proposed contracts, not existing exports or fixed filenames.
 - Local slash commands return a distinct command result and do not fabricate a
   run ID. UI appearance and slash-command vocabulary remain surface-specific.
 
+### Initialization before model execution
+
+Admission returns a handle in `initializing` after `run-admitted` is acknowledged.
+That record identifies configured sources, not a fabricated remote catalog.
+Under that run ID, core prepares and authorizes MCP startup operations using the
+frozen startup configuration. It then connects, discovers and validates tools,
+freezes the resolved catalog, and acknowledges `run-ready` with its identity.
+Only then may the first model invocation start. Built-in/custom-only runs also
+record `run-ready`; they need no remote discovery.
+
+Initialization consumes the same elapsed budget and supports stop, query, and
+approval replies. A pending approval reports its parent phase as `initializing`
+or `running`. In the initial profile, all enabled configured MCP sources are
+required: denied/unavailable startup or an invalid catalog ends initialization
+without a model call and closes partial clients. Applications can disable a
+source before a new run; core does not silently continue with a smaller catalog.
+The resolved catalog stays fixed after ready. A policy revocation closes further
+admission for the live run and invalidates permits; it does not mutate that run's
+frozen configuration into a new generation.
+
 ### State and terminal semantics
 
 | State or field       | Proposed meaning                                                                                                                                                                                                                             |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `initializing`       | The run is admitted; configured sources may be authorized/initialized, but no model invocation is permitted before `run-ready`.                                                                                                              |
 | `running`            | Work is admitted and may start permitted operations.                                                                                                                                                                                         |
 | `awaiting-approval`  | A decision is pending; this can coexist with already-started permitted reads, listed in the snapshot.                                                                                                                                        |
 | `stopping`           | Admission of new model/tool/startup operations is closed; cancellation and settlement are in progress.                                                                                                                                       |
@@ -77,6 +103,14 @@ or runtime failure produces `failed`; a prior budget stop produces
 and per-operation results even when a higher-priority outcome applies. A
 cancelled run may have successfully edited a file before stopping. A saved
 operation success does not erase a subsequent save failure.
+
+A failed target-project test is not automatically a runtime failure or an unknown
+operation: if its executor reports settled work and known completion, the model
+may receive the failed test result and continue within policy and budget. Unknown
+means completion/effects cannot be established, such as a remote request with a
+lost response; it does not require knowing every byte a normally finished program
+changed. Unknown operation completion closes new admission and produces
+`incomplete`, rather than inviting the model to retry that operation.
 
 A terminal journal entry contains execution and prior barrier facts, while the
 live result also reports whether its final acknowledgement arrived. The journal
@@ -100,12 +134,40 @@ observation and may release the quarantine after recording it. A fresh process
 must reconcile unresolved journal entries before reusing that session. This is
 not global exclusion of arbitrary processes using the same directory.
 
+The time bound assumes the JavaScript event loop can run. A synchronous custom
+handler, parser, policy function, or observer that blocks the event loop also
+blocks timers and stop replies. Such code is outside the bounded in-process
+contract; hard preemption requires an independently supervised worker/process
+and is not provided by this proposal. Optional observers are exception-isolated
+and never awaited as required recording; their callbacks must remain nonblocking.
+
+Quarantine is released only after started work and cleanup settle, required
+recording is reconciled, and the resource owner has evidence that conflicting
+work is no longer active. A timeout, promise rejection, or user acknowledgement
+alone is insufficient. Scope-unknown commands/custom operations reserve the
+whole managed workspace; MCP calls additionally reserve their server identity.
+An unresolved remote effect requires application-owner reconciliation evidence
+or use of resources verified to be disjoint, not an approval retry. Recovery may
+clear the restriction without changing the historical incomplete result.
+
 ### Shared budget and retries
+
+The clock for a new admission attempt starts before its first asynchronous
+configuration/storage/initialization step, so waiting for admission persistence
+cannot escape the time limit. A duplicate lookup has the caller's bounded request
+wait and never resets the already-admitted run's budget.
 
 Core requires finite positive time limits and nonnegative integer counters;
 products provide the proposed initial profile below. Applications may supply
 other finite limits, and tests inject the clock. These initial values are
-operational proposals, not measured optimal defaults.
+operational proposals, not measured optimal defaults. They are one named product
+profile, not hard-coded core limits. Six model calls and five rounds preserve the
+current default loop allowance; the other values are starting points for the
+coding example and have no measured optimality claim. The author can request
+profile changes independently of the supervisor contract. Before implementation,
+record the chosen product profile. During implementation, validate its values
+against long-running target tests, slow MCP startup, human approval latency,
+and record-sync overhead.
 
 | Limit                  | Initial product proposal | Accounting                                                                                                                                                                               |
 | ---------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -143,10 +205,20 @@ service from closing a store while its started work still needs recording.
 
 `close` first closes admission, requests stops, awaits bounded settlement, then
 closes owned clients, flushes/finalizes required records, and closes owned stores.
-All failures are collected without skipping later cleanup. Repeated close calls
-share one completion and report the same outcome. Unresolved resources remain
-registered/quarantined; a bounded return never claims they are closed.
-Deleting an active or quarantined session is rejected until reconciliation.
+All shutdown work shares one absolute cleanup deadline set when admission first
+closes; individual close stages do not each receive another grace period. Waits
+on client close, transcript sync, journal acknowledgements, and store close are
+registered work, too. A timed-out wait remains owned, even if its promise later
+settles. Do not close its dependent store or release its writer lease meanwhile.
+Independent cleanup is still attempted within the same remaining allowance.
+
+Repeated close calls share one report. If the deadline expires, that report is
+incomplete and lists still-owned resources; later cleanup updates a separate
+queryable resource snapshot without rewriting the report. Late writes can only
+finish already-enqueued records or record settlement, never start a tool. Retain
+the owner registry and leases until those writes settle or the owning process
+ends, after which durable recovery applies. Deleting an active or quarantined
+session is rejected until reconciliation.
 
 ### Surface migration
 
@@ -239,6 +311,20 @@ Required new confirmation cases:
    event, and reconnect during approval; same facts through CLI, GUI, and library.
 6. Target-project tests may fail while the run completes; application tests must
    distinguish that outcome from core failure and from unsaved results.
+
+Additional confirmation required by cross-contract review:
+
+- From a cold MCP start, prove `run-admitted` precedes startup authorization and
+  that `run-ready` follows discovery but precedes the first model invocation.
+- While an intent acknowledgement waits, expire approval or revoke policy; no
+  handler starts. Include an already accepted duplicate request after ambient
+  settings change, with zero new initialization work.
+- Use a yielding never-settling writer/client double: the single cleanup deadline
+  returns an incomplete report, retains leases, and allows independent cleanup.
+  A blocking synchronous handler needs a separately controlled process test;
+  in-process timers cannot establish a preemption guarantee.
+- Distinguish a normally completed nonzero test exit from unknown remote
+  completion; only the latter blocks continuation pending reconciliation.
 
 ## Follow-up Work
 
