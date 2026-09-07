@@ -2,9 +2,11 @@
 status: accepted
 proposed-date: 2026-09-07
 decision-date: 2026-09-07
-implementation-status: not-started
+implementation-status: partial
 implementation-completed-date: null
-implementation-commits: []
+implementation-commits:
+  - 61723f07e2f6318a352dcaacd16e9b88b7ad94fa
+  - 7f26357d3afd9f14e7316352f7cc5483a387a2c3
 superseded-by: []
 ---
 
@@ -18,7 +20,7 @@ MCP startup, and MCP tool calls, regardless of the CLI, GUI, or library entry po
 
 ## Decision
 
-**Accepted on 2026-09-07; implementation not started.** Core prepares an operation, evaluates application
+**Accepted on 2026-09-07; implementation partial, with confirmation remaining.** Core prepares an operation, evaluates application
 policy, validates any approval reply, and consumes a one-use execution permit.
 Application code supplies rules and the confirmation UI; it does not implement
 an alternative enforcement path. This extends the accepted initial full-access
@@ -283,7 +285,73 @@ arbitrary commands; Orbit's descriptor/one-use rules are accepted target additio
 
 ## Implementation and Confirmation
 
-Acceptance was recorded on 2026-09-07; implementation has not started.
+### Implementation evidence — 2026-09-07
+
+Implementation status is **partial**, not completed. The code and maintained
+guides are committed; the remaining confirmation below prevents a completion
+date. Acceptance and its rationale are unchanged.
+
+- `61723f07e2f6318a352dcaacd16e9b88b7ad94fa`: shared execution, permission,
+  journal/recovery/deletion, CLI/GUI/library integration, public exports,
+  maintained architecture/concepts/feature guides and contract tests.
+- `7f26357d3afd9f14e7316352f7cc5483a387a2c3`: explicit legacy migration and
+  locally validated MCP argument admission tests.
+
+Prepared operations now bind parsed input, response-local call identity plus
+iteration, canonical targets/preimages, environment, source/catalog and policy.
+The runtime acknowledges authorization and intent, revalidates after storage,
+then registers and starts the trusted executor without an intervening await.
+MCP startup resolves the actual executable and its file identity before asking;
+managed MCP operations retain a server identity as well as workspace ownership.
+Library calls without a responder deny asks; explicit unrestricted legacy
+migration remains available. GUI confirmation is bound to its capability,
+request ID, digest and responder scope.
+
+Validation on macOS arm64, Node v26.5.0: `npm run headers:check`,
+`npm run build` and `npm test` passed; the final suite has **351 passing tests**.
+Lint reported 10 complexity/parameter/style warnings and no errors. Reviewed
+formatter output and `git diff --check` passed. `npm run prepack` regenerated
+command documentation; its tool-update notice is not a build failure.
+
+Evidence lives in `test/core/execution/{run,contracts,agent,storage,restart,retries}.test.ts`
+and `test/apps/gui/execution.test.ts`, together with the updated existing tests.
+Subprocess fixtures exit at admission, intent, external-effect, result and
+terminal checkpoints and prove zero redispatch after restart. The real stdio
+fixture verifies child termination. Browser testing verified a bound write
+preview, reload/reopen while awaiting approval, one approval, and a completed /
+acknowledged result. The TTY confirmation fixture returned true on `y` and false
+on Ctrl+C. No provider credentials or external production MCP service were used.
+
+A five-run utilization sample repeated against the committed implementation
+at 12:02 UTC on 2026-09-07 used a deterministic model
+and actual read/write/Bash operations under the unchanged default limits. Each
+run used 4 model calls, 3 tool requests and 3 rounds and completed. Wall times
+were 455.6–1119.4 ms (median 1112.5 ms). The 70 strong-sync journal acknowledgements
+were 5.6–107.7 ms (median 62.8 ms) on the host temporary filesystem (statfs type 26).
+These small warm-host samples are not optimality estimates, percentiles for a
+production population, or measurements of live model latency.
+
+### Confirmation remaining before completed
+
+- Windows executable/shell resolution and filesystem race behavior remain
+  unverified; the code provides no OS sandbox or hard process isolation.
+- Full Ink confirmation interaction, injected HTTP/SSE reordering, unsupported
+  MCP schema vocabulary and remote timeout/reconciliation need additional
+  application/transport acceptance fixtures. Current MCP tests cover real stdio
+  startup/call/close, denied startup, noncooperative initialization, and invalid
+  remote arguments before confirmation; they do not cover every schema form.
+- Representative command/edit previews and human decision latency still need
+  broader product trials. This does not reopen the adopted one-operation scope.
+
+The implementation reference is [Managed Execution](../execution.md), with
+[current architecture](../architecture.md), [Agent Runtime](../concepts/agent-runtime.md)
+and [coding tool migration](../tools.md). The following original checklist is
+retained as acceptance history; it must be reconciled case by case, not marked
+satisfied merely because the aggregate suite passes.
+
+### Original acceptance checklist
+
+Acceptance was recorded on 2026-09-07 before implementation.
 Baseline headers/build and 293 tests passed; they do not exercise this target
 API. Integrate with the
 managed supervisor and required journal, add explicit policy selection and

@@ -2,9 +2,11 @@
 status: accepted
 proposed-date: 2026-09-07
 decision-date: 2026-09-07
-implementation-status: not-started
+implementation-status: partial
 implementation-completed-date: null
-implementation-commits: []
+implementation-commits:
+  - 61723f07e2f6318a352dcaacd16e9b88b7ad94fa
+  - 7f26357d3afd9f14e7316352f7cc5483a387a2c3
 superseded-by: []
 ---
 
@@ -19,7 +21,7 @@ Today a rejected batch or an accepted cancellation can leave work outstanding.
 
 ## Decision
 
-**Accepted on 2026-09-07; implementation not started.** Introduce a
+**Accepted on 2026-09-07; implementation partial, with confirmation remaining.** Introduce a
 provider-neutral run supervisor in core.
 It owns admission, the active run ID, a shared budget, started work, one terminal
 result, and resource cleanup. Agent retains the model/tool loop; ThreadManager
@@ -306,7 +308,71 @@ budget or a universal no-effects-after-timeout guarantee.
 
 ## Implementation and Confirmation
 
-Implementation has not started. The baseline passed headers, build, and 293
+### Implementation evidence — 2026-09-07
+
+Implementation status is **partial**, not completed. The code and maintained
+guides are committed; the remaining confirmation below prevents a completion
+date. Acceptance and its rationale are unchanged.
+
+- `61723f07e2f6318a352dcaacd16e9b88b7ad94fa`: shared execution, permission,
+  journal/recovery/deletion, CLI/GUI/library integration, public exports,
+  maintained architecture/concepts/feature guides and contract tests.
+- `7f26357d3afd9f14e7316352f7cc5483a387a2c3`: explicit legacy migration and
+  locally validated MCP argument admission tests.
+
+`RunSupervisor` now owns admission, immutable results, finite counters/time,
+started promises, one cleanup deadline and quarantined resources. Agent's
+message-returning methods delegate to it. ThreadManager, Application Service,
+CLI and GUI expose the same facts; slash commands are separate. Versioned
+run snapshots and the `run-snapshot` SSE channel remain available when diagnostic
+capture is off. Reconciliation preserves the original result and updates current
+resource ownership. OpenAI/Anthropic default SDK clients make one request on 429.
+
+Validation on macOS arm64, Node v26.5.0: `npm run headers:check`,
+`npm run build` and `npm test` passed; the final suite has **351 passing tests**.
+Lint reported 10 complexity/parameter/style warnings and no errors. Reviewed
+formatter output and `git diff --check` passed. `npm run prepack` regenerated
+command documentation; its tool-update notice is not a build failure.
+
+Evidence lives in `test/core/execution/{run,contracts,agent,storage,restart,retries}.test.ts`
+and `test/apps/gui/execution.test.ts`, together with the updated existing tests.
+Subprocess fixtures exit at admission, intent, external-effect, result and
+terminal checkpoints and prove zero redispatch after restart. The real stdio
+fixture verifies child termination. Browser testing verified a bound write
+preview, reload/reopen while awaiting approval, one approval, and a completed /
+acknowledged result. The TTY confirmation fixture returned true on `y` and false
+on Ctrl+C. No provider credentials or external production MCP service were used.
+
+A five-run utilization sample repeated against the committed implementation
+at 12:02 UTC on 2026-09-07 used a deterministic model
+and actual read/write/Bash operations under the unchanged default limits. Each
+run used 4 model calls, 3 tool requests and 3 rounds and completed. Wall times
+were 455.6–1119.4 ms (median 1112.5 ms). The 70 strong-sync journal acknowledgements
+were 5.6–107.7 ms (median 62.8 ms) on the host temporary filesystem (statfs type 26).
+These small warm-host samples are not optimality estimates, percentiles for a
+production population, or measurements of live model latency.
+
+### Confirmation remaining before completed
+
+- Windows child/process-tree cleanup, supported Node/platform combinations and
+  platform-dependent fixture behavior have not been executed on this macOS host.
+- The five-run utilization sample uses deterministic model responses. Long target
+  tests, slow real MCP servers and representative human approval latency still
+  need product trials before the initial profile can be considered validated.
+- The real browser exercise covered preview, reconnect and approval; full Ink
+  interaction and adversarial SSE gap/reordering under transport faults need
+  further surface-level verification. TTY approval/cancellation was tested at
+  the shared confirmation function, not the complete Ink application.
+
+The implementation reference is [Managed Execution](../execution.md), with
+[current architecture](../architecture.md), [Agent Runtime](../concepts/agent-runtime.md)
+and [coding tool migration](../tools.md). The following original checklist is
+retained as acceptance history; it must be reconciled case by case, not marked
+satisfied merely because the aggregate suite passes.
+
+### Original acceptance checklist
+
+At acceptance, implementation had not started. The baseline passed headers, build, and 293
 existing tests as recorded in the research; those tests do not validate this ADR.
 Implement core ownership/results first, then wire Agent, threads,
 services, and surfaces; integrate required journal and authorization before

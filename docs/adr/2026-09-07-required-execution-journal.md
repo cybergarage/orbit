@@ -2,9 +2,11 @@
 status: accepted
 proposed-date: 2026-09-07
 decision-date: 2026-09-07
-implementation-status: not-started
+implementation-status: partial
 implementation-completed-date: null
-implementation-commits: []
+implementation-commits:
+  - 61723f07e2f6318a352dcaacd16e9b88b7ad94fa
+  - 7f26357d3afd9f14e7316352f7cc5483a387a2c3
 superseded-by: []
 ---
 
@@ -18,7 +20,7 @@ A best-effort diagnostic log and a transcript cannot provide that contract.
 
 ## Decision
 
-**Accepted on 2026-09-07; implementation not started.** Add a required execution
+**Accepted on 2026-09-07; implementation partial, with confirmation remaining.** Add a required execution
 journal distinct from the
 conversation transcript and optional operational logs. Core must acknowledge
 admission and operation intent before dispatch, and acknowledge required results
@@ -209,7 +211,7 @@ The author explicitly accepted the reviewed recommendation on 2026-09-07,
 including required separate recording, unsupported-storage rejection, the
 metadata retention policy, and the minimal marker retained after deletion.
 The file-and-directory-sync default is an accepted starting product choice,
-not a claim that every filesystem supports it. Implementation remains not-started.
+not a claim that every filesystem supports it. At acceptance, implementation was not started.
 
 [Session Persistence](2026-08-22-session-persistence.md),
 [Session-scoped Logging](2026-08-25-session-scoped-logging.md), and
@@ -276,7 +278,71 @@ exactly-once external effects, a private HMAC ledger, or this new journal schema
 
 ## Implementation and Confirmation
 
-No implementation has started. Baseline validation passed headers/build and
+### Implementation evidence — 2026-09-07
+
+Implementation status is **partial**, not completed. The code and maintained
+guides are committed; the remaining confirmation below prevents a completion
+date. Acceptance and its rationale are unchanged.
+
+- `61723f07e2f6318a352dcaacd16e9b88b7ad94fa`: shared execution, permission,
+  journal/recovery/deletion, CLI/GUI/library integration, public exports,
+  maintained architecture/concepts/feature guides and contract tests.
+- `7f26357d3afd9f14e7316352f7cc5483a387a2c3`: explicit legacy migration and
+  locally validated MCP argument admission tests.
+
+The version 1 JSONL writer records admission/ready, authorization, intent,
+known outcome and terminal transcript high-water evidence. Persistent runs
+reuse SessionRecorder ownership, synchronize the key and required ancestors,
+and refuse unsupported acknowledgement without fallback. Reopening preserves
+partial bytes and recognizes existing event IDs. Read-only inspection, recovered
+snapshots, explicit reconciliation and retained deletion markers are exposed.
+Deletion uses the selected file level and retries after transcript/key removal.
+
+Validation on macOS arm64, Node v26.5.0: `npm run headers:check`,
+`npm run build` and `npm test` passed; the final suite has **351 passing tests**.
+Lint reported 10 complexity/parameter/style warnings and no errors. Reviewed
+formatter output and `git diff --check` passed. `npm run prepack` regenerated
+command documentation; its tool-update notice is not a build failure.
+
+Evidence lives in `test/core/execution/{run,contracts,agent,storage,restart,retries}.test.ts`
+and `test/apps/gui/execution.test.ts`, together with the updated existing tests.
+Subprocess fixtures exit at admission, intent, external-effect, result and
+terminal checkpoints and prove zero redispatch after restart. The real stdio
+fixture verifies child termination. Browser testing verified a bound write
+preview, reload/reopen while awaiting approval, one approval, and a completed /
+acknowledged result. The TTY confirmation fixture returned true on `y` and false
+on Ctrl+C. No provider credentials or external production MCP service were used.
+
+A five-run utilization sample repeated against the committed implementation
+at 12:02 UTC on 2026-09-07 used a deterministic model
+and actual read/write/Bash operations under the unchanged default limits. Each
+run used 4 model calls, 3 tool requests and 3 rounds and completed. Wall times
+were 455.6–1119.4 ms (median 1112.5 ms). The 70 strong-sync journal acknowledgements
+were 5.6–107.7 ms (median 62.8 ms) on the host temporary filesystem (statfs type 26).
+These small warm-host samples are not optimality estimates, percentiles for a
+production population, or measurements of live model latency.
+
+### Confirmation remaining before completed
+
+- Supported Windows filesystems and Node versions still need direct capability
+  and lock/cleanup verification. Default strong-sync rejection must remain
+  explicit; portable fixtures must select a supported level deliberately.
+- Simulated short writes, sync failure and process exit are not physical disk
+  failure or power-loss tests. Hardware/controller survival is not promised.
+- Additional process-level writer contention and deletion interruption coverage
+  across supported platforms, plus representative storage/load measurements,
+  remain required before marking this record completed. Existing lock tests and
+  delegated-lease tests are evidence for their own tested conditions only.
+
+The implementation reference is [Managed Execution](../execution.md), with
+[current architecture](../architecture.md), [Agent Runtime](../concepts/agent-runtime.md)
+and [coding tool migration](../tools.md). The following original checklist is
+retained as acceptance history; it must be reconciled case by case, not marked
+satisfied merely because the aggregate suite passes.
+
+### Original acceptance checklist
+
+At acceptance, implementation had not started. Baseline validation passed headers/build and
 293 tests; this validates no target journal guarantee. Implement
 writer contract and failure/recovery tests, then integrate admission, operation
 intent/result, terminal barriers, queries, and deletion with the supervisor.
