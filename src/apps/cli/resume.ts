@@ -61,15 +61,19 @@ export async function runResumeSessionCommand(
       agentClass: deps.agentClass ?? Agent,
       cwd: metadata.cwd,
       debug: resolvedOptions.debug,
+      executionPolicy: resolvedOptions.executionPolicy,
       initialModel: resolvedOptions.model,
       initialProvider: resolvedOptions.provider,
+      journalLevel: resolvedOptions.journalLevel,
       session,
       settings: resolvedOptions.settings,
       systemPrompt,
     })
     return summary
   } finally {
-    await session.close()
+    if (session.hasManagedLease()) session.close().catch(() => {})
+    else await session.close()
+    // A pending managed owner retains the writer until its own late cleanup finishes.
   }
 }
 

@@ -505,3 +505,25 @@ inspection, and whole-session deletion. It does not yet implement:
 These features can be added as new typed entries and repository operations.
 Changes that alter existing fields require an explicit format migration and a
 new `version`.
+
+## Managed execution ownership and deletion
+
+Session transcript version 1 remains readable. Its historical turn phases are
+not the full managed `RunResult`: use the execution journal for quiescence,
+recording, approvals and incomplete outcomes. Older turns have unknown approval
+provenance. `Session.synchronize(level)` provides an explicit transcript barrier
+and high-water value without redefining ordinary `flush()` as fsync.
+
+A persistent Agent delegates the SessionRecorder writer lease until its journal
+closes. A borrowed persistent Session without a writer cannot execute managed
+runs. Close Agent first, then its Session; an incomplete close retains ownership
+until pending work settles or is explicitly reconciled. Do not unlink lock files
+because a timeout elapsed.
+
+The default journal root is `~/.orbit/runs`. An explicit repository `rootDir`
+uses `<rootDir>/.runs` unless `journalRoot` is supplied. Configure that root on
+SessionRepository so resume, queries and deletion use the same partition.
+Repository deletion rejects managed journals; use `SessionDeletionService` or
+the application service. Deletion rejects active/quarantined sessions and retains
+a minimal marker; retries can return only `{id}` after the transcript is gone.
+See [Managed Execution](execution.md#recording-and-recovery).

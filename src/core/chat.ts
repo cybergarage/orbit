@@ -8,6 +8,8 @@ import {loadWorkspaceSettings, mergeWorkspaceSettings, type WorkspaceSettings} f
 
 export interface AgentOptions {
   debug?: boolean
+  executionPolicy?: 'unrestricted' | 'workspace-confirm'
+  journalLevel?: 'file-and-directory-sync' | 'file-sync'
   lang?: string
   model?: string
   provider?: ProviderName
@@ -16,6 +18,8 @@ export interface AgentOptions {
 
 export interface ResolvedAgentOptions {
   debug?: boolean
+  executionPolicy?: 'unrestricted' | 'workspace-confirm'
+  journalLevel?: 'file-and-directory-sync' | 'file-sync'
   lang?: string
   model: string
   provider: ProviderName
@@ -30,6 +34,8 @@ export function resolveAgentOptions(options: AgentOptions, settings: WorkspaceSe
 
   return {
     ...(options.debug === undefined ? {} : {debug: options.debug}),
+    ...(options.executionPolicy === undefined ? {} : {executionPolicy: options.executionPolicy}),
+    ...(options.journalLevel === undefined ? {} : {journalLevel: options.journalLevel}),
     lang: options.lang,
     model,
     provider,

@@ -229,6 +229,10 @@ function formatAgentOptions(options?: AgentOptions): Record<string, unknown> | u
   }
 
   const rest = {...options}
+  expect(options.execution?.policy?.profile).to.equal('workspace-confirm')
+  expect(options.execution?.responderScope).to.equal('local-cli')
+  expect(options.execution?.onApproval).to.be.a('function')
+  delete rest.execution
   delete rest.logger
   return {
     ...rest,

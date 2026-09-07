@@ -4,6 +4,7 @@
 import process from 'node:process'
 import {v7 as uuidv7} from 'uuid'
 
+import type {JournalLevel} from '../execution/journal.js'
 import type {Message} from '../message/index.js'
 import type {ProviderName} from '../models/provider.js'
 import type {
@@ -43,17 +44,22 @@ export interface RecordTurnEventOptions {
 
 export interface SessionOptions {
   entries?: SessionEntry[]
+  journalRoot?: string
   messages?: Message[]
   metadata?: Partial<SessionMetadata>
   recorder?: SessionRecorder
 }
 
 export class Session {
+  readonly journalRoot?: string
+  private closePromise?: Promise<void>
   private readonly entries: SessionEntry[]
+  private ephemeralLease = false
   private readonly messageIds = new Set<string>()
   private readonly messages: Message[] = []
   private readonly metadata: SessionMetadata
   private readonly recorder?: SessionRecorder
+  private releaseEphemeral?: () => void
 
   // Metadata hydration keeps all optional persisted fields explicit at this public construction boundary.
   // eslint-disable-next-line complexity
@@ -73,6 +79,7 @@ export class Session {
       ...(options.metadata?.systemPrompt === undefined ? {} : {systemPrompt: options.metadata.systemPrompt}),
     }
     this.recorder = options.recorder
+    this.journalRoot = options.journalRoot
     this.entries = [...(options.entries ?? [])]
 
     const header = new SessionHeader({
@@ -85,6 +92,22 @@ export class Session {
     for (const message of options.messages ?? []) {
       this.messages.push(message)
       this.messageIds.add(message.id)
+    }
+  }
+
+  acquireManagedLease(): () => void {
+    if (this.closePromise) throw new Error('Session is closing or closed')
+    if (this.recorder) return this.recorder.acquireManagedLease()
+    if (this.getFile()) throw new Error('Persistent Session must delegate its recorder writer lease')
+    if (this.ephemeralLease) throw new Error('Session writer is already owned by an Agent')
+    this.ephemeralLease = true
+    let released = false
+    return () => {
+      if (!released) {
+        released = true
+        this.ephemeralLease = false
+        this.releaseEphemeral?.()
+      }
     }
   }
 
@@ -128,8 +151,15 @@ export class Session {
     )
   }
 
-  async close(): Promise<void> {
-    await this.recorder?.close()
+  close(): Promise<void> {
+    this.closePromise ??= (async () => {
+      if (this.ephemeralLease)
+        await new Promise<void>((resolve) => {
+          this.releaseEphemeral = resolve
+        })
+      await this.recorder?.close()
+    })()
+    return this.closePromise
   }
 
   async flush(): Promise<void> {
@@ -168,6 +198,10 @@ export class Session {
     return {...this.metadata}
   }
 
+  hasManagedLease(): boolean {
+    return this.recorder?.hasManagedLease() ?? this.ephemeralLease
+  }
+
   hasMessage(id: string): boolean {
     return this.messageIds.has(id)
   }
@@ -202,6 +236,13 @@ export class Session {
       type: SessionEntryType.TurnEvent,
     }
     this.addEntry(entry)
+  }
+
+  async synchronize(level: JournalLevel): Promise<number> {
+    if (level === 'memory') await this.flush()
+    else if (this.recorder) await this.recorder.synchronize(level)
+    else throw new Error('Session has no durable synchronization capability')
+    return this.entries.length
   }
 
   private addEntry(entry: SessionEntry): void {

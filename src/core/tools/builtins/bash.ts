@@ -1,7 +1,7 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {spawn, spawnSync} from 'node:child_process'
+import {spawn} from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import {performance} from 'node:perf_hooks'
@@ -21,7 +21,7 @@ const bashSchema = z.object({
 
 export type BashToolInput = z.infer<typeof bashSchema>
 
-interface ShellConfig {
+export interface ShellConfig {
   args: string[]
   shell: string
 }
@@ -31,7 +31,7 @@ export function createBashTool() {
     description: 'Execute a command with Bash in the current working directory.',
     async execute(input, context) {
       if (context.signal.aborted) throw new Error('Bash command aborted.')
-      const shell = resolveShell()
+      const shell = (context.preparedShell as ShellConfig | undefined) ?? resolveShell()
       const startedAt = performance.now()
       const execution = await runCommand(shell, input, context)
       const failed = execution.timedOut || execution.exitCode !== 0
@@ -92,7 +92,7 @@ async function runCommand(
     const child = spawn(shell.shell, [...shell.args, input.command], {
       cwd: context.cwd,
       detached: process.platform !== 'win32',
-      env: process.env,
+      env: (context.preparedEnvironment as NodeJS.ProcessEnv | undefined) ?? process.env,
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
     })
@@ -135,14 +135,10 @@ async function runCommand(
     })
     child.once('close', (exitCode) => {
       cleanup()
-      if (context.signal.aborted) {
-        reject(new Error('Bash command aborted.'))
-        return
-      }
-
       resolve({combined, exitCode, stderr, stdout, timedOut, truncated})
     })
     context.signal.addEventListener('abort', abort, {once: true})
+    if (context.signal.aborted) abort()
     if (input.timeoutSeconds !== undefined) {
       timer = setTimeout(() => {
         timedOut = true
@@ -158,11 +154,12 @@ function appendCapture(current: string, chunk: string): {truncated: boolean; val
   return {truncated: appended.truncated, value: appended.text}
 }
 
-function resolveShell(): ShellConfig {
+export function resolveShell(): ShellConfig {
   if (process.platform !== 'win32') {
     if (fs.existsSync('/bin/bash')) return {args: ['-c'], shell: '/bin/bash'}
     const bash = findOnPath('bash')
-    return bash === undefined ? {args: ['-c'], shell: 'sh'} : {args: ['-c'], shell: bash}
+    if (!bash) throw new Error('No Bash shell found')
+    return {args: ['-c'], shell: bash}
   }
 
   const configured = process.env.ORBIT_BASH_PATH
@@ -187,10 +184,17 @@ function resolveShell(): ShellConfig {
 }
 
 function findOnPath(command: string): string | undefined {
-  const finder = process.platform === 'win32' ? 'where' : 'which'
-  const result = spawnSync(finder, [command], {encoding: 'utf8', timeout: 5000, windowsHide: true})
-  if (result.status !== 0 || !result.stdout) return undefined
-  return result.stdout.trim().split(/\r?\n/u)[0] || undefined
+  for (const directory of (process.env.PATH ?? '').split(path.delimiter)) {
+    const candidate = path.resolve(directory, command)
+    try {
+      fs.accessSync(candidate, fs.constants.X_OK)
+      return candidate
+    } catch {
+      /* Continue executable lookup. */
+    }
+  }
+
+  return undefined
 }
 
 function killProcessTree(pid: number | undefined): void {

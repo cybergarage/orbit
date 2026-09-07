@@ -65,6 +65,8 @@ routing contract belongs in an ADR, and its implemented structure appears in
 
 ## Current feature documentation
 
+- [Managed Execution](execution.md): run APIs, one-operation approval, required journal, recovery and migration.
+
 - [Settings](settings.md)
 - [Coding Tools](tools.md)
 - [Sessions](session.md)

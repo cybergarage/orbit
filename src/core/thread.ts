@@ -5,6 +5,7 @@ import {v7 as uuidv7} from 'uuid'
 
 import type {AgentEvent} from './agent-events.js'
 import type {AgentInvokeOptions, AgentOptions} from './agent.js'
+import type {ApprovalReply, RunHandle, RunSnapshot} from './execution/run.js'
 import type {SessionLoggerFactory} from './logs/index.js'
 import type {Message, MessagePayload, MessageType} from './message/index.js'
 import type {ModelToolCall, ProviderName, Role} from './models/index.js'
@@ -13,6 +14,7 @@ import type {ToolResult} from './tools/index.js'
 import {AgentEventType} from './agent-events.js'
 import {Agent} from './agent.js'
 import {InvalidInputError, ModelAbortError, OrbitError} from './errors/index.js'
+import {RunExecutionError} from './execution/run.js'
 import {Message as CoreMessage, MessageType as CoreMessageType} from './message/index.js'
 import {Session, type SessionRepository} from './session/index.js'
 import {State} from './state.js'
@@ -57,6 +59,7 @@ export interface ThreadSnapshot {
   messages: ThreadMessage[]
   model?: string
   provider?: ProviderName
+  run?: RunSnapshot
   status: ThreadStatus
   updatedAt: string
 }
@@ -139,8 +142,11 @@ export type ThreadEventHandler = (event: ThreadEvent) => void
 
 export interface ThreadAgent {
   close(): Promise<void>
+  getRun?(id: string): RunSnapshot | undefined
   /** Records new messages into its configured session and runs one turn. */
   invoke(newMessages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message>
+  replyApproval?(id: string, reply: ApprovalReply): Promise<'recorded'>
+  startRun?(messages: Message[], options?: Partial<AgentInvokeOptions>): Promise<RunHandle<Message>>
 }
 
 export type ThreadAgentFactory = (options: AgentOptions) => ThreadAgent
@@ -149,6 +155,7 @@ export interface ThreadManagerOptions {
   createAgent?: ThreadAgentFactory
   loggerFactory?: SessionLoggerFactory
   onEvent?: ThreadEventHandler
+  onRunSnapshot?: (snapshot: RunSnapshot) => void
   sessionRepository?: SessionRepository
 }
 
@@ -158,10 +165,12 @@ export interface CreateThreadOptions {
 }
 
 export interface ThreadRunOptions {
+  requestId?: string
   signal?: AbortSignal
 }
 
 export interface ThreadRunHandle {
+  admitted: Promise<void>
   completion: Promise<ThreadMessage>
   id: string
   threadId: string
@@ -171,27 +180,37 @@ interface ManagedThread {
   agent: ThreadAgent
   createdAt: string
   id: string
+  lastRunId?: string
   session: Session
   updatedAt: string
 }
 
 interface ActiveRun {
+  admitted: Promise<void>
   controller: AbortController
   done: Promise<void>
   id: string
+  rejectAdmission(error: unknown): void
+  resolveAdmission(): void
   resolveDone: () => void
   threadId: string
 }
 
 export class ThreadManager {
   private readonly activeRuns = new Map<string, ActiveRun>()
+  private closed = false
+  private closePromise?: Promise<void>
   private readonly createAgent: ThreadAgentFactory
   private readonly eventHandlers = new Set<ThreadEventHandler>()
   private readonly loggerFactory?: SessionLoggerFactory
+  private readonly onRunSnapshot?: (snapshot: RunSnapshot) => void
+  private readonly runThreads = new Map<string, string>()
   private readonly sessionRepository?: SessionRepository
+  private readonly submissions = new Map<string, {content: string; handle: ThreadRunHandle}>()
   private readonly threads = new Map<string, ManagedThread>()
 
   constructor(options: ThreadManagerOptions = {}) {
+    this.onRunSnapshot = options.onRunSnapshot
     this.createAgent = options.createAgent ?? ((agentOptions) => new Agent(agentOptions))
     if (options.onEvent !== undefined) this.eventHandlers.add(options.onEvent)
     this.loggerFactory = options.loggerFactory
@@ -205,31 +224,40 @@ export class ThreadManager {
     return true
   }
 
-  async close(): Promise<void> {
-    await Promise.all([...this.threads.keys()].map((threadId) => this.closeThread(threadId)))
+  close(): Promise<void> {
+    this.closed = true
+    this.closePromise ??= Promise.allSettled(
+      [...this.threads.keys()].map((threadId) => this.closeThread(threadId)),
+    ).then((results) => {
+      const errors = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+      if (errors.length > 0)
+        throw new AggregateError(
+          errors.map((result) => result.reason),
+          'Thread manager close incomplete',
+        )
+    })
+    return this.closePromise
   }
 
   async closeThread(threadId: string): Promise<boolean> {
     const thread = this.threads.get(threadId)
     if (thread === undefined) return false
 
-    this.threads.delete(threadId)
     const run = this.getActiveRunForThread(threadId)
     if (run !== undefined) {
       run.controller.abort()
       await run.done
     }
 
-    try {
-      await thread.agent.close()
-    } finally {
-      await thread.session.close()
-    }
+    await thread.agent.close()
+    await thread.session.close()
 
+    this.threads.delete(threadId)
     return true
   }
 
   createThread(options: CreateThreadOptions = {}): ThreadSnapshot {
+    if (this.closed) throw new Error('Thread manager is closed')
     const id = options.id ?? uuidv7()
     if (this.threads.has(id)) {
       throw new InvalidInputError(`Thread already exists: ${id}`)
@@ -275,6 +303,11 @@ export class ThreadManager {
     return this.snapshot(thread)
   }
 
+  getRun(id: string): RunSnapshot | undefined {
+    const threadId = this.runThreads.get(id)
+    return threadId ? this.threads.get(threadId)?.agent.getRun?.(id) : undefined
+  }
+
   getThread(id: string): ThreadSnapshot | undefined {
     const thread = this.threads.get(id)
     return thread === undefined ? undefined : this.snapshot(thread)
@@ -284,7 +317,14 @@ export class ThreadManager {
     return [...this.threads.values()].map((thread) => this.snapshot(thread))
   }
 
+  replyApproval(id: string, reply: ApprovalReply): Promise<'recorded'> {
+    const threadId = this.runThreads.get(id)
+    const agent = threadId ? this.threads.get(threadId)?.agent : undefined
+    return agent?.replyApproval ? agent.replyApproval(id, reply) : Promise.reject(new Error('Unknown managed run'))
+  }
+
   resumeThread(file: string, options: Omit<CreateThreadOptions, 'id'> = {}): ThreadSnapshot {
+    if (this.closed) throw new Error('Thread manager is closed')
     if (this.sessionRepository === undefined) {
       throw new InvalidInputError('A session repository is required to resume a thread.')
     }
@@ -339,19 +379,39 @@ export class ThreadManager {
   }
 
   startRun(threadId: string, content: string, options: ThreadRunOptions = {}): ThreadRunHandle {
+    if (this.closed) throw new Error('Thread manager is closed')
     if (content.trim().length === 0) {
       throw new InvalidInputError('Message content cannot be empty.')
     }
 
     const thread = this.requireThread(threadId)
+    const requestKey = options.requestId ? `${threadId}:${options.requestId}` : undefined
+    const prior = requestKey ? this.submissions.get(requestKey) : undefined
+    if (prior) {
+      if (prior.content !== content) throw new InvalidInputError('Conflicting request ID')
+      return prior.handle
+    }
+
     if (this.getActiveRunForThread(threadId) !== undefined) {
       throw new InvalidInputError(`Thread is already running: ${threadId}`)
     }
 
     const run = createActiveRun(threadId)
     this.activeRuns.set(run.id, run)
+    thread.lastRunId = run.id
+    this.runThreads.set(run.id, threadId)
     const completion = this.executeRun(thread, content, options, run)
-    return {completion, id: run.id, threadId}
+    completion.catch(() => {})
+    const handle = {
+      admitted: run.admitted,
+      completion,
+      get id() {
+        return run.id
+      },
+      threadId,
+    }
+    if (requestKey) this.submissions.set(requestKey, {content, handle})
+    return handle
   }
 
   subscribe(handler: ThreadEventHandler): () => void {
@@ -360,7 +420,13 @@ export class ThreadManager {
   }
 
   private emit(event: ThreadEvent): void {
-    for (const handler of this.eventHandlers) handler(event)
+    for (const handler of this.eventHandlers) {
+      try {
+        Promise.resolve(handler(event)).catch(() => {})
+      } catch {
+        /* Optional observer. */
+      }
+    }
   }
 
   private async executeRun(
@@ -380,19 +446,51 @@ export class ThreadManager {
     })
     try {
       thread.updatedAt = userMessage.timestamp
-      this.emit({
-        message: serializeMessage(userMessage),
-        runId: run.id,
-        threadId,
-        timestamp: new Date().toISOString(),
-        type: ThreadEventType.RunStarted,
-      })
 
-      const response = await thread.agent.invoke([userMessage], {
+      const invokeOptions: Partial<AgentInvokeOptions> = {
         onEvent: (event) => this.handleAgentEvent(thread, run.id, event),
+        onRunSnapshot: this.onRunSnapshot,
+        requestId: options.requestId ?? run.id,
         signal: run.controller.signal,
         turnId: run.id,
-      })
+      }
+      let response: Message
+      if (thread.agent.startRun) {
+        const handle = await thread.agent.startRun([userMessage], invokeOptions)
+        if (handle.id !== run.id) {
+          this.activeRuns.delete(run.id)
+          this.runThreads.delete(run.id)
+          run.id = handle.id
+          this.activeRuns.set(run.id, run)
+          this.runThreads.set(run.id, threadId)
+          thread.lastRunId = run.id
+        }
+
+        this.emit({
+          message: serializeMessage(userMessage),
+          runId: run.id,
+          threadId,
+          timestamp: new Date().toISOString(),
+          type: ThreadEventType.RunStarted,
+        })
+        run.resolveAdmission()
+        const result = await handle.finished
+        if (result.outcome !== 'completed') throw new RunExecutionError(result)
+        const value = handle.value()
+        if (!value) throw new RunExecutionError({...result, reason: 'Recovered run; query its recorded result'})
+        response = value
+      } else {
+        this.emit({
+          message: serializeMessage(userMessage),
+          runId: run.id,
+          threadId,
+          timestamp: new Date().toISOString(),
+          type: ThreadEventType.RunStarted,
+        })
+        run.resolveAdmission()
+        response = await thread.agent.invoke([userMessage], invokeOptions)
+      }
+
       const message = serializeMessage(response)
       this.emit({
         message,
@@ -403,7 +501,11 @@ export class ThreadManager {
       })
       return message
     } catch (error) {
-      if (run.controller.signal.aborted || error instanceof ModelAbortError) {
+      run.rejectAdmission(error)
+      if (
+        (error instanceof RunExecutionError && error.result.outcome === 'cancelled') ||
+        (!(error instanceof RunExecutionError) && (run.controller.signal.aborted || error instanceof ModelAbortError))
+      ) {
         const abortError =
           error instanceof ModelAbortError
             ? error
@@ -508,6 +610,9 @@ export class ThreadManager {
       messages: thread.session.getConversationMessages().map((message) => serializeMessage(message)),
       ...(metadata.model === undefined ? {} : {model: metadata.model}),
       ...(metadata.provider === undefined ? {} : {provider: metadata.provider}),
+      ...(thread.lastRunId && thread.agent.getRun?.(thread.lastRunId)
+        ? {run: thread.agent.getRun(thread.lastRunId)}
+        : {}),
       status: this.getActiveRunForThread(thread.id) === undefined ? ThreadStatus.Idle : ThreadStatus.Running,
       updatedAt: thread.updatedAt,
     }
@@ -528,14 +633,24 @@ export function serializeMessage(message: Message): ThreadMessage {
 }
 
 function createActiveRun(threadId: string): ActiveRun {
+  let resolveAdmission!: () => void
+  let rejectAdmission!: (error: unknown) => void
+  const admitted = new Promise<void>((resolve, reject) => {
+    resolveAdmission = resolve
+    rejectAdmission = reject
+  })
+  admitted.catch(() => {})
   let resolveDone = noop
   const done = new Promise<void>((resolve) => {
     resolveDone = resolve
   })
   return {
+    admitted,
     controller: new AbortController(),
     done,
     id: uuidv7(),
+    rejectAdmission,
+    resolveAdmission,
     resolveDone,
     threadId,
   }

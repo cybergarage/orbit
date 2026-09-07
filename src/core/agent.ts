@@ -8,6 +8,9 @@ import {v7 as uuidv7} from 'uuid'
 
 import type {AgentEvent, AgentEventHandler} from './agent-events.js'
 import type {DiagnosticContext, DiagnosticEventBus} from './diagnostics/index.js'
+import type {ExecutionPolicy} from './execution/authorization.js'
+import type {ExecutionJournal, JournalLevel} from './execution/journal.js'
+import type {ApprovalReply, ApprovalRequest, RunContext, RunHandle, RunLimits, RunSnapshot} from './execution/run.js'
 import type {Logger} from './logger/index.js'
 import type {SessionLogStore} from './logs/index.js'
 import type {McpToolManager, McpToolManagerFactoryOptions} from './mcp.js'
@@ -33,7 +36,11 @@ import type {
 } from './tools/index.js'
 
 import {AgentEventType} from './agent-events.js'
-import {ModelAbortError, OrbitError} from './errors/index.js'
+import {InvalidInputError, ModelAbortError, OrbitError} from './errors/index.js'
+import {assertManagedTool, executeManagedTool} from './execution/authorization.js'
+import {copyJSON, FileExecutionJournal, MemoryExecutionJournal} from './execution/journal.js'
+import {isolateLogger} from './execution/observer.js'
+import {DEFAULT_RUN_LIMITS, RunExecutionError, RunStoppedError, RunSupervisor, until} from './execution/run.js'
 import {
   FileSessionLogStore,
   LogEventType,
@@ -56,15 +63,26 @@ export type AgentTool = InvokableTool
 export interface AgentInvokeOptions extends OperatorOptions {
   diagnosticContext?: DiagnosticContext
   diagnostics?: DiagnosticEventBus
+  limits?: Partial<RunLimits>
+
   maxToolIterations?: number
   onEvent?: AgentEventHandler
+  onRunSnapshot?: (snapshot: RunSnapshot) => void
+  requestId?: string
   signal?: AbortSignal
   tools?: AgentTool[]
   turnId?: string
 }
 
+interface ManagedInvokeOptions extends AgentInvokeOptions {
+  executionContext?: RunContext
+  executionPolicy?: ExecutionPolicy
+  mcp?: McpToolManager
+}
+
 export interface AgentOptions {
   cwd?: string
+
   defaultToolProfile?: ToolProfileName
   deps?: {
     createMcpToolManager?: (settings: WorkspaceSettings, options: McpToolManagerFactoryOptions) => McpToolManager
@@ -72,6 +90,16 @@ export interface AgentOptions {
     sessionContextBuilder?: SessionContextBuilderType
   }
   diagnostics?: DiagnosticEventBus
+  execution?: {
+    allowLegacyTools?: boolean
+    journalFactory?: (session: Session) => Promise<ExecutionJournal>
+    journalLevel?: Exclude<JournalLevel, 'memory'>
+    journalRoot?: string
+    limits?: Partial<RunLimits>
+    onApproval?: (request: ApprovalRequest) => Promise<void> | void
+    policy?: ExecutionPolicy
+    responderScope?: string
+  }
   logger?: Logger
   logStore?: SessionLogStore
   messages?: Message[]
@@ -91,11 +119,16 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   public readonly messages: Message[]
   public readonly settings: WorkspaceSettings
   public readonly state: State
+  readonly supervisor = new RunSupervisor()
   public readonly tools: AgentTool[]
+  private closePromise?: Promise<void>
   private readonly cwd: string
   private readonly diagnostics?: DiagnosticEventBus
-  private readonly mcpToolManager: McpToolManager
+  private readonly execution: NonNullable<AgentOptions['execution']>
+  private readonly journals = new Map<string, Promise<ExecutionJournal>>()
+  private readonly mcpFactory: NonNullable<NonNullable<AgentOptions['deps']>['createMcpToolManager']>
   private readonly model: Model
+  private observerFailures = 0
   private readonly ownedLogStore?: SessionLogStore
   private readonly sessionContextBuilder: SessionContextBuilderType
   private readonly toolDefinitions: ToolDefinition[]
@@ -122,7 +155,9 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         component: 'agent',
       })
     } else {
-      this.logger = options.logger.child({component: 'agent'})
+      this.logger = isolateLogger(options.logger, () => {
+        this.observerFailures++
+      }).child({component: 'agent'})
     }
 
     this.toolDefinitions = [
@@ -133,14 +168,10 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       ...(options.toolDefinitions ?? []),
     ]
     this.tools = [...(options.tools ?? [])]
-    this.mcpToolManager = (options.deps?.createMcpToolManager ?? createMcpToolManager)(this.settings, {
-      cwd: options.cwd,
-      diagnosticContext: {
-        sessionId: this.state.getSession().getId(),
-        threadId: this.state.getSession().getId(),
-      },
-      diagnostics: this.diagnostics,
-    })
+    this.execution = options.execution ?? {}
+    this.mcpFactory =
+      options.deps?.createMcpToolManager ??
+      ((settings, factoryOptions) => createMcpToolManager(settings.mcp, factoryOptions))
     this.diagnostics?.emit({
       data: {
         cwd: this.cwd,
@@ -163,22 +194,39 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     }
   }
 
-  async close(): Promise<void> {
-    try {
-      await this.mcpToolManager.close()
-    } finally {
-      const closedEvent = this.diagnostics?.emit({
-        level: 'info',
-        sessionId: this.state.getSession().getId(),
-        threadId: this.state.getSession().getId(),
-        type: LogEventType.SessionClosed,
-      })
-      if (closedEvent === undefined) {
-        this.logger.info({eventType: LogEventType.SessionClosed, outcome: LogOutcome.Succeeded}, 'agent session closed')
+  close(): Promise<void> {
+    this.closePromise ??= (async () => {
+      const deadline = performance.now() + (this.execution.limits?.cleanupMs ?? DEFAULT_RUN_LIMITS.cleanupMs)
+      const report = await this.supervisor.close(deadline)
+      const closeStores = async () => {
+        const outcomes = await Promise.allSettled([
+          ...[...this.journals.values()].map(async (journal) => (await journal).close()),
+          this.ownedLogStore?.close(),
+        ])
+        if (outcomes.some((outcome) => outcome.status === 'rejected'))
+          throw new Error('Execution store close failed; inspect recording health')
       }
 
-      await this.ownedLogStore?.close()
-    }
+      if (report.incomplete) {
+        this.supervisor
+          .whenQuiescent()
+          .then(closeStores)
+          .catch(() => {})
+        throw Object.assign(
+          new Error(
+            `Agent close incomplete; execution resources remain owned; ${report.results.map((result) => new RunExecutionError(result).message).join('; ')}`,
+          ),
+          {report},
+        )
+      }
+
+      try {
+        await until(closeStores(), deadline)
+      } catch (error) {
+        throw Object.assign(new Error('Agent store close failed or remains incomplete', {cause: error}), {report})
+      }
+    })()
+    return this.closePromise
   }
 
   getModel(): Model {
@@ -187,6 +235,14 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
 
   getName(suffix?: string): string {
     return formatOperatorName(OperatorType.Agent, suffix)
+  }
+
+  getObserverFailureCount(): number {
+    return this.observerFailures
+  }
+
+  getRun(id: string): RunSnapshot | undefined {
+    return this.supervisor.getRun(id)
   }
 
   getSession(): Session {
@@ -206,9 +262,97 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     return this.invokeSession(this.getSession(), messages, options)
   }
 
+  replyApproval(id: string, reply: ApprovalReply): Promise<'recorded'> {
+    return this.supervisor.replyApproval(id, reply)
+  }
+
   /** Runs one turn from new input and derives prior model context from the supplied session. */
   async run(session: Session, messages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message> {
     return this.invokeSession(session, messages, options)
+  }
+
+  async startRun(
+    messages: Message[],
+    options: Partial<AgentInvokeOptions> = {},
+    session = this.getSession(),
+  ): Promise<RunHandle<Message>> {
+    options = {...options, tools: options.tools ? [...options.tools] : undefined}
+    messages = messages.map(
+      (message) =>
+        new Message(message.type, {
+          contents: copyJSON(message.contents),
+          id: message.id,
+          role: message.role,
+          timestamp: message.timestamp,
+          ...(message.payload === undefined ? {} : {payload: copyJSON(message.payload)}),
+        }),
+    )
+    let manager: McpToolManager | undefined
+    const policy = this.execution.policy ?? {
+      generation: 'workspace-confirm-v1',
+      profile: 'workspace-confirm' as const,
+      roots: [this.cwd],
+    }
+    const frozenPolicy = Object.freeze({...policy, roots: Object.freeze([...policy.roots])})
+    const settings = copyJSON(this.settings)
+    const serialized = messages.map((message) => ({
+      contents: message.contents,
+      role: message.role,
+      type: message.type,
+      ...(message.payload === undefined ? {} : {payload: message.payload}),
+    }))
+    return this.supervisor.startRun<Message>({
+      async cleanup() {
+        await manager?.close()
+      },
+      configuration: {
+        cwd: this.cwd,
+        model: this.model.getModel(),
+        policy: {generation: policy.generation, profile: policy.profile, roots: [...policy.roots]},
+        provider: this.model.getProvider(),
+        sources: this.settings.mcp ?? {},
+      },
+      execute: async (run) => {
+        manager = this.mcpFactory(settings, {
+          cwd: this.cwd,
+          diagnosticContext: {runId: run.id, sessionId: session.getId()},
+          diagnostics: this.diagnostics,
+          execution: {policy: frozenPolicy, run},
+        })
+        return runWithLogContext(
+          {runId: run.id, sessionId: session.getId(), threadId: session.getId(), turnId: run.id},
+          () =>
+            this.invokeSessionWithTurn(session, messages, run.id, {
+              ...options,
+              executionContext: run,
+              executionPolicy: frozenPolicy,
+              mcp: manager,
+              signal: run.signal,
+            }),
+        )
+      },
+      input: {
+        limits: options.limits ?? {},
+        maxToolIterations: options.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS,
+        messages: serialized,
+        tools: (options.tools ?? []).map((tool) => ({
+          name: tool.name,
+          schema:
+            tool.inputSchema ??
+            adaptInvokableTool(tool, tool.source ?? {id: tool.name, kind: 'custom'}).spec.inputSchema,
+        })),
+      },
+      journal: () => this.getJournal(session),
+      limits: {...this.execution.limits, ...options.limits},
+      onApproval: this.execution.onApproval,
+      onSnapshot: options.onRunSnapshot,
+      requestId: options.requestId ?? options.turnId ?? uuidv7(),
+      responderScope: this.execution.responderScope,
+      runId: options.turnId,
+      sessionId: session.getId(),
+      signal: options.signal,
+      synchronize: async () => session.synchronize((await this.getJournal(session)).level),
+    })
   }
 
   // eslint-disable-next-line max-params
@@ -247,6 +391,46 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     }
   }
 
+  private getJournal(session: Session): Promise<ExecutionJournal> {
+    if (
+      session.journalRoot &&
+      this.execution.journalRoot &&
+      path.resolve(session.journalRoot) !== path.resolve(this.execution.journalRoot)
+    )
+      throw new Error(
+        'Configure persistent journal roots on SessionRepository so deletion and recovery share the same location',
+      )
+    let pending = this.journals.get(session.getId())
+    if (!pending) {
+      pending = this.execution.journalFactory
+        ? this.execution.journalFactory(session)
+        : session.getFile()
+          ? FileExecutionJournal.open(session.getId(), {
+              level: this.execution.journalLevel,
+              releaseLease: session.acquireManagedLease(),
+              root:
+                this.execution.journalRoot ??
+                session.journalRoot ??
+                path.join(path.dirname(session.getFile()!), 'runs'),
+            }).then(async (journal) => {
+              try {
+                await session.synchronize(journal.level)
+                return journal
+              } catch (error) {
+                await journal.close()
+                throw error
+              }
+            })
+          : Promise.resolve(new MemoryExecutionJournal(session.getId(), session.acquireManagedLease()))
+      this.journals.set(session.getId(), pending)
+      pending.catch(() => {
+        this.journals.delete(session.getId())
+      })
+    }
+
+    return pending
+  }
+
   // Session recording, tool iteration, and terminal-state handling intentionally share one lifecycle boundary.
 
   private async invokeSession(
@@ -254,16 +438,21 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     messages: Message[],
     options?: Partial<AgentInvokeOptions>,
   ): Promise<Message> {
-    const turnId = options?.turnId ?? uuidv7()
-    return runWithLogContext(
-      {
-        runId: turnId,
-        sessionId: session.getId(),
-        threadId: session.getId(),
-        turnId,
-      },
-      () => this.invokeSessionWithTurn(session, messages, turnId, options),
-    )
+    const handle = await this.startRun(messages, options, session).catch((error) => {
+      if (error instanceof RunStoppedError && options?.signal?.aborted)
+        throw new ModelAbortError('Agent cancelled before admission', {cause: error})
+      throw error
+    })
+    const result = await handle.finished
+    const value = handle.value()
+    if (result.outcome === 'completed' && value) return value
+    if (result.outcome === 'cancelled') {
+      const error = new ModelAbortError('Agent invocation aborted.')
+      Object.assign(error, {result})
+      throw error
+    }
+
+    throw new RunExecutionError(result)
   }
 
   // eslint-disable-next-line complexity
@@ -271,11 +460,22 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     session: Session,
     messages: Message[],
     turnId: string,
-    options?: Partial<AgentInvokeOptions>,
+    options?: Partial<ManagedInvokeOptions>,
   ): Promise<Message> {
     const maxToolIterations = options?.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS
+    if (!Number.isSafeInteger(maxToolIterations) || maxToolIterations < 0) throw new Error('Invalid maxToolIterations')
+    const run = options!.executionContext!
+    const policy = options!.executionPolicy!
+    const managed = {allowLegacyTools: this.execution.allowLegacyTools, policy}
     const diagnostics = options?.diagnostics ?? this.diagnostics
     const turnStartedAt = performance.now()
+    let terminalRecorded = false
+    const recordTerminal = (phase: 'cancelled' | 'completed' | 'failed', error?: SessionError) => {
+      if (terminalRecorded) return
+      terminalRecorded = true
+      session.recordTurnEvent({phase, turnId, ...(error === undefined ? {} : {error})})
+    }
+
     try {
       session.recordTurnContext({
         cwd: this.cwd,
@@ -312,11 +512,15 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         },
         'agent invoke started',
       )
-      const mcpTools = await this.mcpToolManager.getTools()
+      const mcpTools = await run.wait('mcp-discovery', options!.mcp!.getTools())
       throwIfAborted(options?.signal)
       const tools = [...this.tools, ...mcpTools, ...(options?.tools ?? [])]
       const registry = new ToolRegistry()
-      for (const definition of this.toolDefinitions) registry.register(definition)
+      for (const definition of this.toolDefinitions) {
+        assertManagedTool(definition, managed)
+        registry.register(definition)
+      }
+
       for (const [index, availableTool] of tools.entries()) {
         registry.register(
           adaptInvokableTool(availableTool, availableTool.source ?? {id: `agent:${index}`, kind: 'custom'}),
@@ -324,7 +528,17 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       }
 
       const toolSnapshot = registry.snapshot()
-      const toolRuntime = new ToolRuntime(toolSnapshot)
+      for (const spec of toolSnapshot.specs()) assertManagedTool(toolSnapshot.get(spec.name)!, managed)
+      await run.ready(toolSnapshot.specs())
+      const toolRuntime = new ToolRuntime(
+        toolSnapshot,
+        (definition, input, context) => executeManagedTool(run, definition, input, context, managed),
+        async () => {
+          const id = uuidv7()
+          run.operations.push({id, status: 'invalid'})
+          await run.record('operation-result', {operationId: id, status: 'invalid'})
+        },
+      )
       const modelOptions: Partial<ModelInvokeOptions> = {
         ...toModelInvokeOptions(options),
         ...(diagnostics === undefined
@@ -380,8 +594,14 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         let modelMessage: Message
         try {
           // Tool loops are sequential because each model response depends on the previous tool results.
+
+          run.consume('modelCalls')
+          // The next model iteration depends on these results.
           // eslint-disable-next-line no-await-in-loop
-          modelMessage = await this.model.invoke([...this.messages, ...context.messages], iterationOptions)
+          modelMessage = await run.wait(
+            'model',
+            this.model.invoke([...this.messages, ...context.messages], iterationOptions),
+          )
         } catch (error) {
           if (diagnostics === undefined) {
             this.logger.error(
@@ -427,9 +647,10 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         }
 
         const toolCalls = getToolCalls(storedModelMessage)
+        run.consume('toolRequests', toolCalls.length)
         this.logger.debug({iteration, toolCallCount: toolCalls.length}, 'agent tool calls received')
         if (toolCalls.length === 0) {
-          session.recordTurnEvent({phase: TurnPhase.Completed, turnId})
+          recordTerminal(TurnPhase.Completed)
           // The terminal flush belongs to this iteration and must finish before returning the response.
           // eslint-disable-next-line no-await-in-loop
           await session.flush()
@@ -459,11 +680,22 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
 
         if (iteration === maxToolIterations) {
           this.logger.debug({maxToolIterations, toolCallCount: toolCalls.length}, 'agent max tool iterations exceeded')
-          throw new Error(`Agent exceeded maximum tool iterations: ${maxToolIterations}`)
+          run.requestStop('budget-exceeded')
+          run.check()
         }
 
         // Tool execution for one model turn can run in parallel before the next model call.
         const signal = options?.signal ?? new AbortController().signal
+
+        const callIds = new Set<string>()
+        for (const call of toolCalls) {
+          if (typeof call.id !== 'string' || call.id.length === 0 || callIds.has(call.id))
+            throw new InvalidInputError('Tool call IDs must be unique within a model response')
+          callIds.add(call.id)
+        }
+
+        run.consume('toolRounds')
+        // The next model iteration depends on these results.
         // eslint-disable-next-line no-await-in-loop
         const toolResults = await toolRuntime.executeAll(
           toolCalls,
@@ -478,6 +710,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                 update,
               })
             },
+            iteration,
             signal,
           }),
           (toolCall, execute) => this.observeToolExecution(toolCall, execute, iteration, options),
@@ -500,7 +733,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     } catch (error) {
       if (options?.signal?.aborted && !(error instanceof ModelAbortError)) {
         const abortError = new ModelAbortError('Agent invocation aborted.', {cause: error})
-        session.recordTurnEvent({phase: TurnPhase.Cancelled, turnId})
+        recordTerminal(TurnPhase.Cancelled)
         await session.flush()
         this.emitTurnTerminal(
           diagnostics,
@@ -514,7 +747,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       }
 
       if (error instanceof ModelAbortError) {
-        session.recordTurnEvent({phase: TurnPhase.Cancelled, turnId})
+        recordTerminal(TurnPhase.Cancelled)
         await session.flush()
         this.emitTurnTerminal(
           diagnostics,
@@ -527,7 +760,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         throw error
       }
 
-      session.recordTurnEvent({error: serializeSessionError(error), phase: TurnPhase.Failed, turnId})
+      recordTerminal(TurnPhase.Failed, serializeSessionError(error))
       await session.flush()
       this.emitTurnTerminal(
         diagnostics,
@@ -642,7 +875,11 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
 }
 
 function emitAgentEvent(handler: AgentEventHandler | undefined, event: AgentEvent): void {
-  handler?.(event)
+  try {
+    Promise.resolve(handler?.(event)).catch(() => {})
+  } catch {
+    /* Observers do not own execution. */
+  }
 }
 
 function throwIfAborted(signal: AbortSignal | undefined): void {
@@ -704,6 +941,12 @@ function serializeSessionError(error: unknown): SessionError {
 
 function toModelInvokeOptions(options: Partial<AgentInvokeOptions> | undefined): Partial<ModelInvokeOptions> {
   const result: Record<string, unknown> = {...options}
+  delete result.executionPolicy
+  delete result.executionContext
+  delete result.mcp
+  delete result.requestId
+  delete result.limits
+  delete result.onRunSnapshot
   delete result.onEvent
   delete result.tools
   delete result.turnId

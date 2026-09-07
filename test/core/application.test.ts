@@ -41,7 +41,7 @@ describe('OrbitApplicationService', () => {
     try {
       const thread = service.createThread()
       const completed = waitForEvent(service, 'run.completed')
-      const run = service.startRun(thread.id, 'Hello GUI')
+      const run = await service.startRun(thread.id, 'Hello GUI')
 
       expect(run.threadId).to.equal(thread.id)
       expect(run.runId).to.be.a('string').and.not.empty
@@ -139,17 +139,18 @@ describe('OrbitApplicationService', () => {
 
     try {
       const thread = service.createThread()
-      const result = service.startRun(thread.id, '/help')
+      const result = await service.startRun(thread.id, '/help')
       const commandEvent = service.getEvents().find((event) => event.type === 'command.submitted')
 
       expect(result).to.include({threadId: thread.id})
-      expect(result.runId).to.be.a('string').and.not.empty
+      expect(result.kind).to.equal('command')
+      expect(result).not.to.have.property('runId')
       expect(invokeCount).to.equal(0)
       expect(service.getThread(thread.id)?.messages.map((message) => message.content)).to.deep.equal([
         '/help',
         guiSlashCommandHelpMessage,
       ])
-      expect(commandEvent).to.include({level: 'info', runId: result.runId, sessionId: thread.id, threadId: thread.id})
+      expect(commandEvent).to.include({level: 'info', sessionId: thread.id, threadId: thread.id})
       expect(commandEvent?.data).to.deep.equal({
         commandLength: 5,
         commandName: '/help',
@@ -160,12 +161,11 @@ describe('OrbitApplicationService', () => {
         commandName: '/help',
         eventType: 'command.submitted',
         responseLength: guiSlashCommandHelpMessage.length,
-        runId: result.runId,
         sessionId: thread.id,
         threadId: thread.id,
       })
 
-      service.startRun(thread.id, '/model')
+      await service.startRun(thread.id, '/model')
       expect(service.getThread(thread.id)?.messages.map((message) => message.content)).to.deep.equal([
         '/help',
         guiSlashCommandHelpMessage,
@@ -178,7 +178,7 @@ describe('OrbitApplicationService', () => {
       expect(sessions.data[0].preview).to.equal(undefined)
 
       const completed = waitForEvent(service, 'run.completed')
-      service.startRun(thread.id, 'Hello after help')
+      await service.startRun(thread.id, 'Hello after help')
       await completed
       expect(modelRequests).to.deep.equal([['Hello after help']])
       expect(service.getThread(thread.id)?.messages.map((message) => message.content)).to.deep.equal([
@@ -261,7 +261,7 @@ describe('OrbitApplicationService', () => {
         deletedSessionId: thread.id,
       })
       expect((await service.logs.list(thread.id)).data).to.deep.equal([])
-      expect(await service.deleteSession(thread.id)).to.equal(false)
+      expect(await service.deleteSession(thread.id)).to.equal(true)
       await fs.access(file).then(
         () => {
           throw new Error('Expected deleted session file to be absent.')

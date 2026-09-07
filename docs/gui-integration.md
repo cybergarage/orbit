@@ -25,10 +25,10 @@ import {OrbitApplicationService} from 'orbit'
 
 const application = await OrbitApplicationService.create({cwd: workspacePath})
 const thread = application.createThread()
-const run = application.startRun(thread.id, 'Inspect the failing test.')
+const run = await application.startRun(thread.id, 'Inspect the failing test.', crypto.randomUUID())
 
-const unsubscribe = application.subscribe((event) => {
-  sendToRenderer(event)
+const unsubscribe = application.subscribeRunSnapshots((snapshot) => {
+  sendToRenderer(snapshot)
 })
 const unsubscribeLogs = application.subscribeLogs((record) => {
   sendLogToRenderer(record)
@@ -42,16 +42,19 @@ const toolFailures = await application.getSessionLogs(thread.id, {
 const logHealth = application.getLogHealth()
 
 // Use run.runId for immediate cancellation.
-application.cancelRun(run.runId)
+if (run.kind === 'run') application.cancelRun(run.runId)
 
 unsubscribe()
 unsubscribeLogs()
 await application.close()
 ```
 
-The application service intentionally returns a run ID without waiting for the
-model. Completion, failure, and cancellation are projected through diagnostic
-events so command responses and asynchronous notifications remain separate.
+The service returns after required admission, before model completion. Its
+result is discriminated by `kind`: `run` contains a run ID; `command` does not.
+Use `queryRun(id)` for authoritative sequenced snapshots, `replyApproval` for
+a bound decision and `cancelRun` to request stop. Stop acceptance is not proof
+of termination. Refetch snapshots on event gaps and reconnect; ignore older
+sequences for the same run. Diagnostics are optional observations.
 Use `getPreferences()` and `updatePreferences()` to manage diagnostics pane
 visibility independently from diagnostic capture. Full capture is temporary and
 returns to Metadata after 15 minutes.
@@ -106,8 +109,9 @@ const resumed = manager.resumeThread(previousSnapshot.file)
 Without `sessionRepository`, threads remain in memory only. Closing a persisted
 thread closes its writer but does not delete the JSONL file. To permanently
 remove a saved GUI session, use `OrbitApplicationService.deleteSession(id)`;
-it closes any loaded thread, deletes the session log partition, and then deletes
-the transcript.
+it rejects active/quarantined threads, records deletion intent, then removes
+logs, transcript and journal/key. A minimal completed marker prevents ID reuse.
+Partial deletion is retryable even after the transcript has gone.
 
 Only one run can be active in a thread. Independent threads can run in parallel.
 Call `closeThread()` when a window or project closes, and call `close()` during
@@ -127,8 +131,11 @@ The event stream reports these lifecycle transitions:
 - `run-cancelled`
 - `run-failed`
 
-`startRun()` returns the run ID immediately. The same ID is present on every
-run event and is accepted by `cancelRun()`:
+`ThreadManager.startRun()` returns a handle with an `admitted` promise. Await
+that promise before using its durable run ID; retries can resolve an earlier
+run. ApplicationService already awaits this boundary. Query the run snapshot
+to distinguish cancellation, failure, budget exhaustion and incomplete cleanup.
+The run ID is accepted by `cancelRun()`:
 
 ```ts
 manager.cancelRun(runId)
@@ -146,3 +153,5 @@ Model responses are currently delivered as completed messages. The lifecycle
 API is designed so token-delta events can be added without changing the IPC
 boundary. Tools can emit `tool-updated` events before their final result; Bash
 uses these updates for incremental stdout and stderr chunks.
+
+See [Managed Execution](execution.md) for compatibility changes and ownership.

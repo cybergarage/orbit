@@ -107,8 +107,8 @@ describe('GUI server', () => {
       expect(await deleted.json()).to.deep.equal({deleted: true, id: created.id})
 
       const missing = await fetch(`${baseUrl}/api/sessions/${created.id}`, {headers, method: 'DELETE'})
-      expect(missing.status).to.equal(404)
-      expect(await missing.json()).to.deep.equal({deleted: false, id: created.id})
+      expect(missing.status).to.equal(200)
+      expect(await missing.json()).to.deep.equal({deleted: true, id: created.id})
 
       const missingLogs = await fetch(`${baseUrl}/api/sessions/${created.id}/logs`, {headers})
       expect(missingLogs.status).to.equal(404)

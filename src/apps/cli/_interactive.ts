@@ -40,8 +40,10 @@ export async function runInteractiveCommand(
   await sessionRunner({
     agentClass,
     debug: resolvedOptions.debug,
+    executionPolicy: resolvedOptions.executionPolicy,
     initialModel: resolvedOptions.model,
     initialProvider: resolvedOptions.provider,
+    journalLevel: resolvedOptions.journalLevel,
     settings: resolvedOptions.settings,
     systemPrompt,
   })

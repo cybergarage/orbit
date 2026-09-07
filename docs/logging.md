@@ -167,3 +167,14 @@ permissions are supported.
 to its agent factory. `OrbitApplicationService` owns a file store by default
 and exposes `getSessionLogs()`, `subscribeLogs()`, and `getLogHealth()` for
 GUI integrations.
+
+## Required execution evidence
+
+Optional diagnostic/log writes do not authorize execution. Managed Agent runs
+use a separate [execution journal](execution.md#recording-and-recovery) with
+acknowledged admission, intent, result and terminal barriers. A failed observer
+cannot turn required recording into success; `RunResult.recording` reports
+required-store failure separately from known effects. Custom logger exceptions
+are isolated and counted by `Agent.getObserverFailureCount()`. Borrowed log stores
+remain caller-owned. Session deletion includes journal/key and a retained minimal
+marker in addition to the transcript and optional log partition.

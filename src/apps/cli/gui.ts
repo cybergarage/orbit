@@ -14,6 +14,10 @@ export async function runGuiCommand(options: AgentOptions & {port?: number; vers
   const resolved = await resolveWorkspaceAgentOptions(options, cwd)
   const service = await OrbitApplicationService.create({
     cwd,
+    execution: {
+      journalLevel: resolved.journalLevel,
+      policy: {generation: 'product-v1', profile: resolved.executionPolicy ?? 'workspace-confirm', roots: [cwd]},
+    },
     logLevel: resolved.debug ? 'debug' : 'info',
     model: resolved.model,
     provider: resolved.provider,

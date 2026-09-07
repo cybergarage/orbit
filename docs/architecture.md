@@ -46,19 +46,24 @@ CLI exec / interactive       Local GUI
 `Agent` in `src/core/agent.ts` is the current orchestration boundary. One
 invocation performs the following sequence:
 
-1. Record turn context, append new messages, and emit a turn-start event.
-2. Load MCP tools and combine built-in, custom, turn-scoped, and MCP tool
-   definitions into an immutable tool snapshot.
-3. Build model context from the session and invoke the configured model.
-4. Append and emit the assistant response.
-5. Return when the response has no tool calls.
-6. Otherwise validate and execute tool calls, append their results, and repeat
-   the model step within the configured iteration limit.
-7. Flush the terminal session state on completion, cancellation, or failure.
+1. `RunSupervisor` deduplicates submitted input and acknowledges admission in
+   the required execution journal before starting execution resources.
+2. Under the admitted run, authorize MCP startup, discover and validate the
+   catalog, freeze tool definitions, and acknowledge ready before a model call.
+3. Agent records turn context and messages, builds session context, invokes the
+   model, and records its response.
+4. Parse each tool call, prepare its immutable operation, decide policy, obtain
+   any single-operation approval, and acknowledge intent before dispatch.
+5. Record known tool outcomes and repeat within the shared finite budget.
+6. Settle owned work and cleanup, synchronize the transcript, and acknowledge
+   one terminal journal summary. Return an immutable `RunResult`; uncertainty
+   produces `incomplete` and retains affected resources for reconciliation.
 
-Model iterations are sequential because each request depends on the previous
-tool results. Within one iteration, `ToolRuntime` can batch tools marked for
-parallel scheduling; serial tools act as barriers.
+`src/core/execution/` owns lifecycle, authorization, required storage and
+recovery. ThreadManager and application surfaces project its snapshots. Model
+iterations are sequential. Managed read/list/grep/glob calls may be batched;
+mutations, custom tools and MCP calls are serial barriers. See
+[Managed Execution](execution.md) for public APIs, ownership and migration.
 
 This is a fixed, bounded model/tool loop. The runtime does not currently
 interpret a general execution graph or change its topology between turns.
@@ -108,11 +113,12 @@ graph version.
 context, turn terminal events, and session metadata. `SessionContextBuilder`
 derives model input from those durable records.
 
-`SessionRepository` creates, opens, lists, and deletes append-only session
-files. `SessionRecorder` serializes writes and uses process-aware lock files to
+`SessionRepository` creates, opens and lists append-only session files.
+`SessionDeletionService` removes managed artifacts using a retained deletion marker. `SessionRecorder` serializes writes and uses process-aware lock files to
 prevent concurrent writers. Session records are distinct from structured
-runtime logs; the former reconstruct model context and user history, while the
-latter support diagnostics and observability.
+runtime logs and required execution journals: transcripts reconstruct history,
+optional logs support diagnostics, and journals preserve admission and operation
+evidence. The journal delegates the existing SessionRecorder writer lease.
 
 ## Configuration and context
 
@@ -126,8 +132,9 @@ remain configuration inputs rather than persisted session content.
 Agent, model, tool, turn, and thread boundaries emit structured events.
 Session-scoped logs retain correlation identifiers for application, session,
 thread, run, turn, and iteration where applicable. Abort signals propagate
-through threads, model calls, and tool execution; terminal state is flushed
-before a run settles.
+through the shared supervisor, model calls and tool execution. A bounded result
+does not imply that noncooperative work stopped. Required recording failure is
+reported independently from the known execution outcome; observers are optional.
 
 The GUI boundary is loopback-only and requires a startup capability token for
 assets, APIs, and event streams. Origin checks, request limits, and schema

@@ -80,7 +80,7 @@ stderr, preserves their arrival order in model-visible output, reports the exit
 code, and kills the process tree when a call is cancelled or times out. A
 non-zero exit code is a completed command result; a timeout is a tool error.
 
-On Unix, Orbit prefers `/bin/bash`, then Bash on `PATH`, and finally `sh`. On
+On Unix, Orbit resolves Bash without starting a discovery process; `sh` is not a fallback. On
 Windows, it uses `ORBIT_BASH_PATH`, Git Bash, or `bash.exe` on `PATH`.
 
 ### `read`
@@ -174,17 +174,21 @@ creation defaults to true.
 
 ## Access model
 
-The coding tools currently have full host access:
+Managed Agent calls use the `workspace-confirm` policy by default. Reads inside
+configured roots are allowed, edits/commands/MCP operations ask the application
+responder, and paths outside the roots are denied. No responder means denial.
+Tool selection and operation permission are separate: enabling `coding` does
+not approve its writes. An application owner can explicitly select `unrestricted`;
+finite limits and required recording still apply.
 
-- relative paths resolve against the agent working directory;
-- absolute paths and paths outside that directory are accepted;
-- Bash inherits the Orbit process environment and network access;
-- Orbit does not apply a sandbox, command approval, path allowlist, or network
-  policy.
-
-Run Orbit only in an environment where model-directed file and command access
-is acceptable. Cancellation, timeouts, output limits, ignore rules, and process
-cleanup are resource-management behavior, not security boundaries.
+Prepared operations bind parsed input, canonical targets, preimages, environment,
+source identity and policy. After intent storage, core rechecks targets and
+permission before registering and starting the executor. Glob traversal and
+symlink following are restricted. These checks provide no OS sandbox: an
+approved Bash/MCP/custom operation has its process's host access, and external
+filesystem races or detached descendants require operating-system isolation.
+Direct low-level tool invocation also bypasses the managed Agent contract.
+See [Managed Execution](execution.md) for approval and migration details.
 
 ## Custom and MCP tools
 
@@ -195,12 +199,13 @@ such as `filesystem__read_file`.
 
 Every active tool name must be unique. Orbit fails registration when a built-in,
 custom, turn-scoped, or MCP tool collides instead of choosing one by array
-order. Custom and MCP tools are serial unless their definition explicitly
-declares parallel scheduling.
+order. Managed custom and MCP operations are serial, including definitions
+that previously requested parallel scheduling.
 
 Tool execution returns normalized text or image content, optional details, and
-an error marker. Validation failures, unknown names, and thrown errors become
-tool-result messages so the model can recover within the same turn. OpenAI Chat
+an error marker. Invalid calls and denied operations become tool-result
+messages. Arbitrary executor rejection can leave effects unknown; the run stops
+and quarantines resources rather than treating that rejection as proof of no effect. OpenAI Chat
 Completions and Ollama do not expose a native tool-error field, so Orbit adds a
 model-visible `Tool error:` marker when projecting failed results to those
 providers. Non-zero Bash exits include their exit status in model-visible
@@ -214,3 +219,18 @@ results. Rich tool-result capability negotiation remains future work.
 Tools may also emit partial updates before returning their final result. Agent
 and thread consumers receive these as `tool-updated` events. Updates are not
 persisted as conversation messages and are not sent back to the model.
+
+## Managed MCP schema support
+
+Managed discovery validates inputs locally before requesting operation approval.
+The initial subset accepts types, properties, required/additional properties,
+items, enum/const, anyOf/oneOf/allOf, string length/pattern and numeric/array
+bounds, plus the descriptive keywords listed in `validateSchemaKeywords` in
+`src/core/mcp.ts`. Unsupported vocabulary (including references) fails startup;
+Orbit does not silently ignore unknown constraints. All enabled sources are
+required for ready. Startup uses the same run budget and requires authorization
+before opening a stdio client. The discovered catalog stays fixed for that run.
+
+Custom definitions need a trusted `prepare` implementation returning the actual
+executor, bound effects/targets, preview and revalidation. The legacy adapter
+requires both `unrestricted` and `allowLegacyTools: true`; its effects are opaque.

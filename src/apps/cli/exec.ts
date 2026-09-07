@@ -10,6 +10,7 @@ import {loadSystemContexts} from '../../core/context.js'
 import {Agent, Message, MessageType, Role, ToolProfile} from '../../core/index.js'
 import {selectOllamaModel} from '../../core/models/adapters/ollama.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
+import {confirmOperation} from '../approval.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
 
 type AgentClass = new (options?: ConstructorParameters<typeof Agent>[0]) => Agent
@@ -47,9 +48,25 @@ export async function runExecCommand(
   )
 
   const AgentClass = deps.agentClass ?? Agent
+  const controller = new AbortController()
+  const stop = () => controller.abort('user')
   const agent = new AgentClass({
     cwd,
     defaultToolProfile: ToolProfile.Coding,
+    execution: {
+      journalLevel: resolvedOptions.journalLevel,
+      async onApproval(request) {
+        const approve = await confirmOperation(request, controller.signal)
+        await agent.replyApproval(request.runId, {
+          approve,
+          digest: request.digest,
+          requestId: request.id,
+          responderScope: 'local-cli',
+        })
+      },
+      policy: {generation: 'product-v1', profile: resolvedOptions.executionPolicy ?? 'workspace-confirm', roots: [cwd]},
+      responderScope: 'local-cli',
+    },
     messages: systemMessages,
     model: {
       name: resolvedOptions.model,
@@ -59,11 +76,16 @@ export async function runExecCommand(
   })
   agent.logger.setDebugEnabled(resolvedOptions.debug === true)
   const userMessages: Message[] = [new Message(MessageType.User, {content: prompt, role: Role.User})]
+  process.on('SIGINT', stop)
   try {
-    const response = await agent.invoke(userMessages)
+    const response = await agent.invoke(userMessages, {signal: controller.signal})
     return response.content
   } finally {
-    await agent.close()
+    try {
+      await agent.close()
+    } finally {
+      process.removeListener('SIGINT', stop)
+    }
   }
 }
 

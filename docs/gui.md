@@ -43,10 +43,10 @@ application API.
 
 Right-click a Recent session and choose **Delete session…** to permanently
 remove it after confirmation. Deleting the selected session clears the
-conversation and log pane. If its run is active, Orbit cancels the run and
-closes the agent and recorder. Orbit deletes the session log partition before
-unlinking the JSONL transcript, so a log cleanup failure leaves the transcript
-available for retry. This operation is not an archive and cannot be undone.
+conversation and log pane. Active or quarantined sessions cannot be deleted. Orbit acknowledges a minimal
+deletion marker, removes logs, transcript and journal/key, then retains a
+completed marker to prevent reuse of the session ID. Partial deletion can be
+retried. See [Managed Execution](execution.md#recording-and-recovery).
 
 The same context menu provides **Copy session ID** and **Session details…**.
 The selected conversation's top-bar **Session actions** button exposes the same
@@ -154,5 +154,15 @@ remote-access or multi-user mode.
 The initial GUI provides session browsing, identity copying, diagnostic detail
 inspection, deletion, completed-message rendering, prompt submission,
 cancellation, tool detail cards, response metadata, and selected-session logs.
-Project/worktree management, diff review, terminal panes, approvals, attachments,
+Project/worktree management, diff review, terminal panes, attachments,
 and token-delta streaming are follow-up features rather than part of this release.
+
+## Operation confirmation
+
+Each pending operation displays its bound preview and Approve/Deny controls.
+Replies use the startup capability and the pending request ID/digest. Repeating
+the same decision is idempotent; an opposite, stale or wrong-run decision fails.
+The composer retains a request ID across uncertain HTTP replies and refreshes
+snapshots on reconnect. Run banners distinguish completed, cancelled, failed,
+budget-exceeded and incomplete results, including recording failure. Stop asks
+core to stop; it does not announce that external work has terminated.

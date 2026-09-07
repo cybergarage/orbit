@@ -12,6 +12,7 @@ import type {SessionHeaderEntry, SessionMetadata} from './entries.js'
 import type {SessionInformation} from './information.js'
 
 import {sessionsDir} from '../app.js'
+import {deletionMarker} from '../execution/deletion.js'
 import {Message} from '../message/index.js'
 import {encodeSessionEntry, parseSessionFile} from './codec.js'
 import {SESSION_FORMAT_VERSION, SessionEntryType} from './entries.js'
@@ -31,6 +32,7 @@ export interface CreateSessionOptions {
 }
 
 export interface SessionRepositoryOptions {
+  journalRoot?: string
   rootDir?: string
 }
 
@@ -60,15 +62,23 @@ export interface SessionListResult {
 }
 
 export class SessionRepository {
+  public readonly journalRoot: string
   public readonly rootDir: string
 
   constructor(options: SessionRepositoryOptions = {}) {
     this.rootDir = path.resolve(options.rootDir ?? sessionsDir())
+    this.journalRoot = path.resolve(
+      options.journalRoot ??
+        (options.rootDir === undefined
+          ? path.join(path.dirname(this.rootDir), 'runs')
+          : path.join(this.rootDir, '.runs')),
+    )
   }
 
   create(options: CreateSessionOptions = {}): Session {
     const createdAt = new Date(options.createdAt ?? Date.now()).toISOString()
     const id = options.id ?? uuidv7()
+    this.assertNotDeleted(id)
     const rootMessageId = uuidv7()
     const file = sessionFilePath(this.rootDir, id, createdAt)
     const header: SessionHeaderEntry = {
@@ -84,11 +94,17 @@ export class SessionRepository {
       version: SESSION_FORMAT_VERSION,
     }
     const recorder = SessionRecorder.create(file, header)
-    return new Session({metadata: metadataFromHeader(header, file), recorder})
+    return new Session({
+      journalRoot: this.journalRoot,
+      metadata: metadataFromHeader(header, file),
+      recorder,
+    })
   }
 
   async delete(sessionId: string): Promise<SessionSummary | undefined> {
     const summary = await this.findById(sessionId)
+    if (fs.existsSync(path.join(this.journalRoot, sessionId)))
+      throw new Error('Managed sessions must be deleted with SessionDeletionService')
     if (summary === undefined) return
     let guard: SessionRecorder
     try {
@@ -147,7 +163,7 @@ export class SessionRepository {
 
   list(): SessionSummary[] {
     if (!fs.existsSync(this.rootDir)) return []
-    return findSessionFiles(this.rootDir)
+    return findSessionFiles(this.rootDir, this.journalRoot)
       .map((file) => this.readSummary(file))
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
   }
@@ -166,7 +182,7 @@ export class SessionRepository {
       throw error
     }
 
-    const files = await findSessionFilesAsync(this.rootDir)
+    const files = await findSessionFilesAsync(this.rootDir, this.journalRoot)
     const errors: SessionListError[] = []
     const summaries = (
       await Promise.all(
@@ -196,6 +212,7 @@ export class SessionRepository {
     let parsed: ReturnType<typeof parseSessionFile> | undefined
     const recorder = SessionRecorder.open(resolvedFile, () => {
       parsed = parseSessionFile(fs.readFileSync(resolvedFile, 'utf8'), resolvedFile)
+      this.assertNotDeleted(parsed.header.id)
       if (parsed.recovered) {
         fs.writeFileSync(resolvedFile, parsed.entries.map((entry) => encodeSessionEntry(entry)).join(''), {mode: 0o600})
       }
@@ -217,6 +234,7 @@ export class SessionRepository {
       )
     return new Session({
       entries: parsed.entries.slice(1),
+      journalRoot: this.journalRoot,
       messages,
       metadata: metadataFromHeader(parsed.header, resolvedFile),
       recorder,
@@ -227,6 +245,11 @@ export class SessionRepository {
     const resolvedFile = path.resolve(file)
     const parsed = parseSessionFile(fs.readFileSync(resolvedFile, 'utf8'), resolvedFile)
     return summaryFromParsed(parsed, resolvedFile)
+  }
+
+  private assertNotDeleted(id: string): void {
+    if (fs.existsSync(deletionMarker(this.journalRoot, id)))
+      throw new Error('Session deletion is recorded; create a new session')
   }
 }
 
@@ -259,23 +282,23 @@ function metadataFromHeader(header: SessionHeaderEntry, file: string): SessionMe
   }
 }
 
-function findSessionFiles(rootDir: string): string[] {
+function findSessionFiles(rootDir: string, excluded: string): string[] {
   const files: string[] = []
   for (const entry of fs.readdirSync(rootDir, {withFileTypes: true})) {
     const item = path.join(rootDir, entry.name)
-    if (entry.isDirectory()) files.push(...findSessionFiles(item))
+    if (entry.isDirectory() && item !== excluded) files.push(...findSessionFiles(item, excluded))
     if (entry.isFile() && entry.name.endsWith('.jsonl')) files.push(item)
   }
 
   return files
 }
 
-async function findSessionFilesAsync(rootDir: string): Promise<string[]> {
+async function findSessionFilesAsync(rootDir: string, excluded: string): Promise<string[]> {
   const entries = await fsPromises.readdir(rootDir, {withFileTypes: true})
   const nestedFiles = await Promise.all(
     entries.map(async (entry) => {
       const item = path.join(rootDir, entry.name)
-      if (entry.isDirectory()) return findSessionFilesAsync(item)
+      if (entry.isDirectory()) return item === excluded ? [] : findSessionFilesAsync(item, excluded)
       return entry.isFile() && entry.name.endsWith('.jsonl') ? [item] : []
     }),
   )

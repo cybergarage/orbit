@@ -3,6 +3,8 @@
 
 import {z} from 'zod'
 
+import type {OperationPreparation} from '../execution/authorization.js'
+
 export type JsonSchema = Record<string, unknown>
 
 export interface ModelToolSpec {
@@ -33,11 +35,12 @@ export interface ToolExecutionContext extends Record<string, unknown> {
 
 export type ToolScheduling = 'parallel' | 'serial'
 
-export type ToolSource = {id: string; kind: 'custom'} | {kind: 'builtin'} | {kind: 'mcp'; server: string}
+export type ToolSource = {id: string; kind: 'custom'} | {kind: 'builtin'} | {kind: 'mcp'; server: string; tool?: string}
 
 export interface ToolDefinition<Input = unknown, Details = unknown> {
   execute(input: Input, context: ToolExecutionContext): Promise<ToolResult<Details>>
   input: ToolInputCodec<Input>
+  prepare?(input: Input, context: ToolExecutionContext): Promise<OperationPreparation>
   scheduling: ToolScheduling
   source: ToolSource
   spec: ModelToolSpec

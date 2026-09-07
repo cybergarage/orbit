@@ -35,7 +35,7 @@ export function createEditTool() {
 
         const updated = input.replaceAll
           ? content.split(input.oldText).join(input.newText)
-          : content.replace(input.oldText, input.newText)
+          : content.replace(input.oldText, () => input.newText)
         if (updated === content) throw new Error(`Edit did not change ${input.path}`)
         await atomicWrite(file, updated)
         const replacements = input.replaceAll ? matches : 1

@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {Box, render, Text, useApp, useInput} from 'ink'
-import {useState} from 'react'
+import process from 'node:process'
+import {useRef, useState} from 'react'
 
+import type {ApprovalRequest} from './execution/run.js'
 import type {Logger} from './logger/index.js'
 import type {SessionRepository} from './session/index.js'
 import type {WorkspaceSettings} from './settings.js'
 
+import {RunExecutionError} from './execution/run.js'
 import {FileSessionLogStore, StoreSessionLoggerFactory} from './logs/index.js'
 import {Agent, type AgentOptions, isProvider, Message, MessageType, type ProviderName, Role} from './models/index.js'
 import {
@@ -23,9 +26,12 @@ export interface InteractiveSessionOptions {
   agentClass: InteractiveAgentClass
   cwd?: string
   debug?: boolean
+  executionPolicy?: 'unrestricted' | 'workspace-confirm'
   initialModel: string
   initialProvider: ProviderName
+  journalLevel?: 'file-and-directory-sync' | 'file-sync'
   logger?: Logger
+  onAgentCreated?: (agent: Agent) => void
   session?: Session
   sessionRepository?: SessionRepository
   settings?: WorkspaceSettings
@@ -39,8 +45,10 @@ export interface InteractiveAgentClass {
 export interface InteractiveState {
   conversationMessages: Message[]
   cwd?: string
+  executionPolicy?: 'unrestricted' | 'workspace-confirm'
   input: string
   isLoading: boolean
+  journalLevel?: 'file-and-directory-sync' | 'file-sync'
   logger?: Logger
   messages: Message[]
   model: string
@@ -74,7 +82,18 @@ export const slashCommandHelpMessage = [
 ].join('\n')
 
 export function createInitialInteractiveState(
-  options: Pick<InteractiveState, 'cwd' | 'logger' | 'model' | 'provider' | 'session' | 'settings' | 'systemPrompt'>,
+  options: Pick<
+    InteractiveState,
+    | 'cwd'
+    | 'executionPolicy'
+    | 'journalLevel'
+    | 'logger'
+    | 'model'
+    | 'provider'
+    | 'session'
+    | 'settings'
+    | 'systemPrompt'
+  >,
 ): InteractiveState {
   const conversationMessages = options.session?.getConversationMessages() ?? []
   return {
@@ -117,6 +136,14 @@ export async function submitInteractiveInput(
   const agent = new AgentClass({
     cwd: state.cwd,
     defaultToolProfile: ToolProfile.Coding,
+    execution: {
+      journalLevel: state.journalLevel,
+      policy: {
+        generation: 'product-v1',
+        profile: state.executionPolicy ?? 'workspace-confirm',
+        roots: [state.cwd ?? process.cwd()],
+      },
+    },
     logger: state.logger,
     messages: systemMessages,
     model: {
@@ -277,17 +304,25 @@ function parseProvider(value: string): ProviderName | undefined {
 function InteractiveApp({
   agentClass: AgentClass,
   cwd,
+  executionPolicy,
   initialModel,
   initialProvider,
+  journalLevel,
   logger,
+  onAgentCreated,
   session,
   settings,
   systemPrompt,
 }: InteractiveSessionOptions) {
   const {exit} = useApp()
+  const active = useRef<undefined | {agent: Agent; controller: AbortController}>(undefined)
+  const [approval, setApproval] = useState<ApprovalRequest | undefined>()
+  const [blocked, setBlocked] = useState(false)
   const [state, setState] = useState<InteractiveState>(() =>
     createInitialInteractiveState({
       cwd,
+      executionPolicy,
+      journalLevel,
       logger,
       model: initialModel,
       provider: initialProvider,
@@ -299,13 +334,38 @@ function InteractiveApp({
 
   useInput((value, key) => {
     if (key.ctrl && value === 'c') {
-      exit()
+      if (active.current) {
+        active.current.controller.abort('user')
+        setApproval(undefined)
+      } else exit()
+      return
+    }
+
+    if (approval) {
+      if (value.toLowerCase() === 'y' || value.toLowerCase() === 'n') {
+        const request = approval
+        setApproval(undefined)
+        active.current?.agent
+          .replyApproval(request.runId, {
+            approve: value.toLowerCase() === 'y',
+            digest: request.digest,
+            requestId: request.id,
+            responderScope: 'local-interactive',
+          })
+          .catch((error) =>
+            setState((current) => ({
+              ...current,
+              messages: [...current.messages, new Message(MessageType.Assistant, {content: String(error)})],
+            })),
+          )
+      }
+
       return
     }
 
     if (key.return) {
       const nextInput = state.input.trim()
-      if (!nextInput || state.isLoading) return
+      if (!nextInput || state.isLoading || blocked) return
       if (nextInput.startsWith('/')) state.logger?.info({command: nextInput}, 'interactive command submitted')
       if (nextInput === '/exit') {
         exit()
@@ -336,9 +396,22 @@ function InteractiveApp({
         messages: nextMessages,
       })
 
+      const controller = new AbortController()
       const agent = new AgentClass({
         cwd: state.cwd,
         defaultToolProfile: ToolProfile.Coding,
+        execution: {
+          journalLevel: state.journalLevel,
+          onApproval(request) {
+            setApproval(request)
+          },
+          policy: {
+            generation: 'product-v1',
+            profile: state.executionPolicy ?? 'workspace-confirm',
+            roots: [state.cwd ?? process.cwd()],
+          },
+          responderScope: 'local-interactive',
+        },
         logger: state.logger,
         messages: systemMessages,
         model: {
@@ -349,26 +422,51 @@ function InteractiveApp({
         state: new State(session),
       })
 
+      active.current = {agent, controller}
+      onAgentCreated?.(agent)
       agent
-        .invoke([userMessage])
+        .invoke([userMessage], {
+          onRunSnapshot: (snapshot) => setApproval(snapshot.approvals[0]),
+          signal: controller.signal,
+        })
         .then((reply) => {
           setState((currentState) => ({
             ...currentState,
             conversationMessages: [...currentState.conversationMessages, nextMessages.at(-1) as Message, reply],
-            isLoading: false,
+            isLoading: true,
             messages: [...nextMessages, reply],
           }))
         })
         .catch((error: unknown) => {
-          const message = error instanceof Error ? error.message : 'Interactive request failed.'
+          if (error instanceof RunExecutionError && !error.result.quiescence) setBlocked(true)
+          const message =
+            error instanceof RunExecutionError
+              ? `${error.result.outcome}; recording=${error.result.recording.status}; ${error.message}`
+              : error instanceof Error
+                ? error.message
+                : 'Interactive request failed.'
           setState((currentState) => ({
             ...currentState,
             conversationMessages: [...currentState.conversationMessages, nextMessages.at(-1) as Message],
-            isLoading: false,
+            isLoading: true,
             messages: [...nextMessages, new Message(MessageType.Assistant, {content: message})],
           }))
         })
-        .finally(() => agent.close().catch(() => {}))
+        .finally(async () => {
+          try {
+            await agent.close()
+          } catch (error) {
+            setBlocked(true)
+            setState((current) => ({
+              ...current,
+              messages: [...current.messages, new Message(MessageType.Assistant, {content: String(error)})],
+            }))
+          } finally {
+            active.current = undefined
+            setApproval(undefined)
+            setState((current) => ({...current, isLoading: false}))
+          }
+        })
       return
     }
 
@@ -384,6 +482,15 @@ function InteractiveApp({
   return (
     <Box flexDirection="column">
       <Text>Interactive mode. Press Ctrl+C or type /exit to leave.</Text>
+      {approval ? (
+        <Text color="yellow">
+          {JSON.stringify(approval.preview, null, 2)}
+          {'\n'}Approve once? [y/n] Expires {new Date(approval.expiresAt).toISOString()}
+        </Text>
+      ) : null}
+      {blocked ? (
+        <Text color="red">Execution resources remain quarantined. Query the run before reusing this session.</Text>
+      ) : null}
       <Text dimColor>Current model: {formatProviderModel(state.provider, state.model)}</Text>
       <Box flexDirection="column" marginTop={1}>
         {state.messages.length === 0 ? <Text dimColor>No messages yet.</Text> : null}
@@ -431,12 +538,23 @@ export async function runInteractiveSession(options: InteractiveSessionOptions):
   }
 
   if (options.debug !== undefined) logger.setDebugEnabled(options.debug)
+  const agents = new Set<Agent>()
   const app = render(
-    <InteractiveApp {...options} logger={logger} session={session} systemPrompt={effectiveSystemPrompt} />,
+    <InteractiveApp
+      {...options}
+      logger={logger}
+      onAgentCreated={(agent) => {
+        agents.add(agent)
+      }}
+      session={session}
+      systemPrompt={effectiveSystemPrompt}
+    />,
+    {exitOnCtrlC: false},
   )
   try {
     await app.waitUntilExit()
   } finally {
+    await Promise.all([...agents].map((agent) => agent.close()))
     if (options.session === undefined) await session.close()
     await ownedLogStore?.close()
   }

@@ -9,7 +9,8 @@ import {z} from 'zod'
 
 import type {DiagnosticEvent, LogRecord, OrbitApplicationService} from '../../core/index.js'
 
-import {DiagnosticCapture} from '../../core/index.js'
+import {ExecutionRequestError} from '../../core/execution/run.js'
+import {DiagnosticCapture, InvalidInputError} from '../../core/index.js'
 
 export interface GuiServerOptions {
   clientBundle?: string
@@ -105,19 +106,52 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
     if (thread === undefined) return response.status(404).json({error: 'Thread not found.'})
     return response.json(thread)
   })
-  app.post('/api/threads/:threadId/messages', (request, response) => {
+  app.post('/api/threads/:threadId/messages', async (request, response) => {
     const {content} = messageSchema.parse(request.body)
-    response.status(202).json(options.service.startRun(request.params.threadId, content))
+    const requestId = content.startsWith('/')
+      ? undefined
+      : z
+          .string()
+          .regex(/^[A-Za-z0-9_-]{1,160}$/u)
+          .parse(request.body.requestId)
+    response.status(202).json(await options.service.startRun(request.params.threadId, content, requestId))
+  })
+  app.get('/api/runs/:runId', async (request, response) => {
+    const snapshot = await options.service.queryRun(request.params.runId)
+    if (!snapshot) {
+      response.status(404).json({error: 'Unknown run'})
+      return
+    }
+
+    response.json(snapshot)
+  })
+  app.post('/api/runs/:runId/approvals', async (request, response) => {
+    const reply = z
+      .object({approve: z.boolean(), digest: z.string().length(64), requestId: z.string().min(1).max(160)})
+      .strict()
+      .parse(request.body)
+    response.json({status: await options.service.replyApproval(request.params.runId, reply)})
   })
   app.post('/api/runs/:runId/cancel', (request, response) => {
     const cancelled = options.service.cancelRun(request.params.runId)
-    response.status(cancelled ? 202 : 404).json({cancelled})
+    const snapshot = options.service.getRun(request.params.runId)
+    response
+      .status(cancelled ? 202 : snapshot ? 200 : 404)
+      .json({cancelled, status: cancelled ? 'requested' : snapshot?.result ? 'already-terminal' : 'unknown'})
   })
   app.get('/api/events', (request, response) => streamEvents(request, response, options.service))
 
   app.use(((error: unknown, _request: Request, response: Response, _next: NextFunction) => {
     const message = error instanceof Error ? error.message : 'Unexpected server error.'
-    response.status(error instanceof z.ZodError ? 400 : 500).json({error: message})
+    response
+      .status(
+        error instanceof z.ZodError
+          ? 400
+          : error instanceof ExecutionRequestError || error instanceof InvalidInputError
+            ? 409
+            : 500,
+      )
+      .json({error: message})
   }) satisfies ErrorRequestHandler)
 
   const server = createServer(app)
@@ -146,11 +180,15 @@ function streamEvents(request: Request, response: Response, service: OrbitApplic
   const lastEventId = Number(request.get('last-event-id') ?? request.query.after ?? 0)
   const afterSequence = Number.isSafeInteger(lastEventId) && lastEventId >= 0 ? lastEventId : 0
   for (const event of service.getEvents(afterSequence)) writeEvent(response, event)
+  const unsubscribeRuns = service.subscribeRunSnapshots((snapshot) =>
+    response.write(`event: run-snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`),
+  )
   const unsubscribeDiagnostics = service.subscribe((event) => writeEvent(response, event))
   const unsubscribeLogs = service.subscribeLogs((record) => writeLogRecord(response, record))
   const heartbeat = setInterval(() => response.write(': heartbeat\n\n'), 15_000)
   request.once('close', () => {
     clearInterval(heartbeat)
+    unsubscribeRuns()
     unsubscribeDiagnostics()
     unsubscribeLogs()
   })

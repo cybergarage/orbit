@@ -24,19 +24,20 @@ over execution.
 
 ## Current Orbit Implementation
 
-`Agent.invoke()` owns the current turn lifecycle. It records turn metadata,
-builds context from the session, creates a tool snapshot, invokes the selected
-model, executes tool calls, and repeats until the model returns no tool calls
-or the maximum number of tool iterations is exceeded.
+`Agent.startRun()` and `Agent.invoke()` share `RunSupervisor`, which owns
+admission, finite budgets, cancellation, started work, cleanup and one terminal
+result. Agent owns the model/tool loop. The supervisor acknowledges required
+journal records before admission and dispatch; operation preparation and policy
+bind each single-use permission to the actual call.
 
-`ThreadManager` gives applications a run identifier, cancellation, lifecycle
-events, and one active run per managed thread. `Session` and
-`SessionContextBuilder` provide the durable source for later model requests.
-Structured diagnostics and logs observe model, tool, turn, and thread
-boundaries.
+`ThreadManager` and the application service project the same run snapshots.
+Session history supplies model context; optional diagnostics observe the work.
+The required execution journal has a separate storage and failure contract.
+An `incomplete` result preserves unknown effects and ownership; requesting stop
+does not establish quiescence. A completed turn may report a failed target test.
+See [Managed Execution](../execution.md) for the current API and limits.
 
-This orchestration is implemented directly in `Agent`; it is not currently a
-data-driven Processor Graph.
+This is a fixed Agent loop, not a data-driven Processor Graph.
 
 ## Directional Model
 

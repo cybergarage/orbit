@@ -4,6 +4,8 @@
 import type {ModelToolCall} from '../models/model.js'
 import type {ToolDefinition, ToolExecutionContext, ToolResult} from './definition.js'
 
+import {copyJSON} from '../execution/journal.js'
+
 const TOOL_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/u
 
 export interface ToolExecutionResult {
@@ -27,7 +29,14 @@ export class ToolRegistry {
       )
     }
 
-    this.definitions.set(name, definition)
+    this.definitions.set(name, {
+      ...definition,
+      execute: definition.execute.bind(definition),
+      input: {jsonSchema: copyJSON(definition.input.jsonSchema), parse: definition.input.parse.bind(definition.input)},
+      source: copyJSON(definition.source),
+      spec: copyJSON(definition.spec),
+      ...(definition.prepare ? {prepare: definition.prepare.bind(definition)} : {}),
+    })
   }
 
   snapshot(): ToolSnapshot {
@@ -47,12 +56,20 @@ export class ToolSnapshot {
   }
 
   specs() {
-    return [...this.definitions.values()].map((definition) => definition.spec)
+    return [...this.definitions.values()].map((definition) => copyJSON(definition.spec))
   }
 }
 
 export class ToolRuntime {
-  constructor(private readonly snapshot: ToolSnapshot) {}
+  constructor(
+    private readonly snapshot: ToolSnapshot,
+    private readonly managedExecute?: (
+      definition: ToolDefinition,
+      input: unknown,
+      context: ToolExecutionContext,
+    ) => Promise<ToolResult>,
+    private readonly onInvalid?: (toolCall: ModelToolCall) => Promise<void>,
+  ) {}
 
   async executeAll(
     toolCalls: ModelToolCall[],
@@ -65,14 +82,18 @@ export class ToolRuntime {
     const flushParallel = async () => {
       if (parallelBatch.length === 0) return
       results.push(
-        ...(await Promise.all(parallelBatch.map((toolCall) => this.executeOne(toolCall, createContext, onExecute)))),
+        ...(await settleBatch(parallelBatch.map((toolCall) => this.executeOne(toolCall, createContext, onExecute)))),
       )
       parallelBatch = []
     }
 
     for (const toolCall of toolCalls) {
       const definition = this.snapshot.get(toolCall.name)
-      if (definition?.scheduling === 'parallel') {
+      if (
+        definition?.scheduling === 'parallel' &&
+        (!this.managedExecute ||
+          (definition.source.kind === 'builtin' && ['glob', 'grep', 'list', 'read'].includes(definition.spec.name)))
+      ) {
         parallelBatch.push(toolCall)
         continue
       }
@@ -96,6 +117,7 @@ export class ToolRuntime {
     const execute = async (): Promise<ToolExecutionResult> => {
       const definition = this.snapshot.get(toolCall.name)
       if (definition === undefined) {
+        await this.onInvalid?.(toolCall)
         return {
           result: {content: [{text: `Unknown tool: ${toolCall.name}`, type: 'text'}], isError: true},
           toolCall,
@@ -103,10 +125,14 @@ export class ToolRuntime {
       }
 
       try {
-        const input = definition.input.parse(toolCall.input)
-        const result = await definition.execute(input, createContext(toolCall))
+        const input = this.managedExecute ? toolCall.input : definition.input.parse(toolCall.input)
+        const context = createContext(toolCall)
+        const result = this.managedExecute
+          ? await this.managedExecute(definition, input, context)
+          : await definition.execute(input, context)
         return {result, toolCall}
       } catch (error) {
+        if (this.managedExecute && createContext(toolCall).signal.aborted) throw error
         return {
           result: {
             content: [{text: error instanceof Error ? error.message : String(error), type: 'text'}],
@@ -125,4 +151,11 @@ function formatSource(definition: ToolDefinition): string {
   if (definition.source.kind === 'builtin') return 'builtin'
   if (definition.source.kind === 'mcp') return `MCP server ${definition.source.server}`
   return `custom source ${definition.source.id}`
+}
+
+async function settleBatch(promises: Promise<ToolExecutionResult>[]): Promise<ToolExecutionResult[]> {
+  const settled = await Promise.allSettled(promises)
+  const failed = settled.find((result) => result.status === 'rejected')
+  if (failed?.status === 'rejected') throw failed.reason
+  return settled.map((result) => (result as PromiseFulfilledResult<ToolExecutionResult>).value)
 }

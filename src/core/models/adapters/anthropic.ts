@@ -29,7 +29,7 @@ export class AnthropicAgent implements Model {
     private readonly model: string,
     private readonly provider: Provider,
   ) {
-    this.client = new Anthropic(createAnthropicOptions(provider))
+    this.client = new Anthropic({...createAnthropicOptions(provider), maxRetries: 0})
   }
 
   getModel(): string {

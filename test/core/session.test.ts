@@ -353,7 +353,7 @@ describe('session persistence', () => {
       await failedAgent.invoke([new Message(MessageType.User, {content: 'fail'})])
       expect.fail('Expected the model invocation to fail.')
     } catch (error) {
-      expect((error as Error).message).to.equal('model failed')
+      expect((error as Error).message).to.contain('runtime-failed')
     }
 
     expect(
@@ -388,13 +388,13 @@ describe('session persistence', () => {
     }
 
     expect(modelCalls).to.equal(0)
-    expect(cancelledSession.getConversationMessages().map((message) => message.content)).to.deep.equal(['cancel'])
+    expect(cancelledSession.getConversationMessages().map((message) => message.content)).to.deep.equal([])
     expect(
       cancelledSession
         .getEntries()
         .filter((entry) => entry.type === SessionEntryType.TurnEvent)
         .map((entry) => entry.phase),
-    ).to.deep.equal([TurnPhase.Started, TurnPhase.Cancelled])
+    ).to.deep.equal([])
     await cancelledAgent.close()
     await cancelledSession.close()
   })

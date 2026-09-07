@@ -7,8 +7,10 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 
+import type {JournalLevel} from '../execution/journal.js'
 import type {SessionEntry, SessionHeaderEntry} from './entries.js'
 
+import {syncDirectories} from '../execution/journal.js'
 import {encodeSessionEntry} from './codec.js'
 
 const openSessionFiles = new Set<string>()
@@ -21,8 +23,11 @@ interface SessionLock {
 export class SessionRecorder {
   public readonly file: string
   private closed = false
+  private closePromise?: Promise<void>
   private readonly lock: SessionLock
+  private managedLease = false
   private queue: Promise<void> = Promise.resolve()
+  private releaseWaiter?: () => void
 
   private constructor(file: string, lock: SessionLock) {
     this.file = path.resolve(file)
@@ -63,24 +68,62 @@ export class SessionRecorder {
     }
   }
 
+  acquireManagedLease(): () => void {
+    if (this.closed || this.closePromise || this.managedLease) throw new Error('Session writer is busy or closed')
+    this.managedLease = true
+    let released = false
+    return () => {
+      if (released) return
+      released = true
+      this.managedLease = false
+      this.releaseWaiter?.()
+    }
+  }
+
   append(entry: SessionEntry): void {
     if (this.closed) throw new Error(`Session recorder is closed: ${this.file}`)
     const encoded = encodeSessionEntry(entry)
     this.queue = this.queue.then(() => fs.appendFile(this.file, encoded, {encoding: 'utf8'}))
+    this.queue.catch(() => {})
   }
 
-  async close(): Promise<void> {
-    if (this.closed) return
-    this.closed = true
-    try {
-      await this.queue
-    } finally {
-      releaseFile(this.file, this.lock)
-    }
+  close(): Promise<void> {
+    this.closePromise ??= (async () => {
+      if (this.managedLease)
+        await new Promise<void>((resolve) => {
+          this.releaseWaiter = resolve
+        })
+      this.closed = true
+      try {
+        await this.queue
+      } finally {
+        releaseFile(this.file, this.lock)
+      }
+    })()
+    return this.closePromise
   }
 
   async flush(): Promise<void> {
     await this.queue
+  }
+
+  hasManagedLease(): boolean {
+    return this.managedLease
+  }
+
+  synchronize(level: JournalLevel): Promise<void> {
+    this.queue = this.queue.then(async () => {
+      const handle = await fs.open(this.file, 'r+')
+      try {
+        await handle.sync()
+      } finally {
+        await handle.close()
+      }
+
+      if (level === 'file-and-directory-sync') await syncDirectories(path.dirname(this.file), level)
+    })
+    this.queue.catch(() => {})
+    return this.queue
   }
 }
 

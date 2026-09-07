@@ -53,13 +53,15 @@ Permanently delete a saved session
 
 ```
 USAGE
-  $ orbit delete SESSION [--force]
+  $ orbit delete SESSION [--force] [--journal-level file-and-directory-sync|file-sync]
 
 ARGUMENTS
   SESSION  ID of the saved session to delete
 
 FLAGS
-  --force  Delete without asking for confirmation
+  --force                   Delete without asking for confirmation
+  --journal-level=<option>  Persistent journal acknowledgement level; unsupported levels fail admission
+                            <options: file-and-directory-sync|file-sync>
 
 DESCRIPTION
   Permanently delete a saved session
@@ -78,7 +80,8 @@ Send a prompt to the agent and print the response
 
 ```
 USAGE
-  $ orbit exec [PROMPT] [--anthropic-api-key-env <value>] [--debug] [--lang en|ja] [--model <value>]
+  $ orbit exec [PROMPT] [--anthropic-api-key-env <value>] [--debug] [--execution-policy
+    workspace-confirm|unrestricted] [--journal-level file-and-directory-sync|file-sync] [--lang en|ja] [--model <value>]
     [--ollama-host <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai]
 
 ARGUMENTS
@@ -87,6 +90,10 @@ ARGUMENTS
 FLAGS
   --anthropic-api-key-env=<value>  Environment variable name for the Anthropic API key
   --debug                          Enable debug logging
+  --execution-policy=<option>      Operation policy; unrestricted still enforces budgets and recording
+                                   <options: workspace-confirm|unrestricted>
+  --journal-level=<option>         Persistent journal acknowledgement level; unsupported levels fail admission
+                                   <options: file-and-directory-sync|file-sync>
   --lang=<option>                  Output language
                                    <options: en|ja>
   --model=<value>                  Model name (overrides workspace setting and provider default)
@@ -112,12 +119,17 @@ Start the local Orbit graphical interface
 
 ```
 USAGE
-  $ orbit gui [--anthropic-api-key-env <value>] [--debug] [--lang en|ja] [--model <value>] [--ollama-host
-    <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai] [--port <value>]
+  $ orbit gui [--anthropic-api-key-env <value>] [--debug] [--execution-policy
+    workspace-confirm|unrestricted] [--journal-level file-and-directory-sync|file-sync] [--lang en|ja] [--model <value>]
+    [--ollama-host <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai] [--port <value>]
 
 FLAGS
   --anthropic-api-key-env=<value>  Environment variable name for the Anthropic API key
   --debug                          Enable debug logging
+  --execution-policy=<option>      Operation policy; unrestricted still enforces budgets and recording
+                                   <options: workspace-confirm|unrestricted>
+  --journal-level=<option>         Persistent journal acknowledgement level; unsupported levels fail admission
+                                   <options: file-and-directory-sync|file-sync>
   --lang=<option>                  Output language
                                    <options: en|ja>
   --model=<value>                  Model name (overrides workspace setting and provider default)
@@ -159,7 +171,8 @@ Resume a saved interactive session
 
 ```
 USAGE
-  $ orbit resume [SESSION] [--anthropic-api-key-env <value>] [--debug] [--lang en|ja] [--model <value>]
+  $ orbit resume [SESSION] [--anthropic-api-key-env <value>] [--debug] [--execution-policy
+    workspace-confirm|unrestricted] [--journal-level file-and-directory-sync|file-sync] [--lang en|ja] [--model <value>]
     [--ollama-host <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai] [--all] [--last]
 
 ARGUMENTS
@@ -169,6 +182,10 @@ FLAGS
   --all                            Search all working directories (requires --last)
   --anthropic-api-key-env=<value>  Environment variable name for the Anthropic API key
   --debug                          Enable debug logging
+  --execution-policy=<option>      Operation policy; unrestricted still enforces budgets and recording
+                                   <options: workspace-confirm|unrestricted>
+  --journal-level=<option>         Persistent journal acknowledgement level; unsupported levels fail admission
+                                   <options: file-and-directory-sync|file-sync>
   --lang=<option>                  Output language
                                    <options: en|ja>
   --last                           Resume the most recently updated eligible session

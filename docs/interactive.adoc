@@ -4,3 +4,17 @@
 |====
 include::data/interactive.csv[]
 |====
+
+== Managed operations
+
+The default workspace-confirm policy allows reads inside the workspace and asks
+before edits, commands and MCP operations.
+Use Y or N for the displayed single-operation request.
+Ctrl+C during a run requests stop; an incomplete result means cleanup or effects
+remain unconfirmed.
+The interface reports the run result and required recording failure.
+An application owner can select --execution-policy unrestricted explicitly;
+limits and required recording still apply.
+Persistent recording defaults to file-and-directory-sync; --journal-level
+file-sync explicitly selects weaker acknowledgement when needed.
+See link:execution.md[Managed Execution] for ownership and migration details.

@@ -83,7 +83,24 @@ destination. Orbit does not currently implement Router as a runtime primitive.
 ### Run
 
 One admitted execution with a run identifier, cancellation boundary, and
-terminal outcome. In the current thread API, a run invokes one agent turn.
+terminal outcome. The shared supervisor admits one Agent turn from CLI, GUI or
+library. Its immutable result separates execution, quiescence and recording.
+
+### Prepared operation
+
+An immutable description binding parsed input, targets, environment, source and
+policy to a trusted executor. A one-use approval authorizes that operation.
+
+### Execution journal
+
+Required, ordered admission, authorization, operation and terminal evidence. It
+is separate from the transcript and optional logs; missing outcome records
+never authorize replay. See [Managed Execution](../execution.md).
+
+### Quarantine
+
+Retained resource ownership after a bounded result while work or effects remain
+unconfirmed. Late evidence does not replace the original terminal result.
 
 ### Session
 

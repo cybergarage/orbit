@@ -16,6 +16,14 @@ export const agentFlags = {
     description: 'Enable debug logging',
     required: false,
   }),
+  'execution-policy': Flags.string({
+    description: 'Operation policy; unrestricted still enforces budgets and recording',
+    options: ['workspace-confirm', 'unrestricted'],
+  }),
+  'journal-level': Flags.string({
+    description: 'Persistent journal acknowledgement level; unsupported levels fail admission',
+    options: ['file-and-directory-sync', 'file-sync'],
+  }),
   lang: Flags.string({
     description: 'Output language',
     options: ['en', 'ja'],
@@ -43,13 +51,19 @@ export const agentFlags = {
 export function toAgentOptions(flags: {
   anthropicApiKeyEnv?: string
   debug?: boolean
+  'execution-policy'?: string
+  'journal-level'?: string
   lang?: string
   model?: string
   ollamaHost?: string
   openaiApiKeyEnv?: string
   provider?: string
 }): AgentOptions {
+  const executionPolicy = flags['execution-policy']
+  const journalLevel = flags['journal-level']
   return {
+    ...(executionPolicy === 'unrestricted' || executionPolicy === 'workspace-confirm' ? {executionPolicy} : {}),
+    ...(journalLevel === 'file-sync' || journalLevel === 'file-and-directory-sync' ? {journalLevel} : {}),
     ...(flags.debug ? {debug: true} : {}),
     ...(flags.lang ? {lang: flags.lang} : {}),
     ...(flags.model ? {model: flags.model} : {}),

@@ -1,12 +1,14 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
-import {v7 as uuidv7} from 'uuid'
 
+import type {AgentOptions as CoreAgentOptions} from './agent.js'
 import type {Context} from './context.js'
 import type {DiagnosticCapture, DiagnosticEvent, DiagnosticEventBus} from './diagnostics/index.js'
+import type {ApprovalReply, RunSnapshot} from './execution/run.js'
 import type {Logger, LogLevel} from './logger/index.js'
 import type {LogPage, LogQuery, LogRecord, LogStoreHealth, SessionLoggerFactory, SessionLogStore} from './logs/index.js'
 import type {ProviderName} from './models/index.js'
@@ -23,6 +25,8 @@ import {
   DiagnosticCapture as Capture,
   DiagnosticEventBus as EventBus,
 } from './diagnostics/index.js'
+import {inspectExecutionJournal} from './execution/recovery.js'
+import {recoveredRunSnapshot} from './execution/run.js'
 import {createCompositeLogger} from './logger/index.js'
 import {FileSessionLogStore, LogEventType, LogOutcome, StoreSessionLoggerFactory} from './logs/index.js'
 import {Message, MessageType, Role} from './models/index.js'
@@ -78,6 +82,7 @@ export interface OrbitApplicationServiceOptions {
   createAgent?: ThreadAgentFactory
   cwd?: string
   diagnostics?: DiagnosticEventBus
+  execution?: CoreAgentOptions['execution']
   logger?: Logger
   logLevel?: LogLevel
   logStore?: SessionLogStore
@@ -89,22 +94,24 @@ export interface OrbitApplicationServiceOptions {
   version?: string
 }
 
-export interface StartApplicationRunResult {
-  runId: string
-  threadId: string
-}
+export type StartApplicationRunResult =
+  | {kind: 'command'; response: string; runId?: never; threadId: string}
+  | {kind: 'run'; runId: string; threadId: string}
 
 export class OrbitApplicationService {
   readonly diagnostics: DiagnosticEventBus
   readonly logs: SessionLogStore
   readonly repository: SessionRepository
   readonly runtime: RuntimeSnapshot
+  private closePromise?: Promise<void>
   private readonly deletionService: SessionDeletionService
   private readonly detachDiagnosticLogger: () => void
   private readonly displayMessages = new Map<string, ThreadMessage[]>()
   private readonly logger: Logger
   private readonly loggerFactory: SessionLoggerFactory
+  private readonly ownsLogs: boolean
   private preferences: GuiPreferences
+  private readonly runListeners = new Set<(snapshot: RunSnapshot) => void>()
   private readonly settings: WorkspaceSettings
   private readonly systemPrompt?: string
   private readonly threadManager: ThreadManager
@@ -122,6 +129,7 @@ export class OrbitApplicationService {
       options.settings,
     )
     this.settings = resolved.settings
+    this.ownsLogs = options.logStore === undefined
     this.logs = options.logStore ?? new FileSessionLogStore()
     this.loggerFactory = new StoreSessionLoggerFactory(this.logs, {level: options.logLevel ?? 'info'})
     this.logger = createCompositeLogger([
@@ -163,12 +171,27 @@ export class OrbitApplicationService {
             ...agentOptions,
             defaultToolProfile: ToolProfile.Coding,
             diagnostics: this.diagnostics,
+            execution: {...options.execution, onApproval() {}, responderScope: 'local-gui'},
           })),
       loggerFactory: this.loggerFactory,
       onEvent: (event) => this.handleThreadEvent(event),
+      onRunSnapshot: (snapshot) => {
+        for (const listener of this.runListeners) {
+          try {
+            Promise.resolve(listener(structuredClone(snapshot))).catch(() => {})
+          } catch {
+            /* Optional transport observer. */
+          }
+        }
+      },
       sessionRepository: this.repository,
     })
-    this.deletionService = new SessionDeletionService(this.repository, this.logs, this.threadManager)
+    this.deletionService = new SessionDeletionService(
+      this.repository,
+      this.logs,
+      this.threadManager,
+      options.execution?.journalLevel,
+    )
     this.emitStartupDiagnostics(options.contexts, options.settingsSources)
   }
 
@@ -192,14 +215,14 @@ export class OrbitApplicationService {
     return this.threadManager.cancelRun(runId)
   }
 
-  async close(): Promise<void> {
-    try {
+  close(): Promise<void> {
+    this.closePromise ??= (async () => {
       await this.threadManager.close()
-    } finally {
       this.displayMessages.clear()
       this.detachDiagnosticLogger()
-      await this.logs.close()
-    }
+      if (this.ownsLogs) await this.logs.close()
+    })()
+    return this.closePromise
   }
 
   createThread(): ThreadSnapshot {
@@ -266,6 +289,10 @@ export class OrbitApplicationService {
     return {...this.preferences}
   }
 
+  getRun(id: string): RunSnapshot | undefined {
+    return this.threadManager.getRun(id)
+  }
+
   async getSessionLogs(sessionId: string, query: LogQuery = {}): Promise<LogPage | undefined> {
     const known =
       this.threadManager.getThread(sessionId) !== undefined || (await this.findSession(sessionId)) !== undefined
@@ -279,6 +306,39 @@ export class OrbitApplicationService {
 
   async listSessions(options: SessionListOptions = {}): Promise<SessionListResult> {
     return this.repository.listPage(options)
+  }
+
+  async queryRun(id: string): Promise<RunSnapshot | undefined> {
+    const live = this.getRun(id)
+    if (live) return live
+    const root = this.repository.journalRoot
+    const children = await fs.readdir(root, {withFileTypes: true}).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return []
+      throw error
+    })
+    for (const child of children) {
+      if (!child.isDirectory() || child.name === 'deletions') continue
+      // Search saved session partitions without acquiring a writer or dispatching work.
+      // eslint-disable-next-line no-await-in-loop
+      const inspection = await inspectExecutionJournal(root, child.name)
+      const run = inspection.runs.find((entry) => entry.runId === id)
+      if (!run) continue
+      const level = run.records[0]?.data.level === 'file-and-directory-sync' ? 'file-and-directory-sync' : 'file-sync'
+      const snapshot = recoveredRunSnapshot(id, child.name, run.records, {level, mode: 'file'})
+      if (run.issue || !inspection.keyAvailable) {
+        snapshot.quarantined = true
+        snapshot.unresolved = [...snapshot.unresolved, run.issue ? 'invalid-journal' : 'missing-key']
+        if (snapshot.result) snapshot.result.recording.status = 'failed'
+      }
+
+      return snapshot
+    }
+
+    return undefined
+  }
+
+  replyApproval(id: string, reply: Omit<ApprovalReply, 'responderScope'>): Promise<'recorded'> {
+    return this.threadManager.replyApproval(id, {...reply, responderScope: 'local-gui'})
   }
 
   async resumeSession(sessionId: string): Promise<ThreadSnapshot> {
@@ -318,11 +378,10 @@ export class OrbitApplicationService {
     return thread
   }
 
-  startRun(threadId: string, content: string): StartApplicationRunResult {
+  async startRun(threadId: string, content: string, requestId?: string): Promise<StartApplicationRunResult> {
     if (content.startsWith('/')) {
       const thread = this.threadManager.getThread(threadId)
       if (thread === undefined) throw new Error(`Unknown thread: ${threadId}`)
-      const runId = uuidv7()
       const response = this.handleGuiSlashCommand(thread, content)
       this.appendLocalCommandMessages(thread, content, response)
       const event = this.diagnostics.emit({
@@ -333,7 +392,6 @@ export class OrbitApplicationService {
         },
         fullData: {command: content, response},
         level: 'info',
-        runId,
         sessionId: threadId,
         threadId,
         type: 'command.submitted',
@@ -345,7 +403,6 @@ export class OrbitApplicationService {
             commandName: content.split(/\s+/u)[0],
             eventType: 'command.submitted',
             responseLength: response.length,
-            runId,
             sessionId: threadId,
             threadId,
           },
@@ -353,12 +410,13 @@ export class OrbitApplicationService {
         )
       }
 
-      return {runId, threadId}
+      return {kind: 'command', response, threadId}
     }
 
-    const handle = this.threadManager.startRun(threadId, content)
+    const handle = this.threadManager.startRun(threadId, content, {requestId})
     handle.completion.catch(() => {})
-    return {runId: handle.id, threadId: handle.threadId}
+    await handle.admitted
+    return {kind: 'run', runId: handle.id, threadId: handle.threadId}
   }
 
   subscribe(handler: (event: DiagnosticEvent) => void): () => void {
@@ -367,6 +425,11 @@ export class OrbitApplicationService {
 
   subscribeLogs(handler: (record: LogRecord) => void): () => void {
     return this.logs.subscribe(handler)
+  }
+
+  subscribeRunSnapshots(handler: (snapshot: RunSnapshot) => void): () => void {
+    this.runListeners.add(handler)
+    return () => this.runListeners.delete(handler)
   }
 
   updatePreferences(update: Partial<GuiPreferences>): GuiPreferences {

@@ -33,7 +33,7 @@ export class OpenAIAgent implements Model {
     private readonly provider: Provider,
     options: OpenAIAgentOptions = {},
   ) {
-    this.client = options.client ?? new OpenAI(createOpenAIOptions(provider))
+    this.client = options.client ?? new OpenAI({...createOpenAIOptions(provider), maxRetries: 0})
   }
 
   getModel(): string {

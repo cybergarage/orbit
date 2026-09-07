@@ -40,6 +40,8 @@ import {
 } from '../../src/core/models/index.js'
 
 const TEST_OLLAMA_MODEL = 'test-ollama-model'
+// These pre-managed fixtures exercise the explicitly selected legacy policy.
+const legacyExecution = {allowLegacyTools: true, policy: {generation: 'legacy-test', profile: 'unrestricted' as const, roots: []}}
 
 describe('model helpers', () => {
   describe('Agent', () => {
@@ -49,8 +51,7 @@ describe('model helpers', () => {
 
     it('uses the explicitly requested provider and model', async () => {
       const calls: {model: string; provider: string}[] = []
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createModel: (provider, model): Model => ({
             getModel() {
               return model ?? ''
@@ -67,6 +68,7 @@ describe('model helpers', () => {
             },
           }),
         },
+        execution: legacyExecution,
         model: {
           name: 'claude-custom',
           provider: 'anthropic',
@@ -79,8 +81,7 @@ describe('model helpers', () => {
 
     it('automatically binds an injected log store to the agent session', async () => {
       const logs = new MemorySessionLogStore()
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createModel: (): Model => ({
             getModel: () => TEST_OLLAMA_MODEL,
             getName: () => OperatorType.Model,
@@ -88,6 +89,7 @@ describe('model helpers', () => {
             invoke: async () => new Message(MessageType.Assistant, {content: 'ok'}),
           }),
         },
+        execution: legacyExecution,
         logStore: logs,
       })
       agent.logger.setDebugEnabled(true)
@@ -114,8 +116,7 @@ describe('model helpers', () => {
 
     it('passes operator options through to the model invoke call', async () => {
       const calls: {messages: Message[]; options?: Partial<OperatorOptions>}[] = []
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createModel: (): Model => ({
             getModel() {
               return TEST_OLLAMA_MODEL
@@ -132,6 +133,7 @@ describe('model helpers', () => {
             },
           }),
         },
+        execution: legacyExecution,
       })
       const prompt = new Message(MessageType.User, {content: 'hello'})
       const options = {traceId: 'trace-1'}
@@ -148,8 +150,7 @@ describe('model helpers', () => {
     it('prepends Agent messages when invoking the model', async () => {
       const calls: Message[][] = []
       const systemMessage = new Message(MessageType.Session, {content: 'System context', role: Role.System})
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createModel: (): Model => ({
             getModel() {
               return TEST_OLLAMA_MODEL
@@ -166,6 +167,7 @@ describe('model helpers', () => {
             },
           }),
         },
+        execution: legacyExecution,
         messages: [systemMessage],
       })
       const prompt = new Message(MessageType.User, {content: 'hello'})
@@ -181,13 +183,13 @@ describe('model helpers', () => {
 
     it('builds each model request from canonical session history and new input', async () => {
       const calls: Message[][] = []
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createModel: (): Model => createStubModel(async (messages) => {
             calls.push(messages)
             return new Message(MessageType.Assistant, {content: `reply-${calls.length}`})
           }),
         },
+        execution: legacyExecution,
       })
 
       await agent.invoke([new Message(MessageType.User, {content: 'first'})])
@@ -207,8 +209,7 @@ describe('model helpers', () => {
 
     it('returns the model response from run', async () => {
       const response = new Message(MessageType.Assistant, {content: 'ok'})
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createModel: (): Model => ({
             getModel() {
               return TEST_OLLAMA_MODEL
@@ -224,6 +225,7 @@ describe('model helpers', () => {
             },
           }),
         },
+        execution: legacyExecution,
       })
 
       const session = new Session()
@@ -239,8 +241,7 @@ describe('model helpers', () => {
     it('prepends Agent messages when running the model', async () => {
       const calls: Message[][] = []
       const systemMessage = new Message(MessageType.Session, {content: 'System context', role: Role.System})
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createModel: (): Model => ({
             getModel() {
               return TEST_OLLAMA_MODEL
@@ -257,6 +258,7 @@ describe('model helpers', () => {
             },
           }),
         },
+        execution: legacyExecution,
         messages: [systemMessage],
       })
       const prompt = new Message(MessageType.User, {content: 'hello'})
@@ -274,7 +276,7 @@ describe('model helpers', () => {
       const systemMessage = new Message(MessageType.Session, {content: 'System context', role: Role.System})
       const appendedMessage = new Message(MessageType.Session, {content: 'Appended context', role: Role.System})
       const messages = [systemMessage]
-      const agent = new Agent({messages, model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}})
+      const agent = new Agent({execution: legacyExecution, messages, model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}})
 
       messages.push(appendedMessage)
 
@@ -293,7 +295,7 @@ describe('model helpers', () => {
         schema: z.string(),
       })
       const tools = [searchTool]
-      const agent = new Agent({model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}, tools})
+      const agent = new Agent({execution: legacyExecution, model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}, tools})
 
       tools.push(lookupTool)
 
@@ -307,13 +309,13 @@ describe('model helpers', () => {
         schema: z.string(),
       })
       const calls: {options?: Partial<ModelInvokeOptions>}[] = []
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createModel: (): Model => createStubModel(async (_messages, options) => {
             calls.push({options})
             return new Message(MessageType.Assistant, {content: 'ok'})
           }),
         },
+        execution: legacyExecution,
         tools: [searchTool],
       })
 
@@ -326,13 +328,13 @@ describe('model helpers', () => {
 
     it('loads the coding profile as model specifications', async () => {
       const calls: {options?: Partial<ModelInvokeOptions>}[] = []
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createModel: (): Model => createStubModel(async (_messages, options) => {
             calls.push({options})
             return new Message(MessageType.Assistant, {content: 'ok'})
           }),
         },
+        execution: legacyExecution,
         toolProfile: ToolProfile.Coding,
       })
 
@@ -352,14 +354,14 @@ describe('model helpers', () => {
 
     it('lets workspace settings override the product default tool profile', async () => {
       const calls: {options?: Partial<ModelInvokeOptions>}[] = []
-      const agent = new Agent({
-        defaultToolProfile: ToolProfile.Coding,
+      const agent = new Agent({defaultToolProfile: ToolProfile.Coding,
         deps: {
           createModel: (): Model => createStubModel(async (_messages, options) => {
             calls.push({options})
             return new Message(MessageType.Assistant, {content: 'ok'})
           }),
         },
+        execution: legacyExecution,
         settings: {tools: {include: ['read'], profile: ToolProfile.None}},
       })
 
@@ -380,13 +382,13 @@ describe('model helpers', () => {
         schema: z.string(),
       })
       const calls: {options?: Partial<ModelInvokeOptions>}[] = []
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createModel: (): Model => createStubModel(async (_messages, options) => {
             calls.push({options})
             return new Message(MessageType.Assistant, {content: 'ok'})
           }),
         },
+        execution: legacyExecution,
         tools: [searchTool],
       })
 
@@ -409,18 +411,18 @@ describe('model helpers', () => {
         name: 'duplicate',
         schema: z.string(),
       })
-      const agent = new Agent({model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}, tools: [first]})
+      const agent = new Agent({execution: legacyExecution, model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}, tools: [first]})
 
       try {
         await agent.invoke([new Message(MessageType.User, {content: 'hello'})], {tools: [second]})
         expect.fail('Expected duplicate registration to fail.')
       } catch (error) {
         expect(error).to.be.instanceOf(Error)
-        expect((error as Error).message).to.contain('Duplicate tool name: duplicate')
+        expect((error as Error).message).to.contain('runtime-failed')
       }
     })
 
-    it('loads configured MCP tools once and passes their input schema to the model', async () => {
+    it('loads a fresh configured MCP catalog for each run', async () => {
       const inputSchema = {
         properties: {path: {type: 'string'}},
         required: ['path'],
@@ -429,7 +431,7 @@ describe('model helpers', () => {
       const fakeClient = createFakeMcpClient({
         tools: [{description: 'Read a file.', inputSchema, name: 'read_file'}],
       })
-      const manager = createMcpToolManager(
+      const manager = () => createMcpToolManager(
         {servers: {filesystem: {command: 'mcp-filesystem'}}},
         {
           clientFactory: () => fakeClient,
@@ -437,20 +439,20 @@ describe('model helpers', () => {
         },
       )
       const calls: {options?: Partial<ModelInvokeOptions>}[] = []
-      const agent = new Agent({
-        deps: {
-          createMcpToolManager: () => manager,
+      const agent = new Agent({deps: {
+          createMcpToolManager: manager,
           createModel: (): Model => createStubModel(async (_messages, options) => {
             calls.push({options})
             return new Message(MessageType.Assistant, {content: 'ok'})
           }),
         },
+        execution: legacyExecution,
       })
 
       await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
       await agent.invoke([new Message(MessageType.User, {content: 'again'})])
 
-      expect(fakeClient.listToolsCalls).to.equal(1)
+      expect(fakeClient.listToolsCalls).to.equal(2)
       expect(calls[0].options?.tools?.map((availableTool) => ({
         description: availableTool.description,
         inputSchema: availableTool.inputSchema,
@@ -477,8 +479,7 @@ describe('model helpers', () => {
         },
       )
       const calls: Message[][] = []
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createMcpToolManager: () => manager,
           createModel: (): Model => createStubModel(async (messages) => {
             calls.push(messages)
@@ -493,6 +494,7 @@ describe('model helpers', () => {
             return new Message(MessageType.Assistant, {content: 'done'})
           }),
         },
+        execution: legacyExecution,
       })
 
       await agent.invoke([new Message(MessageType.User, {content: 'read'})])
@@ -542,11 +544,11 @@ describe('model helpers', () => {
           transportFactory: () => ({}) as never,
         },
       )
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createMcpToolManager: () => manager,
           createModel: (): Model => createStubModel(async () => new Message(MessageType.Assistant, {content: 'ok'})),
         },
+        execution: legacyExecution,
       })
 
       await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
@@ -562,8 +564,7 @@ describe('model helpers', () => {
         schema: z.object({query: z.string()}),
       })
       const calls: Message[][] = []
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createModel: (): Model => createStubModel(async (messages) => {
             calls.push(messages)
             if (calls.length === 1) {
@@ -577,6 +578,7 @@ describe('model helpers', () => {
             return new Message(MessageType.Assistant, {content: 'done'})
           }),
         },
+        execution: legacyExecution,
         tools: [searchTool],
       })
 
@@ -597,7 +599,7 @@ describe('model helpers', () => {
       })
     })
 
-    it('returns tool execution errors to the model as tool results', async () => {
+    it('stops after an opaque executor rejects with unknown effects', async () => {
       const failingTool = tool(() => {
         throw new Error('boom')
       }, {
@@ -606,7 +608,7 @@ describe('model helpers', () => {
         schema: z.object({}),
       })
       const calls: Message[][] = []
-      const agent = new Agent({
+      const agent = new Agent({cwd: path.join(os.tmpdir(), 'orbit-unknown-custom-effect'),
         deps: {
           createModel: (): Model => createStubModel(async (messages) => {
             calls.push(messages)
@@ -621,24 +623,20 @@ describe('model helpers', () => {
             return new Message(MessageType.Assistant, {content: 'handled'})
           }),
         },
+        execution: legacyExecution,
         tools: [failingTool],
       })
 
-      await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
-
-      expect(calls[1][2].payload).to.deep.equal({
-        input: {},
-        isError: true,
-        name: 'fail',
-        output: {content: [{text: 'boom', type: 'text'}], isError: true},
-        toolCallId: 'call-1',
-      })
+      const handle = await agent.startRun([new Message(MessageType.User, {content: 'hello'})])
+      const result = await handle.finished
+      expect(result.outcome).to.equal('incomplete')
+      expect(result.operations[0].status).to.equal('unknown')
+      expect(calls).to.have.length(1)
     })
 
     it('returns unknown tool calls to the model as tool errors', async () => {
       const calls: Message[][] = []
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createModel: (): Model => createStubModel(async (messages) => {
             calls.push(messages)
             if (calls.length === 1) {
@@ -652,6 +650,7 @@ describe('model helpers', () => {
             return new Message(MessageType.Assistant, {content: 'handled'})
           }),
         },
+        execution: legacyExecution,
       })
 
       await agent.invoke([new Message(MessageType.User, {content: 'hello'})])
@@ -671,14 +670,14 @@ describe('model helpers', () => {
         name: 'search',
         schema: z.string(),
       })
-      const agent = new Agent({
-        deps: {
+      const agent = new Agent({deps: {
           createModel: (): Model => createStubModel(async () => new Message(MessageType.Assistant, {
             payload: {
               toolCalls: [{id: 'call-1', input: 'orbit', name: 'search'}],
             },
           })),
         },
+        execution: legacyExecution,
         tools: [searchTool],
       })
 
@@ -687,7 +686,7 @@ describe('model helpers', () => {
         throw new Error('Expected Agent.invoke to fail.')
       } catch (error) {
         expect(error).to.be.instanceOf(Error)
-        expect((error as Error).message).to.equal('Agent exceeded maximum tool iterations: 1')
+        expect((error as Error).message).to.contain('budget-exceeded')
       }
     })
 
@@ -700,7 +699,7 @@ describe('model helpers', () => {
     })
 
     it('returns the agent operator name with optional suffixes', () => {
-      const agent = new Agent({model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}})
+      const agent = new Agent({execution: legacyExecution, model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}})
 
       expect(agent.getName()).to.equal(OperatorType.Agent)
       expect(agent.getName('Suffix')).to.equal(`${OperatorType.Agent}:Suffix`)
@@ -734,7 +733,7 @@ describe('model helpers', () => {
     })
 
     it('returns the State Session from getSession', () => {
-      const agent = new Agent({model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}})
+      const agent = new Agent({execution: legacyExecution, model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}})
       const firstSession = agent.getSession()
       const secondSession = agent.getSession()
 
@@ -746,7 +745,7 @@ describe('model helpers', () => {
 
     it('returns the provided State Session from getSession', () => {
       const session = new Session()
-      const agent = new Agent({model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}, state: new State(session)})
+      const agent = new Agent({execution: legacyExecution, model: {name: TEST_OLLAMA_MODEL, provider: 'ollama'}, state: new State(session)})
 
       expect(agent.getSession()).to.equal(session)
     })
@@ -764,13 +763,13 @@ describe('model helpers', () => {
         }),
       )
 
-      const agent = new Agent({
-        cwd: root,
+      const agent = new Agent({cwd: root,
         deps: {
           createModel: (_provider, _model, settings): Model => createStubModel(async () => new Message(MessageType.Assistant, {
             content: settings?.providers?.openai?.apiKeyEnv ?? '',
           })),
         },
+        execution: legacyExecution,
       })
 
       expect(agent.getSettings()).to.deep.equal({
@@ -794,13 +793,13 @@ describe('model helpers', () => {
         }),
       )
 
-      const agent = new Agent({
-        cwd: root,
+      const agent = new Agent({cwd: root,
         deps: {
           createModel: (_provider, _model, settings): Model => createStubModel(async () => new Message(MessageType.Assistant, {
             content: settings?.providers?.openai?.apiKeyEnv ?? '',
           })),
         },
+        execution: legacyExecution,
         settings: {
           providers: {
             openai: {apiKeyEnv: 'CLI_OPENAI_KEY'},

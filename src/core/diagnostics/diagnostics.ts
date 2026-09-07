@@ -105,7 +105,14 @@ export class DiagnosticEventBus {
     }
     this.events.push(event)
     if (this.events.length > this.maxEvents) this.events.splice(0, this.events.length - this.maxEvents)
-    for (const listener of this.listeners) listener(event)
+    for (const listener of this.listeners) {
+      try {
+        Promise.resolve(listener(event)).catch(() => {})
+      } catch {
+        /* Report sink health independently. */
+      }
+    }
+
     return event
   }
 

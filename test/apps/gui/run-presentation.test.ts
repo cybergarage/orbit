@@ -17,6 +17,11 @@ import {
 } from '../../../src/apps/gui/run-presentation.js'
 
 describe('GUI run presentation', () => {
+  it('ignores a delayed terminal notification from a previous run', () => {
+    const current = {phase: GuiRunPhase.Thinking, runId: 'current'}
+    expect(updateGuiRunFromEvent(current, {data: {}, runId: 'previous', type: 'run.completed'})).deep.equal(current)
+  })
+
   it('presents submission, model, and tool phases with one active run ID', () => {
     const sending = beginGuiRun()
     const accepted = acceptGuiRun(sending, 'run-1')

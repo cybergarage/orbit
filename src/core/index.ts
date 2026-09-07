@@ -53,6 +53,7 @@ export {
   OrbitErrorCode,
 } from './errors/index.js'
 export type {OrbitErrorOptions} from './errors/index.js'
+export * from './execution/index.js'
 export {runInteractiveSession} from './interactive.js'
 export type {
   InteractiveAgentClass,
@@ -266,4 +267,5 @@ export type {
   WriteToolInput,
 } from './tools/index.js'
 export {LocalWorkspaceLocator} from './workspace.js'
+
 export type {LocalWorkspaceLocatorOptions, WorkspaceLocator} from './workspace.js'

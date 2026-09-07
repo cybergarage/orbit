@@ -62,6 +62,8 @@ function App() {
   const messagesEnd = useRef<HTMLDivElement>(null)
   const pendingSubmissions = useRef(new Set<string>())
   const sessionDetailsReturnFocus = useRef<HTMLElement | null>(null)
+  const runSequences = useRef(new Map<string, number>())
+  const refreshVersions = useRef(new Map<string, number>())
   const selectedThreadId = useRef<string | undefined>(undefined)
 
   const loadSessions = useCallback(async () => {
@@ -70,11 +72,22 @@ function App() {
   }, [])
 
   const refreshThread = useCallback(async (threadId: string) => {
+    const revision = (refreshVersions.current.get(threadId) ?? 0) + 1
+    refreshVersions.current.set(threadId, revision)
     const next = await api<ThreadSnapshot>(`/api/threads/${encodeURIComponent(threadId)}`)
-    if (selectedThreadId.current === threadId) setThread(next)
+    if (refreshVersions.current.get(threadId) !== revision) return
+    if (selectedThreadId.current === threadId)
+      setThread((current) =>
+        current?.run?.runId === next.run?.runId && (current?.run?.sequence ?? 0) > (next.run?.sequence ?? 0)
+          ? current
+          : next,
+      )
     setRunPresentations((current) => ({
       ...current,
-      [threadId]: reconcileGuiRunWithThread(current[threadId], next.status),
+      [threadId]:
+        next.run && !next.run.result
+          ? {...reconcileGuiRunWithThread(current[threadId], next.status), runId: next.run.runId}
+          : reconcileGuiRunWithThread(current[threadId], next.status),
     }))
   }, [])
 
@@ -86,6 +99,13 @@ function App() {
     ]).catch(showError(setError))
 
     const source = new EventSource(`/api/events?token=${encodeURIComponent(token)}`)
+    source.addEventListener('run-snapshot', (message) => {
+      const snapshot = JSON.parse((message as MessageEvent).data) as import('../../core/index.js').RunSnapshot
+      if ((runSequences.current.get(snapshot.runId) ?? -1) >= snapshot.sequence) return
+      runSequences.current.set(snapshot.runId, snapshot.sequence)
+      // Always query authoritative state, including gaps and terminal transitions.
+      if (selectedThreadId.current === snapshot.sessionId) refreshThread(snapshot.sessionId).catch(() => {})
+    })
     source.addEventListener('diagnostic', (message) => {
       const event = JSON.parse((message as MessageEvent).data) as DiagnosticEvent
       if (event.threadId !== undefined) {
@@ -106,6 +126,9 @@ function App() {
       const record = JSON.parse((message as MessageEvent).data) as LogRecord
       if (record.correlation.sessionId !== selectedThreadId.current) return
       setLogs((current) => appendUniqueLog(current, record))
+    })
+    source.addEventListener('open', () => {
+      if (selectedThreadId.current) refreshThread(selectedThreadId.current).catch(() => {})
     })
     source.addEventListener('error', () => setError('The diagnostics stream disconnected. Reconnecting…'))
     return () => source.close()
@@ -191,6 +214,21 @@ function App() {
     }
   }
 
+  const replyApproval = async (requestId: string, digest: string, approve: boolean) => {
+    if (!thread?.run) return
+    try {
+      await api(`/api/runs/${encodeURIComponent(thread.run.runId)}/approvals`, {
+        body: JSON.stringify({approve, digest, requestId}),
+        headers: {'Content-Type': 'application/json'},
+        method: 'POST',
+      })
+      await refreshThread(thread.id)
+    } catch (nextError) {
+      showError(setError)(nextError)
+    }
+  }
+
+  const retrySubmission = useRef<undefined | {content: string; requestId: string; threadId: string}>(undefined)
   const submit = async () => {
     if (thread === undefined || prompt.trim().length === 0) return
     const threadId = thread.id
@@ -203,19 +241,32 @@ function App() {
       setPrompt('')
       setRunPresentations((current) => ({...current, [threadId]: beginGuiRun()}))
       const result = await api<StartApplicationRunResult>(`/api/threads/${encodeURIComponent(threadId)}/messages`, {
-        body: JSON.stringify({content}),
+        body: JSON.stringify({
+          content,
+          requestId: (() => {
+            const prior = retrySubmission.current
+            if (!prior || prior.content !== content || prior.threadId !== threadId)
+              retrySubmission.current = {content, requestId: crypto.randomUUID(), threadId}
+            return retrySubmission.current!.requestId
+          })(),
+        }),
         headers: {'Content-Type': 'application/json'},
         method: 'POST',
       })
       setRunPresentations((current) => ({
         ...current,
-        [threadId]: acceptGuiRun(current[threadId] ?? idleGuiRunPresentation, result.runId),
+        [threadId]:
+          result.kind === 'run'
+            ? acceptGuiRun(current[threadId] ?? idleGuiRunPresentation, result.runId)
+            : idleGuiRunPresentation,
       }))
+      retrySubmission.current = undefined
       await refreshThread(result.threadId)
     } catch (nextError) {
       setPrompt((current) => (current.length === 0 ? content : `${content}\n${current}`))
       setRunPresentations((current) => ({...current, [threadId]: idleGuiRunPresentation}))
       showError(setError)(nextError)
+      await refreshThread(threadId).catch(() => {})
     } finally {
       pendingSubmissions.current.delete(threadId)
     }
@@ -389,6 +440,25 @@ function App() {
           </div>
         </header>
         {error === undefined ? null : <div className="error-banner">{error}</div>}
+        {thread?.run?.approvals.map((approval) => (
+          <section aria-label="Operation confirmation" className="tool-card" key={approval.id}>
+            <strong>Confirm one operation</strong>
+            <pre>{JSON.stringify(approval.preview, null, 2)}</pre>
+            <p>
+              Expires {new Date(approval.expiresAt).toLocaleTimeString()}. This is not permission for the entire
+              session.
+            </p>
+            <button onClick={() => replyApproval(approval.id, approval.digest, false)}>Deny</button>
+            <button onClick={() => replyApproval(approval.id, approval.digest, true)}>Approve once</button>
+          </section>
+        ))}
+        {thread?.run?.result ? (
+          <div role="status">
+            Run: {thread.run.result.outcome}. Recording: {thread.run.result.recording.status}.{' '}
+            {thread.run.result.quiescence ? '' : 'Work may still be active; conflicting resources remain reserved.'}
+          </div>
+        ) : null}
+
         <div aria-busy={runActive} className="messages">
           {thread === undefined || (thread.messages.length === 0 && runStatus === undefined) ? (
             <div className="empty">
@@ -672,7 +742,10 @@ function DeleteSessionDialog({
     <div className="dialog-backdrop" role="presentation">
       <section aria-labelledby="delete-session-title" aria-modal="true" className="dialog" role="dialog">
         <h2 id="delete-session-title">Delete session?</h2>
-        <p>This permanently deletes the session transcript and all diagnostic log segments. It cannot be undone.</p>
+        <p>
+          This deletes the transcript, diagnostic logs and execution journal/key. A minimal deletion marker remains to
+          prevent reuse of the session ID. Active or unconfirmed runs must be resolved first.
+        </p>
         <div className="dialog-session">{session.preview ?? session.id}</div>
         <div className="dialog-actions">
           <button onClick={onCancel}>Cancel</button>

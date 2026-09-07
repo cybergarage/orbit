@@ -240,7 +240,7 @@ describe('session logs', () => {
     const failingLogs = new FailingMemorySessionLogStore()
     await expectRejected(
       new SessionDeletionService(repository, failingLogs).delete('session-2'),
-      'simulated log deletion failure',
+      'Session deletion incomplete',
     )
     expect(await repository.findById('session-2')).to.include({id: 'session-2'})
     await fs.rm(root, {force: true, recursive: true})

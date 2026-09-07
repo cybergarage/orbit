@@ -207,7 +207,9 @@ describe('ThreadManager', () => {
     })
     manager.createThread({id: 'thread-1'})
 
-    const pending = manager.sendMessage('thread-1', 'wait')
+    const handle = manager.startRun('thread-1', 'wait')
+    const pending = handle.completion
+    await handle.admitted
     expect(runId).not.to.equal('')
     expect(manager.getThread('thread-1')?.status).to.equal(ThreadStatus.Running)
     expect(manager.cancelRun(runId)).to.equal(true)
@@ -323,7 +325,7 @@ function createAgentFactory(
   defaults: AgentOptions = {},
 ): ThreadAgentFactory {
   return (options) =>
-    new Agent({
+    new Agent({execution: {allowLegacyTools: true, policy: {generation: 'legacy-test', profile: 'unrestricted', roots: []}},
       ...defaults,
       ...options,
       deps: {
