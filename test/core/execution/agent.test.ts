@@ -516,4 +516,106 @@ describe('managed coding Agent integration', () => {
       await agent.close()
     }
   })
+
+  it('requires explicit legacy permission and validates MCP arguments before confirmation', async () => {
+    let customCalls = 0
+    const definition = {
+      async execute() {
+        customCalls++
+        return {content: []}
+      },
+      input: {jsonSchema: {type: 'object'}, parse: (value: unknown) => value},
+      scheduling: 'serial' as const,
+      source: {id: 'legacy', kind: 'custom' as const},
+      spec: {description: 'fixture', inputSchema: {type: 'object'}, name: 'legacy'},
+    }
+    for (const legacy of [false, true]) {
+      let calls = 0
+      const agent = new Agent({
+        cwd: root,
+        deps: {
+          createModel: () =>
+            model(async () =>
+              ++calls === 1 ? call('legacy', {}) : new Message(MessageType.Assistant, {content: 'done'}),
+            ),
+        },
+        execution: legacy
+          ? {allowLegacyTools: true, policy: {generation: 'legacy', profile: 'unrestricted', roots: [root]}}
+          : {},
+        logStore: new MemorySessionLogStore(),
+        toolDefinitions: [definition],
+      })
+      try {
+        // Each policy uses a separate owner and must finish before the next case.
+        // eslint-disable-next-line no-await-in-loop
+        const result = await (await agent.startRun(user())).finished
+        expect(result.outcome).equal(legacy ? 'completed' : 'failed')
+      } finally {
+        // eslint-disable-next-line no-await-in-loop
+        await agent.close()
+      }
+    }
+
+    expect(customCalls).equal(1)
+    let modelCalls = 0
+    let remoteCalls = 0
+    let approvals = 0
+    const agent = new Agent({
+      cwd: root,
+      deps: {
+        createMcpToolManager: (settings, options) =>
+          createMcpToolManager(settings.mcp, {
+            ...options,
+            clientFactory: () => ({
+              async callTool() {
+                remoteCalls++
+                return {content: []}
+              },
+              async close() {},
+              async connect() {},
+              async listTools() {
+                return {
+                  tools: [
+                    {
+                      inputSchema: {properties: {value: {type: 'number'}}, required: ['value'], type: 'object'},
+                      name: 'number',
+                    },
+                  ],
+                }
+              },
+            }),
+            transportFactory: () => ({}) as never,
+          }),
+        createModel: () =>
+          model(async () =>
+            ++modelCalls === 1
+              ? call('schemafixture__number', {value: 'invalid'})
+              : new Message(MessageType.Assistant, {content: 'invalid arguments'}),
+          ),
+      },
+      execution: {
+        async onApproval(request) {
+          approvals++
+          await agent.replyApproval(request.runId, {
+            approve: true,
+            digest: request.digest,
+            requestId: request.id,
+            responderScope: 'owner',
+          })
+        },
+        responderScope: 'owner',
+      },
+      logStore: new MemorySessionLogStore(),
+      settings: {mcp: {servers: {schemafixture: {command: 'fixture'}}}},
+    })
+    try {
+      const result = await (await agent.startRun(user())).finished
+      expect(result.outcome).equal('completed')
+      expect(result.operations.at(-1)?.status).equal('invalid')
+      expect(remoteCalls).equal(0)
+      expect(approvals).equal(1)
+    } finally {
+      await agent.close()
+    }
+  })
 })
