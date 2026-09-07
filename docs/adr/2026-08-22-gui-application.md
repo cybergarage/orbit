@@ -24,6 +24,15 @@ commands and Server-Sent Events instead of calling model adapters or session
 files directly, and it will present conversations, sessions, and typed
 diagnostics in a three-pane interface.
 
+## Related accepted extension (2026-09-07)
+
+[Managed Run Lifecycle](2026-09-07-managed-run-lifecycle.md)
+retains this local service and REST/SSE architecture and extends it with shared
+core run ownership, stop results, and cleanup semantics.
+This ADR remains accepted for its original scope. The extension was accepted on
+2026-09-07 and is not implemented; the historical rationale and implementation
+evidence below do not establish completion of that extension.
+
 ## Consequences
 
 - Positive: GUI behavior remains testable through provider-neutral application

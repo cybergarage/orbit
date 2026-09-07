@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-07
-decision-date: null
+decision-date: 2026-09-07
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -18,7 +18,8 @@ A best-effort diagnostic log and a transcript cannot provide that contract.
 
 ## Decision
 
-**Proposed, not accepted.** Add a required execution journal distinct from the
+**Accepted on 2026-09-07; implementation not started.** Add a required execution
+journal distinct from the
 conversation transcript and optional operational logs. Core must acknowledge
 admission and operation intent before dispatch, and acknowledge required results
 before reporting a persistently completed run. Journal failure stops new work
@@ -202,6 +203,24 @@ no undeclared transcript or secret content may remain in it.
 Existing sessions with no journal remain readable and may start new managed
 runs, but old operations have unknown authorization provenance.
 
+### Acceptance and relationship to earlier decisions
+
+The author explicitly accepted the reviewed recommendation on 2026-09-07,
+including required separate recording, unsupported-storage rejection, the
+metadata retention policy, and the minimal marker retained after deletion.
+The file-and-directory-sync default is an accepted starting product choice,
+not a claim that every filesystem supports it. Implementation remains not-started.
+
+[Session Persistence](2026-08-22-session-persistence.md),
+[Session-scoped Logging](2026-08-25-session-scoped-logging.md), and
+[Session Records versus Runtime Logs](2026-08-25-session-versus-runtime-log-content.md)
+remain accepted for their existing transcript and optional-log contracts.
+This decision adds a third artifact family, coordinated writer ownership,
+explicit synchronization barriers, and deletion/recovery participation for
+managed runs. It neither rewrites their historical rationale nor converts
+optional logs into mandatory records. Current transcript/log guides continue to
+describe implemented behavior until this extension is delivered.
+
 ## Consequences
 
 - Positive: saving a required intent and result has a defined acknowledgement;
@@ -221,7 +240,7 @@ failures; flush reports those failures but close does not propagate them in the
 same way. Agent appends a completed phase before its terminal flush and may then
 enter a failure path. A03/A09/A13/A11 require mandatory execution evidence to be
 separated from optional observation. Existing accepted logging ADRs explicitly
-separate transcript and runtime-log purposes; this proposal adds a third data
+separate transcript and runtime-log purposes; this decision adds a third data
 contract rather than changing all logs into required records.
 
 ## Decision Drivers
@@ -252,13 +271,13 @@ exactly-once external effects, a private HMAC ledger, or this new journal schema
 | -------------------------------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Use current diagnostic logs                                    | Reuses existing storage and GUI.                                          | Drop/retention/failure semantics cannot provide required admission. Not recommended.                                 |
 | Put all control records in the transcript                      | One artifact and existing session IDs.                                    | Couples model-context history and control/privacy evolution; broad reader migration. Not recommended for this scope. |
-| Separate required JSONL journal with explicit acknowledgements | Small local deployment, distinct semantics, preserved transcript readers. | New lifecycle and synchronization complexity. Recommended.                                                           |
+| Separate required JSONL journal with explicit acknowledgements | Small local deployment, distinct semantics, preserved transcript readers. | New lifecycle and synchronization complexity. Selected.                                                              |
 | Transactional database for all state                           | Stronger local transactions/indexing.                                     | Major storage migration, still not atomic with remote effects. Defer until scale/recovery requirements justify it.   |
 
 ## Implementation and Confirmation
 
 No implementation has started. Baseline validation passed headers/build and
-293 tests; this validates no proposed journal guarantee. If accepted, implement
+293 tests; this validates no target journal guarantee. Implement
 writer contract and failure/recovery tests, then integrate admission, operation
 intent/result, terminal barriers, queries, and deletion with the supervisor.
 Update session/log/privacy guides, concepts, architecture, and public exports.
@@ -283,23 +302,26 @@ performed by the document review.
 
 ### Minimal scope and trade-off after review
 
-A separate journal remains recommended over reusing droppable logs. Its minimum
+The author accepted a separate journal over reusing droppable logs on 2026-09-07.
+Its minimum
 recoverable scope includes admission/ready ordering, key ownership, session writer
 coordination, and partial-deletion handling; none is implied by choosing JSONL.
 A smaller memory-only first implementation is an alternative, provided it is
 explicitly labeled ephemeral and does not claim persisted confirmed execution.
 A database may simplify local transactions but does not remove uncertainty about
-external effects, and still requires a separate storage decision. The author
-should assess this concrete cost rather than treat JSONL as cost-free durability.
+external effects, and still requires a separate storage decision. The acceptance includes this recovery and
+synchronization cost; JSONL alone
+does not establish the durability contract.
 
 ## Follow-up Work
 
-The author should judge a separate journal, fail-closed durable admission,
-metadata-only evidence after restart, retention until explicit deletion, and
-the minimal retained deletion marker. The selected acknowledgement level and
-its rejection on unsupported storage also require an explicit product choice.
+On 2026-09-07, the author accepted a separate journal, fail-closed durable
+admission, metadata-only evidence after restart, retention until explicit
+deletion, and the minimal retained deletion marker. The accepted persistent
+product default is file-and-directory-sync with rejection on unsupported
+storage; weaker levels still require explicit application-owner configuration.
 Storage primitives, supported-platform sync capabilities, and key/lock recovery
-need implementation confirmation. This proposal does not select automated
+need implementation confirmation. This decision does not select automated
 retention, encrypted full payload archives, global workspace locking, or a
 transactional database. It can be reviewed independently of the particular
 approval UI but must integrate with the other two contracts before the complete

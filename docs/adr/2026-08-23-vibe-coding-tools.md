@@ -1,12 +1,13 @@
 ---
-status: accepted
+status: superseded
 proposed-date: 2026-08-23
 decision-date: null
 implementation-status: completed
 implementation-completed-date: 2026-08-23
 implementation-commits:
   - "9a0d5ab19662ead3d809da59dfb131264c1af174"
-superseded-by: []
+superseded-by:
+  - "2026-09-07-prepared-operation-authorization.md"
 ---
 
 # Vibe Coding Tool Architecture
@@ -29,6 +30,20 @@ handlers, combine tools through a source-aware registry, and execute validated
 calls through a scheduling runtime. The initial coding profile contains seven
 full-access local tools, while model providers are registered through an open
 registry instead of a provider-selection switch.
+
+## Subsequent decision (2026-09-07)
+
+[Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md)
+partially supersedes this decision for permission-free product defaults,
+managed path/approval admission, MCP input validation, and custom-tool
+compatibility. The seven tools, registry, provider-neutral specifications,
+result normalization, and provider registration remain retained. The metadata
+marks this partial supersession; it does not discard those retained decisions.
+
+The replacement was accepted on 2026-09-07 and is not implemented. The original
+rationale and completed implementation evidence below are preserved. They describe
+the original scope, not completion of the replacement or a retroactive approval
+of earlier operations.
 
 ## Consequences
 

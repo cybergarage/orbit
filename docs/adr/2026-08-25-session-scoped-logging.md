@@ -36,6 +36,15 @@ store contract, provide memory and per-session JSONL implementations, bind logs
 automatically at agent construction, expose only the selected session's logs in
 the GUI, and delete logs through the same lifecycle service as transcripts.
 
+## Related accepted extension (2026-09-07)
+
+[Required Execution Journal](2026-09-07-required-execution-journal.md)
+retains optional session-scoped diagnostic logs and adds separate required
+execution records, rather than changing every diagnostic write into a barrier.
+This ADR remains accepted for its original scope. The extension was accepted on
+2026-09-07 and is not implemented; the historical rationale and implementation
+evidence below do not establish completion of that extension.
+
 ## Consequences
 
 - Positive: CLI, interactive, resume, and GUI paths share one correlation,

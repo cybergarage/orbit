@@ -31,6 +31,15 @@ codec, session and thread identities are aligned, runtime activity is recorded
 as typed entries, and load and recovery behavior explicitly validates corrupt
 or incomplete data.
 
+## Related accepted extension (2026-09-07)
+
+[Required Execution Journal](2026-09-07-required-execution-journal.md)
+retains transcript formats/readability and adds managed-run recording, shared
+writer authority, explicit synchronization, and coordinated deletion/recovery.
+This ADR remains accepted for its original scope. The extension was accepted on
+2026-09-07 and is not implemented; the historical rationale and implementation
+evidence below do not establish completion of that extension.
+
 ## Consequences
 
 - Positive: sessions can be inspected and resumed across processes without

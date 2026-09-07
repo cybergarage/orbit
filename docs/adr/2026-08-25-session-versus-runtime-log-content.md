@@ -26,6 +26,15 @@ events, metadata-first capture, structured correlation, value-aware redaction,
 bounded segmented storage, opaque cursors, sink-health reporting, and explicit
 temporary opt-in for full content.
 
+## Related accepted extension (2026-09-07)
+
+[Required Execution Journal](2026-09-07-required-execution-journal.md)
+retains the transcript/runtime-log distinction and adds a separate required
+control-record family with its own privacy, retention, and failure contract.
+This ADR remains accepted for its original scope. The extension was accepted on
+2026-09-07 and is not implemented; the historical rationale and implementation
+evidence below do not establish completion of that extension.
+
 ## Consequences
 
 - Positive: default logs can explain model, tool, MCP, and lifecycle behavior

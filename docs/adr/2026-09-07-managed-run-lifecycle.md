@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-07
-decision-date: null
+decision-date: 2026-09-07
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -19,7 +19,8 @@ Today a rejected batch or an accepted cancellation can leave work outstanding.
 
 ## Decision
 
-**Proposed, not accepted.** Introduce a provider-neutral run supervisor in core.
+**Accepted on 2026-09-07; implementation not started.** Introduce a
+provider-neutral run supervisor in core.
 It owns admission, the active run ID, a shared budget, started work, one terminal
 result, and resource cleanup. Agent retains the model/tool loop; ThreadManager
 and Application Service delegate execution ownership to the supervisor. All
@@ -29,14 +30,14 @@ in this ADR.
 
 ### Admission and public behavior
 
-Names below specify proposed contracts, not existing exports or fixed filenames.
+Names below specify accepted target contracts, not existing exports or fixed filenames.
 
 - `startRun` validates the request envelope and checks for an existing request ID
   first. For a new run it validates input, finite limits, and policy/recording
   configuration before admitting work. It returns a handle with run ID, session ID, snapshot
   access, `requestStop`, and a `finished` promise returning `RunResult`.
 - One Agent and one session admit at most one active run per supervisor. Busy
-  submissions return a typed rejection; this proposal adds no task queue.
+  submissions return a typed rejection; this decision adds no task queue.
   Admission freezes cwd, model selection, declared tool/MCP sources, policy,
   and budget. The remote tool catalog is not yet known. The caller supplies the
   resolved settings for a resumed session; redesigning setting precedence is
@@ -81,7 +82,7 @@ frozen configuration into a new generation.
 
 ### State and terminal semantics
 
-| State or field       | Proposed meaning                                                                                                                                                                                                                             |
+| State or field       | Target meaning                                                                                                                                                                                                                               |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `initializing`       | The run is admitted; configured sources may be authorized/initialized, but no model invocation is permitted before `run-ready`.                                                                                                              |
 | `running`            | Work is admitted and may start permitted operations.                                                                                                                                                                                         |
@@ -138,7 +139,7 @@ The time bound assumes the JavaScript event loop can run. A synchronous custom
 handler, parser, policy function, or observer that blocks the event loop also
 blocks timers and stop replies. Such code is outside the bounded in-process
 contract; hard preemption requires an independently supervised worker/process
-and is not provided by this proposal. Optional observers are exception-isolated
+and is not provided by this decision. Optional observers are exception-isolated
 and never awaited as required recording; their callbacks must remain nonblocking.
 
 Quarantine is released only after started work and cleanup settle, required
@@ -158,25 +159,26 @@ cannot escape the time limit. A duplicate lookup has the caller's bounded reques
 wait and never resets the already-admitted run's budget.
 
 Core requires finite positive time limits and nonnegative integer counters;
-products provide the proposed initial profile below. Applications may supply
+products provide the accepted initial profile below. Applications may supply
 other finite limits, and tests inject the clock. These initial values are
-operational proposals, not measured optimal defaults. They are one named product
+accepted starting values, not measured optimal defaults. They are one named product
 profile, not hard-coded core limits. Six model calls and five rounds preserve the
 current default loop allowance; the other values are starting points for the
 coding example and have no measured optimality claim. The author can request
-profile changes independently of the supervisor contract. Before implementation,
-record the chosen product profile. During implementation, validate its values
+profile changes independently of the supervisor contract. The author accepted
+this initial profile on 2026-09-07, including the MCP
+startup limits below. During implementation, validate its values
 against long-running target tests, slow MCP startup, human approval latency,
 and record-sync overhead.
 
-| Limit                  | Initial product proposal | Accounting                                                                                                                                                                               |
-| ---------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Total elapsed deadline | 10 minutes               | Monotonic time from admission, including startup, model calls, approvals, retries, and finalization.                                                                                     |
-| Model invocations      | 6                        | Reserve immediately before each adapter invocation; refusals and failed invocations count.                                                                                               |
-| Tool requests          | 32                       | Count each requested call, including invalid, denied, and cancelled-before-start calls, to bound repeated requests. An oversized batch admits no calls and reports the exhausted budget. |
-| Tool rounds            | 5                        | Retain the current nonnegative integer loop meaning in the compatibility adapter.                                                                                                        |
-| Approval wait          | 5 minutes maximum        | Minimum of this limit and the remaining run deadline. No pause of the total clock.                                                                                                       |
-| Cleanup grace          | 5 seconds                | Separate bounded allowance after admission closes; not extra time for new work.                                                                                                          |
+| Limit                  | Initial product profile | Accounting                                                                                                                                                                               |
+| ---------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Total elapsed deadline | 10 minutes              | Monotonic time from admission, including startup, model calls, approvals, retries, and finalization.                                                                                     |
+| Model invocations      | 6                       | Reserve immediately before each adapter invocation; refusals and failed invocations count.                                                                                               |
+| Tool requests          | 32                      | Count each requested call, including invalid, denied, and cancelled-before-start calls, to bound repeated requests. An oversized batch admits no calls and reports the exhausted budget. |
+| Tool rounds            | 5                       | Retain the current nonnegative integer loop meaning in the compatibility adapter.                                                                                                        |
+| Approval wait          | 5 minutes maximum       | Minimum of this limit and the remaining run deadline. No pause of the total clock.                                                                                                       |
+| Cleanup grace          | 5 seconds               | Separate bounded allowance after admission closes; not extra time for new work.                                                                                                          |
 
 MCP startup uses the run's remaining deadline and a finite startup allowance
 (default 30 seconds per server, at most 16 configured servers in this profile).
@@ -235,6 +237,20 @@ control. Do not silently change CLI transcript persistence: select durable or
 explicit ephemeral recording based on the entry point's existing save mode.
 The authorization ADR specifies the separate full-access compatibility change.
 
+### Acceptance and relationship to earlier decisions
+
+The author explicitly accepted the reviewed recommendation on 2026-09-07,
+including bounded incomplete results, retained ownership, compatibility changes,
+and the initial product profile. This records a target design, not delivered API
+or runtime guarantees. The 2026-09-07 review corrections are part of the decision.
+
+[GUI Application Architecture](2026-08-22-gui-application.md) remains accepted:
+the local service and REST/SSE boundary is retained while run ownership, stop,
+and close acquire this shared core contract. The provider-neutral message/tool
+boundary in [Model Response and Tool Integration](2026-08-23-model-response-tool-integration.md)
+is retained. Authorization and required recording are companion accepted
+contracts; none alone establishes the complete confirmed-editing workflow.
+
 ## Consequences
 
 - Positive: stop, completion, and reconnect describe the same run across all
@@ -243,7 +259,7 @@ The authorization ADR specifies the separate full-access compatibility change.
   quarantine make lifecycle handling more complex and may reject formerly
   accepted concurrent or indefinitely waiting calls.
 - Neutral: output quality and target-project test success remain application
-  judgments. The proposal supplies no distributed scheduler or OS sandbox.
+  judgments. The decision supplies no distributed scheduler or OS sandbox.
 
 ## Context and Problem Statement
 
@@ -276,7 +292,7 @@ Pi `packages/agent/src/agent.ts` separates `abort` and `waitForIdle`;
 `agent-loop.ts` prepares/executes calls and waits for asynchronous event handling.
 Adopt a completion handle, but keep optional observers outside required lifecycle
 completion. Pi shell cleanup is a useful adapter example, not proof that every
-custom tool is stoppable. Neither inspection establishes Orbit's proposed shared
+custom tool is stoppable. Neither inspection establishes Orbit's accepted target shared
 budget or a universal no-effects-after-timeout guarantee.
 
 ## Considered Options
@@ -285,14 +301,14 @@ budget or a universal no-effects-after-timeout guarantee.
 | ---------------------------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | Keep independent Agent/UI lifecycles                             | Smallest change and current API compatibility.           | Cannot make cancellation, recording, and reconnect agree. Not recommended.              |
 | Require every operation to settle without a deadline             | Simple meaning of fully stopped.                         | Noncooperative work can hang close forever. Not recommended.                            |
-| Core supervisor with bounded settlement and explicit uncertainty | Reusable, finite caller waiting, honest partial results. | Requires quarantine and richer results. Recommended.                                    |
+| Core supervisor with bounded settlement and explicit uncertainty | Reusable, finite caller waiting, honest partial results. | Requires quarantine and richer results. Selected.                                       |
 | Run everything in disposable workers/containers                  | Can strengthen local termination and isolation.          | Large deployment change; still no rollback of remote effects. Separate future decision. |
 
 ## Implementation and Confirmation
 
 Implementation has not started. The baseline passed headers, build, and 293
 existing tests as recorded in the research; those tests do not validate this ADR.
-If accepted, implement core ownership/results first, then wire Agent, threads,
+Implement core ownership/results first, then wire Agent, threads,
 services, and surfaces; integrate required journal and authorization before
 claiming the full confirmed-editing workflow is delivered. Update architecture,
 concepts, public exports, CLI/GUI guides, and close/resume documentation.
@@ -328,8 +344,9 @@ Additional confirmation required by cross-contract review:
 
 ## Follow-up Work
 
-Before acceptance, the author should explicitly judge bounded incomplete results,
-initial limits, and public result/close compatibility. Implementation must prove
+The author accepted bounded incomplete results, resource quarantine, the initial
+product limits, and public result/close compatibility changes on 2026-09-07.
+Implementation must prove
 platform-specific child cleanup with fixtures; Windows and real MCP shutdown
 remain unverified. Input/compaction, Skill identity, Graph structure, evaluation,
 and candidate selection are later proposals using this lifecycle.
@@ -339,7 +356,7 @@ and candidate selection are later proposals using this lifecycle.
 - [Research and source ledger](../research/2026-09-07-run-execution-approval-and-recording.md).
 - [Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md).
 - [Required Execution Journal](2026-09-07-required-execution-journal.md).
-- [Accepted GUI architecture](2026-08-22-gui-application.md): retained; this proposal extends its shared runtime contract.
+- [Accepted GUI architecture](2026-08-22-gui-application.md): retained; this decision extends its shared runtime contract without replacing its local service and REST/SSE architecture.
 - [Accepted model/tool integration](2026-08-23-model-response-tool-integration.md): retain provider-neutral tool messages.
 - [Current Agent](../../src/core/agent.ts), [ThreadManager](../../src/core/thread.ts), [Application Service](../../src/core/application.ts).
 - [Pinned Codex `codex-rs/core/src/tasks/mod.rs`](https://github.com/openai/codex/blob/5adb68a49933ae446bf11935662c83dba55a0804/codex-rs/core/src/tasks/mod.rs).

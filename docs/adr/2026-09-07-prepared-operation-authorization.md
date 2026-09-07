@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-07
-decision-date: null
+decision-date: 2026-09-07
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -18,7 +18,7 @@ MCP startup, and MCP tool calls, regardless of the CLI, GUI, or library entry po
 
 ## Decision
 
-**Proposed, not accepted.** Core prepares an operation, evaluates application
+**Accepted on 2026-09-07; implementation not started.** Core prepares an operation, evaluates application
 policy, validates any approval reply, and consumes a one-use execution permit.
 Application code supplies rules and the confirmation UI; it does not implement
 an alternative enforcement path. This extends the accepted initial full-access
@@ -65,7 +65,7 @@ deny or require application-owner configuration rather than accepting a vague
 confirmation. The keyed digest includes effective values while public records
 omit those values. Approval replies echo the same opaque ID and keyed digest.
 
-The proposed sequence is:
+The accepted execution sequence is:
 
 1. For a tool call, validate its unique call ID, resolve the catalog entry, parse
    input, and prepare the descriptor. For MCP startup, resolve the frozen server
@@ -171,7 +171,7 @@ close does not prove the remote operation was cancelled.
 
 ### Product profiles and compatibility
 
-Recommend a named `workspace-confirm` product profile: permit supported read
+Adopt a named `workspace-confirm` product profile: permit supported read
 operations inside configured roots, ask for writes, commands, and configured
 MCP startup/calls, and deny undeclared targets or capabilities. Outside-root
 operations require a policy change by the application owner, followed by a new
@@ -186,9 +186,10 @@ provide a policy that can decide without UI, or a responder. Provide an explicit
 `unrestricted` policy for trusted legacy use, still using lifecycle and required
 recording; never select it as an automatic fallback after a denial. Saved
 transcripts do not import past permission. Migrating product defaults from full
-access is an intentional compatibility change requiring author approval and
-release/migration documentation before implementation. No existing accepted ADR
-is marked superseded while this proposal remains undecided.
+access is an intentional compatibility change accepted by the author on
+2026-09-07. Prepare release/migration documentation before implementation.
+This decision partially supersedes the initial tool architecture as described
+below; adoption does not change the current executable behavior.
 
 ### Compatibility conditions
 
@@ -210,6 +211,24 @@ Inherited tools must never gain unrestricted access just because migration faile
 The implementation must document these cases and test both source compatibility
 and observable behavior rather than describing the policy flag as a universal
 legacy-mode switch.
+
+### Acceptance and relationship to earlier decisions
+
+The author explicitly accepted the reviewed recommendation on 2026-09-07,
+including one-operation approval, full-access migration, legacy adapter limits,
+and the distinction between policy and OS isolation. Implementation remains
+not-started, including migration documentation and platform confirmation.
+
+This decision partially supersedes
+[Vibe Coding Tool Architecture](2026-08-23-vibe-coding-tools.md): replace its
+permission-free product defaults and deferred approval/path-admission policy,
+strengthen managed MCP input validation beyond its record-preserving codec,
+and require the stated preparation adapters for managed custom-tool execution.
+Retain the seven tools, source-aware registry, provider-neutral specifications,
+result normalization, and model-provider registration. The older ADR is marked
+superseded with this limited scope, preserving its original rationale and
+completed implementation evidence. Current full-access behavior remains the
+implemented baseline until this accepted change is delivered.
 
 ## Consequences
 
@@ -251,21 +270,22 @@ Pi `packages/agent/src/agent-loop.ts` validates arguments before `beforeToolCall
 can block the call, and checks cancellation after the hook. Adopt this small
 preparation step; object passing to hooks is not evidence of immutable approval
 binding. Neither system inspection establishes an exact-effects guarantee for
-arbitrary commands; Orbit's descriptor/one-use rules are proposed additions.
+arbitrary commands; Orbit's descriptor/one-use rules are accepted target additions.
 
 ## Considered Options
 
 | Option                                                 | Advantages                                          | Costs and disposition                                                                  |
 | ------------------------------------------------------ | --------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | Application-only callback before a tool event          | Minimal core changes, easy UI integration.          | Can miss library calls, parsing changes, and MCP startup. Not recommended.             |
-| Core prepared descriptor, policy, and one-use approval | Shared enforcement with application-specific rules. | New contract and migration cost. Recommended.                                          |
+| Core prepared descriptor, policy, and one-use approval | Shared enforcement with application-specific rules. | New contract and migration cost. Selected.                                             |
 | Session-wide remembered permission by default          | Fewer interruptions.                                | More complex scope/revocation and larger accidental authorization. Deferred.           |
 | Require an OS sandbox for all operations immediately   | Stronger control of untrusted local programs.       | Broader platform/deployment scope and no remote rollback guarantee. Separate decision. |
 
 ## Implementation and Confirmation
 
-No implementation or acceptance is recorded. Baseline headers/build and 293 tests
-passed; they do not exercise this proposed API. If accepted, integrate with the
+Acceptance was recorded on 2026-09-07; implementation has not started.
+Baseline headers/build and 293 tests passed; they do not exercise this target
+API. Integrate with the
 managed supervisor and required journal, add explicit policy selection and
 migration docs, then update tool/MCP guides, public types, architecture, and
 concepts. Preserve old transcript readability and label missing historical
@@ -286,10 +306,10 @@ behavior remain untested.
 
 ## Follow-up Work
 
-The author should judge the explicit full-access migration, single-operation
-approval scope, and the limited safety claim without built-in isolation. Details
-of session-wide grants, external sandbox backends, MCP alias migration, and
-resumable approvals remain outside this proposal. Implementing an MCP validator
+The author accepted the explicit full-access migration, single-operation
+approval scope, and the limited safety claim without built-in isolation on
+2026-09-07. Details of session-wide grants, external sandbox backends, MCP alias migration, and
+resumable approvals remain outside this decision. Implementing an MCP validator
 requires a documented supported schema subset and tests before claiming support.
 The journal defines record privacy; the runtime defines deadlines and ownership.
 
@@ -298,7 +318,7 @@ The journal defines record privacy; the runtime defines deadlines and ownership.
 - [Research and source ledger](../research/2026-09-07-run-execution-approval-and-recording.md).
 - [Managed Run Lifecycle](2026-09-07-managed-run-lifecycle.md).
 - [Required Execution Journal](2026-09-07-required-execution-journal.md).
-- [Accepted full-access tool architecture](2026-08-23-vibe-coding-tools.md): retain registration/tool primitives; explicit permission-free product defaults would be replaced only upon acceptance of this proposal.
+- [Historical full-access tool architecture](2026-08-23-vibe-coding-tools.md): partially superseded for permission-free defaults, managed admission/validation, and custom-tool compatibility; registration and provider-neutral primitives remain retained.
 - [Current ToolRuntime](../../src/core/tools/registry.ts), [MCP manager](../../src/core/mcp.ts).
 - [Pinned Codex `codex-rs/core/src/tools/orchestrator.rs`](https://github.com/openai/codex/blob/5adb68a49933ae446bf11935662c83dba55a0804/codex-rs/core/src/tools/orchestrator.rs).
 - [Pinned Codex `codex-rs/core/src/tools/approvals.rs`](https://github.com/openai/codex/blob/5adb68a49933ae446bf11935662c83dba55a0804/codex-rs/core/src/tools/approvals.rs).
