@@ -22,6 +22,11 @@ describe('GUI run presentation', () => {
     expect(updateGuiRunFromEvent(current, {data: {}, runId: 'previous', type: 'run.completed'})).deep.equal(current)
   })
 
+  it('ignores a delayed start from a previous run while the new run is active', () => {
+    const current = {phase: GuiRunPhase.Thinking, runId: 'current'}
+    expect(updateGuiRunFromEvent(current, {data: {}, runId: 'previous', type: 'run.started'})).deep.equal(current)
+  })
+
   it('presents submission, model, and tool phases with one active run ID', () => {
     const sending = beginGuiRun()
     const accepted = acceptGuiRun(sending, 'run-1')

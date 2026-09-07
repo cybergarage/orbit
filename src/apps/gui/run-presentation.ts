@@ -48,7 +48,7 @@ export function updateGuiRunFromEvent(
   current: GuiRunPresentation,
   event: Pick<DiagnosticEvent, 'data' | 'runId' | 'type'>,
 ): GuiRunPresentation {
-  if (current.runId && event.runId && current.runId !== event.runId && event.type !== 'run.started') return current
+  if (current.runId && event.runId && current.runId !== event.runId) return current
   const runId = event.runId ?? current.runId
   switch (event.type) {
     case 'model.started': {

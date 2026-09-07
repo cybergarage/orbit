@@ -227,7 +227,8 @@ The initial subset accepts types, properties, required/additional properties,
 items, enum/const, anyOf/oneOf/allOf, string length/pattern and numeric/array
 bounds, plus the descriptive keywords listed in `validateSchemaKeywords` in
 `src/core/mcp.ts`. Unsupported vocabulary (including references) fails startup;
-Orbit does not silently ignore unknown constraints. All enabled sources are
+Orbit does not silently ignore unknown constraints, including constraints inside
+tuple-style `items` arrays. All enabled sources are
 required for ready. Startup uses the same run budget and requires authorization
 before opening a stdio client. The discovered catalog stays fixed for that run.
 

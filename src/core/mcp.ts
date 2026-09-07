@@ -346,7 +346,7 @@ function validateSchemaKeywords(schema: Record<string, unknown>): void {
       }
 
     if (['additionalProperties', 'items', 'not'].includes(key) && isRecord(value)) validateSchemaKeywords(value)
-    if (['allOf', 'anyOf', 'oneOf'].includes(key) && Array.isArray(value))
+    if (['allOf', 'anyOf', 'items', 'oneOf'].includes(key) && Array.isArray(value))
       for (const child of value) {
         if (!isRecord(child)) throw new Error('Invalid schema alternative')
         validateSchemaKeywords(child)

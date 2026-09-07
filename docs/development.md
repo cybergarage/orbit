@@ -186,6 +186,40 @@ rewrite files, so review the resulting diff afterward. New TypeScript files
 must include the standard copyright and SPDX header; run
 `npm run headers:apply` to add missing headers.
 
+### Managed execution surface fixtures
+
+After building, run these isolated fixtures from the repository root:
+
+```sh
+node test/apps/cli/fixtures/managed-interactive.mjs
+node test/apps/gui/fixtures/transport-faults.mjs
+```
+
+The first needs a real terminal. Type `edit`, answer `y`, `n`, or Ctrl+C at
+confirmation, then type `/exit`. It prints the outcome and whether the temporary
+file changed. Use separate sessions for approval and denial/cancellation checks.
+It deliberately selects `file-sync`; this does not verify the stronger default.
+
+The GUI fixture prints a loopback URL. Create a session, send `edit`, wait for
+the preview, and approve once. Its local proxy disconnects SSE, delays an old
+snapshot, returns HTTP 503 once, and replays duplicate/out-of-order snapshots.
+Verify completion and disappearance of the reconnect notice. Terminate the
+fixture with SIGTERM to print counters and remove its temporary data. Both
+fixtures inject models and avoid provider credentials and real user sessions.
+
+The separate diagnostic probe below tests simultaneous reclamation of a stale
+SessionRecorder lock. **It currently exits 1 because both writers acquire the
+same session.** This is an unresolved concurrency defect, not a passing regression
+test; see the [journal ADR](adr/2026-09-07-required-execution-journal.md).
+
+```sh
+node test/core/execution/fixtures/stale-lock-race.mjs
+```
+
+It synchronizes two child processes after both read the dead owner's lock,
+then lets them reclaim it in order. It kills only its own children and removes
+its temporary directory. Keep this evidence distinct from `npm test` results.
+
 ## Releases and npm publication
 
 Pushes to `main` do not create releases or publish packages. Both operations

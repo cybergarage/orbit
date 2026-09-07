@@ -128,9 +128,10 @@ function App() {
       setLogs((current) => appendUniqueLog(current, record))
     })
     source.addEventListener('open', () => {
+      setError((current) => (current === 'The event stream disconnected. Reconnecting…' ? undefined : current))
       if (selectedThreadId.current) refreshThread(selectedThreadId.current).catch(() => {})
     })
-    source.addEventListener('error', () => setError('The diagnostics stream disconnected. Reconnecting…'))
+    source.addEventListener('error', () => setError('The event stream disconnected. Reconnecting…'))
     return () => source.close()
   }, [loadSessions, refreshThread])
 

@@ -479,12 +479,15 @@ reported with the file path and line number and is not modified.
 
 Orbit creates a sidecar lock before creating, opening, repairing, resuming, or
 deleting a session. The lock contains its owning process ID and a unique token.
-Only one writer can own a resolved session file across Orbit processes. A
-session opened by the GUI therefore cannot be resumed concurrently by the CLI;
-the second writer receives an error instead.
+An existing live owner excludes other Orbit processes. A session opened by the
+GUI therefore rejects a concurrent CLI resume in that case. This does not yet
+guarantee exclusion while multiple processes reclaim a dead owner.
 
 Locks whose owner process no longer exists are removed automatically before
-the next open. Malformed locks fail closed because Orbit cannot safely prove
+the next open. That check and removal are not atomic: simultaneous recovery can
+remove a replacement lock and admit two writers. Serialize crash recovery
+externally until the [known recovery defect](execution.md#current-stale-lock-recovery-limitation)
+is resolved. Malformed locks fail closed because Orbit cannot safely prove
 that their owner is gone. A recorder removes only a lock with its own token,
 so it cannot release a replacement owner's lock.
 

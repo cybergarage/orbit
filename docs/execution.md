@@ -185,3 +185,14 @@ three accepted [execution ADRs](adr/README.md). Passing injected I/O tests does
 not establish physical power-loss survival or untested Windows behavior. Initial
 limits remain adjustable product starting points; workload and platform coverage
 must be reported with any measurements.
+
+## Current stale-lock recovery limitation
+
+Live SessionRecorder owners exclude other processes. However, two processes
+reclaiming the same dead owner's lock can both acquire it: stale detection and
+unlink are not atomic. The delegated journal lease inherits this limitation.
+Serialize session recovery outside Orbit until the reclamation protocol is
+corrected; in-process workspace reservations do not resolve this cross-process
+race. The [journal ADR](adr/2026-09-07-required-execution-journal.md) records the
+reproduction and design alternatives. No complete single-writer guarantee after
+concurrent crash recovery is claimed.

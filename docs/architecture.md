@@ -115,7 +115,9 @@ derives model input from those durable records.
 
 `SessionRepository` creates, opens and lists append-only session files.
 `SessionDeletionService` removes managed artifacts using a retained deletion marker. `SessionRecorder` serializes writes and uses process-aware lock files to
-prevent concurrent writers. Session records are distinct from structured
+exclude live owners. Concurrent reclamation of a dead owner currently permits
+two writers; see the [recovery limitation](execution.md#current-stale-lock-recovery-limitation).
+Session records are distinct from structured
 runtime logs and required execution journals: transcripts reconstruct history,
 optional logs support diagnostics, and journals preserve admission and operation
 evidence. The journal delegates the existing SessionRecorder writer lease.
