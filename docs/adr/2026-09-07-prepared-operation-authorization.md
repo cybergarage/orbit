@@ -7,6 +7,7 @@ implementation-completed-date: null
 implementation-commits:
   - 61723f07e2f6318a352dcaacd16e9b88b7ad94fa
   - 7f26357d3afd9f14e7316352f7cc5483a387a2c3
+  - 8ffef065251a0b04c0810f67a5318502c6be4df6
 superseded-by: []
 ---
 
@@ -331,17 +332,48 @@ were 5.6–107.7 ms (median 62.8 ms) on the host temporary filesystem (statfs ty
 These small warm-host samples are not optimality estimates, percentiles for a
 production population, or measurements of live model latency.
 
+### Follow-up verification — 2026-09-07
+
+Commit `8ffef065251a0b04c0810f67a5318502c6be4df6` adds targeted MCP and process tests,
+real Ink/GUI fixtures, local schema/UI corrections, and the separate failing
+stale-lock probe. Acceptance, decision date and initial product limits are
+unchanged. Implementation remains **partial**, with no completion date.
+
+`headers:check`, `build` and `npm test` passed on macOS arm64 / Node v26.5.0
+and an isolated Linux arm64 / Node v24.16.0 container. Both suites reported
+**372 passing tests**; lint had zero errors and 10 existing warnings. The Linux
+copy used `npm ci --ignore-scripts` from the unchanged lockfile. The separate
+`node test/core/execution/fixtures/stale-lock-race.mjs` probe **failed exclusion
+on both platforms** (exit 1, both children reported `owned`). The passing suite
+does not include or cancel this negative evidence.
+
+| Confirmation | Source and execution evidence | Limit |
+| --- | --- | --- |
+| Deny, invalid input, absent responder and legacy adapters | `test/core/execution/{agent,contracts}.test.ts` passed again with dispatch counters. | Covers the explicit fixture inputs and policies. |
+| Mutation, preimages, symlinks, revocation and approval identity | Existing tests cover frozen input, post-intent target changes, expiry/revocation, wrong digest, opposite and duplicate replies; GUI two-client checks passed again. | Windows path/race behavior remains unmeasured. |
+| Unsupported MCP schema | `mcp-contract.test.ts` rejects references, format, unevaluated properties and nested unsupported vocabulary before model exposure. | The tuple-style items case originally escaped recursive checks; `validateSchemaKeywords` now traverses it. No new schema vocabulary was adopted. |
+| Supported nested MCP input | Seven input cases exercise compositions, enum/const, properties, array/numeric/string constraints and invalid-before-approval behavior. | This finite matrix does not claim every JSON Schema vocabulary/dialect is supported. |
+| Remote timeout and external confirmation | Injected rejection and an actual slow stdio call retain unknown effects, do not retry, close the child, and reconcile from explicit evidence without rewriting the original result. | Production services and network transports were not exercised. |
+| User-facing confirmation | Full Ink approve/deny/Ctrl+C and the GUI fault proxy were exercised. The browser returned completed/acknowledged after SSE disconnect, HTTP 503, a delayed stale response and duplicate/reordered notifications. | Fake model and test previews; wider usability trials remain. |
+
+The GUI corrections ignore a previous run's delayed start and clear only the
+stream-disconnected notice when the stream reconnects. These and the nested
+schema correction restore the accepted behavior; they introduce no new public
+API, persistence format or architectural choice. The separate stale-lock race
+can defeat cross-process ownership assumed by this contract; its remedy is not
+implicitly approved by this evidence update.
+
 ### Confirmation remaining before completed
 
+- Resolve the journal ADR's inherited stale-lock ownership defect before claiming
+  cross-process ownership under this contract; the option is not yet adopted.
 - Windows executable/shell resolution and filesystem race behavior remain
-  unverified; the code provides no OS sandbox or hard process isolation.
-- Full Ink confirmation interaction, injected HTTP/SSE reordering, unsupported
-  MCP schema vocabulary and remote timeout/reconciliation need additional
-  application/transport acceptance fixtures. Current MCP tests cover real stdio
-  startup/call/close, denied startup, noncooperative initialization, and invalid
-  remote arguments before confirmation; they do not cover every schema form.
-- Representative command/edit previews and human decision latency still need
-  broader product trials. This does not reopen the adopted one-operation scope.
+  unverified. A Windows environment and supported Bash installation are needed;
+  neither an OS sandbox nor hard process isolation is provided.
+- The initial schema subset and local stdio timeout fixtures now have direct
+  evidence. Additional dialects/services require explicit compatibility tests,
+  not a claim of universal schema support. Production services, broader previews
+  and actual human decision timing still need representative trials.
 
 The implementation reference is [Managed Execution](../execution.md), with
 [current architecture](../architecture.md), [Agent Runtime](../concepts/agent-runtime.md)

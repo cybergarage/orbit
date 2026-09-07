@@ -7,6 +7,7 @@ implementation-completed-date: null
 implementation-commits:
   - 61723f07e2f6318a352dcaacd16e9b88b7ad94fa
   - 7f26357d3afd9f14e7316352f7cc5483a387a2c3
+  - 8ffef065251a0b04c0810f67a5318502c6be4df6
 superseded-by: []
 ---
 
@@ -352,17 +353,50 @@ were 5.6–107.7 ms (median 62.8 ms) on the host temporary filesystem (statfs ty
 These small warm-host samples are not optimality estimates, percentiles for a
 production population, or measurements of live model latency.
 
+### Follow-up verification — 2026-09-07
+
+Commit `8ffef065251a0b04c0810f67a5318502c6be4df6` adds targeted MCP and process tests,
+real Ink/GUI fixtures, local schema/UI corrections, and the separate failing
+stale-lock probe. Acceptance, decision date and initial product limits are
+unchanged. Implementation remains **partial**, with no completion date.
+
+`headers:check`, `build` and `npm test` passed on macOS arm64 / Node v26.5.0
+and an isolated Linux arm64 / Node v24.16.0 container. Both suites reported
+**372 passing tests**; lint had zero errors and 10 existing warnings. The Linux
+copy used `npm ci --ignore-scripts` from the unchanged lockfile. The separate
+`node test/core/execution/fixtures/stale-lock-race.mjs` probe **failed exclusion
+on both platforms** (exit 1, both children reported `owned`). The passing suite
+does not include or cancel this negative evidence.
+
+| Confirmation | Source and execution evidence | Limit |
+| --- | --- | --- |
+| Stop, budgets, parallel outcomes and bounded close | `run.test.ts`, `contracts.test.ts`, `restart.test.ts` under `test/core/execution/` passed again, including pending writers, late mutations, finalization and synchronous code. | These are the enumerated fixtures, not arbitrary executor preemption. |
+| Cold MCP admission, readiness and timeout | `agent.test.ts` checks startup ordering; `mcp-contract.test.ts` exercises an actual delayed stdio call, possible effect, one model request, child exit and explicit reconciliation. | A 1-second cleanup trial returned before child exit; the accepted 5-second cleanup profile confirmed exit. Neither proves all services stop in 5 seconds. |
+| Duplicate requests and stale/reconnected UI | Existing two-client API tests plus `run-presentation.test.ts` and `test/apps/gui/fixtures/transport-faults.mjs`. | Browser verification used an isolated local server and injected models. |
+| Complete Ink interaction | `test/apps/cli/fixtures/managed-interactive.mjs`: approve produced one file and completed/acknowledged; deny produced no file; Ctrl+C during approval produced cancelled/acknowledged and quiescence. | Explicit file-sync, actual PTY, fake model; no human usability sample. |
+| Target-test versus run failure | Existing nonzero target-test fixture passed. The delayed utilization trial below completed without changing defaults. | Representative production workloads remain unmeasured. |
+| Resource ownership after restart | Live-owner contention and sequential stale recovery passed; simultaneous stale recovery admitted two writers. | This is a blocking defect in inherited SessionRecorder locking; see the journal ADR's new finding. |
+
+A separate three-run utilization trial at 14:31 UTC used actual read/write,
+a stdio MCP response delayed by 2 seconds, a Bash target check delayed by
+15 seconds, and an injected 3-second wait before each approval. Each run used
+5 model calls, 4 tool requests and 4 rounds. All completed in 29.284–29.400 s
+(median 29.330 s). The 66 strong-sync acknowledgements on the host temporary
+filesystem (statfs type 26) took 2.7–41.7 ms (median 8.3 ms). These are controlled
+small samples, not live-model latency or representative human decision timing;
+they do not establish optimality of the 10-minute/5-minute defaults.
+
 ### Confirmation remaining before completed
 
-- Windows child/process-tree cleanup, supported Node/platform combinations and
-  platform-dependent fixture behavior have not been executed on this macOS host.
-- The five-run utilization sample uses deterministic model responses. Long target
-  tests, slow real MCP servers and representative human approval latency still
-  need product trials before the initial profile can be considered validated.
-- The real browser exercise covered preview, reconnect and approval; full Ink
-  interaction and adversarial SSE gap/reordering under transport faults need
-  further surface-level verification. TTY approval/cancellation was tested at
-  the shared confirmation function, not the complete Ink application.
+- Resolve the inherited concurrent stale-lock ownership defect through a separately
+  reviewed recovery decision; repeat the failing probe and integration checks.
+- Windows child/process-tree cleanup, Bash/executable resolution, filesystem
+  acknowledgement capability and the remaining supported Node versions need
+  suitable environments. This host has no configured Windows runner/VM; no
+  Windows job was dispatched or inferred from Linux success.
+- Representative long target suites, production MCP services and actual human
+  approval/usability trials remain. Controlled waits and a terminal operator
+  exercise are not product-distribution measurements.
 
 The implementation reference is [Managed Execution](../execution.md), with
 [current architecture](../architecture.md), [Agent Runtime](../concepts/agent-runtime.md)

@@ -306,7 +306,10 @@ its own final hash in a tracked file.
 The Vibe Coding Tool Architecture supersession is partial: the 2026-09-07
 authorization decision replaces permission-free defaults and managed admission/
 validation/adapter conditions, while retaining its registry and tool/provider
-primitives. The three 2026-09-07 decisions are accepted but not implemented.
+primitives. The three 2026-09-07 decisions remain accepted / partial. Common execution is
+implemented, but follow-up verification found concurrent stale-lock reclamation
+can admit two writers. The journal ADR records this unresolved defect and
+recovery options; Windows and representative product trials also remain.
 
 ## Background
 
