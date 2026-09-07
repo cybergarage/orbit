@@ -299,6 +299,9 @@ its own final hash in a tracked file.
 | 2026-08-25 | accepted | completed      | [Session-scoped Logging Architecture](2026-08-25-session-scoped-logging.md)             |
 | 2026-08-25 | accepted | completed      | [Session Records versus Runtime Logs](2026-08-25-session-versus-runtime-log-content.md) |
 | 2026-08-25 | accepted | completed      | [User-Accessible Session Information](2026-08-25-session-information-access.md)         |
+| 2026-09-07 | proposed | not-started    | [Managed Run Lifecycle](2026-09-07-managed-run-lifecycle.md)                            |
+| 2026-09-07 | proposed | not-started    | [Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md)      |
+| 2026-09-07 | proposed | not-started    | [Required Execution Journal](2026-09-07-required-execution-journal.md)                  |
 
 ## Background
 

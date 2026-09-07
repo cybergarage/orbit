@@ -2,7 +2,10 @@
 status: current
 investigation-date: 2026-09-07
 orbit-commit: 8ee97144c20b006225db52efc482004200527e4c
-related-adrs: []
+related-adrs:
+  - docs/adr/2026-09-07-managed-run-lifecycle.md
+  - docs/adr/2026-09-07-prepared-operation-authorization.md
+  - docs/adr/2026-09-07-required-execution-journal.md
 superseded-by: []
 ---
 
@@ -241,6 +244,12 @@ sandbox, global cross-process workspace exclusion, remote exactly-once effects,
 MCP naming migration, and resumable approvals are separate future decisions.
 
 ## Related Decisions
+
+The following records are proposed and not started; none is accepted.
+
+- [Managed Run Lifecycle](../adr/2026-09-07-managed-run-lifecycle.md).
+- [Prepared Operation Authorization](../adr/2026-09-07-prepared-operation-authorization.md).
+- [Required Execution Journal](../adr/2026-09-07-required-execution-journal.md).
 
 - [Vibe Coding Tool Architecture](../adr/2026-08-23-vibe-coding-tools.md): accepted full-access starting point.
 - [GUI Application Architecture](../adr/2026-08-22-gui-application.md): retain local application service, REST, and SSE.
