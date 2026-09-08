@@ -1,13 +1,17 @@
 ---
-status: current
+status: superseded
 investigation-date: 2026-09-08
 orbit-commit: 49d68e842a05b5c5e08cdac2b748d2fb4b692f87
 related-adrs:
   - docs/adr/2026-09-08-session-writer-recovery-guard.md
-superseded-by: []
+superseded-by:
+  - docs/research/2026-09-08-session-writer-recovery-review.md
 ---
 
 # Session Writer Lock Recovery
+
+The [subsequent review](2026-09-08-session-writer-recovery-review.md) is the current decision input.
+This original investigation retains its source and reproduction history unchanged.
 
 ## Purpose
 

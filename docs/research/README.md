@@ -115,13 +115,14 @@ at pinned revisions by default. If either is not relevant, record why.
 
 ## Research index
 
-| Investigated | Status  | Topic                                                                                                                                   |
-| ------------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-09-08   | current | [Session Writer Lock Recovery](2026-09-08-session-writer-lock-recovery.md)                                                              |
-| 2026-09-07   | current | [Run Execution, Approval, and Required Recording](2026-09-07-run-execution-approval-and-recording.md)                                   |
-| 2026-09-04   | current | [OpenClaw 2.0 Agent Architecture, Work Serialization, and Orbit Gaps](2026-09-04-openclaw-2-agent-architecture-and-orbit-gaps.md)       |
-| 2026-09-03   | current | [LangGraph Concepts, Intermediate Representations, and Orbit Processors](2026-09-03-langgraph-concepts-intermediate-representations.md) |
-| 2026-09-03   | current | [Visual Agent Graph Authoring with React Flow and LangGraph.js](2026-09-03-visual-agent-graph-authoring-react-flow-langgraph.md)        |
-| 2026-09-03   | current | [Grok Bot Architecture and Skill Ownership](2026-09-03-grok-bot-architecture-and-skill-ownership.md)                                    |
-| 2026-09-02   | current | [Adaptive Processor Graph Runtime](2026-09-02-adaptive-processor-graph-runtime.md)                                                      |
-| 2026-09-02   | current | [Agent Workflow Optimization Papers](2026-09-02-agent-workflow-optimization-papers.md)                                                  |
+| Investigated | Status     | Topic                                                                                                                                   |
+| ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-08   | current    | [Session Writer Recovery Review](2026-09-08-session-writer-recovery-review.md)                                                          |
+| 2026-09-08   | superseded | [Session Writer Lock Recovery](2026-09-08-session-writer-lock-recovery.md)                                                              |
+| 2026-09-07   | current    | [Run Execution, Approval, and Required Recording](2026-09-07-run-execution-approval-and-recording.md)                                   |
+| 2026-09-04   | current    | [OpenClaw 2.0 Agent Architecture, Work Serialization, and Orbit Gaps](2026-09-04-openclaw-2-agent-architecture-and-orbit-gaps.md)       |
+| 2026-09-03   | current    | [LangGraph Concepts, Intermediate Representations, and Orbit Processors](2026-09-03-langgraph-concepts-intermediate-representations.md) |
+| 2026-09-03   | current    | [Visual Agent Graph Authoring with React Flow and LangGraph.js](2026-09-03-visual-agent-graph-authoring-react-flow-langgraph.md)        |
+| 2026-09-03   | current    | [Grok Bot Architecture and Skill Ownership](2026-09-03-grok-bot-architecture-and-skill-ownership.md)                                    |
+| 2026-09-02   | current    | [Adaptive Processor Graph Runtime](2026-09-02-adaptive-processor-graph-runtime.md)                                                      |
+| 2026-09-02   | current    | [Agent Workflow Optimization Papers](2026-09-02-agent-workflow-optimization-papers.md)                                                  |
