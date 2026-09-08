@@ -6,22 +6,31 @@ import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
+import type {OfflineStorageConditions, RegistrationResumeOptions} from './storage-registration.js'
+
 import {parseSessionFile} from './codec.js'
 import {sessionFilePath} from './paths.js'
+import {
+  assertOfflineStorage,
+  canonicalStoragePath,
+  configureSessionStorage,
+  readRegisteredStorage,
+} from './storage-registration.js'
 
-const bindingName = '.orbit-session-binding.json'
+export type {
+  OfflineStorageConditions,
+  RegistrationResumeOptions,
+  StorageRegistrationInspection,
+} from './storage-registration.js'
+
 const scopes = new WeakSet<object>()
 const cleanup = new Map<string, WriterClaim>()
-interface Binding {
-  journalRoot: string
-  sessionRoot: string
-  version: 1
-}
 interface Identity {
   dev: number
   ino: number
 }
 interface Artifact {
+  bytes?: Buffer
   file: string
   identity: Identity
   token?: string
@@ -31,43 +40,17 @@ interface Owner {
   token: string
   version: 1
 }
-export interface OfflineStorageConditions {
-  allWritersStopped: true
-  automaticRestartersDisabled: true
-  exclusiveStorageControl: true
-}
 export interface SessionScope {
   readonly journalRoot: string
+  readonly pairId: string
   readonly sessionId: string
   readonly sessionRoot: string
-}
-
-function offline(conditions: OfflineStorageConditions): void {
-  if (
-    !conditions ||
-    conditions.allWritersStopped !== true ||
-    conditions.automaticRestartersDisabled !== true ||
-    conditions.exclusiveStorageControl !== true
-  )
-    throw new Error('Offline maintenance requires stopped writers/restarters and external exclusive storage control')
 }
 
 export function validateSessionId(id: string): string {
   if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,160}$/u.test(id) || id === 'deletions')
     throw new Error('Invalid session identity')
   return id
-}
-
-export function canonicalStoragePath(value: string): string {
-  const absolute = path.resolve(value)
-  try {
-    return fs.realpathSync.native(absolute)
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-    const parent = path.dirname(absolute)
-    if (parent === absolute) throw error
-    return path.join(canonicalStoragePath(parent), path.basename(absolute))
-  }
 }
 
 function exists(file: string): boolean {
@@ -80,34 +63,6 @@ function exists(file: string): boolean {
   }
 }
 
-function readBinding(root: string): Binding {
-  const file = path.join(root, bindingName)
-  const stat = fs.lstatSync(file)
-  if (!stat.isFile() || stat.nlink !== 1) throw new Error('Invalid storage binding artifact')
-  const b = JSON.parse(fs.readFileSync(file, 'utf8')) as Binding
-  if (b.version !== 1 || typeof b.sessionRoot !== 'string' || typeof b.journalRoot !== 'string')
-    throw new Error('Invalid storage binding')
-  return b
-}
-
-function same(a: Binding, b: Binding): boolean {
-  return a.version === b.version && a.sessionRoot === b.sessionRoot && a.journalRoot === b.journalRoot
-}
-
-function binding(sessionRoot: string, journalRoot: string): Binding {
-  return {journalRoot: canonicalStoragePath(journalRoot), sessionRoot: canonicalStoragePath(sessionRoot), version: 1}
-}
-
-function validateBinding(b: Binding): void {
-  try {
-    if (!same(b, readBinding(b.sessionRoot)) || !same(b, readBinding(b.journalRoot))) throw new Error('conflict')
-  } catch (error) {
-    throw new Error('Session storage is unregistered, incomplete or conflicting; run offline storage initialization', {
-      cause: error,
-    })
-  }
-}
-
 function syncDirectory(directory: string): void {
   const fd = fs.openSync(directory, 'r')
   try {
@@ -117,70 +72,27 @@ function syncDirectory(directory: string): void {
   }
 }
 
-function writeExclusive(file: string, value: unknown): void {
-  const fd = fs.openSync(file, 'wx', 0o600)
-  try {
-    fs.writeFileSync(fd, JSON.stringify(value) + '\n')
-    fs.fsyncSync(fd)
-  } finally {
-    fs.closeSync(fd)
-  }
-
-  syncDirectory(path.dirname(file))
-}
-
-function inspectOverlaps(b: Binding): void {
+function inspectStorageOwnership(b: {journalRoot: string; sessionRoot: string}): () => void {
   if (
-    b.sessionRoot === b.journalRoot ||
-    b.sessionRoot.startsWith(b.journalRoot + path.sep) ||
-    (b.journalRoot.startsWith(b.sessionRoot + path.sep) && b.journalRoot !== path.join(b.sessionRoot, '.runs'))
+    [...cleanup.values()].some(
+      (claim) => claim.scope.sessionRoot === b.sessionRoot || claim.scope.journalRoot === b.journalRoot,
+    )
   )
-    throw new Error('Overlapping session/journal roots are unsupported except the same binding .runs pair')
-  for (const root of [b.sessionRoot, b.journalRoot]) {
-    let ancestor = root
-    while (true) {
-      if (exists(path.join(ancestor, bindingName)) && !same(b, readBinding(ancestor)))
-        throw new Error('Conflicting ancestor storage binding')
-      const parent = path.dirname(ancestor)
-      if (ancestor === parent) break
-      ancestor = parent
-    }
-
-    const visit = (dir: string): void => {
-      if (!exists(dir)) return
-      for (const item of fs.readdirSync(dir, {withFileTypes: true})) {
-        const file = path.join(dir, item.name)
-        if (item.name === bindingName && !same(b, readBinding(dir)))
-          throw new Error('Conflicting nested storage binding')
-        if (item.isDirectory()) visit(file)
-      }
-    }
-
-    visit(root)
-  }
-}
-
-/** Offline only. Assertions describe operator responsibility, not an OS sandbox or proof of stopped services. */
-export function initializeSessionStorage(
-  sessionRoot: string,
-  journalRoot: string,
-  conditions: OfflineStorageConditions,
-): void {
-  offline(conditions)
-  const b = binding(sessionRoot, journalRoot)
-  inspectOverlaps(b)
-  // Refuse live/malformed old locks; migration never discards unknown ownership.
-  const legacy: string[] = []
+    throw new Error('Local writer or cleanup must settle before offline storage initialization')
+  const legacy: Artifact[] = []
   const scan = (dir: string): void => {
     if (!exists(dir)) return
     for (const item of fs.readdirSync(dir, {withFileTypes: true})) {
       const file = path.join(dir, item.name)
       if (item.isDirectory() && file !== b.journalRoot && item.name !== '.coordination') scan(file)
       if (item.name.endsWith('.jsonl.lock')) {
-        const owner = JSON.parse(fs.readFileSync(file, 'utf8')) as Owner
+        const bytes = fs.readFileSync(file)
+        const owner = JSON.parse(bytes.toString('utf8')) as Owner
         if (!validOwner(owner, false) || alive(owner.pid))
           throw new Error('Live or unknown legacy writer blocks migration')
-        legacy.push(file)
+        const stat = fs.lstatSync(file)
+        if (!stat.isFile() || stat.nlink !== 1) throw new Error('Unknown legacy writer artifact')
+        legacy.push({bytes, file, identity: stat})
       }
     }
   }
@@ -188,35 +100,40 @@ export function initializeSessionStorage(
   scan(b.sessionRoot)
   const ownerDir = path.join(b.sessionRoot, '.coordination')
   if (exists(ownerDir))
-    for (const name of fs.readdirSync(ownerDir)) {
+    for (const name of fs.readdirSync(ownerDir))
       if (name.endsWith('.owner')) {
         const owner = readOwner(path.join(ownerDir, name))
         if (!owner || alive(owner.pid)) throw new Error('Live or unknown writer blocks storage initialization')
       }
+
+  return () => {
+    for (const a of legacy) {
+      removeArtifact(a)
+      syncDirectory(path.dirname(a.file))
     }
-
-  for (const root of [b.sessionRoot, b.journalRoot]) {
-    fs.mkdirSync(root, {mode: 0o700, recursive: true})
-    const file = path.join(root, bindingName)
-    if (exists(file)) {
-      if (!same(b, readBinding(root))) throw new Error('Conflicting storage binding')
-    } else writeExclusive(file, b)
-    syncDirectory(root)
-    syncDirectory(path.dirname(root))
   }
+}
 
-  // Both bindings must be durable before deleting classified legacy evidence.
-  validateBinding(b)
-  for (const file of legacy) {
-    fs.unlinkSync(file)
-    syncDirectory(path.dirname(file))
-  }
+export function initializeSessionStorage(
+  sessionRoot: string,
+  journalRoot: string,
+  conditions: OfflineStorageConditions,
+): void {
+  configureSessionStorage(sessionRoot, journalRoot, conditions, inspectStorageOwnership)
+}
+
+export function resumeSessionStorage(
+  sessionRoot: string,
+  journalRoot: string,
+  conditions: OfflineStorageConditions,
+  options: RegistrationResumeOptions = {},
+): void {
+  configureSessionStorage(sessionRoot, journalRoot, conditions, inspectStorageOwnership, true, options)
 }
 
 export function sessionScope(sessionRoot: string, journalRoot: string, sessionId: string): SessionScope {
   validateSessionId(sessionId)
-  const b = binding(sessionRoot, journalRoot)
-  validateBinding(b)
+  const b = readRegisteredStorage(sessionRoot, journalRoot)
   const scope = Object.freeze({...b, sessionId})
   scopes.add(scope)
   return scope
@@ -230,7 +147,8 @@ function validateScope(scope: SessionScope): void {
     canonicalStoragePath(scope.journalRoot) !== scope.journalRoot
   )
     throw new Error('Storage root identity changed')
-  validateBinding({...scope, version: 1})
+  if (readRegisteredStorage(scope.sessionRoot, scope.journalRoot).pairId !== scope.pairId)
+    throw new Error('Storage pair identity changed')
 }
 
 function key(scope: SessionScope): string {
@@ -296,6 +214,8 @@ function removeArtifact(artifact: Artifact): void {
     current.nlink !== 1
   )
     throw new Error('Coordination identity changed; offline maintenance required')
+  if (artifact.bytes && !fs.readFileSync(artifact.file).equals(artifact.bytes))
+    throw new Error('Legacy writer evidence changed during maintenance')
   if (artifact.token && readOwner(artifact.file)?.token !== artifact.token)
     throw new Error('Coordination token changed; offline maintenance required')
   fs.unlinkSync(artifact.file)
@@ -461,7 +381,7 @@ export function inspectTranscript(scope: SessionScope, file: string, creating = 
 
 /** Offline operator procedure. External exclusion MUST survive this process; never use while services can restart. */
 export function recoverSessionWriter(scope: SessionScope, conditions: OfflineStorageConditions): void {
-  offline(conditions)
+  assertOfflineStorage(conditions)
   validateScope(scope)
   if (cleanup.has(key(scope))) throw new Error('Local writer or cleanup must settle before offline recovery')
   const files = coordinationPaths(scope)
@@ -506,3 +426,5 @@ function inspectRecoveryEvidence(scope: SessionScope): void {
     }
   }
 }
+
+export {canonicalStoragePath, inspectSessionStorage} from './storage-registration.js'

@@ -18,21 +18,22 @@ import fs from 'node:fs';
 const {SessionRepository} = await import(process.env.ORBIT_TEST_MODULE);
 const write = fs.writeFileSync.bind(fs);
 const sync = fs.fsyncSync.bind(fs);
-let bindings = 0;
+let bindings = 0; const files = new Map(); const open = fs.openSync.bind(fs);
+fs.openSync = (...args) => {const fd = open(...args); files.set(fd, String(args[0])); return fd};
 fs.writeFileSync = (...args) => {
   const result = write(...args);
-  if (typeof args[1] === 'string' && args[1].includes('"sessionRoot"')) {
+  if (files.get(args[0])?.endsWith('.orbit-session-binding.json')) {
     bindings++;
     if (bindings === 2 && process.env.ORBIT_TEST_MODE === 'death') process.exit(73);
   }
   return result;
 };
 fs.fsyncSync = fd => {
-  if (bindings === 2 && process.env.ORBIT_TEST_MODE === 'sync-error') throw new Error('Injected binding sync failure');
+  if (bindings === 2 && files.get(fd)?.endsWith('.orbit-session-binding.json') && process.env.ORBIT_TEST_MODE === 'sync-error') throw new Error('Injected binding sync failure');
   return sync(fd);
 };
 try {
-  new SessionRepository({rootDir: process.env.ORBIT_TEST_ROOT}).initializeStorage(${JSON.stringify(conditions)});
+  new SessionRepository({rootDir: process.env.ORBIT_TEST_ROOT, journalRoot: process.env.ORBIT_TEST_JOURNAL}).initializeStorage(${JSON.stringify(conditions)});
 } catch (error) {
   if (error.message !== 'Injected binding sync failure') throw error;
   process.exit(74);
@@ -42,16 +43,31 @@ throw new Error('Missing registration interruption');
 let failures = 0
 for (const mode of ['death', 'sync-error']) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-registration-interruption-'))
+  const journalRoot = process.env.ORBIT_TEST_JOURNAL_PARENT
+    ? fs.mkdtempSync(path.join(process.env.ORBIT_TEST_JOURNAL_PARENT, 'orbit-registration-journal-'))
+    : undefined
   try {
     const storage = path.join(root, 'sessions')
     const child = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
       encoding: 'utf8',
-      env: {...process.env, ORBIT_TEST_MODE: mode, ORBIT_TEST_MODULE: moduleURL, ORBIT_TEST_ROOT: storage},
+      env: {
+        ...process.env,
+        ORBIT_TEST_MODE: mode,
+        ORBIT_TEST_MODULE: moduleURL,
+        ORBIT_TEST_ROOT: storage,
+        ...(journalRoot ? {ORBIT_TEST_JOURNAL: journalRoot} : {}),
+      },
       timeout: 10_000,
     })
     assert.equal(child.error, undefined)
     assert.equal(child.status, mode === 'death' ? 73 : 74, child.stderr)
-    const repository = new SessionRepository({rootDir: storage})
+    const repository = new SessionRepository({journalRoot, rootDir: storage})
+    if (journalRoot)
+      assert.notEqual(
+        fs.statSync(repository.rootDir).dev,
+        fs.statSync(repository.journalRoot).dev,
+        'Cross-filesystem mode requires distinct filesystems',
+      )
     let writableAdmission = 'rejected'
     try {
       const session = repository.create({id: 'before-offline-resume'})
@@ -62,14 +78,23 @@ for (const mode of ['death', 'sync-error']) {
       assert.match(String(error), /registration|initializ|incomplete/iu)
     }
 
-    repository.initializeStorage(conditions)
+    repository.resumeStorage(conditions)
     const resumed = repository.create({id: 'after-offline-resume'})
     // eslint-disable-next-line no-await-in-loop
     await resumed.close()
-    console.log(JSON.stringify({childExit: child.status, mode, offlineResume: 'succeeded', writableAdmission}))
+    console.log(
+      JSON.stringify({
+        childExit: child.status,
+        distinctFilesystems: Boolean(journalRoot),
+        mode,
+        offlineResume: 'succeeded',
+        writableAdmission,
+      }),
+    )
     if (writableAdmission !== 'rejected') failures++
   } finally {
     fs.rmSync(root, {force: true, recursive: true})
+    if (journalRoot) fs.rmSync(journalRoot, {force: true, recursive: true})
   }
 }
 

@@ -121,10 +121,21 @@ part of this evidence but are not yet a complete graph trace.
 
 ### Session writer scope
 
-The canonical registered session/journal root pair and Session ID used to
+The canonical registered session/journal root pair, its stable v2 pair ID and
+Session ID used to
 coordinate ownership before and after transcript deletion. A guard protects
 short owner transitions; the owner and delegated journal lease span active I/O.
 Read-only lock inspection does not grant ownership. See [session storage](../session-storage.md).
+
+### Storage registration guard
+
+A persistent marker in each registered root that prevents writable admission
+while offline registration changes or resynchronizes reciprocal bindings. It is
+distinct from a Session's short ownership-transition guard. Its presence never
+proves external administrative exclusion, and it is never reclaimed online.
+Last guard removal establishes logical readiness after prerequisite syncs; API
+success additionally requires final namespace synchronization. See
+[session storage](../session-storage.md).
 
 ## Status qualifiers
 

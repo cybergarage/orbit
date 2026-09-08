@@ -56,7 +56,8 @@ describe('guarded session recovery', () => {
     )
     await fs.unlink(path.join(repository.journalRoot, '.orbit-session-binding.json'))
     expect(() => repository.create()).throws('incomplete')
-    repository.initializeStorage(offlineStorage)
+    expect(() => repository.initializeStorage(offlineStorage)).throws('explicit offline')
+    repository.resumeStorage(offlineStorage)
     const session = repository.create()
     await session.close()
   })
@@ -375,8 +376,9 @@ describe('guarded session recovery', () => {
       import fs from 'node:fs';
       import {SessionRepository} from './src/core/session/repository.ts';
       const repo = new SessionRepository({rootDir: process.env.ORBIT_TEST_ROOT});
-      const sync = fs.fsyncSync.bind(fs); let count = 0;
-      fs.fsyncSync = fd => {sync(fd); if (++count === 1) process.exit(73)};
+      const sync = fs.fsyncSync.bind(fs), open = fs.openSync.bind(fs); const files = new Map();
+      fs.openSync = (...args) => {const fd = open(...args); files.set(fd, String(args[0])); return fd};
+      fs.fsyncSync = fd => {sync(fd); if (files.get(fd)?.endsWith('.orbit-session-binding.json')) process.exit(73)};
       repo.initializeStorage({allWritersStopped: true, automaticRestartersDisabled: true, exclusiveStorageControl: true});
     `
     await execute(process.execPath, ['--loader', './test/alias-loader.mjs', '--input-type=module', '-e', script], {
@@ -390,7 +392,7 @@ describe('guarded session recovery', () => {
       },
     )
     expect(() => storage.create()).throws('incomplete')
-    storage.initializeStorage(offlineStorage)
+    storage.resumeStorage(offlineStorage)
     const created = storage.create()
     await created.close()
   })

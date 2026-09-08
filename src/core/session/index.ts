@@ -10,11 +10,18 @@ export type {SessionModelContext} from './context-builder.js'
 export {
   coordinationPaths,
   initializeSessionStorage,
+  inspectSessionStorage,
   isSessionLocked,
   recoverSessionWriter,
+  resumeSessionStorage,
   retrySessionCleanup,
 } from './coordination.js'
-export type {OfflineStorageConditions, SessionScope} from './coordination.js'
+export type {
+  OfflineStorageConditions,
+  RegistrationResumeOptions,
+  SessionScope,
+  StorageRegistrationInspection,
+} from './coordination.js'
 export {SessionDeletionService} from './deletion-service.js'
 export type {SessionThreadCloser} from './deletion-service.js'
 export {SESSION_FORMAT_VERSION, SessionEntryType, TurnPhase} from './entries.js'

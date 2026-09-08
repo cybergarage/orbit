@@ -38,14 +38,94 @@ repository.initializeStorage({
 })
 ```
 
-Initialization exclusively creates `.orbit-session-binding.json` in both roots,
-containing version 1 and the canonical session/journal root identities. These
-configuration records outlive per-session deletion and contain no conversation
-content. Conflicting bindings fail; a partial reciprocal registration disables
-writable admission. Rerun the offline procedure with the same roots to finish a
-matching partial registration. Malformed/conflicting records require evidence
-review, not blind overwrite. File and directory synchronization is required for
-registration; unsupported storage must not be silently downgraded.
+Initialization registers `.orbit-session-binding.json` in both roots, containing
+`version: 2`, a shared UUID `pairId` and canonical `sessionRoot` / `journalRoot`.
+A v1 pair must be converted offline; equal v1 JSON never permits upgraded writers.
+The pair ID remains stable across repeated initialization and explicit resume.
+Transcripts, journals and minimal deletion records retain their existing formats.
+The configuration records outlive Session deletion and contain no conversation.
+
+The initializer creates and syncs `.orbit-registration.guard` in **both roots**
+before writing registration data. It syncs existing binding files as well as new
+ones. V1 conversion writes a same-directory temporary v2 file, syncs it, renames
+it over the inspected original, and syncs that directory. Both final files and
+all affected directories are synced before guard removal. There is no atomic
+cross-root rename. Newly created ancestor directories are synced top-down along
+with the directories containing their names. Resume also resyncs existing
+ancestry: an earlier process may have died after mkdir before its parent sync,
+before any guard existed to record that stage. Unsupported ancestor sync refuses
+maintenance rather than skipping the prerequisite.
+
+It removes the journal guard and syncs its root, then removes the Session guard
+and syncs that root. Last guard removal is logical readiness, after all data
+prerequisites. Successful API return additionally requires the final sync.
+A failed sync or lost response after the last unlink can leave inspection showing
+`ready`; **keep external admission and restarters disabled** and run the guarded
+resync below before restarting. Internal readiness does not acknowledge receipt
+of an API response or prove physical persistence after a power failure.
+
+Any retained guard, including empty or malformed metadata, refuses scope creation,
+writer/lease validation, cleanup and deletion. Retained binding staging files also
+refuse admission. Ordinary initialization refuses interrupted registration rather
+than silently claiming its guard. Existing v2 storage can be initialized again
+only offline; that operation establishes new guards and resyncs both files.
+Required file/directory sync failures never silently downgrade storage.
+
+## Inspect and resume an interrupted registration
+
+Read-only inspection takes configured roots, does not require a writable scope,
+and does not repair or authorize anything:
+
+```sh
+orbit storage inspect --session-root /srv/orbit/sessions --journal-root /srv/orbit/runs
+```
+
+`repository.inspectStorage()` returns `unregistered`, `legacy`, `pending`, `ready`
+or `conflicting`, canonical roots, and visible artifact paths and SHA-256 values.
+It is a diagnostic snapshot, not evidence that writers or restarters are stopped.
+The top-level equivalents are `inspectSessionStorage(S, J)` and
+`resumeSessionStorage(S, J, conditions, options)`.
+
+After restoring external exclusion and reviewing both roots, resume matching
+partial metadata explicitly:
+
+```sh
+orbit storage resume --session-root /srv/orbit/sessions --journal-root /srv/orbit/runs \
+  --writers-stopped --restarters-disabled --exclusive-storage-control
+```
+
+The library equivalent is `repository.resumeStorage(conditions)`. It validates
+retained pair/attempt identities, restores any missing guard, syncs both guards,
+resyncs both binding files and retries ordered guard removal. It also supports a
+valid pair after uncertain acknowledgement. It neither obtains a writable scope
+first nor recovers individual Session owners as a side effect.
+
+Empty/torn metadata and unknown staging files require an **independent offline
+review**, including configured roots, surviving records, stopped owners and the
+interrupted invocation. If that evidence is sufficient to reconstruct this pair,
+supply only the reviewed absolute artifact paths and their exact SHA-256 values
+in a JSON file via `--reviewed-artifacts FILE`, or as
+`{reviewedArtifacts: {[absolutePath]: sha256}}` to the resume API. Do not blindly
+copy every inspection digest into an approval file: inspection cannot establish
+that reconstruction is valid. The reviewed bytes must still match at use time.
+
+Resume preserves anomalous bytes in `.orbit-registration-evidence-<sha256>.bin`
+before repair. If an interrupted evidence copy already occupies that name with
+different bytes, it remains unchanged and a new copy uses an additional UUID
+suffix. A filename is not proof of a valid copy: verify the actual bytes/hash.
+Source repair follows a successfully synced complete copy; incomplete copies
+never authorize repair by themselves. It repairs a torn guard in place only after both guard names are
+durable, so exclusion remains present. Reviewed staging files are preserved and
+removed under those guards. Conflicting valid partner/pair/attempt records,
+symlinks, hard links, unreadable artifacts and unknown/live ownership still reject;
+digests do not override those checks. A second interruption retains evidence and
+requires another inspection. There is no online force flag or timeout recovery.
+
+Root paths and pair IDs describe logical relationships, not authenticated volume
+identities. An observed root replacement during maintenance rejects. Copies or
+restores to the same canonical paths between stopped processes cannot always be
+detected; keep those operations excluded pending a separately reviewed migration.
+Moving roots or changing a partner is not same-pair initialization.
 
 The procedure classifies old adjacent `.jsonl.lock` files and refuses unknown or
 live owners. It removes only classified dead-owner files after both bindings
@@ -58,7 +138,9 @@ Rollback also requires stopping every writer and reviewing retained state.
 
 ## Normal acquisition and cleanup
 
-`SessionRepository.scope(id)` issues a validated scope for its registered roots.
+`SessionRepository.scope(id)` issues a validated scope for its registered v2 roots,
+pair ID and Session ID. Acquisition and live lease checks revalidate both current
+bindings and guard absence; a previously issued scope cannot bypass pending state.
 Low-level `SessionRecorder.create(file, header, scope)` and `open(file, scope)`
 require that scope; the old path-only mutation and arbitrary prepare callback
 are removed. The recorder performs defined transcript validation/repair under
@@ -106,7 +188,7 @@ state after acquisition. Removing the transcript never switches the scope to
 a marker filename. Retry returns the remaining summary or ID and preserves the
 already accepted minimal `{version, sessionId, state}` deletion marker.
 
-## Recover an abandoned guard
+## Recover an abandoned Session guard
 
 A guard left by a crashed transition is never reclaimed automatically. Stop all
 writers/restarters and establish external exclusion as above, then run:
@@ -115,7 +197,8 @@ writers/restarters and establish external exclusion as above, then run:
 orbit storage recover SESSION_ID --writers-stopped --restarters-disabled --exclusive-storage-control
 ```
 
-Specify the same custom roots if applicable. The library equivalent is
+Registration must be ready before Session recovery; finish root-level resume
+first. Specify the same custom roots if applicable. The library equivalent is
 `recoverSessionWriter(repository.scope(id), conditions)`. It checks the binding,
 owner, deletion marker and journal evidence, rejects live/unknown owners or
 conflicting/torn evidence, removes the identified stale owner first and the
@@ -132,6 +215,12 @@ isolated roots but cannot validate a production service manager's restart policy
 
 ## Supported assumptions and remaining verification
 
+The current verification focus is Linux/macOS. Windows and other environments
+are deferred. Representative application trials await the coding agent or a
+future autonomous application; real operational exclusion and physical-failure
+trials await a target deployment, storage and SLI/SLO. These deferrals are not
+passing evidence and do not relax runtime storage requirements.
+
 The protocol assumes cooperating upgraded processes on one host, a stable PID
 namespace and a local filesystem with the required exclusive-create and sync
 semantics. It is not protection from arbitrary JavaScript or hostile filesystem
@@ -139,3 +228,6 @@ writers. Network mounts, separate PID namespaces, physical power-loss survival,
 Windows/filesystem variations and representative product workloads require their
 own verification. See the [recovery ADR](adr/2026-09-08-session-writer-recovery-guard.md)
 for evidence and open conditions; acceptance and implementation are distinct.
+
+Registration ordering and acknowledgement evidence are recorded in the
+[registration ADR](adr/2026-09-08-session-storage-registration-guard.md).

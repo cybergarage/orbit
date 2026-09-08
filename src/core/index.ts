@@ -179,11 +179,19 @@ export type {
 export {
   coordinationPaths,
   initializeSessionStorage,
+  inspectSessionStorage,
   isSessionLocked,
   recoverSessionWriter,
+  resumeSessionStorage,
   retrySessionCleanup,
 } from './session/index.js'
-export type {OfflineStorageConditions, SessionScope, SessionWriterLease} from './session/index.js'
+export type {
+  OfflineStorageConditions,
+  RegistrationResumeOptions,
+  SessionScope,
+  SessionWriterLease,
+  StorageRegistrationInspection,
+} from './session/index.js'
 export {
   loadWorkspaceSettings,
   loadWorkspaceSettingsSync,

@@ -116,7 +116,12 @@ derives model input from those durable records.
 `SessionRepository` creates, opens and lists append-only session files.
 `SessionDeletionService` removes managed artifacts under the stable Session-ID
 owner, preserving a minimal deletion marker. `session/coordination.ts` validates
-reciprocal storage bindings and serializes owner transitions with exclusive
+v2 reciprocal storage bindings and their pair identity at ownership boundaries.
+`session/storage-registration.ts` controls offline initialization, read-only
+inspection and explicit resume, using persistent guards in both roots and
+mandatory file/directory synchronization. Pending registration refuses writable
+scopes; final guard removal and API acknowledgement are distinct.
+The coordination module serializes owner transitions with exclusive
 guards; abandoned guards require offline recovery. `SessionRecorder` retains
 ownership through queued writes and delegated journal I/O. `writer-lease.ts`
 validates single-consumer journal capabilities before persistent open.

@@ -8,7 +8,12 @@ import process from 'node:process'
 import {v7 as uuidv7} from 'uuid'
 
 import type {ProviderName} from '../models/provider.js'
-import type {OfflineStorageConditions, SessionScope} from './coordination.js'
+import type {
+  OfflineStorageConditions,
+  RegistrationResumeOptions,
+  SessionScope,
+  StorageRegistrationInspection,
+} from './coordination.js'
 import type {SessionHeaderEntry, SessionMetadata} from './entries.js'
 import type {SessionInformation} from './information.js'
 
@@ -16,7 +21,14 @@ import {sessionsDir} from '../app.js'
 import {deletionMarker} from '../execution/deletion.js'
 import {Message} from '../message/index.js'
 import {parseSessionFile} from './codec.js'
-import {canonicalStoragePath, initializeSessionStorage, sessionScope, validateSessionId} from './coordination.js'
+import {
+  canonicalStoragePath,
+  initializeSessionStorage,
+  inspectSessionStorage,
+  resumeSessionStorage,
+  sessionScope,
+  validateSessionId,
+} from './coordination.js'
 import {SESSION_FORMAT_VERSION, SessionEntryType} from './entries.js'
 import {createSessionInformationFromSource} from './information.js'
 import {sessionFilePath} from './paths.js'
@@ -145,6 +157,10 @@ export class SessionRepository {
     initializeSessionStorage(this.rootDir, this.journalRoot, conditions)
   }
 
+  inspectStorage(): StorageRegistrationInspection {
+    return inspectSessionStorage(this.rootDir, this.journalRoot)
+  }
+
   list(): SessionSummary[] {
     if (!fs.existsSync(this.rootDir)) return []
     return findSessionFiles(this.rootDir, this.journalRoot)
@@ -223,6 +239,10 @@ export class SessionRepository {
     const resolvedFile = path.resolve(file)
     const parsed = parseSessionFile(fs.readFileSync(resolvedFile, 'utf8'), resolvedFile)
     return summaryFromParsed(parsed, resolvedFile)
+  }
+
+  resumeStorage(conditions: OfflineStorageConditions, options: RegistrationResumeOptions = {}): void {
+    resumeSessionStorage(this.rootDir, this.journalRoot, conditions, options)
   }
 
   scope(id: string): SessionScope {
