@@ -117,6 +117,7 @@ at pinned revisions by default. If either is not relevant, record why.
 
 | Investigated | Status     | Topic                                                                                                                                   |
 | ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-08   | current    | [Session Storage Registration Interruption](2026-09-08-session-storage-registration.md)                                                 |
 | 2026-09-08   | current    | [Session Writer Recovery Review](2026-09-08-session-writer-recovery-review.md)                                                          |
 | 2026-09-08   | superseded | [Session Writer Lock Recovery](2026-09-08-session-writer-lock-recovery.md)                                                              |
 | 2026-09-07   | current    | [Run Execution, Approval, and Required Recording](2026-09-07-run-execution-approval-and-recording.md)                                   |
