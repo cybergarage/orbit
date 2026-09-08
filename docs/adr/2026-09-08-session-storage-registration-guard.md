@@ -41,6 +41,16 @@ requires rejection until registration completes. If “completes” instead requ
 a successful response received by the caller, ordinary guard removal or manifest
 publication cannot establish that property; resolve this before acceptance.
 
+The review recommends the narrower data-safety interpretation, subject to explicit
+acceptance: no logical readiness before both binding files and required directory
+entries are synchronized. It does **not** satisfy a stronger interpretation that
+all unsuccessful initializer invocations must leave internal admission blocked,
+including failures after the last unlink. If that stronger condition is required,
+revise this proposal to define a separately controlled admission authority and
+handoff; neither a second marker nor the manifest option establishes it by itself.
+Do not call this an already accepted clarification or change the parent's reasons
+before the author decides.
+
 The existing external prerequisites remain mandatory: stop all old/new writers
 and admission sources, disable every automatic restarter, and retain exclusive
 storage control across initializer death. Marker files neither establish that
@@ -67,17 +77,29 @@ operational exclusion nor make online registration supported.
   objects against their paths before writes/unlinks. Reject binding/guard
   symlinks, hard links and non-regular files. Handle filesystem case aliases by
   actual resolution, without universal lowercasing. Reject ambiguous aliases,
-  swapped roots, divergent partners and unverified replacements.
+  swapped roots, divergent partners and replacements observable during the attempt.
 - Canonical paths and the pair ID identify this registered relationship; they do
   not authenticate a copied filesystem, resist arbitrary raw writes, or prove a
   storage device persisted acknowledgements. Root device/inode observations are
   checked within a maintenance attempt, not imposed as portable persistent inode
-  numbers. A move/restore or change of partner is not same-pair re-registration;
-  refuse it and require a separately reviewed import/migration procedure.
+  numbers. A requested move/restore or change of partner is not same-pair re-registration;
+  refuse that operation and require a separately reviewed import/migration procedure.
+
+A complete pair copied/restored to the same canonical paths between stopped
+processes can retain valid v2 metadata. This format does not automatically detect
+that physical replacement. Keep such restore/move operations under external
+exclusion pending a separately reviewed migration procedure. Stronger automatic
+volume identity or an independently retained registry is an alternative requiring
+additional design; it is not an implicit property of pairId. The recommended
+identity scope remains logical one-to-one storage plus observable alias/conflict
+and within-attempt replacement checks.
 
 ### Proposed offline sequence
 
-1. Establish external exclusion independently of this process. Inspect identities,
+1. Establish external exclusion independently of this process. Use a non-authorizing
+   offline inspection path taking configured S/J roots and operator conditions;
+   it must not require a writable SessionScope or call scope-based Session recovery
+   to repair registration first. Inspect identities,
    conflicts, old locks, live/unknown owners and pending cleanup. Refuse live or
    unexplained ownership. Preserve transcript, journal and deletion evidence.
 2. Create missing root directories top-down, syncing each created directory and
@@ -124,9 +146,14 @@ claiming that a crash before the first mutation invalidates already durable data
 
 A repeated `initializeStorage` is offline even if both JSON files already match.
 It must create guards and resync contents. It cannot remove a partner, change
-pair ID, waive external exclusion, or silently reset a registered generation.
+pair ID, waive external exclusion, or imply a new registration generation.
+V2 has no separate epoch field.
 New initializer invocations encountering existing guards must enter an explicit
-offline resume procedure, not infer ownership from PID or age.
+offline resume procedure, not infer ownership from PID or age. Ordinary
+initialization refuses pending/unknown artifacts; the non-authorizing offline
+inspection may examine them and record the evidence needed for an explicit resume.
+This distinction avoids both silent repair and a circular requirement for a
+writable scope before unready registration can be repaired.
 
 Resume first re-establishes the external conditions and inspects both roots and
 all retained evidence. A valid partial guard identifies its expected counterpart;
@@ -145,6 +172,23 @@ pair, unknown owner, malformed binding without sufficient reconstruction evidenc
 unsupported sync or inaccessible counterpart remains blocked. The resumption
 condition is supplied evidence and a supported destination, not another timeout.
 This proposal authorizes no automatic general-purpose data repair.
+
+If registration unexpectedly becomes pending while a local writer or retained
+cleanup still exists, do not initialize around it or bypass scope validation in
+release. Keep resources quarantined and stop the affected application under the
+external gate; verify termination, then use a separate maintenance process to
+inspect the pending registration and dead-owner evidence. Unknown ownership still
+blocks automated recovery. This is an operational violation recovery condition,
+not a supported race between online writers and maintenance. Resuming registration
+alone neither reconciles incomplete runs nor erases their Session guard, owner,
+journal or deletion evidence.
+
+A scope holds identity, not a writer lease. Validate the current v2 pair and both
+guards again at writer acquisition and live lease checks; never cache readiness.
+Different-version or different-pair scopes fail. An unchanged-pair resync does
+not promise permanent revocation of every pre-existing scope. Do not introduce
+a generation or epoch solely to satisfy an imprecise cache-invalidation phrase;
+owner-token and single-consumer lease checks remain independently mandatory.
 
 ### Admission, inspection, cleanup and Session maintenance
 
@@ -197,8 +241,8 @@ Old transcripts, journals, minimal deletion records, Session IDs and accepted
 ownership reasons are preserved. Current API and feature documentation must not
 claim v2 exists yet. If accepted, implementation must update storage commands,
 error/inspection contracts, architecture, concepts and migration examples, and
-invalidate cached scopes across registration changes. Compatibility is not
-achieved by permitting v1 writes or running old binaries concurrently.
+revalidate scope identity and current registration at ownership boundaries.
+Compatibility is not achieved by permitting v1 writes or running old binaries concurrently.
 
 ## Context and Problem Statement
 
@@ -279,8 +323,11 @@ After acceptance, confirmation must include:
 
 - Deterministic separate-process admission attempts at every matrix checkpoint,
   fresh/v1/v2 data, first registration and repetition, both root orders in fault
-  injection, nested .runs and disjoint filesystems. Assert exact checkpoint exit,
-  rejected acquisition and unchanged evidence; a timeout alone never passes.
+  injection, nested .runs and disjoint filesystems. Assert exact checkpoint exit
+  and the matrix row's expected acquisition result: refusal while pending, possible
+  readiness for an unchanged v2 pair before its first guard or after logical
+  completion. Do not require blanket rejection after final unlink. Check retained
+  evidence and the external gate separately; a timeout alone never passes.
 - The current fixture updated to the new binding-write synchronization points,
   preserving death and fsync-error cases; it must return 0 because both cases
   actually refuse. Trace file and directory sync ordering, including existing
@@ -291,12 +338,16 @@ After acceptance, confirmation must include:
   resync, not deletion of markers merely to make a test pass.
 - Both public writer APIs and persistent journal leases, per-Session acquisition,
   rejection/release retries, isLocked/isOpen with zero repair writes, legacy reads,
-  deletion before/after its retained marker and Session recovery ordering. Old
-  scopes must not bypass registration validation.
+  deletion before/after its retained marker and scope-free offline registration
+  inspection/resume before Session recovery.
+  Exercise pending registration with retained local cleanup and the documented
+  process-stop handoff, without inventing a writable scope. Old scopes must not
+  bypass live registration checks; unchanged-pair resync is not epoch revocation.
 - v1 successful and interrupted migration, mixed v1/v2 pairs, old binary rejection
   after conversion, ambiguous aliases/hard links, root replacement during an
-  attempt and conflicting one-to-one arrangements. No concurrent old-version
-  support is inferred from a single post-conversion version check.
+  attempt and conflicting one-to-one arrangements. Whole-pair same-path restore
+  is an explicitly unsupported operational case, not a promised detection test.
+  No concurrent old-version support is inferred from a single post-conversion version check.
 - Required headers:check, build and test; source diff review after format/lint.
   Run the declared Node/environment matrix, separating unsupported storage
   capability rejection from an actual verified operating environment.
@@ -317,7 +368,8 @@ Author decisions before acceptance:
    shutdown for uncertain outcomes. If successful response receipt must instead
    gate internal admission, request a stronger design and revise this proposal.
 3. Accept explicit evidence-based offline repair and the additional synchronization
-   cost, including refusal on unsupported destinations and no online root rebinding.
+   cost, including refusal on unsupported destinations, the stated logical identity
+   limits and no online root rebinding.
 
 The existing four ADRs remain accepted / partial. Preserve Windows, actual
 operational exclusion, physical storage faults and representative long target
@@ -326,9 +378,35 @@ restart conditions in the recovery ADR. Everything 2026.8.31's managed `$schema`
 compatibility is separate unfinished work. Initial product profile values remain
 unmeasured starting values; this proposal changes none of them.
 
+### Review record — 2026-09-08
+
+Reviewed the original proposal at `672c3668e9c0d1922e9a8d36f217ee89515ac558`;
+[follow-up research](../research/2026-09-08-session-storage-registration-review.md)
+was committed separately as `6120b3d207d0c816327c5ab06cc921cb0cb32288`.
+The original research remains historical evidence. There were no subsequent
+source/test/dependency changes; public main remained
+`80130cf194e477f136eefaa5b7cd2a2374dff198`.
+
+The review corrected blanket rejection assertions, scope-dependent repair
+ambiguity, implied epoch revocation and overbroad physical replacement detection.
+Guard versus manifest, v1 conversion, existing-file resync and ordered guard
+removal remain the conditional recommendation. Completion semantics require the
+explicit author choice above; the parent is not declared unconditionally compatible.
+
+Fresh macOS arm64 / Node 26.5.0 headers:check, build and 397 tests passed,
+with 0 lint errors / 12 warnings and no formatting changes to source. The existing
+registration diagnostic again returned exit 1, child checkpoints 73/74 and admitted
+writers in both cases. This verifies the unchanged defect, not the proposed remedy.
+Linux/Windows, UI, operational and physical-storage trials were not repeated in
+this source/document review. Their dated evidence and outstanding work remain.
+No acceptance, implementation or test correction occurred; metadata remains
+proposed / not-started with null decision/completion dates and no implementation
+commits. All four accepted / partial parents retain their metadata and reasons.
+
 ## References
 
-- [Registration research and full pinned source ledger](../research/2026-09-08-session-storage-registration.md)
+- [Current review research](../research/2026-09-08-session-storage-registration-review.md)
+- [Original registration research and full pinned source ledger](../research/2026-09-08-session-storage-registration.md)
 - [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)
 - [Managed Run Lifecycle](2026-09-07-managed-run-lifecycle.md)
 - [Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md)

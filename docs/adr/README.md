@@ -336,6 +336,11 @@ persistent guards with a committed manifest and specifies v2 migration, existing
 resync and uncertain completion acknowledgement. It is proposed / not-started;
 no acceptance, implementation or supersession of the four partial records is implied.
 
+The [registration review](../research/2026-09-08-session-storage-registration-review.md)
+clarifies stage-specific admission, scope-free offline repair and identity limits.
+The proposed completion interpretation still requires an explicit author decision;
+no parent is treated as having approved it.
+
 ## Background
 
 This convention adapts Michael Nygard's lightweight status, context, decision,
