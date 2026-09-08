@@ -338,14 +338,14 @@ copy used `npm ci --ignore-scripts` from the unchanged lockfile. The separate
 on both platforms** (exit 1, both children reported `owned`). The passing suite
 does not include or cancel this negative evidence.
 
-| Confirmation | Source and execution evidence | Limit |
-| --- | --- | --- |
-| Memory/file ordering, idempotency, torn writes, lost acknowledgement and missing keys | `test/core/execution/{run,contracts,storage,restart}.test.ts` passed again. | Process-exit and injected I/O faults are not power-loss tests. |
-| Required sync capability and no fallback | Existing storage tests exercise rejected levels, key/ancestor sync failure and explicit weaker selection. | Direct directory-sync behavior was exercised on macOS/Linux, not Windows. |
-| Lease retention and competing live writer | `process-storage.test.ts` starts a separate owner, requests close while its journal lease remains, rejects another writer/deleter, then recovers after process exit. | Sequential stale recovery alone does not establish concurrent recovery safety. |
-| Deletion interrupted after each stage | Five actual subprocess exits after initial marker, log deletion, transcript removal, journal/key removal and completed marker all resumed; the minimal marker remained and ID reuse failed. | File-sync was explicitly selected; additional platforms remain unverified. |
-| Simultaneous stale-lock reclamation | `fixtures/stale-lock-race.mjs` under the execution tests reproduces two simultaneous live owners on macOS and Linux. | **Failed guarantee; unresolved.** Passing fault/restart tests do not justify completed status. |
-| Acknowledgement overhead | The managed-run ADR records the 3-run delayed-workload sample: 66 strong-sync acknowledgements, median 8.3 ms. | Small host sample, not a storage capacity or power-loss guarantee. |
+| Confirmation                                                                          | Source and execution evidence                                                                                                                                                               | Limit                                                                                          |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Memory/file ordering, idempotency, torn writes, lost acknowledgement and missing keys | `test/core/execution/{run,contracts,storage,restart}.test.ts` passed again.                                                                                                                 | Process-exit and injected I/O faults are not power-loss tests.                                 |
+| Required sync capability and no fallback                                              | Existing storage tests exercise rejected levels, key/ancestor sync failure and explicit weaker selection.                                                                                   | Direct directory-sync behavior was exercised on macOS/Linux, not Windows.                      |
+| Lease retention and competing live writer                                             | `process-storage.test.ts` starts a separate owner, requests close while its journal lease remains, rejects another writer/deleter, then recovers after process exit.                        | Sequential stale recovery alone does not establish concurrent recovery safety.                 |
+| Deletion interrupted after each stage                                                 | Five actual subprocess exits after initial marker, log deletion, transcript removal, journal/key removal and completed marker all resumed; the minimal marker remained and ID reuse failed. | File-sync was explicitly selected; additional platforms remain unverified.                     |
+| Simultaneous stale-lock reclamation                                                   | `fixtures/stale-lock-race.mjs` under the execution tests reproduces two simultaneous live owners on macOS and Linux.                                                                        | **Failed guarantee; unresolved.** Passing fault/restart tests do not justify completed status. |
+| Acknowledgement overhead                                                              | The managed-run ADR records the 3-run delayed-workload sample: 66 strong-sync acknowledgements, median 8.3 ms.                                                                              | Small host sample, not a storage capacity or power-loss guarantee.                             |
 
 ### New finding: simultaneous stale-lock reclamation
 
@@ -364,11 +364,11 @@ rewrite the accepted reason for keeping transcript and journal ownership
 coordinated. A token re-read before unlink alone still leaves a check/unlink
 race and is not an adequate remedy.
 
-| Follow-up option (not adopted) | Benefit | Cost / required confirmation |
-| --- | --- | --- |
-| Exclusive recovery guard covering every stale-removal path; abandoned guard fails closed and needs explicit offline recovery | Retains the current recorder/journal lease arrangement and can serialize reclaimers. | Adds recovery state and a blocked-recovery procedure; ordinary acquire, isLocked, deletion, guard crash and migration must all participate. |
-| OS-backed process-lifetime locks with a supported cross-platform implementation | Kernel releases ownership after process exit; avoids PID-file reclamation as the exclusion primitive. | Platform support/dependency and filesystem semantics need research, tests and a new decision. |
-| Keep current code and serialize recovery externally | Immediate operational restriction, no format change. | Not a correction or a sufficient completion basis. |
+| Follow-up option (not adopted)                                                                                               | Benefit                                                                                               | Cost / required confirmation                                                                                                                |
+| ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Exclusive recovery guard covering every stale-removal path; abandoned guard fails closed and needs explicit offline recovery | Retains the current recorder/journal lease arrangement and can serialize reclaimers.                  | Adds recovery state and a blocked-recovery procedure; ordinary acquire, isLocked, deletion, guard crash and migration must all participate. |
+| OS-backed process-lifetime locks with a supported cross-platform implementation                                              | Kernel releases ownership after process exit; avoids PID-file reclamation as the exclusion primitive. | Platform support/dependency and filesystem semantics need research, tests and a new decision.                                               |
+| Keep current code and serialize recovery externally                                                                          | Immediate operational restriction, no format change.                                                  | Not a correction or a sufficient completion basis.                                                                                          |
 
 Recommendation: prepare a research-backed proposal for the exclusive recovery
 guard first, explicitly comparing an OS-backed lock. Do not automatically
@@ -376,6 +376,17 @@ reclaim an abandoned guard through the same unsafe check/unlink pattern. The
 author must decide the recovery/compatibility cost before implementation; no
 option is accepted in this record. Resume with the deterministic probe and
 require one owner, then test interruption of the recovery mechanism itself.
+
+### Recovery proposal follow-up — 2026-09-08
+
+The [session writer recovery research](../research/2026-09-08-session-writer-lock-recovery.md)
+and [proposed recovery guard](2026-09-08-session-writer-recovery-guard.md) compare
+exclusive guards with OS-managed locks and define migration, maintenance and
+confirmation conditions. No option is accepted or implemented. The unchanged
+macOS baseline still reproduces two writers. Today's full suite also exposes
+a separate date-dependent legacy log cursor failure; see the research evidence.
+Acceptance, implementation hashes, partial status and remaining platform/product
+checks are unchanged.
 
 ### Confirmation remaining before completed
 

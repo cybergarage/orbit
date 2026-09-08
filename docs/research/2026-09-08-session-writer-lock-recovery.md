@@ -2,7 +2,8 @@
 status: current
 investigation-date: 2026-09-08
 orbit-commit: 49d68e842a05b5c5e08cdac2b748d2fb4b692f87
-related-adrs: []
+related-adrs:
+  - docs/adr/2026-09-08-session-writer-recovery-guard.md
 superseded-by: []
 ---
 
@@ -252,7 +253,8 @@ The [required journal](../adr/2026-09-07-required-execution-journal.md),
 [managed run](../adr/2026-09-07-managed-run-lifecycle.md), and
 [authorization](../adr/2026-09-07-prepared-operation-authorization.md)
 remain accepted / partial. Their reasons, dates, and implementation history
-are unchanged. A separate proposal is the next decision input.
+are unchanged. The [proposed recovery guard](../adr/2026-09-08-session-writer-recovery-guard.md) is a separate decision input,
+not an adoption record.
 
 ## References
 

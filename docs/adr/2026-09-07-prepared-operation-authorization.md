@@ -347,14 +347,14 @@ copy used `npm ci --ignore-scripts` from the unchanged lockfile. The separate
 on both platforms** (exit 1, both children reported `owned`). The passing suite
 does not include or cancel this negative evidence.
 
-| Confirmation | Source and execution evidence | Limit |
-| --- | --- | --- |
-| Deny, invalid input, absent responder and legacy adapters | `test/core/execution/{agent,contracts}.test.ts` passed again with dispatch counters. | Covers the explicit fixture inputs and policies. |
-| Mutation, preimages, symlinks, revocation and approval identity | Existing tests cover frozen input, post-intent target changes, expiry/revocation, wrong digest, opposite and duplicate replies; GUI two-client checks passed again. | Windows path/race behavior remains unmeasured. |
-| Unsupported MCP schema | `mcp-contract.test.ts` rejects references, format, unevaluated properties and nested unsupported vocabulary before model exposure. | The tuple-style items case originally escaped recursive checks; `validateSchemaKeywords` now traverses it. No new schema vocabulary was adopted. |
-| Supported nested MCP input | Seven input cases exercise compositions, enum/const, properties, array/numeric/string constraints and invalid-before-approval behavior. | This finite matrix does not claim every JSON Schema vocabulary/dialect is supported. |
-| Remote timeout and external confirmation | Injected rejection and an actual slow stdio call retain unknown effects, do not retry, close the child, and reconcile from explicit evidence without rewriting the original result. | Production services and network transports were not exercised. |
-| User-facing confirmation | Full Ink approve/deny/Ctrl+C and the GUI fault proxy were exercised. The browser returned completed/acknowledged after SSE disconnect, HTTP 503, a delayed stale response and duplicate/reordered notifications. | Fake model and test previews; wider usability trials remain. |
+| Confirmation                                                    | Source and execution evidence                                                                                                                                                                                    | Limit                                                                                                                                            |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Deny, invalid input, absent responder and legacy adapters       | `test/core/execution/{agent,contracts}.test.ts` passed again with dispatch counters.                                                                                                                             | Covers the explicit fixture inputs and policies.                                                                                                 |
+| Mutation, preimages, symlinks, revocation and approval identity | Existing tests cover frozen input, post-intent target changes, expiry/revocation, wrong digest, opposite and duplicate replies; GUI two-client checks passed again.                                              | Windows path/race behavior remains unmeasured.                                                                                                   |
+| Unsupported MCP schema                                          | `mcp-contract.test.ts` rejects references, format, unevaluated properties and nested unsupported vocabulary before model exposure.                                                                               | The tuple-style items case originally escaped recursive checks; `validateSchemaKeywords` now traverses it. No new schema vocabulary was adopted. |
+| Supported nested MCP input                                      | Seven input cases exercise compositions, enum/const, properties, array/numeric/string constraints and invalid-before-approval behavior.                                                                          | This finite matrix does not claim every JSON Schema vocabulary/dialect is supported.                                                             |
+| Remote timeout and external confirmation                        | Injected rejection and an actual slow stdio call retain unknown effects, do not retry, close the child, and reconcile from explicit evidence without rewriting the original result.                              | Production services and network transports were not exercised.                                                                                   |
+| User-facing confirmation                                        | Full Ink approve/deny/Ctrl+C and the GUI fault proxy were exercised. The browser returned completed/acknowledged after SSE disconnect, HTTP 503, a delayed stale response and duplicate/reordered notifications. | Fake model and test previews; wider usability trials remain.                                                                                     |
 
 The GUI corrections ignore a previous run's delayed start and clear only the
 stream-disconnected notice when the stream reconnects. These and the nested
@@ -362,6 +362,17 @@ schema correction restore the accepted behavior; they introduce no new public
 API, persistence format or architectural choice. The separate stale-lock race
 can defeat cross-process ownership assumed by this contract; its remedy is not
 implicitly approved by this evidence update.
+
+### Recovery proposal follow-up — 2026-09-08
+
+The [session writer recovery research](../research/2026-09-08-session-writer-lock-recovery.md)
+and [proposed recovery guard](2026-09-08-session-writer-recovery-guard.md) compare
+exclusive guards with OS-managed locks and define migration, maintenance and
+confirmation conditions. No option is accepted or implemented. The unchanged
+macOS baseline still reproduces two writers. Today's full suite also exposes
+a separate date-dependent legacy log cursor failure; see the research evidence.
+Acceptance, implementation hashes, partial status and remaining platform/product
+checks are unchanged.
 
 ### Confirmation remaining before completed
 

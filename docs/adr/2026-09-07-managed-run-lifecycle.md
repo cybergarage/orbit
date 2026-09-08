@@ -368,14 +368,14 @@ copy used `npm ci --ignore-scripts` from the unchanged lockfile. The separate
 on both platforms** (exit 1, both children reported `owned`). The passing suite
 does not include or cancel this negative evidence.
 
-| Confirmation | Source and execution evidence | Limit |
-| --- | --- | --- |
-| Stop, budgets, parallel outcomes and bounded close | `run.test.ts`, `contracts.test.ts`, `restart.test.ts` under `test/core/execution/` passed again, including pending writers, late mutations, finalization and synchronous code. | These are the enumerated fixtures, not arbitrary executor preemption. |
-| Cold MCP admission, readiness and timeout | `agent.test.ts` checks startup ordering; `mcp-contract.test.ts` exercises an actual delayed stdio call, possible effect, one model request, child exit and explicit reconciliation. | A 1-second cleanup trial returned before child exit; the accepted 5-second cleanup profile confirmed exit. Neither proves all services stop in 5 seconds. |
-| Duplicate requests and stale/reconnected UI | Existing two-client API tests plus `run-presentation.test.ts` and `test/apps/gui/fixtures/transport-faults.mjs`. | Browser verification used an isolated local server and injected models. |
-| Complete Ink interaction | `test/apps/cli/fixtures/managed-interactive.mjs`: approve produced one file and completed/acknowledged; deny produced no file; Ctrl+C during approval produced cancelled/acknowledged and quiescence. | Explicit file-sync, actual PTY, fake model; no human usability sample. |
-| Target-test versus run failure | Existing nonzero target-test fixture passed. The delayed utilization trial below completed without changing defaults. | Representative production workloads remain unmeasured. |
-| Resource ownership after restart | Live-owner contention and sequential stale recovery passed; simultaneous stale recovery admitted two writers. | This is a blocking defect in inherited SessionRecorder locking; see the journal ADR's new finding. |
+| Confirmation                                       | Source and execution evidence                                                                                                                                                                         | Limit                                                                                                                                                     |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stop, budgets, parallel outcomes and bounded close | `run.test.ts`, `contracts.test.ts`, `restart.test.ts` under `test/core/execution/` passed again, including pending writers, late mutations, finalization and synchronous code.                        | These are the enumerated fixtures, not arbitrary executor preemption.                                                                                     |
+| Cold MCP admission, readiness and timeout          | `agent.test.ts` checks startup ordering; `mcp-contract.test.ts` exercises an actual delayed stdio call, possible effect, one model request, child exit and explicit reconciliation.                   | A 1-second cleanup trial returned before child exit; the accepted 5-second cleanup profile confirmed exit. Neither proves all services stop in 5 seconds. |
+| Duplicate requests and stale/reconnected UI        | Existing two-client API tests plus `run-presentation.test.ts` and `test/apps/gui/fixtures/transport-faults.mjs`.                                                                                      | Browser verification used an isolated local server and injected models.                                                                                   |
+| Complete Ink interaction                           | `test/apps/cli/fixtures/managed-interactive.mjs`: approve produced one file and completed/acknowledged; deny produced no file; Ctrl+C during approval produced cancelled/acknowledged and quiescence. | Explicit file-sync, actual PTY, fake model; no human usability sample.                                                                                    |
+| Target-test versus run failure                     | Existing nonzero target-test fixture passed. The delayed utilization trial below completed without changing defaults.                                                                                 | Representative production workloads remain unmeasured.                                                                                                    |
+| Resource ownership after restart                   | Live-owner contention and sequential stale recovery passed; simultaneous stale recovery admitted two writers.                                                                                         | This is a blocking defect in inherited SessionRecorder locking; see the journal ADR's new finding.                                                        |
 
 A separate three-run utilization trial at 14:31 UTC used actual read/write,
 a stdio MCP response delayed by 2 seconds, a Bash target check delayed by
@@ -385,6 +385,17 @@ a stdio MCP response delayed by 2 seconds, a Bash target check delayed by
 filesystem (statfs type 26) took 2.7–41.7 ms (median 8.3 ms). These are controlled
 small samples, not live-model latency or representative human decision timing;
 they do not establish optimality of the 10-minute/5-minute defaults.
+
+### Recovery proposal follow-up — 2026-09-08
+
+The [session writer recovery research](../research/2026-09-08-session-writer-lock-recovery.md)
+and [proposed recovery guard](2026-09-08-session-writer-recovery-guard.md) compare
+exclusive guards with OS-managed locks and define migration, maintenance and
+confirmation conditions. No option is accepted or implemented. The unchanged
+macOS baseline still reproduces two writers. Today's full suite also exposes
+a separate date-dependent legacy log cursor failure; see the research evidence.
+Acceptance, implementation hashes, partial status and remaining platform/product
+checks are unchanged.
 
 ### Confirmation remaining before completed
 
