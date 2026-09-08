@@ -49,16 +49,22 @@ export const agentFlags = {
 }
 
 export function toAgentOptions(flags: {
+  'anthropic-api-key-env'?: string
   anthropicApiKeyEnv?: string
   debug?: boolean
   'execution-policy'?: string
   'journal-level'?: string
   lang?: string
   model?: string
+  'ollama-host'?: string
   ollamaHost?: string
+  'openai-api-key-env'?: string
   openaiApiKeyEnv?: string
   provider?: string
 }): AgentOptions {
+  const anthropicApiKeyEnv = flags['anthropic-api-key-env'] ?? flags.anthropicApiKeyEnv
+  const ollamaHost = flags['ollama-host'] ?? flags.ollamaHost
+  const openaiApiKeyEnv = flags['openai-api-key-env'] ?? flags.openaiApiKeyEnv
   const executionPolicy = flags['execution-policy']
   const journalLevel = flags['journal-level']
   return {
@@ -68,13 +74,13 @@ export function toAgentOptions(flags: {
     ...(flags.lang ? {lang: flags.lang} : {}),
     ...(flags.model ? {model: flags.model} : {}),
     ...(isProvider(flags.provider) ? {provider: flags.provider} : {}),
-    ...(flags.anthropicApiKeyEnv || flags.ollamaHost || flags.openaiApiKeyEnv
+    ...(anthropicApiKeyEnv || ollamaHost || openaiApiKeyEnv
       ? {
           settings: {
             providers: {
-              ...(flags.anthropicApiKeyEnv ? {anthropic: {apiKeyEnv: flags.anthropicApiKeyEnv}} : {}),
-              ...(flags.ollamaHost ? {ollama: {host: flags.ollamaHost}} : {}),
-              ...(flags.openaiApiKeyEnv ? {openai: {apiKeyEnv: flags.openaiApiKeyEnv}} : {}),
+              ...(anthropicApiKeyEnv ? {anthropic: {apiKeyEnv: anthropicApiKeyEnv}} : {}),
+              ...(ollamaHost ? {ollama: {host: ollamaHost}} : {}),
+              ...(openaiApiKeyEnv ? {openai: {apiKeyEnv: openaiApiKeyEnv}} : {}),
             },
           },
         }

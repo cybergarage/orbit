@@ -5,7 +5,16 @@ export function normalizeCliArgs(argv, stdinIsTTY) {
   const standaloneFlags = new Set(['--help', '--version', '-h', '-v'])
   if (argv.some((arg) => standaloneFlags.has(arg))) return argv
 
-  const flagsWithValues = new Set(['--lang', '--model', '--provider'])
+  const flagsWithValues = new Set([
+    '--anthropic-api-key-env',
+    '--execution-policy',
+    '--journal-level',
+    '--lang',
+    '--model',
+    '--ollama-host',
+    '--openai-api-key-env',
+    '--provider',
+  ])
   let expectsValue = false
 
   for (const arg of argv) {

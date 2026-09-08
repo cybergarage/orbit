@@ -154,7 +154,7 @@ Built-in tools are configured under `tools`:
 Valid names are `bash`, `edit`, `glob`, `grep`, `list`, `read`, and `write`.
 CLI, interactive, and GUI entry points use `coding` when no profile is set. The
 reusable `Agent` library retains an empty default unless its caller selects a
-profile. See [Coding Tools](tools.md) for schemas and full-access behavior.
+profile. See [Coding Tools](tools.md) for schemas and managed operation policies.
 
 ## Merge behavior
 
@@ -187,3 +187,21 @@ the effective settings use `openai` with `gpt-5-mini` and retain the `OPENAI_API
 Within a single workspace, `.orbit/settings.json` and `settings.json` are not merged. If `.orbit/settings.json` exists, it takes precedence and `settings.json` is ignored.
 
 CLI flags are applied on top of workspace settings when supported by the command.
+
+## Connection flags
+
+The `--ollama-host`, `--openai-api-key-env`, and `--anthropic-api-key-env`
+flags override the corresponding provider settings for the current command.
+API-key flags take an environment variable **name**, never the secret value.
+For example, after building the source checkout:
+
+```sh
+./bin/run.js exec --provider ollama --model example-model --ollama-host http://127.0.0.1:11435 "Inspect this workspace"
+```
+
+`example-model` must name a tool-capable model installed on that Ollama server.
+Connection flags also work when the launcher chooses the default command:
+interactive mode for a terminal, or `exec` for piped input. The values of
+`--execution-policy` and `--journal-level` are likewise kept with their flags;
+they are not treated as command names. Omitting the command does not bypass
+operation approval, execution budgets, or recording requirements.
