@@ -1,11 +1,12 @@
 ---
-status: current
+status: superseded
 investigation-date: 2026-09-08
 orbit-commit: f20d919bdbedb3e900156787856e3e4ea1644e60
 related-adrs:
   - docs/adr/2026-09-08-session-storage-registration-guard.md
   - docs/adr/2026-09-08-session-writer-recovery-guard.md
-superseded-by: []
+superseded-by:
+  - docs/research/2026-09-08-session-storage-registration-review.md
 ---
 
 # Session Storage Registration Interruption
