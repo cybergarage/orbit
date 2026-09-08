@@ -2,7 +2,9 @@
 status: current
 investigation-date: 2026-09-08
 orbit-commit: f20d919bdbedb3e900156787856e3e4ea1644e60
-related-adrs: []
+related-adrs:
+  - docs/adr/2026-09-08-session-storage-registration-guard.md
+  - docs/adr/2026-09-08-session-writer-recovery-guard.md
 superseded-by: []
 ---
 
@@ -239,6 +241,9 @@ direct-client echo/delay trial does not close it. Initial profile limits are
 unchanged and are not measured optima.
 
 ## Related Decisions and References
+
+The [registration guard proposal](../adr/2026-09-08-session-storage-registration-guard.md)
+records the candidate protocol and author choices. It remains proposed / not-started.
 
 This is a follow-up to [Session Writer Recovery Review](2026-09-08-session-writer-recovery-review.md),
 not a replacement of its writer-exclusion investigation.

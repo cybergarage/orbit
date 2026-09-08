@@ -303,6 +303,7 @@ its own final hash in a tracked file.
 | 2026-09-07 | accepted   | partial        | [Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md)      |
 | 2026-09-07 | accepted   | partial        | [Required Execution Journal](2026-09-07-required-execution-journal.md)                  |
 | 2026-09-08 | accepted   | partial        | [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)            |
+| 2026-09-08 | proposed   | not-started    | [Session Storage Registration Guard](2026-09-08-session-storage-registration-guard.md)  |
 
 The Vibe Coding Tool Architecture supersession is partial: the 2026-09-07
 authorization decision replaces permission-free defaults and managed admission/
@@ -329,6 +330,11 @@ adds Linux Node 20.19.0 / 22.23.2 but also identifies a separate registration
 interruption defect that still admits writes. A new protocol decision is pending;
 the four ADRs remain partial. The same record separates the official Everything
 server's managed schema refusal from a successful direct-client control.
+
+The [registration proposal](2026-09-08-session-storage-registration-guard.md) compares
+persistent guards with a committed manifest and specifies v2 migration, existing-file
+resync and uncertain completion acknowledgement. It is proposed / not-started;
+no acceptance, implementation or supersession of the four partial records is implied.
 
 ## Background
 
