@@ -117,6 +117,7 @@ at pinned revisions by default. If either is not relevant, record why.
 
 | Investigated | Status     | Topic                                                                                                                                   |
 | ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-08   | current    | [Input Budgets and Durable Session Compaction](2026-09-08-input-budgets-and-compaction.md)                                              |
 | 2026-09-08   | current    | [Session Storage Registration Review](2026-09-08-session-storage-registration-review.md)                                                |
 | 2026-09-08   | superseded | [Session Storage Registration Interruption](2026-09-08-session-storage-registration.md)                                                 |
 | 2026-09-08   | current    | [Session Writer Recovery Review](2026-09-08-session-writer-recovery-review.md)                                                          |

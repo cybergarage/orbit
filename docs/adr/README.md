@@ -290,6 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                |
 | ---------- | ---------- | -------------- | --------------------------------------------------------------------------------------- |
+| 2026-09-08 | proposed   | not-started    | [Budgeted Session Compaction](2026-09-08-budgeted-session-compaction.md)                |
 | 2026-08-22 | accepted   | completed      | [GUI Application Architecture](2026-08-22-gui-application.md)                           |
 | 2026-08-22 | accepted   | completed      | [Session Persistence Design](2026-08-22-session-persistence.md)                         |
 | 2026-08-23 | accepted   | completed      | [Model Response and Tool Integration](2026-08-23-model-response-tool-integration.md)    |
@@ -341,6 +342,12 @@ explicitly deferred, not verified. The deferrals do not block current Unix work
 or book production. [Bounded managed Everything schema verification](2026-09-07-prepared-operation-authorization.md#bounded-managed-mcp-schema-verification--2026-09-08)
 now records the requested compatibility scope and Unix integration results.
 Book/application production can proceed; broader MCP functionality is not inferred.
+
+[Budgeted Session compaction](2026-09-08-budgeted-session-compaction.md) is a new
+proposed / not-started context contract. It does not adopt the future compaction
+phases of the historical linear-assembly ADR or change any accepted/partial
+record. Model profiles, transcript v2 migration and whole-turn protection await
+explicit author acceptance before implementation.
 
 ## Background
 
