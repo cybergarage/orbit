@@ -318,6 +318,12 @@ lists remaining platform, fault-matrix, deployment and product checks. The
 three parent decisions remain accepted / partial, with their reasons and history
 retained. No parent ADR is superseded by this recovery refinement.
 
+The [resumed confirmation](2026-09-08-session-writer-recovery-guard.md#resumed-platform-and-ui-confirmation--2026-09-08)
+adds actual-filesystem case tests, macOS 397 tests, a clean native Linux build
+with 396 tests, the later Linux 25-case recovery suite, and updated real Ink/browser
+fault verification. Required platform, deployment and representative product checks
+still prevent completion; no accepted decision or product limit changed.
+
 ## Background
 
 This convention adapts Michael Nygard's lightweight status, context, decision,

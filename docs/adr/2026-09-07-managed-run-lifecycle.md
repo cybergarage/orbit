@@ -435,6 +435,18 @@ from `abac54535177c3d721e94567d25057a8b6f20441`; no new acceptance or optimal-li
 claim is made. Windows, other supported environments, physical durability,
 external deployment control and representative/manual UI trials remain open.
 
+### Resumed recovery verification — 2026-09-08
+
+The recovery ADR's [resumed platform and UI confirmation](2026-09-08-session-writer-recovery-guard.md#resumed-platform-and-ui-confirmation--2026-09-08)
+records test commit `141ff61a6dd8f206d18702721adac58dc9371792`, macOS 397 tests,
+a clean native Linux dependency/build/396-test run and the later Linux 25-case
+recovery suite. It also records updated real Ink approve/deny/stop and browser
+transport-fault checks, including their fixture/model and measurement limits.
+No production code, accepted rationale or initial product limit changed.
+The local UI rerun is now verified; Windows, remaining supported environments,
+physical durability, actual deployment exclusion and representative human/model/MCP
+trials remain open with restart conditions in that record. Status stays partial.
+
 ### Confirmation remaining before completed
 
 - Finish the recovery extension's remaining platform, deployment and fault-matrix

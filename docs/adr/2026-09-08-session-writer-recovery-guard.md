@@ -7,6 +7,7 @@ implementation-completed-date: null
 implementation-commits:
   - abac54535177c3d721e94567d25057a8b6f20441
   - 49c61e58adecc18c806b94701240a5753eed547c
+  - 141ff61a6dd8f206d18702721adac58dc9371792
 superseded-by: []
 ---
 
@@ -564,6 +565,68 @@ in addition to the preceding full 390-test run. Production code is unchanged
 from `abac54535177c3d721e94567d25057a8b6f20441`; no new acceptance or optimal-limit
 claim is made. Windows, other supported environments, physical durability,
 external deployment control and representative/manual UI trials remain open.
+
+### Resumed platform and UI confirmation — 2026-09-08
+
+Resume baseline: `e504a0f701fbe2fecee8f541fdc02b14e238f6d3`, with a clean working
+tree and no production changes since the implementation above. Public main was
+still `80130cf194e477f136eefaa5b7cd2a2374dff198`; these local commits are not a
+published release. Test commit `141ff61a6dd8f206d18702721adac58dc9371792` adds an
+actual-filesystem case-identity check in `test/core/execution/recovery-guard.test.ts`.
+This is a local verification addition, not a new architecture decision or a change
+to scope identity. No production code or initial product limit changed.
+
+The test checks the filesystem before choosing its assertion: a case alias must
+resolve to the same registered roots and coordination paths, refuse a concurrent
+writer, report locked, and allow reopen after close. Distinct case-sensitive
+directories must register separately and keep their writer lifetimes independent.
+The host temporary filesystem reported case aliases; the container's temporary
+filesystem reported distinct paths. These observations do not establish Windows
+path behavior, other volumes, Unicode normalization or power-loss durability.
+
+| Executed check | Result and exact scope |
+| --- | --- |
+| macOS arm64 / Node 26.5.0 | After the test addition, `npm run headers:check`, `npm run build` and `npm test` passed: **397 tests**, lint 0 errors / 12 warnings. |
+| Native Linux dependency/build verification | A clean Git archive of the resume baseline was unpacked into a disposable `mcr.microsoft.com/devcontainers/typescript-node:4-24-bookworm` container, Linux arm64 / Node 24.16.0. `npm ci --no-audit --no-fund`, headers, build and npm test passed with **396 tests**, lint 0 errors / 12 warnings. This used Linux dependencies and a freshly built GUI bundle, rather than the prior host-built artifact. |
+| Linux case-test follow-up | After adding the test, the read-only source mount with networking disabled passed all **25 recovery tests**, including the case-sensitive branch. This is additional to the clean native 396-test run, not a native 397-test run. |
+| Independent race probe | The native Linux build ran `node test/core/execution/fixtures/stale-lock-race.mjs`: exit 0, guard-rejected second process, owner-rejected third process, unchanged winning ownership, and successful recovery after exit. Timeout was not the success criterion. |
+| Full Ink / real PTY | Rebuilt `test/apps/cli/fixtures/managed-interactive.mjs`, three isolated sessions: approve returned 2 model calls, expected file content, completed / acknowledged; deny returned 2 model calls, no file, completed / acknowledged; Ctrl+C during confirmation returned 1 model call, no file, cancelled / acknowledged. Every result had quiescence true; `/exit` returned exit 0. The fixture explicitly requests file-sync. |
+| GUI / actual in-app browser | Rebuilt `test/apps/gui/fixtures/transport-faults.mjs` with fake model and isolated registered roots: send edit, inspect the preview, approve once. Proxy logs confirmed SSE disconnect, a delayed stale HTTP snapshot, HTTP 503, and duplicate/reordered snapshots on reconnect. The browser recovered to completed / acknowledged, removed the approval and disconnected notices, and showed the final response. On SIGTERM the fixture returned exit 0, 2 model calls, expected file content and delayed/failed/replayed all true. |
+
+The UI checks were agent-operated real terminal/browser interactions with injected
+model responses, not human usability samples. File content and model counts are
+observations; the fixture does not instrument every filesystem write. The separate
+automated authorization tests retain dispatch-count and duplicate-response checks.
+No live provider, production MCP service or real user session was accessed. The
+previous migration-time statement that these UI fixtures had not been rerun is
+historical; the local rerun above closes that specific gap.
+
+Remaining work and restart conditions:
+
+- **Windows and the rest of the supported matrix:** no configured Windows runner
+  or VM was available to this task. Local virtualization command/application
+  discovery did not expose one; no remote CI job was dispatched. Provide a runner
+  or VM with supported Node, local storage and Bash, then run registration/sync,
+  aliases, guard/owner cleanup, subprocess/deletion/maintenance tests and the UI
+  checks. Linux success does not establish those results.
+- **Actual deployment exclusion:** no target service manager, restart policy or
+  maintenance deployment was supplied. Provide an isolated deployment configured
+  like the target, enumerate all old writers and their automatic restarters,
+  disable admission/restart externally, interrupt maintenance, and demonstrate
+  that exclusion persists until inspection permits restart. Operator flags and
+  the fixture's synthetic gate do not prove this condition.
+- **Physical durability/storage failures:** provide the intended storage and an
+  approved fault harness. Process death, injected I/O errors and successful sync
+  acknowledgements do not prove persistence through physical power loss.
+- **Representative product trials:** provide a disposable target project with a
+  long test suite, the intended model/MCP configuration and an actual human
+  reviewer. Measure successful/failed tests, slow MCP and confirmation waiting,
+  outcomes, cleanup and acknowledgement timing against the unchanged initial
+  limits. Synthetic waits and agent-operated confirmation remain distinct from
+  workload distributions and optimality claims.
+
+The four affected ADRs remain accepted / partial with null completion dates.
+Acceptance reasons and prior failed-probe/log-test evidence remain intact.
 
 ## Follow-up Work
 
