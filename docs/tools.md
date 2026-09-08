@@ -252,3 +252,17 @@ before opening a stdio client. The discovered catalog stays fixed for that run.
 Custom definitions need a trusted `prepare` implementation returning the actual
 executor, bound effects/targets, preview and revalidation. The legacy adapter
 requires both `unrestricted` and `allowLegacyTools: true`; its effects are opaque.
+
+## Expected read failures
+
+The built-in `read`, `list`, `glob`, and `grep` tools return `ToolResult` with
+`isError: true` for settled filesystem failures such as missing paths, wrong
+path kinds, and denied read access. A binary input to the text reader and an
+invalid grep expression are likewise explicit failed results. Direct callers
+must inspect `isError`; these expected cases no longer reject the promise.
+
+Unexpected failures, including I/O errors outside that bounded set, still
+reject. The managed executor continues to treat arbitrary rejection as unknown
+completion and closes further admission. This change does not classify command,
+mutation, custom-tool, or MCP failures as safe to retry, and does not bypass
+operation authorization, journal acknowledgement, or cancellation checks.

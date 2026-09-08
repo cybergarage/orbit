@@ -63,7 +63,9 @@ describe('coding tools', () => {
 
     expect(toolResultText(result)).to.equal('two\nthree')
     expect(result.details).to.include({endLine: 3, startLine: 2})
-    await expectToolError(invoke(createReadTool(), {path: '.'}, root), 'Use list instead')
+    const directory = await invoke(createReadTool(), {path: '.'}, root)
+    expect(directory.isError).to.equal(true)
+    expect(toolResultText(directory)).to.include('Use list instead')
   })
 
   it('lists directory entries deterministically and hides dotfiles by default', async () => {

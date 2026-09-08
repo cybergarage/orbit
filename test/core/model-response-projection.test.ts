@@ -1,6 +1,8 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
+/* eslint-disable camelcase -- Provider protocol fixtures use wire-format field names. */
+
 import {expect} from 'chai'
 
 import {createProvider, Message, MessageType} from '../../src/core/index.js'

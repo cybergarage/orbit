@@ -6,12 +6,22 @@ import {randomUUID} from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
+import {textToolResult, type ToolResult} from '../definition.js'
+
 const mutationQueues = new Map<string, Promise<unknown>>()
 const createIgnore = ignoreModule as unknown as () => Ignore
 
 export const DEFAULT_MAX_OUTPUT_BYTES = 200_000
 export const DEFAULT_RESULT_LIMIT = 2000
 export const DEFAULT_IGNORES = ['**/.git/**', '**/node_modules/**', '**/dist/**', '**/coverage/**']
+
+/** Only settled, expected filesystem read failures become model-visible errors. */
+export function readOnlyFailure(error: unknown): ToolResult | undefined {
+  if (!(error instanceof Error)) return undefined
+  const {code} = error as NodeJS.ErrnoException
+  if (!code || !['EACCES', 'EISDIR', 'ENOENT', 'ENOTDIR', 'EPERM'].includes(code)) return undefined
+  return textToolResult(error.message, {isError: true})
+}
 
 export function resolveToolPath(cwd: string, value = '.'): string {
   return path.resolve(cwd, value)

@@ -6,7 +6,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import {z} from 'zod'
 
-import {textToolResult} from '../definition.js'
+import {textToolResult, type ToolExecutionContext, type ToolResult} from '../definition.js'
 import {defineBuiltinTool} from './factory.js'
 import {
   createGitIgnoreFilter,
@@ -14,6 +14,7 @@ import {
   DEFAULT_RESULT_LIMIT,
   displayPath,
   hasUtf8BinaryMarker,
+  readOnlyFailure,
   resolveToolPath,
   truncateText,
 } from './shared.js'
@@ -41,80 +42,14 @@ interface GrepMatch {
 export function createGrepTool() {
   return defineBuiltinTool({
     description: 'Search UTF-8 file contents with a regular expression or literal text.',
-    // File discovery, regex matching, context projection, and truncation share one deterministic search boundary.
-    // eslint-disable-next-line complexity
     async execute(input, context) {
-      const requestedPath = input.path ?? '.'
-      const target = resolveToolPath(context.cwd, requestedPath)
-      const stat = await fs.stat(target)
-      const base = stat.isDirectory() ? target : path.dirname(target)
-      const files = stat.isDirectory()
-        ? await fastGlob(input.glob ?? '**/*', {
-            absolute: true,
-            cwd: base,
-            dot: true,
-            followSymbolicLinks: false,
-            ignore: DEFAULT_IGNORES,
-            onlyFiles: true,
-            unique: true,
-          })
-        : [target]
-      const accepts = await createGitIgnoreFilter(base)
-      const sourcePattern = input.literal ? escapeRegExp(input.pattern) : input.pattern
-      const expression = new RegExp(sourcePattern, input.ignoreCase ? 'giu' : 'gu')
-      const limit = input.limit ?? DEFAULT_RESULT_LIMIT
-      const matches: GrepMatch[] = []
-
-      for (const file of files.sort((left, right) => left.localeCompare(right, 'en'))) {
-        if (context.signal.aborted) throw new Error('Grep search aborted.')
-        const relativeToBase = path.relative(base, file)
-        if (!accepts(relativeToBase)) continue
-        // Files are intentionally scanned in stable order so the result limit remains deterministic.
-        // eslint-disable-next-line no-await-in-loop
-        const buffer = await fs.readFile(file)
-        if (hasUtf8BinaryMarker(buffer)) continue
-        const lines = buffer.toString('utf8').split(/\r?\n/u)
-        for (const [index, line] of lines.entries()) {
-          expression.lastIndex = 0
-          let match = expression.exec(line)
-          while (match !== null) {
-            const contextLines = input.contextLines ?? 0
-            matches.push({
-              column: match.index + 1,
-              ...(contextLines === 0
-                ? {}
-                : {
-                    context: lines
-                      .slice(Math.max(0, index - contextLines), index + contextLines + 1)
-                      .map((text, contextIndex) => ({
-                        line: Math.max(0, index - contextLines) + contextIndex + 1,
-                        text,
-                      }))
-                      .filter((contextLine) => contextLine.line !== index + 1),
-                  }),
-              line: index + 1,
-              path: displayPath(context.cwd, file, path.isAbsolute(requestedPath)),
-              text: line,
-            })
-            if (matches.length >= limit) break
-            if (match[0].length === 0) expression.lastIndex += 1
-            match = expression.exec(line)
-          }
-
-          if (matches.length >= limit) break
-        }
-
-        if (matches.length >= limit) break
+      try {
+        return await executeGrep(input, context)
+      } catch (error) {
+        const failure = readOnlyFailure(error)
+        if (failure) return failure
+        throw error
       }
-
-      const rendered = matches.flatMap((match) => renderMatch(match)).join('\n')
-      const truncated = truncateText(rendered || '[no matches]')
-      return textToolResult(truncated.text, {
-        details: {
-          matches,
-          truncated: truncated.truncated || matches.length >= limit,
-        },
-      })
     },
     name: 'grep',
     scheduling: 'parallel',
@@ -134,4 +69,87 @@ function renderMatch(match: GrepMatch): string[] {
 
 function escapeRegExp(value: string): string {
   return value.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`)
+}
+
+// File discovery, matching and truncation share one deterministic search.
+// eslint-disable-next-line complexity
+async function executeGrep(input: GrepToolInput, context: ToolExecutionContext): Promise<ToolResult> {
+  const requestedPath = input.path ?? '.'
+  const target = resolveToolPath(context.cwd, requestedPath)
+  const stat = await fs.stat(target)
+  const base = stat.isDirectory() ? target : path.dirname(target)
+  const files = stat.isDirectory()
+    ? await fastGlob(input.glob ?? '**/*', {
+        absolute: true,
+        cwd: base,
+        dot: true,
+        followSymbolicLinks: false,
+        ignore: DEFAULT_IGNORES,
+        onlyFiles: true,
+        unique: true,
+      })
+    : [target]
+  const accepts = await createGitIgnoreFilter(base)
+  const sourcePattern = input.literal ? escapeRegExp(input.pattern) : input.pattern
+  let expression: RegExp
+  try {
+    expression = new RegExp(sourcePattern, input.ignoreCase ? 'giu' : 'gu')
+  } catch (error) {
+    if (!(error instanceof SyntaxError)) throw error
+    return textToolResult(`Invalid search expression: ${error.message}`, {isError: true})
+  }
+
+  const limit = input.limit ?? DEFAULT_RESULT_LIMIT
+  const matches: GrepMatch[] = []
+
+  for (const file of files.sort((left, right) => left.localeCompare(right, 'en'))) {
+    if (context.signal.aborted) throw new Error('Grep search aborted.')
+    const relativeToBase = path.relative(base, file)
+    if (!accepts(relativeToBase)) continue
+    // Files are intentionally scanned in stable order so the result limit remains deterministic.
+    // eslint-disable-next-line no-await-in-loop
+    const buffer = await fs.readFile(file)
+    if (hasUtf8BinaryMarker(buffer)) continue
+    const lines = buffer.toString('utf8').split(/\r?\n/u)
+    for (const [index, line] of lines.entries()) {
+      expression.lastIndex = 0
+      let match = expression.exec(line)
+      while (match !== null) {
+        const contextLines = input.contextLines ?? 0
+        matches.push({
+          column: match.index + 1,
+          ...(contextLines === 0
+            ? {}
+            : {
+                context: lines
+                  .slice(Math.max(0, index - contextLines), index + contextLines + 1)
+                  .map((text, contextIndex) => ({
+                    line: Math.max(0, index - contextLines) + contextIndex + 1,
+                    text,
+                  }))
+                  .filter((contextLine) => contextLine.line !== index + 1),
+              }),
+          line: index + 1,
+          path: displayPath(context.cwd, file, path.isAbsolute(requestedPath)),
+          text: line,
+        })
+        if (matches.length >= limit) break
+        if (match[0].length === 0) expression.lastIndex += 1
+        match = expression.exec(line)
+      }
+
+      if (matches.length >= limit) break
+    }
+
+    if (matches.length >= limit) break
+  }
+
+  const rendered = matches.flatMap((match) => renderMatch(match)).join('\n')
+  const truncated = truncateText(rendered || '[no matches]')
+  return textToolResult(truncated.text, {
+    details: {
+      matches,
+      truncated: truncated.truncated || matches.length >= limit,
+    },
+  })
 }
