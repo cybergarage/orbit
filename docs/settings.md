@@ -13,6 +13,12 @@ If both files exist in the same workspace, `.orbit/settings.json` is used.
 
 Orbit discovers workspaces by walking from the current directory to the filesystem root and treating each directory that contains an `.orbit` directory as a workspace. As a result, when the current directory is below the user's home directory and `~/.orbit` exists, `~/.orbit/settings.json` is loaded as the shallowest workspace setting. The home directory is not searched separately, so this file is not loaded when the current directory is outside the home directory hierarchy.
 
+Workspace discovery requires `.orbit` to resolve to a directory. A regular file
+with that name, including a symbolic link to a regular file, is not a workspace
+marker. Directory links retain their existing behavior. Both synchronous and
+asynchronous loaders use this condition and continue searching ancestors.
+
+
 ## Example
 
 ```json

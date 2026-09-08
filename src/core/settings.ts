@@ -135,12 +135,20 @@ export function mergeWorkspaceSettings(...settings: Array<undefined | WorkspaceS
   return mergedSettings
 }
 
+function isWorkspaceDirectorySync(file: string): boolean {
+  try {
+    return fsSync.statSync(file).isDirectory()
+  } catch {
+    return false
+  }
+}
+
 function workspaceDirectoriesSync(startDir: string): string[] {
   const dirs: string[] = []
   let dir = path.resolve(startDir)
 
   while (true) {
-    if (fsSync.existsSync(path.join(dir, DOT_APP_DIR_NAME))) dirs.push(dir)
+    if (isWorkspaceDirectorySync(path.join(dir, DOT_APP_DIR_NAME))) dirs.push(dir)
     const parent = path.dirname(dir)
     if (parent === dir) break
     dir = parent

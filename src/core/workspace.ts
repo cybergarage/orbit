@@ -16,10 +16,9 @@ export interface LocalWorkspaceLocatorOptions {
   start?: string
 }
 
-async function exists(p: string): Promise<boolean> {
+async function isDirectory(p: string): Promise<boolean> {
   try {
-    await fs.stat(p)
-    return true
+    return (await fs.stat(p)).isDirectory()
   } catch {
     return false
   }
@@ -37,7 +36,7 @@ export class LocalWorkspaceLocator implements WorkspaceLocator {
     let dir = path.resolve(this.start)
     while (true) {
       // eslint-disable-next-line no-await-in-loop
-      if (await exists(path.join(dir, DOT_APP_DIR_NAME))) dirs.push(dir)
+      if (await isDirectory(path.join(dir, DOT_APP_DIR_NAME))) dirs.push(dir)
       const parent = path.dirname(dir)
       if (parent === dir) break
       dir = parent
