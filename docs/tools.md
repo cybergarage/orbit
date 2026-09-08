@@ -226,7 +226,24 @@ Managed discovery validates inputs locally before requesting operation approval.
 The initial subset accepts types, properties, required/additional properties,
 items, enum/const, anyOf/oneOf/allOf, string length/pattern and numeric/array
 bounds, plus the descriptive keywords listed in `validateSchemaKeywords` in
-`src/core/mcp.ts`. Unsupported vocabulary (including references) fails startup;
+`src/core/mcp.ts`. The root declaration
+`$schema: "http://json-schema.org/draft-07/schema#"` is recognized and passed intact
+to the existing SDK's Draft 7 validator. The `uri` format is checked by that
+validator with its configured format support. Other declarations, nested
+`$schema` values and other formats reject before model exposure. This bounded
+profile does not claim complete Draft 7 or 2020-12 support. A valid URI is a
+syntactic input constraint, never authorization to access its destination.
+
+Invalid arguments are rejected before operation approval and remote dispatch;
+each valid opaque MCP action still passes through the selected managed policy,
+including confirmation when that policy requires it.
+The official Everything 2026.8.31 catalog can be loaded with this subset. The
+integration fixture exercises echo, addition and a three-second operation, plus
+an invalid URI with zero remote dispatch for that call. Resource, sampling,
+elicitation and other server capabilities are not certified by that trial.
+Real model/human waits and representative application workloads remain separate.
+
+Unsupported vocabulary (including references) fails startup;
 Orbit does not silently ignore unknown constraints, including constraints inside
 tuple-style `items` arrays. All enabled sources are
 required for ready. Startup uses the same run budget and requires authorization

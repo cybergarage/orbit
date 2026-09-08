@@ -79,6 +79,11 @@ describe('managed MCP catalog and remote outcomes', () => {
   }
 
   const unsupported: Record<string, unknown>[] = [
+    {$schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object'},
+    {$schema: 'https://example.invalid/schema', type: 'object'},
+    {$schema: 7, type: 'object'},
+    {properties: {value: {$schema: 'http://json-schema.org/draft-07/schema#', type: 'string'}}, type: 'object'},
+    {properties: {value: {format: 'made-up', type: 'string'}}, type: 'object'},
     {$ref: '#/$defs/value', type: 'object'},
     {properties: {value: {format: 'email', type: 'string'}}, type: 'object'},
     {additionalProperties: {unevaluatedProperties: false}, type: 'object'},
@@ -99,6 +104,35 @@ describe('managed MCP catalog and remote outcomes', () => {
           confirmedStopped: true,
           operations: result.operations.map(({id}) => ({id, status: 'failed'})),
         })
+      } finally {
+        await agent.close()
+      }
+    })
+  }
+
+  for (const [input, valid] of [
+    [{target: 'https://example.invalid/resource'}, true],
+    [{target: 'data:text/plain,isolated'}, true],
+    [{target: 'relative/path'}, false],
+    [{target: 'https://example.invalid/with space'}, false],
+    [{target: 12}, false],
+    [{}, false],
+  ] as const) {
+    it(`validates Draft 7 URI input ${JSON.stringify(input)} without weakening operation approval`, async () => {
+      const schema = {
+        $schema: 'http://json-schema.org/draft-07/schema#',
+        additionalProperties: false,
+        properties: {target: {format: 'uri', type: 'string'}},
+        required: ['target'],
+        type: 'object',
+      }
+      const {agent, counts} = fixture(schema, input)
+      try {
+        const result = await (await agent.startRun(user)).finished
+        expect(result.outcome).equal('completed')
+        expect(counts.calls).equal(valid ? 1 : 0)
+        expect(counts.approvals).equal(valid ? 2 : 1)
+        expect(result.operations.at(-1)?.status).equal(valid ? 'succeeded' : 'invalid')
       } finally {
         await agent.close()
       }

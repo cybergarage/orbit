@@ -91,6 +91,11 @@ Built-in coding tools, custom tools, turn-scoped tools, and tools discovered
 through MCP share this execution boundary. MCP is an integration source for
 tools; it is not the runtime's general composition mechanism.
 
+Managed MCP discovery checks a bounded schema vocabulary before model exposure.
+The existing SDK validator handles the recognized Draft 7 declaration and URI
+format; invalid arguments do not reach operation approval or remote dispatch.
+See [the maintained schema profile](tools.md#managed-mcp-schema-support).
+
 ## Operator and Processor boundary
 
 `src/core/processor/` provides the current composition primitives:
