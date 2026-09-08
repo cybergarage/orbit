@@ -312,7 +312,8 @@ implemented, but follow-up verification found concurrent stale-lock reclamation
 can admit two writers. The journal ADR records this unresolved defect and
 recovery options; Windows and representative product trials also remain.
 The [recovery guard proposal](2026-09-08-session-writer-recovery-guard.md) compares filesystem and OS locks
-without adopting either.
+without adopting either. Its 2026-09-08 review clarifies cleanup retries, journal
+capabilities and explicit legacy API migration; the proposal remains not-started.
 
 ## Background
 

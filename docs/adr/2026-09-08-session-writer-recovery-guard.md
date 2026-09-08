@@ -58,11 +58,13 @@ versioned binding encoding and API type names are implementation details to
 review before code lands; bypassing the binding is not an allowed fallback.
 
 `SessionRepository` supplies the scope. Exported low-level SessionRecorder
-create/open/isOpen callers must supply validated repository scope, or obtain
+create/open callers must supply validated repository scope, or obtain
 it through the repository; a path alone cannot safely recover the scope after
 deletion. This is an explicit proposed API compatibility change. Do not infer
 a scope by walking guessed ancestor names or offer a silent legacy writer
-mode. Read-only inspection of old transcripts remains possible. Files outside
+mode. The existing isOpen(file) argument may remain in a proposed read-only
+conservative wrapper as specified below; it does not need a breaking scope argument. Read-only
+inspection of old transcripts remains possible. Files outside
 the bound repository require explicit import to a fresh ID before writable use.
 
 Resolve root aliases consistently and validate the transcript's header ID,
@@ -74,7 +76,20 @@ is initially limited to cooperating processes on one host and verified local
 filesystems with a stable PID namespace. Shared network mounts, independent
 PID namespaces and hostile filesystem writers require a different guarantee.
 Root binding and identity validation must be demonstrated, not inferred from
-path.resolve alone.
+path.resolve alone. Validate the exact supported root/year/month/day transcript
+layout and reject cross-binding nested/overlapping roots during registration;
+the same binding's default session-root/.runs pair remains allowed. Binding
+registration cannot authorize a second repository to claim an existing one’s
+transcript under a different relative layout. Invalid IDs must reject before
+creating sidecar directories or names.
+
+Stable identity is required; this one-to-one registered topology is a proposed
+simplification, not the only possible safe architecture. A multi-resource scheme
+can instead claim both canonical transcript identity and journal-root/Session-ID
+identity, preserving more custom layouts. It requires a fixed lock order,
+rollback of partial acquisition, aliases and a durable deletion identity when
+the transcript disappears. The simpler binding is recommended for this scope,
+with its restrictions presented as author-owned compatibility costs.
 
 ### Admission and recovery protocol
 
@@ -99,7 +114,17 @@ path.resolve alone.
    complete. If guard cleanup fails, do not report successful new admission;
    preserve blocked ownership evidence and surface the failure. Partial owner
    writes or ambiguous I/O remain fail-closed. No model/tool starts from such an
-   incomplete acquisition.
+   incomplete acquisition. Every path after successful guard creation has an
+   explicit unwind: ordinary rejection leaves the pre-existing owner untouched
+   and releases this attempt's own guard. If this attempt created a new owner
+   but failed preparation, remove only that owner under the still-held guard
+   after all started preparation I/O has settled, then release the guard. No
+   cleanup runs for a guard this attempt failed to acquire. Capture both the
+   original error and any cleanup failure; a retained guard is blocked recovery,
+   not an ordinary busy rejection. Before returning that failure, transfer any
+   retained cleanup capability to the core cleanup registry for this scope;
+   do not lose it merely because no recorder was returned to the caller.
+   The registry may finish only the known failed attempt, never resume admission.
 5. Keep the owner record for the recorder lifetime, through queued transcript
    writes and all managed journal leases. A run does not hold the short guard
    while waiting for the model, MCP, a person or journal writes. A dead writer
@@ -111,7 +136,11 @@ That owner performs a complete inspection/removal/replacement before releasing
 the guard. A subsequent contender sees the replacement live owner. A crash
 inside that interval preserves the guard and therefore prevents admission.
 This argument depends on all entry points and versions participating; token
-comparison alone is not the exclusion primitive.
+comparison alone is not the exclusion primitive. Keep a local guard capability
+from successful exclusive creation, including an unpredictable token and file
+identity. Diagnostic PID text does not recreate that capability after restart.
+No callback or arbitrary preparation code may dispatch operations inside an
+acquisition transition; complete only the defined transcript preparation I/O.
 
 ### Inspection, close and deletion
 
@@ -120,18 +149,51 @@ for an in-process owner, any guard, any owner record (including stale or
 malformed), or an inspection error. It is a conservative snapshot, not a lease
 or a promise that a later open will fail. It never unlinks stale files. A richer
 inspection result can explain live/possibly stale/blocked/error states, but
-cannot grant authority. Use an actual guarded acquisition for mutation.
+cannot grant authority. A path-only isOpen wrapper resolves only an existing,
+validated scope using read-only metadata. If the scope is missing, conflicting
+or cannot be determined, it reports unavailable/true rather than probing the
+old adjacent lock and returning false. It never registers bindings or creates
+or cleans sidecars. Use an actual guarded acquisition for mutation.
 
 Close first settles queued writes and managed leases as already required, then
 acquires the same guard, verifies its owner token and removes only that owner.
 Do not clear the in-process ownership registry before successful release. If
 the guard is busy or cleanup fails, retain exclusion, report close as incomplete
 and allow bounded asynchronous retry or explicit maintenance. A retry must not
-release a replacement owner's token. No new shutdown timeout value is adopted.
+release a replacement owner's token. No new shutdown timeout value is adopted. Report later coordination cleanup
+failure separately from any already immutable run result; do not rewrite a
+known completed operation as unknown merely because a sidecar could not be removed.
 Guard cleanup never recursively invokes recorder close or another acquisition.
+Implement a serialized cleanup state owned by the recorder; the current cached
+closePromise in SessionRecorder and Session is not itself a retry mechanism.
+The state must distinguish these cases:
 
-Both SessionDeletionService and legacy SessionRepository.delete use the same
-session owner and guard protocol. Deletion obtains a writer capability that
+| Cleanup state                         | Retry authority and action                                                                                                                     |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| I/O or managed lease unsettled        | Keep writer ownership; do not start owner removal.                                                                                             |
+| Own owner present, guard not acquired | A bounded asynchronous attempt may acquire the guard; EEXIST never authorizes removal.                                                         |
+| Own guard held, own owner present     | Continue the same cleanup capability; do not try to acquire its own guard again.                                                               |
+| Owner removed, own guard remains      | Release only that retained guard; do not require the now-absent owner or create a new writer.                                                  |
+| Removal acknowledgement uncertain     | Re-inspect matching local capability/identity; absence can settle that artifact, mismatch never authorizes unlink and blocks further mutation. |
+| Owner and guard released              | Mark cleanup complete; repeated calls do not mutate replacement ownership.                                                                     |
+
+Do not reopen append/synchronize or issue a fresh journal lease when a cleanup
+attempt times out or fails. Repeated close/status/retry entry points join one
+cleanup state, not parallel removers or a permanently cached rejected promise.
+Clearing an in-memory cleanup registry after success must compare its generation
+so that a newer owner of the same scope is not cleared. A process restart loses
+local creator authority and therefore returns to offline recovery for any guard
+left behind; it does not reconstruct a cleanup capability from PID/token text.
+
+SessionDeletionService uses the same session owner and guard protocol.
+The old SessionRepository.delete currently unlinks only the transcript without
+a marker. The recommendation is to refuse that mutation and direct callers to
+SessionDeletionService, including sessions without a journal directory. This
+avoids silently adding retained markers to the old API. A later compatibility
+wrapper may delegate only with an explicit full deletion context (logs,
+acknowledgement level and retained-marker semantics); no transcript-only fallback
+is allowed. Read-only lookup and a no-op for an absent session may remain.
+Deletion through the service obtains a writer capability that
 allows continuation of an existing deleting/completed marker; ordinary admission
 does not. After acquiring it, re-read the marker and artifact inventory, check
 active/quarantined runtime state, then follow the already accepted marker-first
@@ -150,6 +212,31 @@ recovery; report them explicitly and do not claim complete cleanup until the
 required removal is confirmed. Global repository binding metadata is unaffected.
 Lock recovery alone never clears quarantine, reconciles an unknown external
 effect, restores approval, or replays an operation.
+
+### Persistent journal authority
+
+The built-in FileExecutionJournal must validate the same authority when used
+directly, not only when Agent opens it. Replace its bare releaseLease callback
+with a runtime-validated core-issued capability, or an equivalent scoped factory
+that does not expose an unchecked persistent open. The proposed capability binds
+the repository identity, Session ID, canonical journal root, owner generation
+and live lease state. Public types/serialized PID records or user callbacks
+cannot manufacture it. Reject mismatched Session metadata/recorder identity as
+well as foreign, released or already-consumed capabilities before opening or
+creating journal/key files. One capability has at most one live journal consumer;
+failure paths return or release that borrow exactly once after I/O settles.
+A matching capability delegates existing recorder ownership and acquires no
+second process lock. Its release is a journal-borrow release, not early recorder
+writer release. Reconciliation writes use the same owned journal; read-only
+inspection requires no live capability.
+
+Agent's existing path supplies matching values, but FileExecutionJournal.open
+currently trusts an arbitrary release callback and separately supplied root.
+Existing storage tests use no-op callbacks; adoption requires ownership fixtures
+and migration examples for direct library users. Custom ExecutionJournal /
+journalFactory implementations remain trusted extensions responsible for their
+own exclusion. Validate the built-in persistent boundary; do not claim this
+protocol prevents arbitrary JavaScript/fs access in the same process.
 
 ### Abandoned guard and exclusive maintenance
 
@@ -206,13 +293,21 @@ record remains intact, while this document records the subsequently found defect
 Current architecture and feature guides continue to describe current code until
 an accepted implementation changes them.
 
+Operational switching also requires handling repository registration as one
+maintenance operation: incomplete reciprocal records block _both_ roots, and
+no participant independently repairs one half. Explicitly test interruption
+between each binding write, moving/restoring a registered root and old-version
+rollback. The proposal does not claim OS locks solve mixed-version migration:
+old binaries must still stop when changing the ownership primitive.
+
 ## Consequences
 
 - Positive: a complete transition has one exclusive owner, including concurrent
   stale reclamation, release and deletion retry; native lock packaging is avoided.
 - Negative: abrupt death during a short guard interval can require operator
   intervention; public recorder context, storage binding and offline migration
-  add compatibility and maintenance costs. Close can remain incomplete even
+  and direct journal capability validation add compatibility and maintenance costs.
+  The legacy transcript-only delete entry point no longer mutates. Close can remain incomplete even
   when data writes have finished.
 - Neutral: journal schema, permission semantics, initial execution budgets and
   the minimal deletion record keep their accepted roles. Exclusion does not
@@ -282,6 +377,16 @@ writer migration, and local-filesystem validation. They do not solve outcome
 ambiguity or unsupported fsync. The proposed guard is not claimed universally
 safer than this alternative.
 
+### Identity and API alternatives
+
+| Choice                                                              | Compatibility benefit                                                | Cost / proposed disposition                                                                                                            |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| One-to-one registered roots, scoped recorder and journal capability | One Session-ID owner protects transcript, journal and deletion retry | Restricts custom/overlapping roots and direct mutating API use. Recommended, not logically required for every possible locking design. |
+| Ordered claims on transcript and journal identities                 | Can retain more arbitrary file/root layouts                          | Multiple locks, partial rollback and transcript-free deletion mapping; defer unless that compatibility is a product requirement.       |
+| Path-only read-only isOpen wrapper                                  | Retains the existing argument without granting authority             | Missing/unresolvable scope returns conservatively unavailable; recommended.                                                            |
+| Keep unchecked callback-based persistent journal open               | No library migration                                                 | Cannot establish matching live ownership; not recommended.                                                                             |
+| Extend old delete automatically with permanent marker semantics     | Preserves a method call                                              | Silently changes retained metadata behavior; prefer explicit service migration.                                                        |
+
 ## Implementation and Confirmation
 
 **Not started.** Neither new protocol code nor regression fixes are included.
@@ -303,12 +408,48 @@ the existing three ADRs.
 | OS alternative if selected                                                                           | Native binding on supported Node/OS matrix; contention, abrupt death, descriptor inheritance, delayed release, sidecar replacement and unsupported filesystems; helper death must not expose an active writer.                                    |
 | Storage and product trials                                                                           | Windows/local-filesystem acknowledgement and child cleanup; realistic long target tests, slow production MCP and human approval; no silent weaker-level fallback or optimality claim.                                                             |
 
-Current checks: headers and build passed; full tests twice returned 371 passing /
+Initial proposal checks (before this review): headers and build passed; full tests twice returned 371 passing /
 1 failing (date-dependent legacy log cursor), and isolated log tests returned
 6 passing / 1 failing. The separate race probe returned exit 1. Formatting,
 metadata, references and lifecycle checks validate this proposal document only.
 The date-dependent test needs a later narrowly scoped correction; no failed
 check is relabeled successful here.
+
+### Proposal review — 2026-09-08
+
+Reviewed at `b6391c8d895e37a58bff4dc39b29610e230fc7ad`; source/test diff after
+the proposal was empty. Headers/build passed again and the unchanged macOS
+probe returned exit 1 / two owners. The full test suite was not repeated; the
+separate date-dependent log failure remains unresolved.
+[Review research](../research/2026-09-08-session-writer-recovery-review.md),
+commit `9c2e0bb43bc61d988ef2d74d64b7d65eb85f5ccd`, records source evidence and
+supersedes the original investigation as the current decision input without
+erasing the original failed-probe history.
+
+The review corrected rejection cleanup, staged release retries, direct journal
+authority, legacy deletion migration, and the overstatement of layout/API
+restrictions as unavoidable. The guard recommendation remains conditional;
+review is not approval and all implementation metadata stays not-started/null/empty.
+
+Additional confirmation required by these corrections:
+
+- Rejection after each acquisition checkpoint leaves the prior owner untouched
+  and normally removes only the rejecting attempt's guard; inject cleanup failure
+  separately from the primary error.
+- Kill or fail I/O before/after owner unlink and guard unlink, including a lost
+  acknowledgement and a replacement token. Concurrent retries never clear a
+  newer in-memory owner, reacquire their own guard, reopen writes or strand a
+  removable guard merely because its owner was already removed.
+- Direct built-in journal open rejects fake/no-op, mismatched, expired, copied
+  and second-use capabilities before any journal/key I/O; valid Agent/direct
+  usage and reconciliation share one recorder lease through delayed close.
+- Legacy delete of a real transcript refuses with migration guidance and removes
+  nothing; explicit service deletion retains only the accepted marker content.
+- Registered root aliases and cross-binding nesting cannot create two scopes
+  for one artifact. The same binding's default .runs layout remains usable.
+  Partial reciprocal registration blocks both roots until exclusive maintenance.
+- The read-only path wrapper has no registration/cleanup side effects; scope
+  ambiguity never returns a grant of writer authority.
 
 ## Follow-up Work
 
@@ -328,7 +469,7 @@ no existing ADR can be completed from this proposal or the older passing suite.
 
 ## References
 
-- [Research and pinned source ledger](../research/2026-09-08-session-writer-lock-recovery.md).
+- [Review research](../research/2026-09-08-session-writer-recovery-review.md), [original research and pinned source ledger](../research/2026-09-08-session-writer-lock-recovery.md).
 - [Required Execution Journal](2026-09-07-required-execution-journal.md), [Managed Run Lifecycle](2026-09-07-managed-run-lifecycle.md), [Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md).
 - [Session Persistence](2026-08-22-session-persistence.md).
 - [Recorder](../../src/core/session/recorder.ts), [repository](../../src/core/session/repository.ts), [deletion service](../../src/core/session/deletion-service.ts), [race probe](../../test/core/execution/fixtures/stale-lock-race.mjs).
