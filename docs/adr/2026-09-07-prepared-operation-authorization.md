@@ -5,6 +5,7 @@ decision-date: 2026-09-07
 implementation-status: partial
 implementation-completed-date: null
 implementation-commits:
+  - 379151d24184735638c1ed92cfd16f580ce21ece
   - da42d7194daf2fc84cced6100bc4e15a98722068
   - 61723f07e2f6318a352dcaacd16e9b88b7ad94fa
   - 7f26357d3afd9f14e7316352f7cc5483a387a2c3
@@ -528,3 +529,38 @@ Windows, operational, physical-failure and representative application evidence.
 Those author-directed deferrals remain unverified. Status stays accepted / partial
 and completion date null. Bounded managed Everything schema compatibility is next;
 no initial limit has been measured as optimal.
+
+## Bounded Managed MCP Schema Verification — 2026-09-08
+
+Implementation commit: `379151d24184735638c1ed92cfd16f580ce21ece`; recorded after that commit.
+This is a local compatibility correction to the existing validated schema subset,
+not a replacement authorization decision: the already used SDK 1.29.0 / AJV
+8.20.0 / ajv-formats 3.0.1 handles the recognized Draft 7 root declaration and URI
+format. No public API, dependency, storage format or permission boundary changed.
+The declaration stays in the schema. Unknown dialects, nested declarations,
+unconfirmed formats and reference vocabulary still reject before model exposure.
+A syntactically valid URI never grants access to its destination.
+
+The official Everything package **2026.8.31** actually returned 13 tool schemas,
+all with `http://json-schema.org/draft-07/schema#`; one uses `format: uri`.
+`test/core/execution/fixtures/everything-server.mjs` now confirms managed echo,
+addition and a three-second operation, plus invalid URI rejection. On macOS
+arm64 / Node 26.5.0 and a fresh Linux arm64 / Node 22.23.2 installation, it observed
+2 deterministic model invocations, 4 approvals (startup plus 3 valid calls),
+exactly 3 remote calls, zero dispatch for the invalid call, completed/quiescent
+run, file-and-directory-sync journal acknowledgement and confirmed child exit.
+The direct-client control also succeeded; it is not the managed evidence.
+
+Headers:check, native build and full npm test passed on both environments:
+**422 passing**, 0 lint errors / 15 warnings. The focused MCP contract suite has
+25 tests, including 11 new rejection/input cases. The feature guide documents
+this bounded profile; full Draft 7/2020-12, resources, sampling, elicitation and
+all Everything functionality are not claimed. Scripted approval and a model
+double are protocol integration checks, not real-model or human usage trials.
+
+The previously deferred Everything schema limitation is resolved for the author's
+requested coding-agent verification scope. Windows, operational/physical-storage
+and representative application trials remain unverified under the author's
+deferral. This ADR remains accepted / partial with completion date null; no
+profile value is measured as optimal. Current work can proceed to the book and
+coding-agent application using these verified common runtime components.

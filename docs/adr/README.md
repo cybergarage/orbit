@@ -338,7 +338,9 @@ records Unix native build/411 tests, 3,958 subprocess fault cases per environmen
 and cross-filesystem diagnosis. All five records remain accepted / partial;
 Windows, operational/physical-failure and representative application trials are
 explicitly deferred, not verified. The deferrals do not block current Unix work
-or book production. Bounded managed Everything schema compatibility is next.
+or book production. [Bounded managed Everything schema verification](2026-09-07-prepared-operation-authorization.md#bounded-managed-mcp-schema-verification--2026-09-08)
+now records the requested compatibility scope and Unix integration results.
+Book/application production can proceed; broader MCP functionality is not inferred.
 
 ## Background
 

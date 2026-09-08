@@ -808,3 +808,13 @@ Windows, operational, physical-failure and representative application evidence.
 Those author-directed deferrals remain unverified. Status stays accepted / partial
 and completion date null. Bounded managed Everything schema compatibility is next;
 no initial limit has been measured as optimal.
+
+### Subsequent bounded MCP verification — 2026-09-08
+
+The [authorization evidence](2026-09-07-prepared-operation-authorization.md#bounded-managed-mcp-schema-verification--2026-09-08) records
+`379151d24184735638c1ed92cfd16f580ce21ece` and managed Everything echo/addition/short-wait
+verification on macOS/Linux, including invalid-input refusal, required journal
+acknowledgement and child termination. The bounded schema follow-up above is
+resolved for the requested scope; broader server functionality is not inferred.
+This record's accepted / partial state and deferred environment, deployment and
+representative-application evidence remain unchanged.
