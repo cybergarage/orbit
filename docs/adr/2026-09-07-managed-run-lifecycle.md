@@ -447,6 +447,20 @@ The local UI rerun is now verified; Windows, remaining supported environments,
 physical durability, actual deployment exclusion and representative human/model/MCP
 trials remain open with restart conditions in that record. Status stays partial.
 
+### Registration and reference-server follow-up — 2026-09-08
+
+Diagnostic commit `5ee2265e239ef2f3135656ac6f520157af062e93` is recorded after the
+fixture commit. The recovery ADR's [additional matrix and registration finding](2026-09-08-session-writer-recovery-guard.md#additional-node-matrix-and-registration-interruption-finding--2026-09-08)
+records Linux Node 20.19.0 / 22.23.2 success and a separate **failing** registration
+interruption probe on macOS and Linux: matching binding files can admit writes
+before initialization synchronization completes. Persistent completion/exclusion
+metadata needs design review; no new protocol is adopted or implemented here.
+Its [official MCP trial](2026-09-08-session-writer-recovery-guard.md#official-mcp-reference-server-trial--2026-09-08)
+records Everything 2026.8.31 catalog refusal, child exit and explicit reconciliation,
+plus a successful direct-client echo/delay control. It does not establish managed
+Everything compatibility or representative production latency. This ADR remains
+accepted / partial; reasons, limits and implementation hashes are unchanged.
+
 ### Confirmation remaining before completed
 
 - Finish the recovery extension's remaining platform, deployment and fault-matrix

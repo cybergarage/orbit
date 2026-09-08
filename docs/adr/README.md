@@ -324,6 +324,12 @@ with 396 tests, the later Linux 25-case recovery suite, and updated real Ink/bro
 fault verification. Required platform, deployment and representative product checks
 still prevent completion; no accepted decision or product limit changed.
 
+The [additional verification](2026-09-08-session-writer-recovery-guard.md#additional-node-matrix-and-registration-interruption-finding--2026-09-08)
+adds Linux Node 20.19.0 / 22.23.2 but also identifies a separate registration
+interruption defect that still admits writes. A new protocol decision is pending;
+the four ADRs remain partial. The same record separates the official Everything
+server's managed schema refusal from a successful direct-client control.
+
 ## Background
 
 This convention adapts Michael Nygard's lightweight status, context, decision,

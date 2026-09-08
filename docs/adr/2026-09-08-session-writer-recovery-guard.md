@@ -628,6 +628,112 @@ Remaining work and restart conditions:
 The four affected ADRs remain accepted / partial with null completion dates.
 Acceptance reasons and prior failed-probe/log-test evidence remain intact.
 
+### Additional Node matrix and registration interruption finding — 2026-09-08
+
+The next verification started at `cd890aaeec20dfb339467d41f0b666cb9b37b467`, with
+no intervening production/test changes and a clean Orbit tree. Public main was
+still `80130cf194e477f136eefaa5b7cd2a2374dff198`. Diagnostic fixture commit
+`5ee2265e239ef2f3135656ac6f520157af062e93` records the cases below; this later
+ADR commit records its full hash. Production code, accepted reasons and initial
+limits are unchanged. **A new registration defect prevents completion.**
+
+Clean Linux arm64 Git archives passed npm ci, headers:check, native build,
+**397 tests** and the existing independent stale-recovery probe on Node
+**20.19.0** and **22.23.2**. Images were `node:20.19.0-bookworm`
+(digest `sha256:a5fb035ac1dff34a4ecaea85f90f7321185695d3fd22c12ba12f4535a4647cc5`)
+and `node:22-bookworm`
+(digest `sha256:8a34c4ab3ea2c5cd194f07e317b2a8f09461d3c8b05c4e34c8ccd56d56024c4d`).
+The minimum declared Node version and another supported major now have Linux
+evidence. After adding the diagnostic fixtures, macOS arm64 / Node 26.5.0
+headers, build and npm test passed **397 tests**, with 0 lint errors / 12 warnings.
+This aggregate result excludes the independently failing registration probe.
+
+`node test/core/execution/fixtures/registration-interruption.mjs` returns **exit 1**
+on macOS / Node 26.5.0 and Linux / Node 22.23.2. Each isolated case writes the
+second reciprocal binding, then either exits with the expected checkpoint code
+73 before synchronization or raises a binding-sync failure and exits 74. A fresh
+repository accepts a writer in both cases. Explicit offline reinitialization
+later returns successfully. That is an API/admission observation, not proof of
+restored durability: the source branch for existing matching bindings syncs
+directories without explicitly resyncing those binding files. Offline repair
+must address that ordering as well. Timeouts and unexpected child exit codes fail the fixture and
+are not counted as exclusion. This is neither a physical-power-loss experiment
+nor the earlier same-session stale-recovery race.
+
+Source cause: `initializeSessionStorage` in `src/core/session/coordination.ts`
+writes each binding before `fsyncSync`; `validateBinding` accepts two matching
+JSON records without evidence that the initialization completed. The existing
+`recovery-guard.test.ts` interruption stops after the first binding, so it verifies
+the missing-counterpart case but not failure after both records become visible.
+The accepted requirement says registration interruption must leave writable
+admission disabled until offline initialization completes. The external operator
+must still hold exclusion throughout failed maintenance; this defect does not
+justify releasing that prerequisite or equate filesystem visibility with success.
+
+Design input, **not a new adoption**:
+
+| Option | Consequence |
+| --- | --- |
+| Persistent repository initialization guard/marker | Make pending initialization visible before changing bindings; normal scope/admission refuses while either root reports pending state. Only exclusive offline recovery may validate/resynchronize bindings and remove the marker. Fits the existing fail-closed maintenance direction, but adds repository-level metadata, compatibility and interruption rules beyond the current per-session guard. |
+| Explicit committed registration manifest | Separate prepared reciprocal identities from the commit point after required synchronization. Requires a precise authority/location and alias/conflict rules across both roots, plus version/migration handling. A second JSON write alone repeats the defect. |
+| Rely exclusively on the operator's external gate | Avoids new metadata but fails the adopted programmatic admission condition and leaves copied/reopened roots ambiguous. Not recommended; it would weaken an accepted requirement. |
+
+Recommend researching a persistent initialization guard, comparing it with a
+committed manifest before accepting a storage protocol extension. Establish its
+location and identity for both roots, durable ordering, initial and repeated
+registration, interrupted recovery, legacy records, aliases/conflicts, read-only
+inspection and normal admission. Check crashes and errors before/after each
+binding write/sync and each marker transition; loss of a cleanup acknowledgement
+must not grant authority or delete another registration's evidence. Keep the
+external gate until verified completion. This task records the evidence/options;
+it does not silently add a persistent format or claim the defect repaired.
+
+### Official MCP reference-server trial — 2026-09-08
+
+At the author's request to use a generic test server, an isolated npm installation
+of [Everything MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/everything)
+**2026.8.31** was used. npm distribution integrity was
+`sha512-5U3OZh8Xq0Li4nA26l6uNvV9/1suMDuWSn+NjLZIhzinhMY6N3A4DCrxVecBGPf2PsNFKTEv5krxGPRwzxc7jQ==`.
+No Orbit dependency, user MCP configuration or provider credential was changed.
+The inspected distribution files were `dist/index.js`, `dist/transports/stdio.js`,
+`dist/server/index.js`, and the echo/long-running-operation tool handlers.
+
+Reproduce with `node test/core/execution/fixtures/everything-server.mjs
+<isolated-install>/node_modules/@modelcontextprotocol/server-everything/dist/index.js`
+after building Orbit. The fixture checks the installed package version and never
+installs software itself. It uses actual stdio transport and a registered isolated
+Session with file-and-directory-sync journal acknowledgement.
+
+Managed discovery confirms process startup once, then refuses the catalog at
+`Unsupported managed MCP schema keyword: $schema` in `src/core/mcp.ts`.
+Observed: 0 model calls, 1 approval, incomplete / unknown-operation, acknowledged
+journal, quiescence false and the child PID absent. After confirming that discovery
+failed before any tool/model call and the only child had exited, explicit
+reconciliation records failed startup and permits close. The original result is
+not rewritten. An initial trial also observed close refusal before reconciliation;
+that was not a successful echo run.
+
+The same server's direct-client control discovers **13 tools**, returns the expected
+echo and completes `trigger-long-running-operation` with duration 3 / steps 3 in
+**3004.7 ms**. The committed fixture exits 0 for its expected refusal and control
+assertions; it does not claim successful managed tool execution. It does not
+instrument every server effect. This is a real reference-server connection,
+not a production MCP or live-model/human workload, and a 3-second controlled wait
+is not representative latency or proof of optimal limits.
+
+Keep the accepted schema refusal for now. The first unsupported keyword is
+identified; the rest of the full catalog is not thereby verified. Supporting this
+server under managed execution would require an explicit dialect/vocabulary
+compatibility review and tests, rather than stripping arbitrary schema metadata
+or bypassing managed admission. That extension is separate from the registration
+repair and is not adopted here.
+
+No Windows runner/VM or actual deployment/restarter configuration was supplied.
+The author authorized a generic MCP test server, but did not supply a long target
+suite, live model or human trial conditions. Those, physical durability and the
+remaining supported environments retain the prior restart conditions. Updated
+macOS UI and Linux Node 24 checks were not repeated without a relevant change.
+
 ## Follow-up Work
 
 The author accepted orphan-guard refusal/offline recovery, scoped mutating APIs,
@@ -636,7 +742,9 @@ repeat those decisions or implement a partial guard around acquireLock alone.
 If new evidence requires a material change, record the evidence, alternatives
 and recommendation without replacing the accepted rationale.
 
-Continue the remaining confirmation matrix against the implementation above and
+First resolve the registration interruption finding through the recorded design
+review and implementation, keeping the failing probe as evidence. Then continue
+the remaining confirmation matrix against the implementation above and
 record any local fixes with new implementation hashes in later evidence commits.
 Keep completion null while required platform, deployment or product checks remain.
 Do not replay unknown effects or weaken storage/maintenance prerequisites to make
