@@ -16,9 +16,10 @@ import type {JournalRecord} from '../../../src/core/execution/journal.js'
 import type {RunContext} from '../../../src/core/execution/run.js'
 
 import {executePrepared} from '../../../src/core/execution/authorization.js'
-import {FileExecutionJournal, MemoryExecutionJournal} from '../../../src/core/execution/journal.js'
+import {MemoryExecutionJournal} from '../../../src/core/execution/journal.js'
 import {inspectExecutionJournal, recordReconciliation} from '../../../src/core/execution/recovery.js'
 import {DEFAULT_RUN_LIMITS, RunSupervisor} from '../../../src/core/execution/run.js'
+import {openTestJournal} from '../../session-storage-fixture.js'
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -431,13 +432,13 @@ describe('cross-contract execution races', () => {
       },
     } as typeof fs
     try {
-      const journal = await FileExecutionJournal.open('session', {io, releaseLease() {}, root})
+      const journal = await openTestJournal('session', {io, releaseLease() {}, root})
       const digest = journal.digest({})
       await journal
         .append('run', 'run-admitted', {requestDigest: digest, requestId: 'request'}, 0, 'event')
         .catch(() => {})
       await journal.close().catch(() => {})
-      const reopened = await FileExecutionJournal.open('session', {releaseLease() {}, root})
+      const reopened = await openTestJournal('session', {releaseLease() {}, root})
       expect(
         (await reopened.append('run', 'run-admitted', {requestDigest: digest, requestId: 'request'}, 0, 'event'))
           .sequence,
@@ -471,7 +472,7 @@ describe('cross-contract execution races', () => {
   it('preserves torn bytes in a read-only inspection and rejects missing keys', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-inspect-'))
     try {
-      const journal = await FileExecutionJournal.open('session', {releaseLease() {}, root})
+      const journal = await openTestJournal('session', {releaseLease() {}, root})
       await journal.append('run', 'run-admitted', {})
       await journal.close()
       const file = path.join(root, 'session/run/events.jsonl')
@@ -481,7 +482,7 @@ describe('cross-contract execution races', () => {
       expect(inspection.runs[0].issue).contains('Torn')
       expect((await fs.readFile(file, 'utf8')).endsWith('{partial')).equal(true)
       await fs.unlink(path.join(root, 'session/key'))
-      await FileExecutionJournal.open('session', {releaseLease() {}, root}).then(
+      await openTestJournal('session', {releaseLease() {}, root}).then(
         () => {
           throw new Error('Missing key accepted')
         },
@@ -518,9 +519,16 @@ describe('cross-contract execution races', () => {
   })
 
   it('does not await or leak an asynchronously rejecting snapshot observer', async () => {
-    const handle = await new RunSupervisor().startRun({...options(), async execute(run) { await run.ready([]) }, async onSnapshot() { throw new Error('optional observer') }})
+    const handle = await new RunSupervisor().startRun({
+      ...options(),
+      async execute(run) {
+        await run.ready([])
+      },
+      async onSnapshot() {
+        throw new Error('optional observer')
+      },
+    })
     expect((await handle.finished).outcome).equal('completed')
     await delay()
   })
-
 })

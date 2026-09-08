@@ -114,13 +114,15 @@ context, turn terminal events, and session metadata. `SessionContextBuilder`
 derives model input from those durable records.
 
 `SessionRepository` creates, opens and lists append-only session files.
-`SessionDeletionService` removes managed artifacts using a retained deletion marker. `SessionRecorder` serializes writes and uses process-aware lock files to
-exclude live owners. Concurrent reclamation of a dead owner currently permits
-two writers; see the [recovery limitation](execution.md#current-stale-lock-recovery-limitation).
-Session records are distinct from structured
-runtime logs and required execution journals: transcripts reconstruct history,
-optional logs support diagnostics, and journals preserve admission and operation
-evidence. The journal delegates the existing SessionRecorder writer lease.
+`SessionDeletionService` removes managed artifacts under the stable Session-ID
+owner, preserving a minimal deletion marker. `session/coordination.ts` validates
+reciprocal storage bindings and serializes owner transitions with exclusive
+guards; abandoned guards require offline recovery. `SessionRecorder` retains
+ownership through queued writes and delegated journal I/O. `writer-lease.ts`
+validates single-consumer journal capabilities before persistent open.
+Session records reconstruct history, optional logs support diagnostics, and
+journals preserve admission and operation evidence. All persistent entry points
+use the same registered roots; see [storage migration](session-storage.md).
 
 ## Configuration and context
 

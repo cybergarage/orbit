@@ -7,8 +7,9 @@ import os from 'node:os'
 import path from 'node:path'
 import {stub} from 'sinon'
 
-import {FileExecutionJournal, MemoryExecutionJournal} from '../../../src/core/execution/journal.js'
-import {MemorySessionLogStore, SessionDeletionService, SessionRepository} from '../../../src/core/index.js'
+import {MemoryExecutionJournal} from '../../../src/core/execution/journal.js'
+import {MemorySessionLogStore, SessionDeletionService} from '../../../src/core/index.js'
+import {openTestJournal, SessionRepository} from '../../session-storage-fixture.js'
 
 function faultIO(
   targetFile: (file: string) => boolean,
@@ -58,12 +59,12 @@ describe('required journal storage faults', () => {
             }
           : undefined,
     )
-    const journal = await FileExecutionJournal.open('session', {io, releaseLease() {}, root})
+    const journal = await openTestJournal('session', {io, releaseLease() {}, root})
     await journal.append('run', 'run-admitted', {requestId: 'request'})
     expect(writes).greaterThan(1)
     expect(journal.records()).length(1)
     await journal.close()
-    const reopened = await FileExecutionJournal.open('session', {releaseLease() {}, root})
+    const reopened = await openTestJournal('session', {releaseLease() {}, root})
     expect(reopened.records()).length(1)
     await reopened.close()
   })
@@ -80,7 +81,7 @@ describe('required journal storage faults', () => {
             }
           : undefined,
     )
-    const journal = await FileExecutionJournal.open('session', {io, releaseLease() {}, root})
+    const journal = await openTestJournal('session', {io, releaseLease() {}, root})
     await journal.append('run', 'run-admitted', {}).then(
       () => {
         throw new Error('Unexpected ack')
@@ -90,7 +91,7 @@ describe('required journal storage faults', () => {
     await journal.close().catch(() => {})
     const file = path.join(root, 'session/run/events.jsonl')
     const bytes = await fs.readFile(file)
-    await FileExecutionJournal.open('session', {releaseLease() {}, root}).then(
+    await openTestJournal('session', {releaseLease() {}, root}).then(
       () => {
         throw new Error('Torn record accepted')
       },
@@ -112,7 +113,7 @@ describe('required journal storage faults', () => {
             }
           : undefined,
     )
-    await FileExecutionJournal.open('session', {
+    await openTestJournal('session', {
       io,
       releaseLease() {
         releases++
@@ -140,7 +141,7 @@ describe('required journal storage faults', () => {
             }
           : undefined,
     )
-    await FileExecutionJournal.open('session', {
+    await openTestJournal('session', {
       io,
       releaseLease() {
         releases++
@@ -155,7 +156,7 @@ describe('required journal storage faults', () => {
       },
     )
     expect(releases).equal(1)
-    const weak = await FileExecutionJournal.open('session', {io, level: 'file-sync', releaseLease() {}, root})
+    const weak = await openTestJournal('session', {io, level: 'file-sync', releaseLease() {}, root})
     await weak.append('run', 'run-admitted', {})
     expect(weak.level).equal('file-sync')
     await weak.close()
@@ -163,7 +164,7 @@ describe('required journal storage faults', () => {
 
   it('rejects unsupported levels at runtime and coalesces journal close', async () => {
     let releases = 0
-    await FileExecutionJournal.open('session', {
+    await openTestJournal('session', {
       level: 'unsupported' as never,
       releaseLease() {
         releases++

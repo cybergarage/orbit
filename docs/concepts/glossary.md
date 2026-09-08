@@ -119,6 +119,13 @@ Correlated evidence of node invocations, edge choices, inputs, outputs,
 effects, timing, and terminal outcomes. Current Orbit logs and events provide
 part of this evidence but are not yet a complete graph trace.
 
+### Session writer scope
+
+The canonical registered session/journal root pair and Session ID used to
+coordinate ownership before and after transcript deletion. A guard protects
+short owner transitions; the owner and delegated journal lease span active I/O.
+Read-only lock inspection does not grant ownership. See [session storage](../session-storage.md).
+
 ## Status qualifiers
 
 - **Current:** implemented in the maintained repository.

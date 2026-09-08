@@ -7,6 +7,14 @@ export {encodeSessionEntry, parseSessionFile} from './codec.js'
 export type {ParsedSessionFile} from './codec.js'
 export {SessionContextBuilder} from './context-builder.js'
 export type {SessionModelContext} from './context-builder.js'
+export {
+  coordinationPaths,
+  initializeSessionStorage,
+  isSessionLocked,
+  recoverSessionWriter,
+  retrySessionCleanup,
+} from './coordination.js'
+export type {OfflineStorageConditions, SessionScope} from './coordination.js'
 export {SessionDeletionService} from './deletion-service.js'
 export type {SessionThreadCloser} from './deletion-service.js'
 export {SESSION_FORMAT_VERSION, SessionEntryType, TurnPhase} from './entries.js'
@@ -38,5 +46,7 @@ export type {
   SessionRepositoryOptions,
   SessionSummary,
 } from './repository.js'
+
 export {Session} from './session.js'
 export type {AppendMessageOptions, RecordTurnContextOptions, RecordTurnEventOptions, SessionOptions} from './session.js'
+export type {SessionWriterLease} from './writer-lease.js'

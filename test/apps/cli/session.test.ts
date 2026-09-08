@@ -7,7 +7,8 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {runSessionInformationCommand} from '../../../src/apps/cli/session.js'
-import {Message, MessageType, Role, SessionRepository} from '../../../src/core/index.js'
+import {Message, MessageType, Role} from '../../../src/core/index.js'
+import {SessionRepository} from '../../session-storage-fixture.js'
 
 describe('session information command', () => {
   it('prints an exact saved summary without changing or locking the transcript', async () => {

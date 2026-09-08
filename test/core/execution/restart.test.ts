@@ -8,8 +8,8 @@ import os from 'node:os'
 import path from 'node:path'
 import {promisify} from 'node:util'
 
-import {FileExecutionJournal} from '../../../src/core/execution/journal.js'
 import {RunSupervisor} from '../../../src/core/execution/run.js'
+import {openTestJournal} from '../../session-storage-fixture.js'
 
 const child = promisify(execFile)
 
@@ -26,7 +26,11 @@ describe('managed execution subprocess recovery', () => {
           import {executePrepared} from './src/core/execution/authorization.ts';
           const root = process.env.ORBIT_TEST_ROOT;
           const checkpoint = process.env.ORBIT_TEST_CHECKPOINT;
-          const journal = await FileExecutionJournal.open('session', {root, level: 'file-sync', releaseLease() {}});
+          const {SessionRepository} = await import('./src/core/session/repository.ts');
+          const repository = new SessionRepository({rootDir: root + '-transcripts', journalRoot: root});
+          repository.initializeStorage({allWritersStopped: true, automaticRestartersDisabled: true, exclusiveStorageControl: true});
+          const session = repository.create({id: 'session'});
+          const journal = await FileExecutionJournal.open('session', {root, level: 'file-sync', lease: session.acquireWriterLease()});
           const append = journal.append.bind(journal);
           journal.append = async (...args) => { const record = await append(...args); if (record.kind === checkpoint) process.exit(73); return record; };
           const handle = await new RunSupervisor().startRun({sessionId: 'session', requestId: 'request', input: {}, configuration: {}, journal: async () => journal, async execute(run) {
@@ -52,7 +56,7 @@ describe('managed execution subprocess recovery', () => {
             expect(error.code, error.stderr).equal(73)
           },
         )
-        const journal = await FileExecutionJournal.open('session', {level: 'file-sync', releaseLease() {}, root})
+        const journal = await openTestJournal('session', {level: 'file-sync', root})
         let dispatches = 0
         const handle = await new RunSupervisor().startRun({
           configuration: {changed: true},

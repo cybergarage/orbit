@@ -9,12 +9,8 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {startGuiServer} from '../../../src/apps/gui/server.js'
-import {
-  guiSlashCommandHelpMessage,
-  MemorySessionLogStore,
-  OrbitApplicationService,
-  SessionRepository,
-} from '../../../src/core/index.js'
+import {guiSlashCommandHelpMessage, MemorySessionLogStore, OrbitApplicationService} from '../../../src/core/index.js'
+import {SessionRepository} from '../../session-storage-fixture.js'
 
 describe('GUI server', () => {
   it('protects and validates the local application API', async () => {

@@ -8,13 +8,15 @@ import process from 'node:process'
 import {v7 as uuidv7} from 'uuid'
 
 import type {ProviderName} from '../models/provider.js'
+import type {OfflineStorageConditions, SessionScope} from './coordination.js'
 import type {SessionHeaderEntry, SessionMetadata} from './entries.js'
 import type {SessionInformation} from './information.js'
 
 import {sessionsDir} from '../app.js'
 import {deletionMarker} from '../execution/deletion.js'
 import {Message} from '../message/index.js'
-import {encodeSessionEntry, parseSessionFile} from './codec.js'
+import {parseSessionFile} from './codec.js'
+import {canonicalStoragePath, initializeSessionStorage, sessionScope, validateSessionId} from './coordination.js'
 import {SESSION_FORMAT_VERSION, SessionEntryType} from './entries.js'
 import {createSessionInformationFromSource} from './information.js'
 import {sessionFilePath} from './paths.js'
@@ -66,8 +68,8 @@ export class SessionRepository {
   public readonly rootDir: string
 
   constructor(options: SessionRepositoryOptions = {}) {
-    this.rootDir = path.resolve(options.rootDir ?? sessionsDir())
-    this.journalRoot = path.resolve(
+    this.rootDir = canonicalStoragePath(options.rootDir ?? sessionsDir())
+    this.journalRoot = canonicalStoragePath(
       options.journalRoot ??
         (options.rootDir === undefined
           ? path.join(path.dirname(this.rootDir), 'runs')
@@ -77,7 +79,7 @@ export class SessionRepository {
 
   create(options: CreateSessionOptions = {}): Session {
     const createdAt = new Date(options.createdAt ?? Date.now()).toISOString()
-    const id = options.id ?? uuidv7()
+    const id = validateSessionId(options.id ?? uuidv7())
     this.assertNotDeleted(id)
     const rootMessageId = uuidv7()
     const file = sessionFilePath(this.rootDir, id, createdAt)
@@ -93,7 +95,7 @@ export class SessionRepository {
       type: SessionEntryType.Session,
       version: SESSION_FORMAT_VERSION,
     }
-    const recorder = SessionRecorder.create(file, header)
+    const recorder = SessionRecorder.create(file, header, this.scope(id))
     return new Session({
       journalRoot: this.journalRoot,
       metadata: metadataFromHeader(header, file),
@@ -102,33 +104,11 @@ export class SessionRepository {
   }
 
   async delete(sessionId: string): Promise<SessionSummary | undefined> {
+    validateSessionId(sessionId)
     const summary = await this.findById(sessionId)
-    if (fs.existsSync(path.join(this.journalRoot, sessionId)))
-      throw new Error('Managed sessions must be deleted with SessionDeletionService')
-    if (summary === undefined) return
-    let guard: SessionRecorder
-    try {
-      guard = SessionRecorder.open(summary.file)
-    } catch (error) {
-      if (error instanceof Error && error.message.startsWith('Session file is already open for writing:')) {
-        throw new Error(`Session is open for writing: ${sessionId}`)
-      }
-
-      throw error
-    }
-
-    try {
-      try {
-        await fsPromises.unlink(summary.file)
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
-        throw error
-      }
-    } finally {
-      await guard.close()
-    }
-
-    return summary
+    if (summary || fs.existsSync(deletionMarker(this.journalRoot, sessionId)))
+      throw new Error('Use SessionDeletionService with explicit logs and retained deletion marker semantics')
+    return undefined
   }
 
   async findById(sessionId: string): Promise<SessionSummary | undefined> {
@@ -159,6 +139,10 @@ export class SessionRepository {
       if (summary !== undefined) return summary
       cursor = page.nextCursor
     } while (cursor !== undefined)
+  }
+
+  initializeStorage(conditions: OfflineStorageConditions): void {
+    initializeSessionStorage(this.rootDir, this.journalRoot, conditions)
   }
 
   list(): SessionSummary[] {
@@ -209,15 +193,9 @@ export class SessionRepository {
 
   open(file: string): Session {
     const resolvedFile = path.resolve(file)
-    let parsed: ReturnType<typeof parseSessionFile> | undefined
-    const recorder = SessionRecorder.open(resolvedFile, () => {
-      parsed = parseSessionFile(fs.readFileSync(resolvedFile, 'utf8'), resolvedFile)
-      this.assertNotDeleted(parsed.header.id)
-      if (parsed.recovered) {
-        fs.writeFileSync(resolvedFile, parsed.entries.map((entry) => encodeSessionEntry(entry)).join(''), {mode: 0o600})
-      }
-    })
-    if (parsed === undefined) throw new Error(`Session file could not be loaded: ${resolvedFile}`)
+    const discovered = parseSessionFile(fs.readFileSync(resolvedFile, 'utf8'), resolvedFile)
+    const recorder = SessionRecorder.open(resolvedFile, this.scope(discovered.header.id))
+    const parsed = parseSessionFile(fs.readFileSync(resolvedFile, 'utf8'), resolvedFile)
 
     const messages = parsed.entries
       .filter((entry) => entry.type === SessionEntryType.Message)
@@ -245,6 +223,10 @@ export class SessionRepository {
     const resolvedFile = path.resolve(file)
     const parsed = parseSessionFile(fs.readFileSync(resolvedFile, 'utf8'), resolvedFile)
     return summaryFromParsed(parsed, resolvedFile)
+  }
+
+  scope(id: string): SessionScope {
+    return sessionScope(this.rootDir, this.journalRoot, id)
   }
 
   private assertNotDeleted(id: string): void {

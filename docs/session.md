@@ -5,6 +5,10 @@ interactive CLI saves sessions automatically. Library users can create,
 inspect, list, and resume sessions through `SessionRepository`, and GUI clients
 can opt into the same storage through `ThreadManager`.
 
+Persistent examples below assume that both roots have been registered using the
+[offline initialization or migration procedure](session-storage.md). A fresh
+installation also requires initialization; read-only inspection does not.
+
 ## Storage location
 
 The default root is:
@@ -390,19 +394,19 @@ The resumed thread keeps the original session and thread ID, message IDs,
 timestamps, tool history, and parent chain. `closeThread()` and `close()` close
 the agent and recorder but do not delete the JSONL file.
 
-Delete a closed persisted session by ID through its repository:
+Delete a closed persisted session through the explicit deletion service, supplying
+the same log store used by the application:
 
 ```ts
-const deleted = await repository.delete(snapshot.id)
+import {SessionDeletionService} from 'orbit'
+const deleted = await new SessionDeletionService(repository, logStore).delete(snapshot.id)
 ```
 
-`delete()` returns the deleted summary, or `undefined` when the session does
-not exist. It obtains the same cross-process writer lock used by resume and
-refuses to unlink a session that is open for writing in any Orbit process. GUI
-integrations should close the corresponding thread first;
-`OrbitApplicationService.deleteSession()` performs both operations in order.
-Deletion is permanent and removes the JSONL transcript rather than archiving
-or hiding it.
+The service removes logs, transcript and journal under one Session-ID owner and
+retains the disclosed minimal deletion marker. It refuses active writers and
+supports retries after transcript removal. `SessionRepository.delete()` no longer
+performs transcript-only deletion; migrate explicitly to this service or use
+`OrbitApplicationService.deleteSession()`.
 
 Only one run may be active per thread. Independent threads can run in
 parallel, and each session has its own ordered recorder. `ThreadManager`
@@ -477,19 +481,14 @@ removes that incomplete tail when opening the session, rewrites the valid
 entries with complete newlines, and then resumes appending. Other corruption is
 reported with the file path and line number and is not modified.
 
-Orbit creates a sidecar lock before creating, opening, repairing, resuming, or
-deleting a session. The lock contains its owning process ID and a unique token.
-An existing live owner excludes other Orbit processes. A session opened by the
-GUI therefore rejects a concurrent CLI resume in that case. This does not yet
-guarantee exclusion while multiple processes reclaim a dead owner.
-
-Locks whose owner process no longer exists are removed automatically before
-the next open. That check and removal are not atomic: simultaneous recovery can
-remove a replacement lock and admit two writers. Serialize crash recovery
-externally until the [known recovery defect](execution.md#current-stale-lock-recovery-limitation)
-is resolved. Malformed locks fail closed because Orbit cannot safely prove
-that their owner is gone. A recorder removes only a lock with its own token,
-so it cannot release a replacement owner's lock.
+Orbit registers a stable Session-ID scope and uses a short exclusive guard for
+owner acquisition, stale recovery and release. Other processes reject while a
+guard or live owner is held. Well-formed dead owners can be reclaimed under the
+guard; an abandoned guard or unknown owner requires offline maintenance.
+Read-only inspection never unlinks locks. Writer ownership remains through
+queued transcript writes and delegated journal I/O, including delayed cleanup.
+See [storage registration and recovery](session-storage.md) for migration,
+compatibility restrictions, cleanup retry and platform assumptions.
 
 ## Current scope
 
@@ -526,7 +525,7 @@ because a timeout elapsed.
 The default journal root is `~/.orbit/runs`. An explicit repository `rootDir`
 uses `<rootDir>/.runs` unless `journalRoot` is supplied. Configure that root on
 SessionRepository so resume, queries and deletion use the same partition.
-Repository deletion rejects managed journals; use `SessionDeletionService` or
+Repository deletion rejects mutation of any existing transcript; use `SessionDeletionService` or
 the application service. Deletion rejects active/quarantined sessions and retains
 a minimal marker; retries can return only `{id}` after the transcript is gone.
 See [Managed Execution](execution.md#recording-and-recovery).

@@ -17,9 +17,9 @@ import {
   Message,
   MessageType,
   OrbitApplicationService,
-  SessionRepository,
   ToolProfile,
 } from '../../../src/core/index.js'
+import {SessionRepository} from '../../session-storage-fixture.js'
 
 async function poll(read: () => Promise<RunSnapshot>, ready: (snapshot: RunSnapshot) => boolean): Promise<RunSnapshot> {
   const deadline = Date.now() + 3000

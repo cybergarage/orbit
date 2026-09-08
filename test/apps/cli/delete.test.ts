@@ -7,7 +7,8 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {runDeleteSessionCommand} from '../../../src/apps/cli/delete.js'
-import {MemorySessionLogStore, SessionRepository, StoreSessionLoggerFactory} from '../../../src/core/index.js'
+import {MemorySessionLogStore, StoreSessionLoggerFactory} from '../../../src/core/index.js'
+import {SessionRepository} from '../../session-storage-fixture.js'
 
 describe('delete command', () => {
   it('asks for confirmation before deleting a session', async () => {

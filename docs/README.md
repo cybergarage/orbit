@@ -86,3 +86,5 @@ Possible future categories such as `guides/`, `reference/`, or `subsystems/`
 require an established body of content and a migration plan for incoming
 links. Proposed specifications belong in research or a proposed ADR until the
 repository adopts a dedicated specification lifecycle.
+
+- [Session storage registration, recovery and migration](session-storage.md): offline initialization, scoped writer/journal APIs, retained guards and deletion migration.

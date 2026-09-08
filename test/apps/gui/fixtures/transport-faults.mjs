@@ -19,6 +19,12 @@ import {
   ToolProfile,
 } from '../../../../dist/core/index.js'
 const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-gui-faults-'))
+const repository = new SessionRepository({rootDir: path.join(root, 'sessions')})
+repository.initializeStorage({
+  allWritersStopped: true,
+  automaticRestartersDisabled: true,
+  exclusiveStorageControl: true,
+})
 let armed = false
 let calls = 0
 let delayed = false
@@ -69,7 +75,7 @@ const service = new OrbitApplicationService({
   logStore: new MemorySessionLogStore(),
   model: 'fixture',
   provider: 'ollama',
-  repository: new SessionRepository({rootDir: path.join(root, 'sessions')}),
+  repository,
   settingsSources: [],
 })
 service.updatePreferences({diagnosticCapture: 'off'})

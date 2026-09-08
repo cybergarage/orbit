@@ -46,6 +46,7 @@ USAGE
 * [`orbit help [COMMAND]`](#orbit-help-command)
 * [`orbit resume [SESSION]`](#orbit-resume-session)
 * [`orbit session [SESSION]`](#orbit-session-session)
+* [`orbit storage ACTION [SESSION]`](#orbit-storage-action-session)
 
 ## `orbit delete SESSION`
 
@@ -239,4 +240,30 @@ EXAMPLES
 ```
 
 _See code: [src/cli/session.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/session.ts)_
+
+## `orbit storage ACTION [SESSION]`
+
+Initialize or recover session storage under external offline exclusion
+
+```
+USAGE
+  $ orbit storage ACTION [SESSION] [--exclusive-storage-control] [--journal-root <value>]
+    [--restarters-disabled] [--session-root <value>] [--writers-stopped]
+
+ARGUMENTS
+  ACTION     (initialize|recover)
+  [SESSION]  Exact session ID for recovery
+
+FLAGS
+  --exclusive-storage-control  Confirm external exclusive administration of both roots
+  --journal-root=<value>       Matching execution journal root
+  --restarters-disabled        Confirm automatic restarters remain disabled through interruption
+  --session-root=<value>       Session repository root
+  --writers-stopped            Confirm all current and old writer processes are stopped
+
+DESCRIPTION
+  Initialize or recover session storage under external offline exclusion
+```
+
+_See code: [src/cli/storage.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/storage.ts)_
 <!-- commandsstop -->

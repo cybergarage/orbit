@@ -15,11 +15,11 @@ import {
   Message,
   MessageType,
   SessionDeletionService,
-  SessionRepository,
   State,
   ToolProfile,
 } from '../../../src/core/index.js'
 import {createMcpToolManager} from '../../../src/core/mcp.js'
+import {SessionRepository} from '../../session-storage-fixture.js'
 
 function model(
   invoke: (messages: MessageValue[], options?: Partial<ModelInvokeOptions>) => Promise<MessageValue>,
@@ -252,8 +252,8 @@ describe('managed coding Agent integration', () => {
           journal = await (
             await import('../../../src/core/execution/journal.js')
           ).FileExecutionJournal.open('session', {
-            releaseLease: session.acquireManagedLease(),
-            root: path.join(root, 'runs'),
+            lease: session.acquireWriterLease(),
+            root: repository.journalRoot,
           })
           return journal
         },

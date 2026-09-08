@@ -10,8 +10,9 @@ import path from 'node:path'
 import {promisify} from 'node:util'
 
 import {FileExecutionJournal} from '../../../src/core/execution/journal.js'
-import {MemorySessionLogStore, SessionDeletionService, SessionRepository} from '../../../src/core/index.js'
+import {MemorySessionLogStore, SessionDeletionService} from '../../../src/core/index.js'
 import {SessionRecorder} from '../../../src/core/session/recorder.js'
+import {SessionRepository} from '../../session-storage-fixture.js'
 
 const execute = promisify(execFile)
 const args = (script: string) => ['--loader', './test/alias-loader.mjs', '--input-type=module', '-e', script]
@@ -36,9 +37,11 @@ describe('cross-process managed storage ownership', () => {
       process.execPath,
       args(`
       import {SessionRecorder} from './src/core/session/recorder.ts';
+      import {SessionRepository} from './src/core/session/repository.ts';
+      const repository = new SessionRepository({rootDir: process.env.ORBIT_TEST_SESSIONS});
       import {FileExecutionJournal} from './src/core/execution/journal.ts';
-      const recorder = SessionRecorder.open(process.env.ORBIT_TEST_FILE);
-      const journal = await FileExecutionJournal.open('session', {root: process.env.ORBIT_TEST_ROOT, level: 'file-sync', releaseLease: recorder.acquireManagedLease()});
+      const recorder = SessionRecorder.open(process.env.ORBIT_TEST_FILE, repository.scope('session'));
+      const journal = await FileExecutionJournal.open('session', {root: process.env.ORBIT_TEST_ROOT, level: 'file-sync', lease: recorder.acquireManagedLease()});
       await journal.append('run', 'run-admitted', {requestId: 'request'});
       recorder.close();
       process.stdout.write('owned\\n');
@@ -50,6 +53,7 @@ describe('cross-process managed storage ownership', () => {
           ...process.env,
           ORBIT_TEST_FILE: file,
           ORBIT_TEST_ROOT: repository.journalRoot,
+          ORBIT_TEST_SESSIONS: repository.rootDir,
           TS_NODE_PROJECT: 'tsconfig.test.json',
         },
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -68,7 +72,7 @@ describe('cross-process managed storage ownership', () => {
         }),
       ])
       expect(ready).equal('owned\n')
-      expect(() => SessionRecorder.open(file)).throws('already open')
+      expect(() => SessionRecorder.open(file, repository.scope('session'))).throws('already open')
       await new SessionDeletionService(repository, new MemorySessionLogStore(), undefined, 'file-sync')
         .delete('session')
         .then(
@@ -84,10 +88,10 @@ describe('cross-process managed storage ownership', () => {
       )
       child.stdin.write('exit\n')
       expect((await exited)[0]).equal(73)
-      const recorder = SessionRecorder.open(file)
+      const recorder = SessionRecorder.open(file, repository.scope('session'))
       const journal = await FileExecutionJournal.open('session', {
+        lease: recorder.acquireManagedLease(),
         level: 'file-sync',
-        releaseLease: recorder.acquireManagedLease(),
         root: repository.journalRoot,
       })
       expect(journal.records()).length(1)
@@ -106,14 +110,14 @@ describe('cross-process managed storage ownership', () => {
     it(`resumes deletion after process exit following ${checkpoint}`, async () => {
       const repository = new SessionRepository({rootDir: path.join(root, 'sessions')})
       const session = repository.create({id: 'session'})
-      await session.close()
       const journal = await FileExecutionJournal.open('session', {
+        lease: session.acquireWriterLease(),
         level: 'file-sync',
-        releaseLease() {},
         root: repository.journalRoot,
       })
       await journal.append('run', 'run-admitted', {})
       await journal.close()
+      await session.close()
       await fs.writeFile(path.join(root, 'log-artifact'), 'private diagnostic fixture')
       await execute(
         process.execPath,

@@ -23,8 +23,8 @@ import {
   MessageType,
   OperatorType,
   Role,
-  SessionRepository,
 } from '../../src/core/models/index.js'
+import {SessionRepository} from '../session-storage-fixture.js'
 
 function createMockAgent(invokeImpl: Model['invoke'], options: AgentOptions = {}): Agent {
   return new Agent({

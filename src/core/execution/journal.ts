@@ -5,6 +5,10 @@ import {createHmac, randomBytes, randomUUID} from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
+import type {SessionWriterLease} from '../session/writer-lease.js'
+
+import {consumeWriterLease} from '../session/writer-lease.js'
+
 export type JournalLevel = 'file-and-directory-sync' | 'file-sync' | 'memory'
 export type JournalKind =
   | 'approval-requested'
@@ -157,9 +161,9 @@ export class MemoryExecutionJournal implements ExecutionJournal {
 
 export interface FileExecutionJournalOptions {
   io?: typeof fs
-  level?: Exclude<JournalLevel, 'memory'>
   /** Delegates the already-held SessionRecorder writer authority; no second lock. */
-  releaseLease: () => void
+  lease: SessionWriterLease
+  level?: Exclude<JournalLevel, 'memory'>
   root: string
 }
 
@@ -173,7 +177,8 @@ export class FileExecutionJournal extends MemoryExecutionJournal {
 
   private constructor(
     sessionId: string,
-    private readonly options: FileExecutionJournalOptions,
+    options: FileExecutionJournalOptions,
+    private readonly releaseWriter: () => void,
   ) {
     super(sessionId)
     this.root = path.resolve(options.root)
@@ -184,12 +189,13 @@ export class FileExecutionJournal extends MemoryExecutionJournal {
   }
 
   static async open(sessionId: string, options: FileExecutionJournalOptions): Promise<FileExecutionJournal> {
+    const release = consumeWriterLease(options.lease, sessionId, options.root)
     try {
-      const journal = new FileExecutionJournal(sessionId, options)
+      const journal = new FileExecutionJournal(sessionId, options, release)
       await journal.load()
       return journal
     } catch (error) {
-      options.releaseLease()
+      release()
       throw error
     }
   }
@@ -198,7 +204,7 @@ export class FileExecutionJournal extends MemoryExecutionJournal {
     this.fileClosePromise ??= super.close().finally(() => {
       if (!this.released) {
         this.released = true
-        this.options.releaseLease()
+        this.releaseWriter()
       }
     })
     return this.fileClosePromise

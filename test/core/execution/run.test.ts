@@ -7,8 +7,9 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {executePrepared} from '../../../src/core/execution/authorization.js'
-import {canonicalJSON, FileExecutionJournal, MemoryExecutionJournal} from '../../../src/core/execution/journal.js'
+import {canonicalJSON, MemoryExecutionJournal} from '../../../src/core/execution/journal.js'
 import {RunSupervisor} from '../../../src/core/execution/run.js'
+import {openTestJournal} from '../../session-storage-fixture.js'
 
 const delay = (ms: number) =>
   new Promise<void>((resolve) => {
@@ -242,7 +243,7 @@ describe('managed execution contracts', () => {
       const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-journal-'))
       let releases = 0
       try {
-        const journal = await FileExecutionJournal.open('session', {
+        const journal = await openTestJournal('session', {
           releaseLease() {
             releases++
           },
@@ -251,7 +252,7 @@ describe('managed execution contracts', () => {
         const digest = journal.digest({token: 'private-input'})
         await journal.append('run', 'run-admitted', {requestDigest: digest, requestId: 'request'})
         await journal.close()
-        const reopened = await FileExecutionJournal.open('session', {
+        const reopened = await openTestJournal('session', {
           releaseLease() {
             releases++
           },
@@ -270,14 +271,14 @@ describe('managed execution contracts', () => {
     it('preserves a torn journal instead of truncating it', async () => {
       const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-journal-'))
       try {
-        const journal = await FileExecutionJournal.open('session', {releaseLease() {}, root})
+        const journal = await openTestJournal('session', {releaseLease() {}, root})
         await journal.append('run', 'run-admitted', {})
         await journal.close()
         const file = path.join(root, 'session/run/events.jsonl')
         await fs.appendFile(file, '{torn')
         let error: unknown
         try {
-          await FileExecutionJournal.open('session', {releaseLease() {}, root})
+          await openTestJournal('session', {releaseLease() {}, root})
         } catch (error_) {
           error = error_
         }

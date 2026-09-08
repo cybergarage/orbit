@@ -17,8 +17,8 @@ import {
   Message,
   MessageType,
   OrbitApplicationService,
-  SessionRepository,
 } from '../../src/core/index.js'
+import {SessionRepository} from '../session-storage-fixture.js'
 
 describe('OrbitApplicationService', () => {
   it('creates durable threads, starts runs, and projects diagnostics', async () => {

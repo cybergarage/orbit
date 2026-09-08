@@ -14,9 +14,9 @@ import {
   MemorySessionLogStore,
   runWithLogContext,
   SessionDeletionService,
-  SessionRepository,
   StoreSessionLoggerFactory,
 } from '../../src/core/index.js'
+import {SessionRepository} from '../session-storage-fixture.js'
 
 describe('session logs', () => {
   it('routes structured logger records to bounded memory partitions', async () => {
@@ -93,7 +93,7 @@ describe('session logs', () => {
         runId: 'turn-1',
         sessionId: 'session-1',
         threadId: 'session-1',
-        timestamp: '2026-08-25T00:00:00.000Z',
+        timestamp: new Date(Date.now() - 60_000).toISOString(),
         version: 1,
       })}\n`,
     )

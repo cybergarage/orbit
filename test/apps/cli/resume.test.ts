@@ -9,7 +9,8 @@ import path from 'node:path'
 import type {InteractiveSessionOptions} from '../../../src/core/index.js'
 
 import {runResumeSessionCommand} from '../../../src/apps/cli/resume.js'
-import {Message, MessageType, SessionRepository} from '../../../src/core/index.js'
+import {Message, MessageType} from '../../../src/core/index.js'
+import {SessionRepository} from '../../session-storage-fixture.js'
 
 describe('resume command', () => {
   it('resumes an exact session with persisted context and closes it', async () => {

@@ -84,7 +84,7 @@ Anthropic default clients disable SDK retries; injected clients must preserve
 that contract. There is no automatic model/tool retry in the managed loop.
 
 Close uses one absolute cleanup deadline and attempts independent cleanup.
-Repeated close calls share the same promise/report. Pending writers, models,
+Concurrent close calls share the same promise/report; recorder cleanup failures can be retried without reopening writes. Pending writers, models,
 clients and unknown effects retain ownership after a bounded incomplete result.
 Owned journals and log stores close only when safe; borrowed log stores stay
 caller-owned. A borrowed Session delegates its writer lease and should close
@@ -186,13 +186,13 @@ not establish physical power-loss survival or untested Windows behavior. Initial
 limits remain adjustable product starting points; workload and platform coverage
 must be reported with any measurements.
 
-## Current stale-lock recovery limitation
+## Guarded writer recovery
 
-Live SessionRecorder owners exclude other processes. However, two processes
-reclaiming the same dead owner's lock can both acquire it: stale detection and
-unlink are not atomic. The delegated journal lease inherits this limitation.
-Serialize session recovery outside Orbit until the reclamation protocol is
-corrected; in-process workspace reservations do not resolve this cross-process
-race. The [journal ADR](adr/2026-09-07-required-execution-journal.md) records the
-reproduction and design alternatives. No complete single-writer guarantee after
-concurrent crash recovery is claimed.
+SessionRecorder serializes all owner transitions with a stable Session-ID guard.
+The built-in journal validates its borrowed recorder lease before persistent I/O.
+Normal acquisition, rejection, close and deletion use the same protocol; an
+abandoned guard denies admission until externally exclusive offline maintenance.
+See [registration, migration and recovery](session-storage.md) before upgrading
+existing CLI, GUI or library deployments. The [recovery ADR](adr/2026-09-08-session-writer-recovery-guard.md)
+retains the earlier two-writer reproduction and subsequent verification evidence.
+Windows and representative product trials remain separate verification work.

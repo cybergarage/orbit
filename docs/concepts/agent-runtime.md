@@ -35,8 +35,10 @@ Session history supplies model context; optional diagnostics observe the work.
 The required execution journal has a separate storage and failure contract.
 An `incomplete` result preserves unknown effects and ownership; requesting stop
 does not establish quiescence. A completed turn may report a failed target test.
-The journal inherits SessionRecorder locking; its current concurrent stale-lock
-reclamation defect limits cross-process ownership guarantees after a crash.
+The journal borrows a validated SessionRecorder lease. Guarded owner transitions
+share one stable session identity across resume and deletion; an abandoned guard
+refuses admission until externally exclusive offline recovery. This assumes
+cooperating upgraded processes on one host and supported local storage.
 See [Managed Execution](../execution.md) for the current API and limits.
 
 This is a fixed Agent loop, not a data-driven Processor Graph.

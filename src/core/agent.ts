@@ -406,8 +406,8 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         ? this.execution.journalFactory(session)
         : session.getFile()
           ? FileExecutionJournal.open(session.getId(), {
+              lease: session.acquireWriterLease(),
               level: this.execution.journalLevel,
-              releaseLease: session.acquireManagedLease(),
               root:
                 this.execution.journalRoot ??
                 session.journalRoot ??

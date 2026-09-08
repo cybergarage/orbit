@@ -12,6 +12,7 @@ import type {Model} from '../../src/core/index.js'
 
 import {
   Agent,
+  MemorySessionLogStore,
   Message,
   MessageType,
   ModelAbortError,
@@ -19,17 +20,18 @@ import {
   parseSessionFile,
   Role,
   SessionContextBuilder,
+  SessionDeletionService,
   SessionEntryType,
-  SessionRepository,
   State,
   TurnPhase,
 } from '../../src/core/index.js'
+import {SessionRepository} from '../session-storage-fixture.js'
 
 describe('session persistence', () => {
   let root = ''
 
   beforeEach(async () => {
-    root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-sessions-'))
+    root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-sessions-')))
   })
 
   afterEach(async () => {
@@ -294,13 +296,13 @@ describe('session persistence', () => {
     const repository = new SessionRepository({rootDir: root})
     const session = repository.create({id: 'locked-session'})
     const file = session.getFile() as string
-    const lockFile = `${file}.lock`
+    const lockFile = path.join(root, '.coordination', 'locked-session.owner')
     await session.close()
-    await fs.writeFile(lockFile, `${JSON.stringify({pid: process.pid, token: 'external'})}\n`)
+    await fs.writeFile(lockFile, `${JSON.stringify({pid: process.pid, token: 'external', version: 1})}\n`)
 
     expect(() => repository.open(file)).to.throw('Session file is already open for writing')
     const stalePid = await exitedProcessId()
-    await fs.writeFile(lockFile, `${JSON.stringify({pid: stalePid, token: 'stale'})}\n`)
+    await fs.writeFile(lockFile, `${JSON.stringify({pid: stalePid, token: 'stale', version: 1})}\n`)
 
     const resumed = repository.open(file)
     await resumed.close()
@@ -315,10 +317,14 @@ describe('session persistence', () => {
     await session.close()
 
     expect(await repository.findById('session-to-delete')).to.include({file, id: 'session-to-delete'})
-    expect(await repository.delete('session-to-delete')).to.include({file, id: 'session-to-delete'})
+    expect(
+      await new SessionDeletionService(repository, new MemorySessionLogStore()).delete('session-to-delete'),
+    ).to.include({file, id: 'session-to-delete'})
     expect(await repository.findById('session-to-delete')).to.equal(undefined)
     expect(fsSync.existsSync(file)).to.equal(false)
-    expect(await repository.delete('session-to-delete')).to.equal(undefined)
+    expect(
+      await new SessionDeletionService(repository, new MemorySessionLogStore()).delete('session-to-delete'),
+    ).to.deep.equal({id: 'session-to-delete'})
   })
 
   it('refuses to delete a session that is open for writing', async () => {
@@ -326,14 +332,16 @@ describe('session persistence', () => {
     const session = repository.create({id: 'open-session'})
 
     try {
-      await repository.delete('open-session')
+      await new SessionDeletionService(repository, new MemorySessionLogStore()).delete('open-session')
       throw new Error('Expected deletion to fail for an open session.')
     } catch (error) {
-      expect((error as Error).message).to.equal('Session is open for writing: open-session')
+      expect((error as Error).message).to.contain('already open for writing')
     }
 
     await session.close()
-    expect(await repository.delete('open-session')).to.include({id: 'open-session'})
+    expect(await new SessionDeletionService(repository, new MemorySessionLogStore()).delete('open-session')).to.include(
+      {id: 'open-session'},
+    )
   })
 
   it('records failed and pre-cancelled agent turns', async () => {

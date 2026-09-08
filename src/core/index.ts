@@ -177,6 +177,14 @@ export type {
   SessionTurnEventEntry,
 } from './session/index.js'
 export {
+  coordinationPaths,
+  initializeSessionStorage,
+  isSessionLocked,
+  recoverSessionWriter,
+  retrySessionCleanup,
+} from './session/index.js'
+export type {OfflineStorageConditions, SessionScope, SessionWriterLease} from './session/index.js'
+export {
   loadWorkspaceSettings,
   loadWorkspaceSettingsSync,
   loadWorkspaceSettingsWithSources,
@@ -239,6 +247,7 @@ export {
   ToolRuntime,
   ToolSnapshot,
 } from './tools/index.js'
+
 export type {
   BashToolInput,
   BuiltinToolSelection,
@@ -266,6 +275,6 @@ export type {
   ToolSource,
   WriteToolInput,
 } from './tools/index.js'
-export {LocalWorkspaceLocator} from './workspace.js'
 
+export {LocalWorkspaceLocator} from './workspace.js'
 export type {LocalWorkspaceLocatorOptions, WorkspaceLocator} from './workspace.js'

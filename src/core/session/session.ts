@@ -18,6 +18,7 @@ import type {
   TurnPhase,
 } from './entries.js'
 import type {SessionRecorder} from './recorder.js'
+import type {SessionWriterLease} from './writer-lease.js'
 
 import {Message as CoreMessage} from '../message/index.js'
 import {SessionEntryType} from './entries.js'
@@ -53,6 +54,7 @@ export interface SessionOptions {
 export class Session {
   readonly journalRoot?: string
   private closePromise?: Promise<void>
+  private closing = false
   private readonly entries: SessionEntry[]
   private ephemeralLease = false
   private readonly messageIds = new Set<string>()
@@ -78,6 +80,13 @@ export class Session {
       rootMessageId,
       ...(options.metadata?.systemPrompt === undefined ? {} : {systemPrompt: options.metadata.systemPrompt}),
     }
+    if (
+      options.recorder &&
+      (options.recorder.scope.sessionId !== id ||
+        options.recorder.file !== options.metadata?.file ||
+        options.recorder.scope.journalRoot !== options.journalRoot)
+    )
+      throw new Error('Session metadata must match recorder identity and journal binding')
     this.recorder = options.recorder
     this.journalRoot = options.journalRoot
     this.entries = [...(options.entries ?? [])]
@@ -96,7 +105,7 @@ export class Session {
   }
 
   acquireManagedLease(): () => void {
-    if (this.closePromise) throw new Error('Session is closing or closed')
+    if (this.closing) throw new Error('Session is closing or closed')
     if (this.recorder) return this.recorder.acquireManagedLease()
     if (this.getFile()) throw new Error('Persistent Session must delegate its recorder writer lease')
     if (this.ephemeralLease) throw new Error('Session writer is already owned by an Agent')
@@ -109,6 +118,11 @@ export class Session {
         this.releaseEphemeral?.()
       }
     }
+  }
+
+  acquireWriterLease(): SessionWriterLease {
+    if (this.closing || !this.recorder) throw new Error('A live persistent Session recorder is required')
+    return this.recorder.acquireManagedLease()
   }
 
   appendMessages(messages: Message[], options: AppendMessageOptions = {}): Message[] {
@@ -152,6 +166,7 @@ export class Session {
   }
 
   close(): Promise<void> {
+    this.closing = true
     this.closePromise ??= (async () => {
       if (this.ephemeralLease)
         await new Promise<void>((resolve) => {
@@ -159,7 +174,11 @@ export class Session {
         })
       await this.recorder?.close()
     })()
-    return this.closePromise
+    const pending = this.closePromise
+    pending.catch(() => {
+      if (this.closePromise === pending) this.closePromise = undefined
+    })
+    return pending
   }
 
   async flush(): Promise<void> {

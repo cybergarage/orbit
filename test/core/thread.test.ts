@@ -7,13 +7,7 @@ import os from 'node:os'
 import path from 'node:path'
 import {z} from 'zod'
 
-import type {
-  AgentOptions,
-  Model,
-  ModelInvokeOptions,
-  ThreadAgentFactory,
-  ThreadEvent,
-} from '../../src/core/index.js'
+import type {AgentOptions, Model, ModelInvokeOptions, ThreadAgentFactory, ThreadEvent} from '../../src/core/index.js'
 
 import {
   Agent,
@@ -22,13 +16,13 @@ import {
   MessageType,
   ModelAbortError,
   OperatorType,
-  SessionRepository,
   StoreSessionLoggerFactory,
   ThreadEventType,
   ThreadManager,
   ThreadStatus,
   tool,
 } from '../../src/core/index.js'
+import {SessionRepository} from '../session-storage-fixture.js'
 
 describe('ThreadManager', () => {
   it('binds the configured logger factory to new thread sessions', async () => {
@@ -325,7 +319,8 @@ function createAgentFactory(
   defaults: AgentOptions = {},
 ): ThreadAgentFactory {
   return (options) =>
-    new Agent({execution: {allowLegacyTools: true, policy: {generation: 'legacy-test', profile: 'unrestricted', roots: []}},
+    new Agent({
+      execution: {allowLegacyTools: true, policy: {generation: 'legacy-test', profile: 'unrestricted', roots: []}},
       ...defaults,
       ...options,
       deps: {

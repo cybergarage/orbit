@@ -17,6 +17,12 @@ import {
 } from '../../../../dist/core/index.js'
 import {runInteractiveSession} from '../../../../dist/core/interactive.js'
 const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-ink-fixture-'))
+const repository = new SessionRepository({rootDir: path.join(root, 'sessions')})
+repository.initializeStorage({
+  allWritersStopped: true,
+  automaticRestartersDisabled: true,
+  exclusiveStorageControl: true,
+})
 const store = new MemorySessionLogStore()
 const results = []
 let calls = 0
@@ -58,7 +64,7 @@ try {
     initialProvider: 'ollama',
     journalLevel: 'file-sync',
     logger: new StoreSessionLoggerFactory(store).forApplication(),
-    sessionRepository: new SessionRepository({rootDir: path.join(root, 'sessions')}),
+    sessionRepository: repository,
   })
   console.log(
     'FIXTURE_RESULT ' +

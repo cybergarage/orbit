@@ -8,9 +8,9 @@ import type {JournalLevel} from '../execution/journal.js'
 import type {SessionLogStore} from '../logs/index.js'
 import type {SessionRepository, SessionSummary} from './repository.js'
 
-import {deletionMarker, readDeletionMarker, writeDeletionMarker} from '../execution/deletion.js'
+import {readDeletionMarker, writeDeletionMarker} from '../execution/deletion.js'
 import {syncDirectory} from '../execution/journal.js'
-import {SessionRecorder} from './recorder.js'
+import {inspectTranscript, WriterClaim} from './coordination.js'
 
 export interface SessionThreadCloser {
   closeThread(threadId: string): Promise<boolean>
@@ -30,16 +30,24 @@ export class SessionDeletionService {
   async delete(sessionId: string): Promise<SessionSummary | undefined | {file?: undefined; id: string}> {
     if (!['file-and-directory-sync', 'file-sync'].includes(this.level))
       throw new Error('Unsupported deletion acknowledgement level')
+    const scope = this.sessions.scope(sessionId)
     const root = this.sessions.journalRoot
-    const marker = await readDeletionMarker(root, sessionId)
-    const session = await this.sessions.findById(sessionId)
+    let marker = await readDeletionMarker(root, sessionId)
+    let session = await this.sessions.findById(sessionId)
     if (!session && !marker) return undefined
     const thread = this.threads?.getThread?.(sessionId)
     if (thread?.status === 'running' || thread?.run?.quarantined === true)
       throw new Error('Cannot delete an active or quarantined session')
     await this.threads?.closeThread(sessionId)
-    const guard = SessionRecorder.open(session?.file ?? deletionMarker(root, sessionId))
+    const guard = WriterClaim.acquire(scope, () => {}, true)
     try {
+      marker = await readDeletionMarker(root, sessionId)
+      session = await this.sessions.findById(sessionId)
+      if (!session && !marker) return undefined
+      if (session) inspectTranscript(scope, session.file)
+      const currentThread = this.threads?.getThread?.(sessionId)
+      if (currentThread?.status === 'running' || currentThread?.run?.quarantined === true)
+        throw new Error('Cannot delete an active or quarantined session')
       await writeDeletionMarker(root, sessionId, 'deleting', this.level)
       await this.logs.deleteSession(sessionId)
       if (session) {
@@ -54,7 +62,7 @@ export class SessionDeletionService {
     } catch (error) {
       throw new Error('Session deletion incomplete; retry deletion using the retained marker', {cause: error})
     } finally {
-      await guard.close()
+      guard.release()
     }
   }
 }
