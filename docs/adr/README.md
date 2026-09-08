@@ -303,7 +303,7 @@ its own final hash in a tracked file.
 | 2026-09-07 | accepted   | partial        | [Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md)      |
 | 2026-09-07 | accepted   | partial        | [Required Execution Journal](2026-09-07-required-execution-journal.md)                  |
 | 2026-09-08 | accepted   | partial        | [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)            |
-| 2026-09-08 | accepted   | not-started    | [Session Storage Registration Guard](2026-09-08-session-storage-registration-guard.md)  |
+| 2026-09-08 | accepted   | partial        | [Session Storage Registration Guard](2026-09-08-session-storage-registration-guard.md)  |
 
 The Vibe Coding Tool Architecture supersession is partial: the 2026-09-07
 authorization decision replaces permission-free defaults and managed admission/
@@ -326,20 +326,19 @@ fault verification. Required platform, deployment and representative product che
 still prevent completion; no accepted decision or product limit changed.
 
 The [additional verification](2026-09-08-session-writer-recovery-guard.md#additional-node-matrix-and-registration-interruption-finding--2026-09-08)
-adds Linux Node 20.19.0 / 22.23.2 but also identifies a separate registration
-interruption defect that still admits writes. A new protocol decision is pending;
-the four ADRs remain partial. The same record separates the official Everything
-server's managed schema refusal from a successful direct-client control.
+identified the earlier registration interruption defect. The separately reviewed
+[registration ADR](2026-09-08-session-storage-registration-guard.md) was accepted
+through the author's delegated decision and now records its implementation.
+It specifies v2 migration, persistent guards, existing-file resync and the
+separation of logical readiness from API acknowledgement. Original research,
+review, acceptance rationale and the four parent histories remain available.
 
-The [registration proposal](2026-09-08-session-storage-registration-guard.md) compares
-persistent guards with a committed manifest and specifies v2 migration, existing-file
-resync and uncertain completion acknowledgement. It is proposed / not-started;
-no acceptance, implementation or supersession of the four partial records is implied.
-
-The [registration review](../research/2026-09-08-session-storage-registration-review.md)
-clarifies stage-specific admission, scope-free offline repair and identity limits.
-The proposed completion interpretation still requires an explicit author decision;
-no parent is treated as having approved it.
+[Registration implementation evidence](2026-09-08-session-storage-registration-guard.md#implementation-evidence--2026-09-08)
+records Unix native build/411 tests, 3,958 subprocess fault cases per environment,
+and cross-filesystem diagnosis. All five records remain accepted / partial;
+Windows, operational/physical-failure and representative application trials are
+explicitly deferred, not verified. The deferrals do not block current Unix work
+or book production. Bounded managed Everything schema compatibility is next.
 
 ## Background
 

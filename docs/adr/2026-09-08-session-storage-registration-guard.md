@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-09-08
 decision-date: 2026-09-08
-implementation-status: not-started
+implementation-status: partial
 implementation-completed-date: null
-implementation-commits: []
+implementation-commits:
+  - da42d7194daf2fc84cced6100bc4e15a98722068
 superseded-by: []
 ---
 
@@ -19,7 +20,7 @@ run lifecycle, operation authorization or required journal decisions.
 
 ## Decision
 
-**Accepted on 2026-09-08 through the delegated decision below; implementation not started:** introduce persistent registration
+**Accepted on 2026-09-08 through the delegated decision below; implementation had not started at acceptance:** introduce persistent registration
 guards in both roots and version-2 reciprocal bindings. An Orbit writer requires
 two matching v2 bindings and absence of both roots' registration guards.
 Version-1 storage requires explicit offline conversion; matching old JSON alone
@@ -426,6 +427,94 @@ No acceptance, implementation or test correction occurred; metadata remains
 proposed / not-started with null decision/completion dates and no implementation
 commits. All four accepted / partial parents retain their metadata and reasons.
 
+## Implementation Evidence — 2026-09-08
+
+Implementation commit: `da42d7194daf2fc84cced6100bc4e15a98722068`. This evidence is recorded in a later
+commit. The decision is accepted; implementation remains **partial**, completion
+date null, because the explicitly deferred environment/deployment evidence is
+unverified. Those deferrals do not block the author's current Unix/book work.
+
+`src/core/session/storage-registration.ts` implements v2 pair identity, guards in
+both roots, ordered binding and directory synchronization, v1 staged conversion,
+read-only inspection and explicit offline resume. `coordination.ts` checks current
+registration at Session ownership and live lease boundaries and refuses offline
+initialization around local ownership/cleanup. Public exports and repository
+wrappers expose inspection/resume without issuing a writable scope. The storage
+CLI, generated command reference, architecture, glossary and migration guide are
+updated. No accepted run outcome, approval or deletion-record policy is replaced.
+
+Existing files and ancestors are resynchronized: an earlier mkdir may have been
+visible when the process died before syncing its parent. Legacy-lock cleanup
+compares captured inode and bytes without requiring an old record to pretend it
+has the newer owner format. Observation errors are kept distinct from ordinary
+incomplete metadata, so resume does not silently ignore a failed ready-state read.
+An observable root swap refuses the attempt while retaining exclusion evidence.
+
+Explicit review of anomalous bytes uses exact per-path SHA-256 values from an
+independent offline inspection. It cannot override a valid conflicting pair,
+unknown owner, symlink or hard link. Both guards become durable before a torn
+guard is repaired in place. An interrupted evidence copy is preserved unchanged;
+if necessary another copy receives a UUID suffix and must sync successfully before
+source repair. The new tests reproduced the original copy-retry obstruction
+before this local correction. This is evidence-preserving retry, not automatic
+repair of arbitrary storage or an alternative registration decision.
+
+### Executed verification
+
+| Environment / check                                                    | Observed result                                                                                         |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| macOS arm64, Node 26.5.0                                               | headers:check, native build, npm test: **411 passing**, 0 lint errors / 15 warnings                     |
+| Linux arm64, Debian bookworm container, Node 20.19.0                   | fresh npm ci, headers:check, native build, npm test: **411 passing**                                    |
+| Five normal/registration-resume checkpoint scenarios, each environment | **2,742 fault cases passed**, exact child exit 73 (death) or 74 (I/O error), zero timeout successes     |
+| Two anomalous-evidence repair scenarios, each environment              | **1,216 fault cases passed**, after the evidence-copy retry correction                                  |
+| Original second-binding diagnostic, macOS                              | both death and file-sync failure refused; explicit offline resume succeeded; exit 0                     |
+| Original diagnostic, Linux with separate filesystems                   | Session in /tmp and journal in /dev/shm had distinct device IDs; both cases refused and resumed; exit 0 |
+| Stale-owner race diagnostic, macOS/Linux                               | one owner, competing guard/owner rejection, recovery after owner exit; no simultaneous live owners      |
+
+The five checkpoint scenarios are fresh nested registration (255 checkpoints),
+v1 disjoint conversion (311), valid-v2 repetition (267), pending-guard resume
+(271), and logically-ready resync after uncertain acknowledgement (267).
+The two repair scenarios cover torn-guard repair (313) and retained staging
+(295). Every checkpoint runs death and injected I/O error in an independent
+child. Writable acquisition is then attempted from another process; the parent
+also verifies offline resumption. The fixture reports **3,958 cases per
+environment in total**, not 3,958 ordinary Mocha tests. The first five ran before
+the final evidence-copy fallback correction; the latter two exercise that
+correction, and the complete ordinary suite was rerun afterward. No unchanged
+branch is described as a new live-service trial.
+
+The call boundaries cover open/read/write, file and directory fsync, close,
+rename, guard unlink and lost acknowledgement. Repair cases additionally cover
+truncation of a reviewed torn guard. Expected readiness is stage-specific:
+unchanged v2 may remain ready before the first guard; a visible guard refuses;
+last Session-guard unlink may restore logical readiness before final sync or
+response. Timeout, elapsed time, successful JSON reads or a process exit alone
+never establish exclusion. Test roots have no external admission/restarter;
+this is not evidence for a real service manager or physical power loss.
+
+Focused tests cover legacy conversion/preservation, actual resync of matching
+files/ancestry, API exports, CLI conditions, exact-digest review, retained partial
+copies, malformed/staged evidence, conflicting pair IDs, aliases/hard links,
+root replacement, conservative inspection and pending registration with local
+writer cleanup retained. Existing run, journal, authorization, deletion,
+subprocess and GUI tests pass using the same core registration implementation.
+
+### Remaining verification and resumption
+
+Keep Windows/other environments deferred until a matching runner and filesystem
+exist. Real external admission/restarter-stop trials and physical-storage faults
+await the target application, deployment/storage and SLI/SLO. Representative
+long target tests, production MCP, real model and human confirmation waits await
+an application and isolated trial conditions. No initial profile value is
+claimed optimal. The official Everything managed-schema limitation remains the
+next bounded compatibility task; direct-client success is not substituted for it.
+
+When those conditions are supplied, run the corresponding supported-environment,
+operational or application trials and add their outcomes without rewriting this
+implementation's decision rationale. Re-run affected local checks on relevant
+source/environment changes. Current local diagnostics do not certify a copied
+volume, hostile raw writes, mixed-version operation or a distributed filesystem.
+
 ## References
 
 - [Current review research](../research/2026-09-08-session-storage-registration-review.md)
@@ -434,7 +523,7 @@ commits. All four accepted / partial parents retain their metadata and reasons.
 - [Managed Run Lifecycle](2026-09-07-managed-run-lifecycle.md)
 - [Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md)
 - [Required Execution Journal](2026-09-07-required-execution-journal.md)
-- [Current storage guide (v1 implementation)](../session-storage.md)
+- [Current storage guide](../session-storage.md)
 - Source at the baseline: `src/core/session/coordination.ts`, `repository.ts`,
   `recorder.ts`, `writer-lease.ts`, `deletion-service.ts`; independent diagnostic:
   `test/core/execution/fixtures/registration-interruption.mjs`.

@@ -5,6 +5,7 @@ decision-date: 2026-09-07
 implementation-status: partial
 implementation-completed-date: null
 implementation-commits:
+  - da42d7194daf2fc84cced6100bc4e15a98722068
   - 61723f07e2f6318a352dcaacd16e9b88b7ad94fa
   - 7f26357d3afd9f14e7316352f7cc5483a387a2c3
   - 8ffef065251a0b04c0810f67a5318502c6be4df6
@@ -511,3 +512,19 @@ mandatory. Initial limits remain unmeasured profiles. This record stays
 accepted / partial; no implementation is declared completed by this scope change.
 See the [registration acceptance](2026-09-08-session-storage-registration-guard.md#acceptance-and-active-verification-scope--2026-09-08)
 for the immediate decision and work sequence.
+
+## Registration Implementation Integration — 2026-09-08
+
+Commit `da42d7194daf2fc84cced6100bc4e15a98722068` implements the separately accepted
+[registration guard decision](2026-09-08-session-storage-registration-guard.md#implementation-evidence--2026-09-08).
+Current v2 registration and both-root guard checks are shared by Session ownership
+and persistent journal leases; explicit offline resume preserves unknown operation,
+owner and deletion evidence. This implements the registration dependency without
+adopting this ADR's run/authorization/journal/recovery rationale again.
+
+The linked record separates 411 ordinary tests on macOS and Linux, 3,958 subprocess
+fault cases per environment, and cross-filesystem diagnostic results from deferred
+Windows, operational, physical-failure and representative application evidence.
+Those author-directed deferrals remain unverified. Status stays accepted / partial
+and completion date null. Bounded managed Everything schema compatibility is next;
+no initial limit has been measured as optimal.

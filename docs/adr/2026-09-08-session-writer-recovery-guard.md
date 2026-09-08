@@ -5,6 +5,7 @@ decision-date: 2026-09-08
 implementation-status: partial
 implementation-completed-date: null
 implementation-commits:
+  - da42d7194daf2fc84cced6100bc4e15a98722068
   - abac54535177c3d721e94567d25057a8b6f20441
   - 49c61e58adecc18c806b94701240a5753eed547c
   - 141ff61a6dd8f206d18702721adac58dc9371792
@@ -791,3 +792,19 @@ external shutdown until offline verification/resync. This is the explicit narrow
 completion choice absent from this record's original sentence; the original
 sentence, accepted rationale and historical evidence are preserved. Per-Session
 owner, guard and deletion contracts are not replaced.
+
+## Registration Implementation Integration — 2026-09-08
+
+Commit `da42d7194daf2fc84cced6100bc4e15a98722068` implements the separately accepted
+[registration guard decision](2026-09-08-session-storage-registration-guard.md#implementation-evidence--2026-09-08).
+Current v2 registration and both-root guard checks are shared by Session ownership
+and persistent journal leases; explicit offline resume preserves unknown operation,
+owner and deletion evidence. This implements the registration dependency without
+adopting this ADR's run/authorization/journal/recovery rationale again.
+
+The linked record separates 411 ordinary tests on macOS and Linux, 3,958 subprocess
+fault cases per environment, and cross-filesystem diagnostic results from deferred
+Windows, operational, physical-failure and representative application evidence.
+Those author-directed deferrals remain unverified. Status stays accepted / partial
+and completion date null. Bounded managed Everything schema compatibility is next;
+no initial limit has been measured as optimal.
