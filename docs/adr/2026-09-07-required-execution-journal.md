@@ -388,6 +388,16 @@ a separate date-dependent legacy log cursor failure; see the research evidence.
 Acceptance, implementation hashes, partial status and remaining platform/product
 checks are unchanged.
 
+### Accepted recovery extension — 2026-09-08
+
+The author accepted [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)
+after its review. It supplies guarded recovery, scoped recorder/journal
+validation, release retry and migration conditions for the existing shared
+ownership contract. Its implementation is not started. This ADR remains
+accepted / partial; its rationale, decision date, implementation hashes and
+remaining platform/product checks are unchanged. The known two-writer failure
+and separate date-dependent log test remain unresolved.
+
 ### Confirmation remaining before completed
 
 - Concurrent stale-lock reclamation is a **known failing** exclusion condition,

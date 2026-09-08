@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-08
-decision-date: null
+decision-date: 2026-09-08
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -15,29 +15,55 @@ superseded-by: []
 Prevent two cooperating Orbit processes from obtaining writer authority for the
 same persisted session during stale-owner recovery. Preserve the accepted
 shared transcript/journal lease, operation authorization and unknown-outcome
-semantics. This proposal addresses the newly reproduced ownership defect; it
+semantics. This decision addresses the newly reproduced ownership defect; it
 does not adopt those three contracts again.
 
 ## Decision
 
-**Proposed, not accepted:** introduce one exclusive filesystem guard per stable
+**Accepted on 2026-09-08; implementation not started:** introduce one exclusive filesystem guard per stable
 session coordination scope. Acquire that guard before every writer-owner
 transition, including ordinary admission, stale recovery and release. Never
 reclaim a guard automatically. Refuse admission while a guard remains and
 require exclusive offline maintenance if its creator cannot release it.
 
-The recommendation favors a Node filesystem implementation without a native
-lock dependency, conditional on author acceptance of blocked-session recovery
-and compatibility costs. An OS-backed alternative is viable and preferable
-if automatic recovery after guard-owner death is required. No option is
-selected by the existence of this document.
+The author selected the reviewed Node filesystem guard, including its blocked
+recovery and migration costs. OS-managed locks remain a researched alternative,
+not the selected implementation. A future requirement for unattended recovery
+would need a new recorded decision rather than a silent change to this contract.
+
+### Acceptance record — 2026-09-08
+
+The author explicitly accepted the recommendation including the review changes
+in `d9e4bea8242502ac0c4e22b462bf1032ffdfd7d6`:
+
+- Refuse admission for an abandoned guard and require exclusive offline
+  maintenance that also disables old writers and their automatic restarters.
+- Coordinate normal acquisition, rejection cleanup and staged release retry
+  under a stable per-session scope without replaying unknown external effects.
+- Validate writer/lease authority for the recorder and built-in persistent
+  journal; retain the conservative read-only isOpen wrapper.
+- Refuse legacy transcript-only deletion and migrate explicitly to the deletion
+  service with its existing disclosed minimal marker.
+- Register session/journal roots one-to-one, reject ambiguous/conflicting layouts,
+  and accept the all-writer offline upgrade and maintenance cost.
+
+At acceptance, the working tree was clean and the reviewed commit was still HEAD;
+no later source, test or document differences were found. Public main remained
+`80130cf194e477f136eefaa5b7cd2a2374dff198`. Review evidence and existing ADRs
+revealed no new material contradiction preventing this record. The known race,
+date-dependent log-test failure and unverified platform/product conditions are
+implementation obligations, not evidence that they have been resolved.
+This acceptance changes no runtime, test, product budget or journal event schema.
+Implementation status remains not-started, completion date null, and
+implementation-commits empty. The original proposal/review findings below retain
+their dated context.
 
 ### Scope and stable identity
 
 Use a canonical session repository identity plus validated Session ID as the
 coordination key, independent of transcript creation date and deletion state.
-The proposed sidecars are `<session-root>/.coordination/<session-id>.guard`
-and `<session-root>/.coordination/<session-id>.owner`. These are proposed
+The selected sidecars are `<session-root>/.coordination/<session-id>.guard`
+and `<session-root>/.coordination/<session-id>.owner`. These are selected, unimplemented
 coordination metadata, not current files or a change to journal event schema.
 The owner contains a version, PID and unpredictable ownership token; guard
 existence is authoritative even when its diagnostic contents are incomplete.
@@ -60,9 +86,9 @@ review before code lands; bypassing the binding is not an allowed fallback.
 `SessionRepository` supplies the scope. Exported low-level SessionRecorder
 create/open callers must supply validated repository scope, or obtain
 it through the repository; a path alone cannot safely recover the scope after
-deletion. This is an explicit proposed API compatibility change. Do not infer
+deletion. This is an explicit accepted API compatibility change. Do not infer
 a scope by walking guessed ancestor names or offer a silent legacy writer
-mode. The existing isOpen(file) argument may remain in a proposed read-only
+mode. The existing isOpen(file) argument may remain in the selected read-only
 conservative wrapper as specified below; it does not need a breaking scope argument. Read-only
 inspection of old transcripts remains possible. Files outside
 the bound repository require explicit import to a fresh ID before writable use.
@@ -83,7 +109,7 @@ registration cannot authorize a second repository to claim an existing one’s
 transcript under a different relative layout. Invalid IDs must reject before
 creating sidecar directories or names.
 
-Stable identity is required; this one-to-one registered topology is a proposed
+Stable identity is required; this one-to-one registered topology is the selected
 simplification, not the only possible safe architecture. A multi-resource scheme
 can instead claim both canonical transcript identity and journal-root/Session-ID
 identity, preserving more custom layouts. It requires a fixed lock order,
@@ -187,7 +213,7 @@ left behind; it does not reconstruct a cleanup capability from PID/token text.
 
 SessionDeletionService uses the same session owner and guard protocol.
 The old SessionRepository.delete currently unlinks only the transcript without
-a marker. The recommendation is to refuse that mutation and direct callers to
+a marker. The selected behavior is to refuse that mutation and direct callers to
 SessionDeletionService, including sessions without a journal directory. This
 avoids silently adding retained markers to the old API. A later compatibility
 wrapper may delegate only with an explicit full deletion context (logs,
@@ -218,7 +244,7 @@ effect, restores approval, or replays an operation.
 The built-in FileExecutionJournal must validate the same authority when used
 directly, not only when Agent opens it. Replace its bare releaseLease callback
 with a runtime-validated core-issued capability, or an equivalent scoped factory
-that does not expose an unchecked persistent open. The proposed capability binds
+that does not expose an unchecked persistent open. The selected capability binds
 the repository identity, Session ID, canonical journal root, owner generation
 and live lease state. Public types/serialized PID records or user callbacks
 cannot manufacture it. Reject mismatched Session metadata/recorder identity as
@@ -284,14 +310,24 @@ transcript and journal content, approvals as historical evidence, and minimal
 deletion markers. Rollback likewise requires stopping every writer and checking
 coordination state; the old format being readable is not a concurrency guarantee.
 
-This would refine the writer-recovery mechanism assumed by Required Execution
-Journal and Session Persistence. It does not supersede the three accepted
-2026-09-07 reasons for common ownership, authorization or mandatory recording.
-Those records stay accepted / partial. No supersession or acceptance metadata
-is changed by this proposal. The older session ADR's historical implementation
-record remains intact, while this document records the subsequently found defect.
-Current architecture and feature guides continue to describe current code until
-an accepted implementation changes them.
+This decision refines the previously unspecified recovery policy and tightens
+mutating API admission; it does not replace the retained parent contracts:
+
+| Existing ADR                                        | Relationship and retained scope                                                                                                                                                                      |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Session Persistence (2026-08-22)                    | Refines writer admission/recovery and direct mutation eligibility. Versioned JSONL, transcript readability and historical implementation evidence remain.                                            |
+| Session Resume Behavior and CLI Design (2026-08-23) | Supplies the concrete guarded recovery/migration policy required by its explicit cross-process exclusion condition. Exact-ID/latest selection, cwd rules and history hydration remain.               |
+| Required Execution Journal (2026-09-07)             | Specifies how its shared recorder authority is recovered and validated at the built-in journal boundary. Mandatory recording, acknowledgement, unknown outcomes and minimal deletion markers remain. |
+| Managed Run Lifecycle (2026-09-07)                  | Refines resource release/cleanup conditions; preserves immutable results, run budgets, quiescence and quarantine responsibilities.                                                                   |
+| Prepared Operation Authorization (2026-09-07)       | Closes an inherited authority failure without changing prepared operations, confirmation scope or permission policy.                                                                                 |
+
+These are accepted refinements within the existing single-writer/ownership
+requirements, not a reversal of their selected contracts; no parent ADR is
+marked superseded. The two older records keep their dated completed evidence,
+which does not demonstrate this new recovery implementation. The 2026-09-07
+three remain accepted / partial with the same implementation hashes and null
+completion dates. Current architecture and feature guides still describe
+current code until a separately authorized implementation updates them.
 
 Operational switching also requires handling repository registration as one
 maintenance operation: incomplete reciprocal records block _both_ roots, and
@@ -358,7 +394,7 @@ recorder/materialization/ordinal files, source links and comparison limits.
 
 | Option                                                                                          | Benefits                                                                              | Costs and recommendation                                                                                                                   |
 | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Short exclusive filesystem guard plus current PID/token owner concept                           | No native dependency; serializes all owner transitions; preserves lease delegation    | Orphan guard blocks the session; stable scope/API migration required. Recommended for author review, not accepted.                         |
+| Short exclusive filesystem guard plus current PID/token owner concept                           | No native dependency; serializes all owner transitions; preserves lease delegation    | Orphan guard blocks the session; stable scope/API migration required. Selected on 2026-09-08; not implemented.                             |
 | OS-backed writer locks, with stable retained sidecars or an OS coordination lock around removal | OS releases ownership on handle closure/death, avoiding guard-file orphan reclamation | Requires supported native binding/package tests and non-inherited handle ownership. Strong alternative if unattended recovery is required. |
 | OS lock held by a separate helper only                                                          | Can call native OS APIs without a Node addon                                          | Helper can die while its client continues writing; insufficient without a separately designed lifetime/fencing mechanism. Not recommended. |
 | Token recheck, timeout stealing or rename-as-claim alone                                        | Small change                                                                          | Does not condition removal on the observed owner; not a sufficient correction.                                                             |
@@ -374,26 +410,26 @@ retained OS lock as Codex does. If retained per-session sidecars are chosen,
 disclose the additional retained identity metadata and review its deletion
 cost before adoption. OS locks also need stable session identity, offline old
 writer migration, and local-filesystem validation. They do not solve outcome
-ambiguity or unsupported fsync. The proposed guard is not claimed universally
+ambiguity or unsupported fsync. The selected guard is not claimed universally
 safer than this alternative.
 
 ### Identity and API alternatives
 
-| Choice                                                              | Compatibility benefit                                                | Cost / proposed disposition                                                                                                            |
-| ------------------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| One-to-one registered roots, scoped recorder and journal capability | One Session-ID owner protects transcript, journal and deletion retry | Restricts custom/overlapping roots and direct mutating API use. Recommended, not logically required for every possible locking design. |
-| Ordered claims on transcript and journal identities                 | Can retain more arbitrary file/root layouts                          | Multiple locks, partial rollback and transcript-free deletion mapping; defer unless that compatibility is a product requirement.       |
-| Path-only read-only isOpen wrapper                                  | Retains the existing argument without granting authority             | Missing/unresolvable scope returns conservatively unavailable; recommended.                                                            |
-| Keep unchecked callback-based persistent journal open               | No library migration                                                 | Cannot establish matching live ownership; not recommended.                                                                             |
-| Extend old delete automatically with permanent marker semantics     | Preserves a method call                                              | Silently changes retained metadata behavior; prefer explicit service migration.                                                        |
+| Choice                                                              | Compatibility benefit                                                | Cost / disposition                                                                                                                                |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One-to-one registered roots, scoped recorder and journal capability | One Session-ID owner protects transcript, journal and deletion retry | Restricts custom/overlapping roots and direct mutating API use. Selected on 2026-09-08, not logically required for every possible locking design. |
+| Ordered claims on transcript and journal identities                 | Can retain more arbitrary file/root layouts                          | Multiple locks, partial rollback and transcript-free deletion mapping; defer unless that compatibility is a product requirement.                  |
+| Path-only read-only isOpen wrapper                                  | Retains the existing argument without granting authority             | Missing/unresolvable scope returns conservatively unavailable; selected on 2026-09-08.                                                            |
+| Keep unchecked callback-based persistent journal open               | No library migration                                                 | Cannot establish matching live ownership; not recommended.                                                                                        |
+| Extend old delete automatically with permanent marker semantics     | Preserves a method call                                              | Silently changes retained metadata behavior; prefer explicit service migration.                                                                   |
 
 ## Implementation and Confirmation
 
 **Not started.** Neither new protocol code nor regression fixes are included.
-The research at `06b61f31a9091592fed0095a8c4ddb5cf50a8f14` records the unchanged
-baseline and source comparison. Before any implementation, obtain an explicit
-author decision on this proposed record; acceptance does not itself complete
-the existing three ADRs.
+The research at `06b61f31a9091592fed0095a8c4ddb5cf50a8f14` records the original
+baseline and source comparison. The author accepted the reviewed contract on
+2026-09-08. Implementation requires a subsequent implementation request; this
+acceptance record does not itself complete this or the existing three ADRs.
 
 | Required confirmation after acceptance                                                               | Observable result                                                                                                                                                                                                                                 |
 | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -415,6 +451,16 @@ metadata, references and lifecycle checks validate this proposal document only.
 The date-dependent test needs a later narrowly scoped correction; no failed
 check is relabeled successful here.
 
+### Acceptance validation — 2026-09-08
+
+On the unchanged macOS / Node v26.5.0 implementation, headers:check and build
+passed. npm test returned 371 passing / 1 failing, reproducing the same legacy
+log cursor failure described above; lint reported 10 warnings and no errors.
+No source or test file changed. The diagnostic race probe was not rerun during
+acceptance; its prior failing evidence remains unresolved. Metadata, local
+references and diff checks validate the adoption record separately from that
+runtime failure. No platform or representative product trial was added.
+
 ### Proposal review — 2026-09-08
 
 Reviewed at `b6391c8d895e37a58bff4dc39b29610e230fc7ad`; source/test diff after
@@ -428,8 +474,9 @@ erasing the original failed-probe history.
 
 The review corrected rejection cleanup, staged release retries, direct journal
 authority, legacy deletion migration, and the overstatement of layout/API
-restrictions as unavoidable. The guard recommendation remains conditional;
-review is not approval and all implementation metadata stays not-started/null/empty.
+restrictions as unavoidable. At that review, the guard recommendation remained
+conditional: review was not approval. The subsequent acceptance above retains
+implementation metadata as not-started/null/empty.
 
 Additional confirmation required by these corrections:
 
@@ -453,24 +500,24 @@ Additional confirmation required by these corrections:
 
 ## Follow-up Work
 
-Review three author-owned trade-offs: orphan-guard refusal/offline recovery;
-stable scope and public API/configuration migration; or the extra native
-integration work to obtain OS-managed recovery instead. If the binding or
-maintenance requirements are impractical, revise this proposal before adoption.
-Do not implement a partial guard around acquireLock alone.
+The author accepted orphan-guard refusal/offline recovery, scoped mutating APIs,
+one-to-one storage registration and explicit legacy deletion migration. Do not
+repeat those decisions or implement a partial guard around acquireLock alone.
+If new evidence requires a material change, record the evidence, alternatives
+and recommendation without replacing the accepted rationale.
 
-After explicit adoption, implement the selected protocol and maintenance/migration
+In a subsequent authorized implementation task, implement the protocol and maintenance/migration
 support, run the confirmation matrix, update current architecture/concepts and
 session/execution guides, and commit implementation separately from later ADR
 implementation evidence. Correct the separately reproduced date-dependent log
 test in an authorized implementation task. Windows, other supported Node
 versions, storage/power-loss limits and representative utilization remain open;
-no existing ADR can be completed from this proposal or the older passing suite.
+no existing ADR can be completed from this acceptance record or the older passing suite.
 
 ## References
 
 - [Review research](../research/2026-09-08-session-writer-recovery-review.md), [original research and pinned source ledger](../research/2026-09-08-session-writer-lock-recovery.md).
 - [Required Execution Journal](2026-09-07-required-execution-journal.md), [Managed Run Lifecycle](2026-09-07-managed-run-lifecycle.md), [Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md).
-- [Session Persistence](2026-08-22-session-persistence.md).
+- [Session Persistence](2026-08-22-session-persistence.md), [Session Resume](2026-08-23-session-resume-cli.md).
 - [Recorder](../../src/core/session/recorder.ts), [repository](../../src/core/session/repository.ts), [deletion service](../../src/core/session/deletion-service.ts), [race probe](../../test/core/execution/fixtures/stale-lock-race.mjs).
 - [Linux flock](https://man7.org/linux/man-pages/man2/flock.2.html), [Windows LockFileEx](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-lockfileex), [Node exclusive flags](https://nodejs.org/download/release/v26.5.0/docs/api/fs.html#file-system-flags).

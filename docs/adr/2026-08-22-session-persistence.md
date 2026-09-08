@@ -36,9 +36,23 @@ or incomplete data.
 [Required Execution Journal](2026-09-07-required-execution-journal.md)
 retains transcript formats/readability and adds managed-run recording, shared
 writer authority, explicit synchronization, and coordinated deletion/recovery.
-This ADR remains accepted for its original scope. The extension was accepted on
-2026-09-07 and is not implemented; the historical rationale and implementation
-evidence below do not establish completion of that extension.
+This ADR remains accepted for its original scope. At that acceptance, the extension was
+not implemented; the historical rationale and implementation
+evidence below do not establish completion of that extension. Its current
+implementation status is partial, as recorded in the linked journal ADR.
+
+## Accepted recovery refinement (2026-09-08)
+
+[Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)
+now defines guarded reclamation, stable scope, verified persistent journal
+leases and offline migration for the single-writer requirement. Mutating
+low-level APIs and legacy deletion gain explicit migration conditions; the
+read-only isOpen wrapper remains conservative. This refines the recovery policy
+without replacing the original transcript/selection contracts, so this record
+remains accepted and its historical implementation metadata is retained.
+The new recovery implementation has not started. The previously reproduced
+two-writer defect remains unresolved; the older completed evidence below must
+not be used to claim completion of the new contract.
 
 ## Consequences
 

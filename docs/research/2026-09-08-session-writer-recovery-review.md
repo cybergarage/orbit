@@ -169,6 +169,13 @@ restrictions. No claim is made that native packaging is harder than offline
 maintenance in every deployment. The recommendation is conditional on the
 intended single-host product and operator workflow.
 
+## Subsequent decision — 2026-09-08
+
+The author subsequently [accepted the reviewed recovery contract](../adr/2026-09-08-session-writer-recovery-guard.md)
+with implementation not-started. This note's review findings and non-binding
+recommendations above remain dated research evidence; only the ADR records
+acceptance. The three existing implementation records remain partial.
+
 ## Related Decisions
 
 - [Reviewed proposal](../adr/2026-09-08-session-writer-recovery-guard.md).

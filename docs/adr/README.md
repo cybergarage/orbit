@@ -302,7 +302,7 @@ its own final hash in a tracked file.
 | 2026-09-07 | accepted   | partial        | [Managed Run Lifecycle](2026-09-07-managed-run-lifecycle.md)                            |
 | 2026-09-07 | accepted   | partial        | [Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md)      |
 | 2026-09-07 | accepted   | partial        | [Required Execution Journal](2026-09-07-required-execution-journal.md)                  |
-| 2026-09-08 | proposed   | not-started    | [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)            |
+| 2026-09-08 | accepted   | not-started    | [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)            |
 
 The Vibe Coding Tool Architecture supersession is partial: the 2026-09-07
 authorization decision replaces permission-free defaults and managed admission/
@@ -311,9 +311,13 @@ primitives. The three 2026-09-07 decisions remain accepted / partial. Common exe
 implemented, but follow-up verification found concurrent stale-lock reclamation
 can admit two writers. The journal ADR records this unresolved defect and
 recovery options; Windows and representative product trials also remain.
-The [recovery guard proposal](2026-09-08-session-writer-recovery-guard.md) compares filesystem and OS locks
-without adopting either. Its 2026-09-08 review clarifies cleanup retries, journal
-capabilities and explicit legacy API migration; the proposal remains not-started.
+The [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)
+was accepted on 2026-09-08 after review; implementation is not-started. It refines
+recovery and mutation eligibility within the existing persistence, resume and
+shared execution ownership contracts. Their reasons and historical evidence
+are retained; no parent ADR is superseded. The three 2026-09-07 decisions remain
+accepted / partial, and the two-writer and date-dependent log-test failures
+remain unresolved.
 
 ## Background
 
