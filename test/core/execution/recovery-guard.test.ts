@@ -436,4 +436,117 @@ describe('guarded session recovery', () => {
     expect(library.retrySessionCleanup).equal(retrySessionCleanup)
     expect(library.isSessionLocked).equal(isSessionLocked)
   })
+
+  it('rejects copied capabilities and changed bindings before journal I/O', async () => {
+    const session = repository.create({id: 'binding-lease'})
+    const lease = session.acquireWriterLease()
+    const options = {lease, root: repository.journalRoot}
+    let touched = 0
+    const io = {
+      ...fs,
+      async stat(...args: Parameters<typeof fs.stat>) {
+        touched++
+        return fs.stat(...args)
+      },
+    } as typeof fs
+    await FileExecutionJournal.open('binding-lease', {...options, io, lease: (() => lease()) as never}).then(
+      () => {
+        throw new Error('Copied capability accepted')
+      },
+      (error) => {
+        expect(String(error)).contains('Invalid')
+      },
+    )
+    const bindingFile = path.join(repository.journalRoot, '.orbit-session-binding.json')
+    const original = await fs.readFile(bindingFile, 'utf8')
+    try {
+      await fs.writeFile(bindingFile, original.replace(repository.rootDir, path.join(root, 'different')))
+      await FileExecutionJournal.open('binding-lease', {...options, io}).then(
+        () => {
+          throw new Error('Changed binding accepted')
+        },
+        (error) => {
+          expect(String(error)).contains('conflicting')
+        },
+      )
+      expect(touched).equal(0)
+    } finally {
+      await fs.writeFile(bindingFile, original)
+      lease()
+      await session.close()
+    }
+  })
+
+  it('does not unlink a replaced guard after a failed close', async () => {
+    const scope = repository.scope('guard-replaced');
+      const session = repository.create({id: 'guard-replaced'})
+    const paths = coordinationPaths(scope);
+      const unlink = fsSync.unlinkSync.bind(fsSync)
+    const fail = stub(fsSync, 'unlinkSync').callsFake((file) => {
+      if (String(file) === paths.guard) throw new Error('guard retained')
+      unlink(file)
+    })
+    try {
+      await session.close().catch((error) => {
+        expect(String(error)).contains('guard retained')
+      })
+    } finally {
+      fail.restore()
+    }
+
+    const original = await fs.readFile(paths.guard, 'utf8')
+    const replacement = JSON.stringify({pid: process.pid, token: 'replacement', version: 1})
+    try {
+      await fs.writeFile(paths.guard, replacement)
+      await retrySessionCleanup(scope).then(
+        () => {
+          throw new Error('Replaced guard removed')
+        },
+        (error) => {
+          expect(String(error)).contains('token changed')
+        },
+      )
+      expect(await fs.readFile(paths.guard, 'utf8')).equal(replacement)
+    } finally {
+      await fs.writeFile(paths.guard, original)
+      await session.close()
+    }
+  })
+
+  for (const point of ['guard-write', 'transcript-write', 'close-guard-write']) {
+    it(`cleans only its own resources after ${point} failure`, async () => {
+      const scope = repository.scope('io-unwind');
+        const paths = coordinationPaths(scope)
+      const session = point === 'close-guard-write' ? repository.create({id: 'io-unwind'}) : undefined
+      const write = fsSync.writeFileSync.bind(fsSync)
+      let count = 0
+      const fail = stub(fsSync, 'writeFileSync').callsFake(((...args: Parameters<typeof fsSync.writeFileSync>) => {
+        count++
+        if (
+          (point === 'transcript-write' && typeof args[0] === 'string' && args[0].endsWith('.jsonl')) ||
+          (point !== 'transcript-write' && count === 1)
+        )
+          throw new Error('injected transition write failure')
+        return write(...args)
+      }) as typeof fsSync.writeFileSync)
+      try {
+        if (session)
+          await session.close().catch((error) => {
+            expect(String(error)).contains('injected')
+          })
+        else expect(() => repository.create({id: 'io-unwind'})).throws()
+      } finally {
+        fail.restore()
+      }
+
+      if (session) await session.close()
+      await retrySessionCleanup(scope)
+      expect(fsSync.existsSync(paths.guard)).equal(false)
+      expect(fsSync.existsSync(paths.owner)).equal(false)
+    })
+  }
+
+  it('rejects registering an ancestor around another registered repository', () => {
+    expect(() => initializeSessionStorage(root, path.join(root, '.runs'), offlineStorage)).throws('nested')
+  })
 })
