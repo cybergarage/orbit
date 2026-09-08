@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-08
-decision-date: null
+decision-date: 2026-09-08
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -19,7 +19,7 @@ run lifecycle, operation authorization or required journal decisions.
 
 ## Decision
 
-**Proposed, not accepted or implemented:** introduce persistent registration
+**Accepted on 2026-09-08 through the delegated decision below; implementation not started:** introduce persistent registration
 guards in both roots and version-2 reciprocal bindings. An Orbit writer requires
 two matching v2 bindings and absence of both roots' registration guards.
 Version-1 storage requires explicit offline conversion; matching old JSON alone
@@ -35,28 +35,50 @@ before logical completion refuses admission; an uncertain acknowledgement after
 it requires continued external shutdown and offline verification, even if
 internal inspection says ready.
 
-This completion-point distinction is an **author decision required by this
-proposal**, not a reinterpretation already approved in the parent ADR. The parent
-requires rejection until registration completes. If “completes” instead requires
-a successful response received by the caller, ordinary guard removal or manifest
-publication cannot establish that property; resolve this before acceptance.
+The accepted completion point is the last guard removal after all binding data
+and prerequisite directory syncs. Final namespace sync and response delivery are
+separate acknowledgement steps. A failed or lost response keeps the external
+admission/restarter gate closed until exclusive verification and resynchronization.
+This does not promise that internal admission remains disabled until a caller
+receives success. The review's stronger alternative is not selected; it would
+require a separately controlled admission authority and handoff.
 
-The review recommends the narrower data-safety interpretation, subject to explicit
-acceptance: no logical readiness before both binding files and required directory
-entries are synchronized. It does **not** satisfy a stronger interpretation that
-all unsuccessful initializer invocations must leave internal admission blocked,
-including failures after the last unlink. If that stronger condition is required,
-revise this proposal to define a separately controlled admission authority and
-handoff; neither a second marker nor the manifest option establishes it by itself.
-Do not call this an already accepted clarification or change the parent's reasons
-before the author decides.
+### Acceptance and active verification scope — 2026-09-08
+
+The author requested proceeding through the registration decision, implementation,
+Unix verification, bounded MCP schema compatibility, and book/application
+production. This delegates the decision within the reviewed alternatives; it is
+not recorded as the author having separately repeated every proposed detail.
+The agent selects the reviewed guard/v2 recommendation: it fixes the demonstrated
+visibility-before-sync defect with the existing one-to-one storage arrangement,
+explicit offline conversion and repair, without adding manifest generations or a
+separate admission service. The documented outage, logical identity limits and
+extra synchronization costs remain part of this decision.
+
+Source and test contents at `3b2668e34337e0f92076d08baabaec47b5fb8b7b` had no
+changes after review. Public main remained
+`80130cf194e477f136eefaa5b7cd2a2374dff198`. Headers/build passed and the unchanged
+macOS diagnostic again admitted writers at child exits 73/74 (fixture exit 1).
+This known defect is the implementation target, not a new contradiction.
+Implementation status remains not-started, completion null and commits empty at
+acceptance. Existing research and review records remain historical evidence.
+
+The author's updated near-term scope is Linux/macOS. Windows and other platforms
+are deferred, not passed or failed. Representative application trials are deferred
+until the final coding agent or a future autonomous agent is defined. Operational
+exclusion trials and physical-storage failures await a target application, storage
+and SLI/SLO. Their missing evidence remains explicit; it does not block the current
+Unix work or book production. External exclusion and required sync behavior are
+still mandatory implementation contracts. Deferred trials do not imply weaker
+runtime guarantees or optimal profile values. Bounded managed MCP schema support
+is the next independent work item after registration implementation/verification.
 
 The existing external prerequisites remain mandatory: stop all old/new writers
 and admission sources, disable every automatic restarter, and retain exclusive
 storage control across initializer death. Marker files neither establish that
 operational exclusion nor make online registration supported.
 
-### Proposed storage identity and placement
+### Storage identity and placement
 
 - Keep `.orbit-session-binding.json` in each root. V2 contains `version: 2`,
   `pairId` (a newly generated UUID on initial conversion), and canonical absolute
@@ -94,7 +116,7 @@ additional design; it is not an implicit property of pairId. The recommended
 identity scope remains logical one-to-one storage plus observable alias/conflict
 and within-attempt replacement checks.
 
-### Proposed offline sequence
+### Offline sequence
 
 1. Establish external exclusion independently of this process. Use a non-authorizing
    offline inspection path taking configured S/J roots and operator conditions;
@@ -239,7 +261,7 @@ directory syncs and explicit uncertain-outcome handling, but no OS-lock dependen
 
 Old transcripts, journals, minimal deletion records, Session IDs and accepted
 ownership reasons are preserved. Current API and feature documentation must not
-claim v2 exists yet. If accepted, implementation must update storage commands,
+claim v2 exists yet. Implementation must update storage commands,
 error/inspection contracts, architecture, concepts and migration examples, and
 revalidate scope identity and current registration at ownership boundaries.
 Compatibility is not achieved by permitting v1 writes or running old binaries concurrently.
@@ -262,11 +284,10 @@ comparisons and limits. Public main remained
 
 The [recovery ADR](2026-09-08-session-writer-recovery-guard.md) is accepted / partial
 and already requires registration interruption to refuse writers until completion.
-This proposal supplies missing persistence/migration mechanics and an explicit
-completion interpretation; it neither re-accepts nor supersedes that ADR now.
-If accepted with this interpretation, append the narrow completion clarification
-to the parent while preserving its original wording and history. If the author
-requires a stronger acknowledgement gate, revise this proposed ADR before acceptance.
+This decision supplies missing persistence/migration mechanics and an explicit
+completion interpretation. The parent now links the narrow completion choice
+while preserving its original wording and history. Its Session ownership protocol
+is not superseded. A stronger acknowledgement gate would require a later decision.
 The other three accepted / partial ADRs retain their run, authorization and journal
 rationale and implementation records unchanged.
 
@@ -315,11 +336,13 @@ ordering; no SQLite dependency or physical-durability guarantee is adopted here.
 
 ## Implementation and Confirmation
 
-No implementation is authorized by this proposed ADR. The existing failing probe
-is baseline evidence only. Implementation status stays not-started, completion
-is null and implementation-commits is empty.
+Implementation is authorized by the author's continuous-work request after this
+acceptance commit. The existing failing probe is baseline evidence only. At
+acceptance, implementation status is not-started, completion null and commits
+empty; implementation evidence must be recorded after the implementation commit.
 
-After acceptance, confirmation must include:
+Confirmation must include the following; environment/deployment trials explicitly
+deferred above remain unverified and do not gate current Unix work:
 
 - Deterministic separate-process admission attempts at every matrix checkpoint,
   fresh/v1/v2 data, first registration and repetition, both root orders in fault
@@ -359,7 +382,7 @@ After acceptance, confirmation must include:
 
 ## Follow-up Work
 
-Author decisions before acceptance:
+Reviewed choices selected in the acceptance above:
 
 1. Accept v2 conversion and whole-pair outage during incomplete registration,
    rather than keep v1 write compatibility or choose a manifest generation model.

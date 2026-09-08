@@ -303,7 +303,7 @@ its own final hash in a tracked file.
 | 2026-09-07 | accepted   | partial        | [Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md)      |
 | 2026-09-07 | accepted   | partial        | [Required Execution Journal](2026-09-07-required-execution-journal.md)                  |
 | 2026-09-08 | accepted   | partial        | [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)            |
-| 2026-09-08 | proposed   | not-started    | [Session Storage Registration Guard](2026-09-08-session-storage-registration-guard.md)  |
+| 2026-09-08 | accepted   | not-started    | [Session Storage Registration Guard](2026-09-08-session-storage-registration-guard.md)  |
 
 The Vibe Coding Tool Architecture supersession is partial: the 2026-09-07
 authorization decision replaces permission-free defaults and managed admission/
@@ -352,3 +352,10 @@ people's memory.
 - [Documenting Architecture Decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)
 - [Markdown Architectural Decision Records](https://adr.github.io/madr/)
 - [OpenAI: Harness engineering in an agent-first world](https://openai.com/index/harness-engineering/)
+
+The registration guard decision was accepted on 2026-09-08 under the author's
+continuous-work request. Its acceptance section defines logical completion and
+records Linux/macOS priority and explicitly deferred environment/application/SLO
+trials. Earlier proposed/review summaries above describe their historical state.
+The four earlier records remain accepted / partial, and the new implementation
+starts only after the acceptance commit.

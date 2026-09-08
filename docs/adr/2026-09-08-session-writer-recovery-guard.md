@@ -770,3 +770,24 @@ author review; it does not silently alter this record's accepted completion
 condition. This ADR remains accepted / partial with its original rationale,
 implementation evidence and remaining environment/workload obligations intact.
 The new record is proposed / not-started and supersedes no decision.
+
+### Author-directed deferrals — 2026-09-08
+
+The author prioritizes Linux/macOS and defers Windows/other platforms,
+representative application trials, and operational/physical-storage verification
+until the application and its SLI/SLO are specified. Preserve these as unverified
+with their existing restart conditions; do not label them passed or failed or use
+them to block current Unix work and book production. Runtime ownership, required
+sync, external admission/restarter exclusion and uncertainty handling remain
+mandatory. Initial limits remain unmeasured profiles. This record stays
+accepted / partial; no implementation is declared completed by this scope change.
+See the [registration acceptance](2026-09-08-session-storage-registration-guard.md#acceptance-and-active-verification-scope--2026-09-08)
+for the immediate decision and work sequence.
+
+The newly accepted registration decision defines completion of root registration
+as last-guard removal after binding prerequisites have synchronized, separately
+from final namespace-sync/API acknowledgement. Uncertain acknowledgement retains
+external shutdown until offline verification/resync. This is the explicit narrow
+completion choice absent from this record's original sentence; the original
+sentence, accepted rationale and historical evidence are preserved. Per-Session
+owner, guard and deletion contracts are not replaced.

@@ -498,3 +498,16 @@ The journal defines record privacy; the runtime defines deadlines and ownership.
 - [Pinned Codex `codex-rs/core/src/tools/orchestrator.rs`](https://github.com/openai/codex/blob/5adb68a49933ae446bf11935662c83dba55a0804/codex-rs/core/src/tools/orchestrator.rs).
 - [Pinned Codex `codex-rs/core/src/tools/approvals.rs`](https://github.com/openai/codex/blob/5adb68a49933ae446bf11935662c83dba55a0804/codex-rs/core/src/tools/approvals.rs).
 - [Pinned Pi `packages/agent/src/agent-loop.ts`](https://github.com/earendil-works/pi/blob/b79e4cc834970cca69daebffab7df1da7d1e52c4/packages/agent/src/agent-loop.ts).
+
+### Author-directed deferrals — 2026-09-08
+
+The author prioritizes Linux/macOS and defers Windows/other platforms,
+representative application trials, and operational/physical-storage verification
+until the application and its SLI/SLO are specified. Preserve these as unverified
+with their existing restart conditions; do not label them passed or failed or use
+them to block current Unix work and book production. Runtime ownership, required
+sync, external admission/restarter exclusion and uncertainty handling remain
+mandatory. Initial limits remain unmeasured profiles. This record stays
+accepted / partial; no implementation is declared completed by this scope change.
+See the [registration acceptance](2026-09-08-session-storage-registration-guard.md#acceptance-and-active-verification-scope--2026-09-08)
+for the immediate decision and work sequence.
