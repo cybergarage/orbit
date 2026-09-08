@@ -311,8 +311,9 @@ primitives. The three 2026-09-07 decisions remain accepted / partial. Common exe
 implemented. Follow-up verification originally found a two-writer stale recovery
 race. [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)
 was accepted on 2026-09-08 and now has a partial implementation: the updated
-race probe and 390 tests pass on macOS and Linux, including the corrected
-legacy log cursor fixture. Its evidence record retains the prior failures and
+race probe and 390 tests passed on macOS and Linux, including the corrected
+legacy log cursor fixture. Additional local cases pass in the macOS 396-test
+suite and Linux 24-case recovery suite. Its evidence record retains the prior failures and
 lists remaining platform, fault-matrix, deployment and product checks. The
 three parent decisions remain accepted / partial, with their reasons and history
 retained. No parent ADR is superseded by this recovery refinement.

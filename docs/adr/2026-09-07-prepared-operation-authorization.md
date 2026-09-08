@@ -9,6 +9,7 @@ implementation-commits:
   - 7f26357d3afd9f14e7316352f7cc5483a387a2c3
   - 8ffef065251a0b04c0810f67a5318502c6be4df6
   - abac54535177c3d721e94567d25057a8b6f20441
+  - 49c61e58adecc18c806b94701240a5753eed547c
 superseded-by: []
 ---
 
@@ -398,6 +399,18 @@ macOS, and the compiled race probe passed on both. The linked recovery record
 maps cases, command checks, limitations and remaining verification. This ADR
 remains accepted / partial with null completion date; no run, authorization,
 record schema, product budget or acceptance rationale is re-adopted here.
+
+### Additional local confirmation — 2026-09-08
+
+Test commit `49c61e58adecc18c806b94701240a5753eed547c` closes the locally executable
+follow-up cases: copied lease, changed binding before journal I/O, replaced
+guard token, guard/transcript/close-guard write failures, and ancestor registration
+around another binding. macOS / Node 26.5.0 npm test passed **396 tests** (0 lint
+errors, 12 warnings). Linux / Node 24.16.0 passed the updated **24 recovery tests**
+in addition to the preceding full 390-test run. Production code is unchanged
+from `abac54535177c3d721e94567d25057a8b6f20441`; no new acceptance or optimal-limit
+claim is made. Windows, other supported environments, physical durability,
+external deployment control and representative/manual UI trials remain open.
 
 ### Confirmation remaining before completed
 

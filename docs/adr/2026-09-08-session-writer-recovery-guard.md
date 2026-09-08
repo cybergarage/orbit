@@ -6,6 +6,7 @@ implementation-status: partial
 implementation-completed-date: null
 implementation-commits:
   - abac54535177c3d721e94567d25057a8b6f20441
+  - 49c61e58adecc18c806b94701240a5753eed547c
 superseded-by: []
 ---
 
@@ -542,14 +543,27 @@ Remaining confirmation is explicit, not implied by the aggregate suite:
   fault injection and process death do not prove power-loss durability or that
   a service manager cannot restart an old writer. Validate the actual deployment's
   external exclusion and recovery procedure before claiming that operational scope.
-- Broader fault permutations (every rejection checkpoint, copied capabilities,
-  changed binding while a lease is held and guard identity replacement) remain for
-  focused verification; tested representative branches are not exhaustive proof.
+- The additional local confirmation below covers copied capabilities, changed
+  bindings, replacement guard tokens and transition write failures. Tested
+  branches and process checkpoints are not proof of all OS/filesystem faults;
+  repeat the matrix for the target deployment and storage environment.
 - Updated real Ink/browser fixtures were migrated but not manually repeated in
   this implementation task. Their prior execution evidence remains dated; repeat
   them for the target environment along with long target suites, slow production
   MCP, real models and actual human approval/usability trials. No workload-based
   optimization of the existing time/call limits has been established.
+
+### Additional local confirmation — 2026-09-08
+
+Test commit `49c61e58adecc18c806b94701240a5753eed547c` closes the locally executable
+follow-up cases: copied lease, changed binding before journal I/O, replaced
+guard token, guard/transcript/close-guard write failures, and ancestor registration
+around another binding. macOS / Node 26.5.0 npm test passed **396 tests** (0 lint
+errors, 12 warnings). Linux / Node 24.16.0 passed the updated **24 recovery tests**
+in addition to the preceding full 390-test run. Production code is unchanged
+from `abac54535177c3d721e94567d25057a8b6f20441`; no new acceptance or optimal-limit
+claim is made. Windows, other supported environments, physical durability,
+external deployment control and representative/manual UI trials remain open.
 
 ## Follow-up Work
 
