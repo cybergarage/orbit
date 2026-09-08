@@ -302,22 +302,20 @@ its own final hash in a tracked file.
 | 2026-09-07 | accepted   | partial        | [Managed Run Lifecycle](2026-09-07-managed-run-lifecycle.md)                            |
 | 2026-09-07 | accepted   | partial        | [Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md)      |
 | 2026-09-07 | accepted   | partial        | [Required Execution Journal](2026-09-07-required-execution-journal.md)                  |
-| 2026-09-08 | accepted   | not-started    | [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)            |
+| 2026-09-08 | accepted   | partial        | [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)            |
 
 The Vibe Coding Tool Architecture supersession is partial: the 2026-09-07
 authorization decision replaces permission-free defaults and managed admission/
 validation/adapter conditions, while retaining its registry and tool/provider
 primitives. The three 2026-09-07 decisions remain accepted / partial. Common execution is
-implemented, but follow-up verification found concurrent stale-lock reclamation
-can admit two writers. The journal ADR records this unresolved defect and
-recovery options; Windows and representative product trials also remain.
-The [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)
-was accepted on 2026-09-08 after review; implementation is not-started. It refines
-recovery and mutation eligibility within the existing persistence, resume and
-shared execution ownership contracts. Their reasons and historical evidence
-are retained; no parent ADR is superseded. The three 2026-09-07 decisions remain
-accepted / partial, and the two-writer and date-dependent log-test failures
-remain unresolved.
+implemented. Follow-up verification originally found a two-writer stale recovery
+race. [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)
+was accepted on 2026-09-08 and now has a partial implementation: the updated
+race probe and 390 tests pass on macOS and Linux, including the corrected
+legacy log cursor fixture. Its evidence record retains the prior failures and
+lists remaining platform, fault-matrix, deployment and product checks. The
+three parent decisions remain accepted / partial, with their reasons and history
+retained. No parent ADR is superseded by this recovery refinement.
 
 ## Background
 

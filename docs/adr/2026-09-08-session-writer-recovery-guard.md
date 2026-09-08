@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-09-08
 decision-date: 2026-09-08
-implementation-status: not-started
+implementation-status: partial
 implementation-completed-date: null
-implementation-commits: []
+implementation-commits:
+  - abac54535177c3d721e94567d25057a8b6f20441
 superseded-by: []
 ---
 
@@ -20,7 +21,7 @@ does not adopt those three contracts again.
 
 ## Decision
 
-**Accepted on 2026-09-08; implementation not started:** introduce one exclusive filesystem guard per stable
+**Accepted on 2026-09-08 (implementation had not started at acceptance):** introduce one exclusive filesystem guard per stable
 session coordination scope. Acquire that guard before every writer-owner
 transition, including ordinary admission, stale recovery and release. Never
 reclaim a guard automatically. Refuse admission while a guard remains and
@@ -63,8 +64,8 @@ their dated context.
 Use a canonical session repository identity plus validated Session ID as the
 coordination key, independent of transcript creation date and deletion state.
 The selected sidecars are `<session-root>/.coordination/<session-id>.guard`
-and `<session-root>/.coordination/<session-id>.owner`. These are selected, unimplemented
-coordination metadata, not current files or a change to journal event schema.
+and `<session-root>/.coordination/<session-id>.owner`. These are coordination metadata, separate from journal event schema.
+The implementation evidence below records their delivery after acceptance.
 The owner contains a version, PID and unpredictable ownership token; guard
 existence is authoritative even when its diagnostic contents are incomplete.
 Neither file contains prompts, tool arguments or transcript paths.
@@ -425,11 +426,12 @@ safer than this alternative.
 
 ## Implementation and Confirmation
 
-**Not started.** Neither new protocol code nor regression fixes are included.
+**Partial.** The implementation below delivers the selected protocol and local
+regression fixes; remaining platform and product verification prevents completion.
 The research at `06b61f31a9091592fed0095a8c4ddb5cf50a8f14` records the original
 baseline and source comparison. The author accepted the reviewed contract on
-2026-09-08. Implementation requires a subsequent implementation request; this
-acceptance record does not itself complete this or the existing three ADRs.
+2026-09-08. The subsequent explicit implementation request produced the commit below;
+acceptance alone did not complete this or the existing three ADRs.
 
 | Required confirmation after acceptance                                                               | Observable result                                                                                                                                                                                                                                 |
 | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -498,6 +500,57 @@ Additional confirmation required by these corrections:
 - The read-only path wrapper has no registration/cleanup side effects; scope
   ambiguity never returns a grant of writer authority.
 
+### Implementation evidence — 2026-09-08
+
+Implementation commit: `abac54535177c3d721e94567d25057a8b6f20441` (recorded in this subsequent documentation commit).
+Acceptance reasons and decision date remain unchanged. Status is accepted / partial,
+with a null completion date; the three parent execution ADRs remain partial.
+
+The current implementation uses `session/coordination.ts` for reciprocal root
+registration, scope validation, guarded owner transitions and offline recovery;
+`recorder.ts` for transcript ownership and serialized cleanup;
+`writer-lease.ts` for single-consumer runtime capabilities; and the existing
+Session, Agent, journal and deletion service for integration. `storage.ts` adds
+explicit offline CLI initialization/recovery. [Migration documentation](../session-storage.md)
+describes root/API compatibility and the external operator prerequisite.
+
+| Confirmation                                   | Evidence and scope                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Same-session concurrent recovery and admission | Updated compiled `test/core/execution/fixtures/stale-lock-race.mjs` pauses one reclaimer inside its guard. A competing reclaimer returns guard-rejected; a later live-owner contender returns owner-rejected without changing the token. Recovery after the first process exits succeeds. macOS and Linux both exit 0; timeout is failure. The earlier two-owner / exit-1 evidence remains historical. |
+| Acquisition/rejection/cleanup                  | `recovery-guard.test.ts` covers malformed owner rejection without guard leakage, failed-admission cleanup retained without a returned recorder, partial owner-write failure, owner-removed/guard-retained retry, concurrent close, no active-writer cleanup, replacement-owner preservation and lost unlink acknowledgement.                                                                           |
+| Crash and maintenance                          | Five subprocess transition checkpoints cover guard creation, owner read, stale unlink, partial owner creation and guard release. Unknown partial owners halt automatic maintenance. Additional subprocess tests interrupt reciprocal initialization and owner/guard removal during maintenance; the fixture's external admission gate remains until repeat inspection.                                 |
+| Identity and migration                         | Tests reject unregistered/incomplete/conflicting roots, ancestor overlap, invalid IDs, duplicate IDs and hard links; root symlink aliases converge. Same-binding `.runs` works. Legacy deletion refuses; explicit service uses the stable scope through delayed deletion and retries. Prior five deletion interruption checkpoints continue to pass.                                                   |
+| Journal and run integration                    | Invalid callback-shaped capability, wrong session/root and consumed/released capability reject; a consumed lease cannot be released early. Journal I/O holds the recorder through close. Existing Agent startup/admission/approval, restart, MCP timeout, GUI and CLI tests use initialized repositories and actual writer leases. Public maintenance exports are checked.                             |
+| Existing date-dependent log test               | The legacy record timestamp is now relative to the test clock, inside the existing 14-day retention window. The retention contract is unchanged; full suites no longer reproduce that separate cursor failure.                                                                                                                                                                                         |
+
+macOS arm64 / Node 26.5.0: headers:check and build passed, npm test passed
+**390 tests** (lint: 0 errors, 12 warnings). Compiled CLI smoke checks rejected
+missing offline confirmations and completed explicit initialization and abandoned
+guard recovery in isolated roots. Command documentation was regenerated with
+prepack. Linux / Node **24.16.0**, using the local Bookworm container with the
+repository mounted read-only: headers and all **390 tests** passed, as did the
+compiled race fixture. Linux used the existing compiled portable artifact; a
+native Linux packaging build was not run. No real user storage or network
+provider was used. These results do not measure optimal product limits.
+
+Remaining confirmation is explicit, not implied by the aggregate suite:
+
+- Windows and other supported Node/filesystem combinations: reciprocal metadata
+  synchronization, path case/alias behavior, guard/owner cleanup and child process
+  shutdown. Resume on a configured Windows runner/VM and the supported matrix.
+- Physical power loss, unsupported storage and production deployment control:
+  fault injection and process death do not prove power-loss durability or that
+  a service manager cannot restart an old writer. Validate the actual deployment's
+  external exclusion and recovery procedure before claiming that operational scope.
+- Broader fault permutations (every rejection checkpoint, copied capabilities,
+  changed binding while a lease is held and guard identity replacement) remain for
+  focused verification; tested representative branches are not exhaustive proof.
+- Updated real Ink/browser fixtures were migrated but not manually repeated in
+  this implementation task. Their prior execution evidence remains dated; repeat
+  them for the target environment along with long target suites, slow production
+  MCP, real models and actual human approval/usability trials. No workload-based
+  optimization of the existing time/call limits has been established.
+
 ## Follow-up Work
 
 The author accepted orphan-guard refusal/offline recovery, scoped mutating APIs,
@@ -506,13 +559,12 @@ repeat those decisions or implement a partial guard around acquireLock alone.
 If new evidence requires a material change, record the evidence, alternatives
 and recommendation without replacing the accepted rationale.
 
-In a subsequent authorized implementation task, implement the protocol and maintenance/migration
-support, run the confirmation matrix, update current architecture/concepts and
-session/execution guides, and commit implementation separately from later ADR
-implementation evidence. Correct the separately reproduced date-dependent log
-test in an authorized implementation task. Windows, other supported Node
-versions, storage/power-loss limits and representative utilization remain open;
-no existing ADR can be completed from this acceptance record or the older passing suite.
+Continue the remaining confirmation matrix against the implementation above and
+record any local fixes with new implementation hashes in later evidence commits.
+Keep completion null while required platform, deployment or product checks remain.
+Do not replay unknown effects or weaken storage/maintenance prerequisites to make
+a test pass. Preserve prior failures as historical evidence and distinguish them
+from the new passing guard and log tests.
 
 ## References
 

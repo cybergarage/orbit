@@ -8,6 +8,7 @@ implementation-commits:
   - 61723f07e2f6318a352dcaacd16e9b88b7ad94fa
   - 7f26357d3afd9f14e7316352f7cc5483a387a2c3
   - 8ffef065251a0b04c0810f67a5318502c6be4df6
+  - abac54535177c3d721e94567d25057a8b6f20441
 superseded-by: []
 ---
 
@@ -407,10 +408,24 @@ accepted / partial; its rationale, decision date, implementation hashes and
 remaining platform/product checks are unchanged. The known two-writer failure
 and separate date-dependent log test remain unresolved.
 
+### Guard recovery implementation — 2026-09-08
+
+`abac54535177c3d721e94567d25057a8b6f20441` implements the [accepted recovery extension](2026-09-08-session-writer-recovery-guard.md).
+Stable scoped guards, reciprocal registration, validated journal leases,
+retryable cleanup and explicit offline maintenance now support this ADR's
+shared ownership contract. Its earlier race and date-dependent log failure
+remain historical evidence; the updated race probe passes and the legacy
+cursor test is repaired without changing retention. macOS / Node 26.5.0 and
+Linux / Node 24.16.0 each passed 390 tests; headers passed on both, build on
+macOS, and the compiled race probe passed on both. The linked recovery record
+maps cases, command checks, limitations and remaining verification. This ADR
+remains accepted / partial with null completion date; no run, authorization,
+record schema, product budget or acceptance rationale is re-adopted here.
+
 ### Confirmation remaining before completed
 
-- Resolve the inherited concurrent stale-lock ownership defect through a separately
-  reviewed recovery decision; repeat the failing probe and integration checks.
+- Finish the recovery extension's remaining platform, deployment and fault-matrix
+  verification; its focused probe and integration suites now pass.
 - Windows child/process-tree cleanup, Bash/executable resolution, filesystem
   acknowledgement capability and the remaining supported Node versions need
   suitable environments. This host has no configured Windows runner/VM; no
