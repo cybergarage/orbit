@@ -86,7 +86,7 @@ export class OpenAIAgent implements Model {
       message.tool_calls
         ?.filter((toolCall) => isOpenAIFunctionToolCall(toolCall))
         .map((toolCall) => toOpenAIModelToolCall(toolCall)) ?? []
-    const content = message.content ?? message.refusal ?? message.audio?.transcript ?? ''
+    const content = message.content || message.refusal || message.audio?.transcript || ''
     const parts = toOpenAIOutputParts(message, toolCalls)
     const metadata: ModelResponseMetadata = {
       durationMs: performance.now() - startedAt,

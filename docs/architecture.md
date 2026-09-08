@@ -76,9 +76,18 @@ request and response serialization for OpenAI, Anthropic, and Ollama.
 `ModelRegistry` selects registered providers without placing provider switches
 inside the agent loop.
 
-Normalized output parts preserve ordered text, reasoning, refusal, media,
-citation, and tool-call information. Provider-only response data remains under
-JSON-serializable metadata.
+The normalized output-part type represents text, reasoning, refusal, media,
+citations, and tool calls. OpenAI and Ollama construct supported parts; the
+Anthropic adapter currently extracts text and tool calls without constructing
+parts. These projections do not preserve every provider block or original
+ordering. Provider-only metadata is kept in a JSON-serializable field.
+
+Display text falls back to the OpenAI refusal or audio transcript when the
+primary content is empty. Normalized response parts remain separate from that
+display text. Tool failure projection recognizes both the message-level and
+nested tool-result error flags; Anthropic emits `is_error` for either, while
+OpenAI and Ollama send the corresponding textual error marker. This does not
+make every provider-specific response block replayable across providers.
 
 ## Tool boundary
 

@@ -20,7 +20,7 @@ import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
 import {splitSystemPrompt} from '../prompt.js'
 import {Role} from '../role.js'
-import {getToolCalls, getToolResult, stringifyToolOutput} from './tools.js'
+import {getToolCalls, getToolResult, isToolResultError, stringifyToolOutput} from './tools.js'
 
 export class AnthropicAgent implements Model {
   private readonly client: Anthropic
@@ -136,7 +136,7 @@ export function toAnthropicMessage(message: Message): MessageParam {
           // eslint-disable-next-line camelcase
           tool_use_id: toolResult.toolCallId,
           type: 'tool_result',
-          ...(toolResult.isError ? createAnthropicToolErrorFields() : {}),
+          ...(isToolResultError(toolResult) ? createAnthropicToolErrorFields() : {}),
         },
       ],
       role: Role.User,

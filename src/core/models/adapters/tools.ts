@@ -33,9 +33,12 @@ export function getToolResultImages(output: unknown): string[] {
 
 export function stringifyToolResult(result: ModelToolResultPayload): string {
   const text = stringifyToolOutput(result.output)
-  const isError = result.isError === true || (isToolResult(result.output) && result.output.isError === true)
-  if (!isError) return text
+  if (!isToolResultError(result)) return text
   return text.length === 0 ? 'Tool error: execution failed.' : `Tool error: ${text}`
+}
+
+export function isToolResultError(result: ModelToolResultPayload): boolean {
+  return result.isError === true || (isToolResult(result.output) && result.output.isError === true)
 }
 
 function isModelToolCallPayload(payload: unknown): payload is ModelToolCallPayload {
