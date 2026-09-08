@@ -80,6 +80,42 @@ describe('guarded session recovery', () => {
     await reopened.close()
   })
 
+  it('uses actual filesystem case identity for registered roots and writer exclusion', async () => {
+    const alternateRoot = path.join(root, 'SESSIONS')
+    const sameDirectory = fsSync.existsSync(alternateRoot)
+    const alternate = new SessionRepository({rootDir: alternateRoot})
+    const first = repository.create({id: 'case-identity'})
+    try {
+      if (sameDirectory) {
+        expect(alternate.rootDir).equal(repository.rootDir)
+        expect(alternate.journalRoot).equal(repository.journalRoot)
+        expect(coordinationPaths(alternate.scope('case-identity'))).deep.equal(
+          coordinationPaths(repository.scope('case-identity')),
+        )
+        expect(() => alternate.create({id: 'case-identity'})).throws('already open')
+        expect(isSessionLocked(alternate.scope('case-identity'))).equal(true)
+      } else {
+        alternate.initializeStorage(offlineStorage)
+        expect(alternate.rootDir).not.equal(repository.rootDir)
+        expect(coordinationPaths(alternate.scope('case-identity')).owner).not.equal(
+          coordinationPaths(repository.scope('case-identity')).owner,
+        )
+        const independent = alternate.create({id: 'case-identity'})
+        await independent.close()
+        expect(isSessionLocked(alternate.scope('case-identity'))).equal(false)
+        expect(isSessionLocked(repository.scope('case-identity'))).equal(true)
+      }
+    } finally {
+      await first.close()
+    }
+
+    if (sameDirectory) {
+      expect(isSessionLocked(alternate.scope('case-identity'))).equal(false)
+      const reopened = alternate.open(first.getFile()!)
+      await reopened.close()
+    }
+  })
+
   it('never mutates ownership from read-only inspection or reclaims an abandoned guard', async () => {
     const session = repository.create({id: 'inspect'})
     const file = session.getFile()!
