@@ -24,6 +24,7 @@ import type {
   ProviderName,
 } from './models/index.js'
 import type {Operator, OperatorOptions} from './processor/index.js'
+import type {ContextPolicy} from './session/context-policy.js'
 import type {Session, SessionContextBuilder as SessionContextBuilderType, SessionError} from './session/index.js'
 import type {WorkspaceSettings} from './settings.js'
 import type {
@@ -51,6 +52,7 @@ import {
 import {createMcpToolManager} from './mcp.js'
 import {getModel, Message, MessageType} from './models/index.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
+import {prepareSessionContext} from './session/context-policy.js'
 import {SessionContextBuilder, TurnPhase} from './session/index.js'
 import {loadWorkspaceSettingsSync, mergeWorkspaceSettings} from './settings.js'
 import {State} from './state.js'
@@ -75,12 +77,14 @@ export interface AgentInvokeOptions extends OperatorOptions {
 }
 
 interface ManagedInvokeOptions extends AgentInvokeOptions {
+  contextPolicy?: ContextPolicy
   executionContext?: RunContext
   executionPolicy?: ExecutionPolicy
   mcp?: McpToolManager
 }
 
 export interface AgentOptions {
+  contextPolicy?: ContextPolicy
   cwd?: string
 
   defaultToolProfile?: ToolProfileName
@@ -115,6 +119,7 @@ export interface AgentOptions {
 }
 
 export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
+  public readonly contextPolicy: ContextPolicy
   public readonly logger: Logger
   public readonly messages: Message[]
   public readonly settings: WorkspaceSettings
@@ -138,6 +143,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   constructor(options: AgentOptions = {}) {
     const createModel = options.deps?.createModel ?? getModel
     this.settings = mergeWorkspaceSettings(loadWorkspaceSettingsSync(options.cwd), options.settings)
+    this.contextPolicy = options.contextPolicy ?? this.settings.contextPolicy ?? {mode: 'disabled'}
     this.cwd = path.resolve(options.cwd ?? process.cwd())
     this.model = createModel(
       options.model?.provider ?? this.settings.provider,
@@ -294,7 +300,16 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       roots: [this.cwd],
     }
     const frozenPolicy = Object.freeze({...policy, roots: Object.freeze([...policy.roots])})
-    const settings = copyJSON(this.settings)
+    const contextPolicy: ContextPolicy =
+      this.contextPolicy.mode === 'budgeted'
+        ? {...this.contextPolicy, profile: copyJSON(this.contextPolicy.profile)}
+        : {mode: 'disabled'}
+    const contextConfiguration =
+      contextPolicy.mode === 'budgeted'
+        ? {mode: contextPolicy.mode, profile: contextPolicy.profile}
+        : {mode: contextPolicy.mode}
+    // Estimators are injected behavior, not JSON settings or journal evidence.
+    const settings = copyJSON({...this.settings, contextPolicy: contextConfiguration})
     const serialized = messages.map((message) => ({
       contents: message.contents,
       role: message.role,
@@ -306,6 +321,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         await manager?.close()
       },
       configuration: {
+        contextPolicy: contextConfiguration,
         cwd: this.cwd,
         model: this.model.getModel(),
         policy: {generation: policy.generation, profile: policy.profile, roots: [...policy.roots]},
@@ -324,6 +340,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           () =>
             this.invokeSessionWithTurn(session, messages, run.id, {
               ...options,
+              contextPolicy,
               executionContext: run,
               executionPolicy: frozenPolicy,
               mcp: manager,
@@ -595,12 +612,27 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         try {
           // Tool loops are sequential because each model response depends on the previous tool results.
 
+          const prepared =
+            options?.contextPolicy?.mode === 'budgeted'
+              ? // Context preparation is sequential because it uses this iteration history.
+                // eslint-disable-next-line no-await-in-loop
+                await prepareSessionContext({
+                  model: this.model,
+                  modelOptions: iterationOptions,
+                  onEvent: (event) =>
+                    emitAgentEvent(options?.onEvent, {iteration, type: AgentEventType.ContextPrepared, ...event}),
+                  policy: options.contextPolicy,
+                  prefix: this.messages,
+                  run,
+                  session,
+                })
+              : undefined
           run.consume('modelCalls')
           // The next model iteration depends on these results.
           // eslint-disable-next-line no-await-in-loop
           modelMessage = await run.wait(
             'model',
-            this.model.invoke([...this.messages, ...context.messages], iterationOptions),
+            prepared ? prepared.invoke() : this.model.invoke([...this.messages, ...context.messages], iterationOptions),
           )
         } catch (error) {
           if (diagnostics === undefined) {
@@ -941,6 +973,7 @@ function serializeSessionError(error: unknown): SessionError {
 
 function toModelInvokeOptions(options: Partial<AgentInvokeOptions> | undefined): Partial<ModelInvokeOptions> {
   const result: Record<string, unknown> = {...options}
+  delete result.contextPolicy
   delete result.executionPolicy
   delete result.executionContext
   delete result.mcp

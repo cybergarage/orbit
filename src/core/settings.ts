@@ -6,6 +6,8 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 
+import type {ContextPolicy, ContextProfile} from './session/context-policy.js'
+
 import {DOT_APP_DIR_NAME, SETTINGS_FILE_NAME} from './app.js'
 import {getProvider, isProvider, type ProviderName} from './models/provider.js'
 import {type BuiltinToolSelection, isBuiltinToolName, isToolProfile} from './tools/index.js'
@@ -32,6 +34,7 @@ export interface McpSettings {
 export type ToolSettings = BuiltinToolSelection
 
 export interface WorkspaceSettings {
+  contextPolicy?: ContextPolicy
   mcp?: McpSettings
   model?: string
   provider?: ProviderName
@@ -174,7 +177,7 @@ function validateWorkspaceSettings(parsed: unknown, file: string): WorkspaceSett
     throw new Error(`Invalid workspace settings in ${file}: settings must be an object.`)
   }
 
-  const {mcp, model, provider, providers, tools} = parsed
+  const {contextPolicy, mcp, model, provider, providers, tools} = parsed
   const providerOptions = getProvider().join(', ')
 
   if (provider !== undefined && !isProvider(provider)) {
@@ -186,6 +189,7 @@ function validateWorkspaceSettings(parsed: unknown, file: string): WorkspaceSett
   }
 
   return {
+    ...(contextPolicy === undefined ? {} : {contextPolicy: parseContextPolicy(contextPolicy)}),
     ...(typeof model === 'string' ? {model} : {}),
     ...(isProvider(provider) ? {provider} : {}),
     ...(providers === undefined ? {} : {providers: validateProviderSettings(providers, file)}),
@@ -310,6 +314,14 @@ function validateBuiltinToolNames(value: unknown, file: string, field: 'exclude'
 
 function mergeWorkspaceSettingsInto(target: WorkspaceSettings, source: WorkspaceSettings): void {
   Object.assign(target, {
+    ...(source.contextPolicy === undefined
+      ? {}
+      : {
+          contextPolicy:
+            source.contextPolicy.mode === 'disabled'
+              ? {mode: 'disabled'}
+              : {...source.contextPolicy, profile: structuredClone(source.contextPolicy.profile)},
+        }),
     ...(source.model === undefined ? {} : {model: source.model}),
     ...(source.provider === undefined ? {} : {provider: source.provider}),
     ...(source.providers === undefined ? {} : {providers: mergeProviderSettings(target.providers, source.providers)}),
@@ -349,4 +361,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isStringRecord(value: unknown): value is Record<string, string> {
   return isRecord(value) && Object.values(value).every((item) => typeof item === 'string')
+}
+
+function parseContextPolicy(value: unknown): ContextPolicy {
+  if (!isRecord(value)) throw new Error('Context policy must be an object')
+  if (value.mode === 'disabled') return {mode: 'disabled'}
+  if (value.mode !== 'budgeted' || !isRecord(value.profile)) throw new Error('Invalid context policy')
+  const p = value.profile
+  for (const name of ['revision', 'model', 'provider'])
+    if (typeof p[name] !== 'string' || !p[name]) throw new Error('Missing context profile identity')
+  for (const name of [
+    'window',
+    'outputReserve',
+    'safetyMargin',
+    'trigger',
+    'target',
+    'summaryOutput',
+    'templateOverhead',
+  ])
+    if (!Number.isSafeInteger(p[name]) || (p[name] as number) < 0) throw new Error('Invalid context profile count')
+  return {mode: 'budgeted', profile: structuredClone(p) as unknown as ContextProfile}
 }

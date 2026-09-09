@@ -234,6 +234,7 @@ export class WriterClaim {
 
   static acquire(scope: SessionScope, prepare: () => void, deleting = false): WriterClaim {
     validateScope(scope)
+    if (exists(migrationIntentPath(scope))) throw new Error('Transcript migration requires exclusive resume')
     if (cleanup.has(key(scope))) throw new Error('Session file is already open for writing or cleanup is pending')
     const claim = new WriterClaim(scope)
     const files = coordinationPaths(scope)
@@ -336,7 +337,7 @@ export async function retrySessionCleanup(scope: SessionScope): Promise<void> {
 export function isSessionLocked(scope: SessionScope): boolean {
   try {
     const files = coordinationPaths(scope)
-    return cleanup.has(key(scope)) || exists(files.guard) || exists(files.owner)
+    return cleanup.has(key(scope)) || exists(files.guard) || exists(files.owner) || exists(migrationIntentPath(scope))
   } catch {
     return true
   }
@@ -385,6 +386,7 @@ export function recoverSessionWriter(scope: SessionScope, conditions: OfflineSto
   validateScope(scope)
   if (cleanup.has(key(scope))) throw new Error('Local writer or cleanup must settle before offline recovery')
   const files = coordinationPaths(scope)
+  if (exists(migrationIntentPath(scope))) throw new Error('Use migration-aware exclusive resume')
   inspectRecoveryEvidence(scope)
   const owner = exists(files.owner) ? readOwner(files.owner) : undefined
   if (exists(files.owner) && (!owner || alive(owner.pid)))
@@ -428,3 +430,63 @@ function inspectRecoveryEvidence(scope: SessionScope): void {
 }
 
 export {canonicalStoragePath, inspectSessionStorage} from './storage-registration.js'
+
+/** The intent shares the stable Session scope, independent of transcript rename. */
+export function migrationIntentPath(scope: SessionScope): string {
+  validateScope(scope)
+  return key(scope) + '.migration.json'
+}
+
+export function beginTranscriptMaintenance(
+  scope: SessionScope,
+  conditions: OfflineStorageConditions,
+  resume: boolean,
+  resumeToken?: string,
+): {release: () => void; token: string} {
+  assertOfflineStorage(conditions)
+  validateScope(scope)
+  if (cleanup.has(key(scope))) throw new Error('Local writer or cleanup is still owned')
+  inspectRecoveryEvidence(scope)
+  const files = coordinationPaths(scope)
+  if (exists(files.owner)) throw new Error('Recover the stopped writer before transcript migration')
+  if (exists(path.join(scope.journalRoot, 'deletions', scope.sessionId + '.json')))
+    throw new Error('Session deletion is recorded')
+  fs.mkdirSync(path.dirname(files.guard), {mode: 0o700, recursive: true})
+  let artifact: Artifact | undefined
+  if (resume) {
+    if (!exists(files.guard) && resumeToken)
+      createArtifact(files.guard, {pid: process.pid, token: resumeToken, version: 1}, () => {})
+    const owner = readOwner(files.guard)
+    if (!owner || (owner.pid !== process.pid && alive(owner.pid))) throw new Error('Unknown or live migration guard')
+    const stat = fs.lstatSync(files.guard)
+    if (!stat.isFile() || stat.nlink !== 1) throw new Error('Invalid migration guard')
+    artifact = {
+      bytes: fs.readFileSync(files.guard),
+      file: files.guard,
+      identity: {dev: stat.dev, ino: stat.ino},
+      token: owner.token,
+    }
+  } else {
+    if (exists(migrationIntentPath(scope))) throw new Error('Pending transcript migration')
+    createArtifact(files.guard, {pid: process.pid, token: randomUUID(), version: 1}, (value) => {
+      artifact = value
+    })
+  }
+
+  const fd = fs.openSync(files.guard, 'r')
+  try {
+    fs.fsyncSync(fd)
+  } finally {
+    fs.closeSync(fd)
+  }
+
+  syncDirectory(path.dirname(files.guard))
+  const held = artifact!
+  return {
+    release() {
+      removeArtifact(held)
+      syncDirectory(path.dirname(files.guard))
+    },
+    token: readOwner(files.guard)!.token,
+  }
+}

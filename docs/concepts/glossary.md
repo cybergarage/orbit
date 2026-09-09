@@ -18,6 +18,13 @@ The current orchestration object that runs one bounded model/tool turn over a
 Session. Conceptually, an agent exposes a goal-oriented runtime contract that
 may later be implemented by a Processor Graph.
 
+### Context checkpoint
+
+A validated, synchronized record selecting an untrusted summary and retained
+conversation suffix for model input. It preserves original Session messages and
+does not replace execution journal evidence. Current budgeted preparation uses
+transcript v2; see [Input budgets and compaction](../context-compaction.md).
+
 ### Control plane
 
 The mechanisms that validate, evaluate, select, promote, and roll back runtime

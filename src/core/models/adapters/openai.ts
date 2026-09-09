@@ -13,12 +13,20 @@ import {performance} from 'node:perf_hooks'
 import {OpenAI} from 'openai'
 
 import type {Message} from '../../message/index.js'
-import type {Model, ModelInvokeOptions, ModelOutputPart, ModelResponseMetadata, ModelToolCall} from '../model.js'
+import type {
+  Model,
+  ModelInvokeOptions,
+  ModelOutputPart,
+  ModelResponseMetadata,
+  ModelToolCall,
+  PreparedModelInvocation,
+} from '../model.js'
 import type {Provider, ProviderName} from '../provider.js'
 
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
+import {freezeModelRequest} from '../prepared.js'
 import {getToolCalls, getToolResult, stringifyToolResult} from './tools.js'
 
 export interface OpenAIAgentOptions {
@@ -49,77 +57,92 @@ export class OpenAIAgent implements Model {
   }
 
   // Request mapping and optional provider metadata are kept together at the adapter boundary.
-  // eslint-disable-next-line complexity
+
   async invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
-    const request = {
-      messages: messages.map((message) => toOpenAIMessage(message)),
-      model: this.model,
-      ...(options?.tools && options.tools.length > 0 ? {tools: options.tools.map((tool) => toOpenAITool(tool))} : {}),
-    }
-    emitModelRequest(
-      options,
+    return this.prepare(messages, options).invoke()
+  }
+
+  prepare(messages: Message[], options?: Partial<ModelInvokeOptions>): PreparedModelInvocation {
+    const request = freezeModelRequest(
       {
-        messageCount: request.messages.length,
+        messages: messages.map((message) => toOpenAIMessage(message)),
         model: this.model,
-        provider: this.getProvider(),
-        toolCount: options?.tools?.length ?? 0,
+        // Provider wire field.
+        // eslint-disable-next-line camelcase
+        ...(options?.maxOutputTokens === undefined ? {} : {max_completion_tokens: options.maxOutputTokens}),
+        ...(options?.tools && options.tools.length > 0 ? {tools: options.tools.map((tool) => toOpenAITool(tool))} : {}),
+      },
+      options?.maxOutputTokens,
+    )
+    return {
+      invoke: async () => {
+        emitModelRequest(
+          options,
+          {
+            messageCount: request.messages.length,
+            model: this.model,
+            provider: this.getProvider(),
+            toolCount: options?.tools?.length ?? 0,
+          },
+          request,
+        )
+        const startedAt = performance.now()
+        let response
+        try {
+          response = await this.client.chat.completions.create(request, {signal: options?.signal})
+        } catch (error) {
+          emitModelFailure(
+            options,
+            {durationMs: performance.now() - startedAt, model: this.model, provider: this.getProvider()},
+            error,
+          )
+          throw error
+        }
+
+        const choice = response.choices[0]
+        if (choice === undefined) throw new Error('OpenAI returned a chat completion without choices.')
+        const {message} = choice
+        const toolCalls =
+          message.tool_calls
+            ?.filter((toolCall) => isOpenAIFunctionToolCall(toolCall))
+            .map((toolCall) => toOpenAIModelToolCall(toolCall)) ?? []
+        const content = message.content || message.refusal || message.audio?.transcript || ''
+        const parts = toOpenAIOutputParts(message, toolCalls)
+        const metadata: ModelResponseMetadata = {
+          durationMs: performance.now() - startedAt,
+          model: response.model,
+          provider: this.getProvider(),
+          responseId: response.id,
+          stopReason: choice.finish_reason,
+          ...(response.usage === undefined
+            ? {}
+            : {
+                usage: {
+                  ...(response.usage.prompt_tokens_details?.cached_tokens === undefined
+                    ? {}
+                    : {cachedInputTokens: response.usage.prompt_tokens_details.cached_tokens}),
+                  inputTokens: response.usage.prompt_tokens,
+                  outputTokens: response.usage.completion_tokens,
+                  ...(response.usage.completion_tokens_details?.reasoning_tokens === undefined
+                    ? {}
+                    : {reasoningTokens: response.usage.completion_tokens_details.reasoning_tokens}),
+                  totalTokens: response.usage.total_tokens,
+                },
+              }),
+        }
+        emitModelResponse(options, {content, metadata, response, toolCalls})
+
+        return new CoreMessage(MessageType.Assistant, {
+          content,
+          payload: {
+            ...(parts.length > 0 ? {parts} : {}),
+            response: metadata,
+            ...(toolCalls.length > 0 ? {toolCalls} : {}),
+          },
+        })
       },
       request,
-    )
-    const startedAt = performance.now()
-    let response
-    try {
-      response = await this.client.chat.completions.create(request, {signal: options?.signal})
-    } catch (error) {
-      emitModelFailure(
-        options,
-        {durationMs: performance.now() - startedAt, model: this.model, provider: this.getProvider()},
-        error,
-      )
-      throw error
     }
-
-    const choice = response.choices[0]
-    if (choice === undefined) throw new Error('OpenAI returned a chat completion without choices.')
-    const {message} = choice
-    const toolCalls =
-      message.tool_calls
-        ?.filter((toolCall) => isOpenAIFunctionToolCall(toolCall))
-        .map((toolCall) => toOpenAIModelToolCall(toolCall)) ?? []
-    const content = message.content || message.refusal || message.audio?.transcript || ''
-    const parts = toOpenAIOutputParts(message, toolCalls)
-    const metadata: ModelResponseMetadata = {
-      durationMs: performance.now() - startedAt,
-      model: response.model,
-      provider: this.getProvider(),
-      responseId: response.id,
-      stopReason: choice.finish_reason,
-      ...(response.usage === undefined
-        ? {}
-        : {
-            usage: {
-              ...(response.usage.prompt_tokens_details?.cached_tokens === undefined
-                ? {}
-                : {cachedInputTokens: response.usage.prompt_tokens_details.cached_tokens}),
-              inputTokens: response.usage.prompt_tokens,
-              outputTokens: response.usage.completion_tokens,
-              ...(response.usage.completion_tokens_details?.reasoning_tokens === undefined
-                ? {}
-                : {reasoningTokens: response.usage.completion_tokens_details.reasoning_tokens}),
-              totalTokens: response.usage.total_tokens,
-            },
-          }),
-    }
-    emitModelResponse(options, {content, metadata, response, toolCalls})
-
-    return new CoreMessage(MessageType.Assistant, {
-      content,
-      payload: {
-        ...(parts.length > 0 ? {parts} : {}),
-        response: metadata,
-        ...(toolCalls.length > 0 ? {toolCalls} : {}),
-      },
-    })
   }
 }
 

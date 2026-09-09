@@ -5,8 +5,17 @@ export {isMessageType, Message, MessageType, UserMessage} from '../message/index
 export type {MessageOptions, MessagePayload} from '../message/index.js'
 export {encodeSessionEntry, parseSessionFile} from './codec.js'
 export type {ParsedSessionFile} from './codec.js'
+export type {ContextSummary, SessionCompactionEntry, SummaryFact, SummaryTest} from './compaction.js'
 export {SessionContextBuilder} from './context-builder.js'
 export type {SessionModelContext} from './context-builder.js'
+export {ContextBudgetError, estimateJSONRequest, validateContextProfile} from './context-policy.js'
+export type {
+  ContextPolicy,
+  ContextPreparationEvent,
+  ContextProfile,
+  RequestEstimate,
+  RequestEstimator,
+} from './context-policy.js'
 export {
   coordinationPaths,
   initializeSessionStorage,
@@ -41,9 +50,14 @@ export {createSessionInformation, formatSessionInformation} from './information.
 export type {SessionInformation, SessionInformationOverrides, SessionStatus} from './information.js'
 export {createMessage} from './message-factory.js'
 export type {CreateMessageOptions} from './message-factory.js'
+export {inspectTranscriptMigration, migrateSessionTranscript} from './migration.js'
+
+export type {TranscriptMigrationInspection} from './migration.js'
 export {sessionFilePath} from './paths.js'
 export {SessionRecorder} from './recorder.js'
+
 export {SessionRepository} from './repository.js'
+
 export type {
   CreateSessionOptions,
   FindLatestSessionOptions,
@@ -53,7 +67,8 @@ export type {
   SessionRepositoryOptions,
   SessionSummary,
 } from './repository.js'
-
 export {Session} from './session.js'
+
 export type {AppendMessageOptions, RecordTurnContextOptions, RecordTurnEventOptions, SessionOptions} from './session.js'
+
 export type {SessionWriterLease} from './writer-lease.js'

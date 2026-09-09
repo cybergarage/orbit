@@ -12,7 +12,8 @@ as a product contract.
 - Read [Current Architecture](architecture.md) for the structure implemented in
   the repository today.
 - Read [Development](development.md) to build, test, and change Orbit.
-- Read the feature guides for current user-visible behavior.
+- Read the feature guides for current user-visible behavior, including
+  [Input budgets and compaction](context-compaction.md).
 
 ## Document types
 

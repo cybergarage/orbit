@@ -18,7 +18,6 @@ with that name, including a symbolic link to a regular file, is not a workspace
 marker. Directory links retain their existing behavior. Both synchronous and
 asynchronous loaders use this condition and continue searching ancestors.
 
-
 ## Example
 
 ```json
@@ -211,3 +210,11 @@ interactive mode for a terminal, or `exec` for piped input. The values of
 `--execution-policy` and `--journal-level` are likewise kept with their flags;
 they are not treated as command names. Omitting the command does not bypass
 operation approval, execution budgets, or recording requirements.
+
+## Input budgeting
+
+`contextPolicy` selects disabled compatibility mode or a complete budgeted model
+profile. A nearer setting replaces this policy rather than merging individual
+counts. Model identity, window, reserves and estimator assumptions are explicit;
+see [Input budgets and compaction](context-compaction.md). CLI, GUI and Service
+use this same setting. Programmatic Agent/Service options can override it.

@@ -68,6 +68,7 @@ export interface RuntimeSettingsSource {
 }
 
 export interface RuntimeSnapshot {
+  contextMode?: 'budgeted' | 'disabled'
   contexts: RuntimeContextSource[]
   cwd: string
   model: string
@@ -78,6 +79,7 @@ export interface RuntimeSnapshot {
 }
 
 export interface OrbitApplicationServiceOptions {
+  contextPolicy?: CoreAgentOptions['contextPolicy']
   contexts?: Context[]
   createAgent?: ThreadAgentFactory
   cwd?: string
@@ -146,7 +148,10 @@ export class OrbitApplicationService {
       .map((context) => context.content)
       .filter((content) => content.length > 0)
       .join('\n\n')
+    const contextPolicy = options.contextPolicy ?? this.settings.contextPolicy
+    if (contextPolicy) this.settings.contextPolicy = contextPolicy
     this.runtime = {
+      contextMode: contextPolicy?.mode ?? 'disabled',
       contexts: options.contexts.map((context) => ({
         ...(context.source.kind === 'none' ? {} : {file: context.source.file}),
         kind: context.source.kind,
@@ -169,6 +174,7 @@ export class OrbitApplicationService {
         ((agentOptions) =>
           new Agent({
             ...agentOptions,
+            contextPolicy,
             defaultToolProfile: ToolProfile.Coding,
             diagnostics: this.diagnostics,
             execution: {...options.execution, onApproval() {}, responderScope: 'local-gui'},
@@ -232,6 +238,7 @@ export class OrbitApplicationService {
         : [new Message(MessageType.Session, {content: this.systemPrompt, role: Role.System})]
     const thread = this.threadManager.createThread({
       agent: {
+        contextPolicy: this.settings.contextPolicy,
         cwd: this.runtime.cwd,
         diagnostics: this.diagnostics,
         messages: systemMessages,
@@ -595,6 +602,13 @@ function eventContext(event: ThreadEvent): {
 }
 
 function threadEventMetadata(event: ThreadEvent): Record<string, unknown> {
+  if (event.type === ThreadEventType.ContextPrepared)
+    return {
+      beforeTokens: event.beforeTokens,
+      outcome: event.outcome,
+      ...(event.afterTokens === undefined ? {} : {afterTokens: event.afterTokens}),
+      ...(event.reason === undefined ? {} : {reason: event.reason}),
+    }
   if (event.type === ThreadEventType.RunFailed) return {error: event.error}
   if ('message' in event) return {messageId: event.message.id, messageType: event.message.type}
   if ('toolCall' in event) return {toolCallId: event.toolCall.id, toolName: event.toolCall.name}

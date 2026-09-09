@@ -9,6 +9,7 @@ import type {ApprovalReply, RunHandle, RunSnapshot} from './execution/run.js'
 import type {SessionLoggerFactory} from './logs/index.js'
 import type {Message, MessagePayload, MessageType} from './message/index.js'
 import type {ModelToolCall, ProviderName, Role} from './models/index.js'
+import type {ContextPreparationEvent} from './session/context-policy.js'
 import type {ToolResult} from './tools/index.js'
 
 import {AgentEventType} from './agent-events.js'
@@ -27,6 +28,7 @@ export const ThreadStatus = {
 export type ThreadStatus = (typeof ThreadStatus)[keyof typeof ThreadStatus]
 
 export const ThreadEventType = {
+  ContextPrepared: AgentEventType.ContextPrepared,
   MessageCompleted: AgentEventType.MessageCompleted,
   ModelStarted: AgentEventType.ModelStarted,
   RunCancelled: 'run-cancelled',
@@ -128,6 +130,7 @@ export interface ThreadRunFailedEvent extends ThreadEventBase {
 }
 
 export type ThreadEvent =
+  | (ContextPreparationEvent & ThreadEventBase & {iteration: number; type: typeof ThreadEventType.ContextPrepared})
   | ThreadMessageCompletedEvent
   | ThreadModelStartedEvent
   | ThreadRunCancelledEvent
@@ -269,6 +272,8 @@ export class ThreadManager {
         ? new Session({metadata: {cwd: options.agent?.cwd, id}})
         : this.sessionRepository.create({
             cwd: options.agent?.cwd,
+            formatVersion:
+              (options.agent?.contextPolicy ?? options.agent?.settings?.contextPolicy)?.mode === 'budgeted' ? 2 : 1,
             id,
             model: options.agent?.model?.name,
             originator: 'orbit-thread-manager',
@@ -546,6 +551,11 @@ export class ThreadManager {
     }
 
     switch (event.type) {
+      case AgentEventType.ContextPrepared: {
+        this.emit({...base, ...event})
+        return
+      }
+
       case AgentEventType.MessageCompleted: {
         thread.updatedAt = event.message.timestamp
         this.emit({...base, iteration: event.iteration, message: serializeMessage(event.message), type: event.type})

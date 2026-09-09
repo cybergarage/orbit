@@ -12,24 +12,36 @@ import {Anthropic} from '@anthropic-ai/sdk'
 import {performance} from 'node:perf_hooks'
 
 import type {Message} from '../../message/index.js'
-import type {Model, ModelInvokeOptions, ModelResponseMetadata, ModelToolCall} from '../model.js'
+import type {
+  Model,
+  ModelInvokeOptions,
+  ModelResponseMetadata,
+  ModelToolCall,
+  PreparedModelInvocation,
+} from '../model.js'
 import type {Provider, ProviderName} from '../provider.js'
 
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
+import {freezeModelRequest} from '../prepared.js'
 import {splitSystemPrompt} from '../prompt.js'
 import {Role} from '../role.js'
 import {getToolCalls, getToolResult, isToolResultError, stringifyToolOutput} from './tools.js'
 
+export interface AnthropicAgentOptions {
+  client?: Pick<Anthropic, 'messages'>
+}
+
 export class AnthropicAgent implements Model {
-  private readonly client: Anthropic
+  private readonly client: Pick<Anthropic, 'messages'>
 
   constructor(
     private readonly model: string,
     private readonly provider: Provider,
+    options: AnthropicAgentOptions = {},
   ) {
-    this.client = new Anthropic({...createAnthropicOptions(provider), maxRetries: 0})
+    this.client = options.client ?? new Anthropic({...createAnthropicOptions(provider), maxRetries: 0})
   }
 
   getModel(): string {
@@ -45,78 +57,90 @@ export class AnthropicAgent implements Model {
   }
 
   async invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
+    return this.prepare(messages, options).invoke()
+  }
+
+  prepare(messages: Message[], options?: Partial<ModelInvokeOptions>): PreparedModelInvocation {
     const {messages: chatMessages, systemPrompt} = splitSystemPrompt(messages)
-    const request = {
-      // Anthropic's SDK expects snake_case for this field.
-      // eslint-disable-next-line camelcase
-      max_tokens: 8096,
-      messages: chatMessages.map((message) => toAnthropicMessage(message)),
-      model: this.model,
-      ...(systemPrompt ? {system: systemPrompt} : {}),
-      ...(options?.tools && options.tools.length > 0
-        ? {tools: options.tools.map((tool) => toAnthropicTool(tool))}
-        : {}),
-    }
-    emitModelRequest(
-      options,
+    const request = freezeModelRequest(
       {
-        messageCount: request.messages.length,
+        // Anthropic's SDK expects snake_case for this field.
+        // eslint-disable-next-line camelcase
+        max_tokens: options?.maxOutputTokens ?? 8096,
+        messages: chatMessages.map((message) => toAnthropicMessage(message)),
         model: this.model,
-        provider: this.getProvider(),
-        toolCount: options?.tools?.length ?? 0,
+        ...(systemPrompt ? {system: systemPrompt} : {}),
+        ...(options?.tools && options.tools.length > 0
+          ? {tools: options.tools.map((tool) => toAnthropicTool(tool))}
+          : {}),
+      },
+      options?.maxOutputTokens,
+    )
+    return {
+      invoke: async () => {
+        emitModelRequest(
+          options,
+          {
+            messageCount: request.messages.length,
+            model: this.model,
+            provider: this.getProvider(),
+            toolCount: options?.tools?.length ?? 0,
+          },
+          request,
+        )
+        const startedAt = performance.now()
+        let response
+        try {
+          response = await this.client.messages.create(request, {signal: options?.signal})
+        } catch (error) {
+          emitModelFailure(
+            options,
+            {durationMs: performance.now() - startedAt, model: this.model, provider: this.getProvider()},
+            error,
+          )
+          throw error
+        }
+
+        const toolCalls = response.content
+          .filter((block) => isToolUseBlock(block))
+          .map((toolCall) => toAnthropicModelToolCall(toolCall))
+        const content = response.content
+          .filter((block) => block.type === 'text')
+          .map((block) => block.text)
+          .join('')
+        const metadata: ModelResponseMetadata = {
+          durationMs: performance.now() - startedAt,
+          model: response.model,
+          provider: this.getProvider(),
+          responseId: response.id,
+          ...(response.stop_reason === null ? {} : {stopReason: response.stop_reason}),
+          usage: {
+            ...(response.usage.cache_creation_input_tokens === null
+              ? {}
+              : {cacheCreationInputTokens: response.usage.cache_creation_input_tokens}),
+            ...(response.usage.cache_read_input_tokens === null
+              ? {}
+              : {cachedInputTokens: response.usage.cache_read_input_tokens}),
+            inputTokens: response.usage.input_tokens,
+            outputTokens: response.usage.output_tokens,
+            totalTokens:
+              response.usage.input_tokens +
+              response.usage.output_tokens +
+              (response.usage.cache_creation_input_tokens ?? 0) +
+              (response.usage.cache_read_input_tokens ?? 0),
+          },
+        }
+        emitModelResponse(options, {content, metadata, response, toolCalls})
+        return new CoreMessage(MessageType.Assistant, {
+          content,
+          payload: {
+            response: metadata,
+            ...(toolCalls.length > 0 ? {toolCalls} : {}),
+          },
+        })
       },
       request,
-    )
-    const startedAt = performance.now()
-    let response
-    try {
-      response = await this.client.messages.create(request, {signal: options?.signal})
-    } catch (error) {
-      emitModelFailure(
-        options,
-        {durationMs: performance.now() - startedAt, model: this.model, provider: this.getProvider()},
-        error,
-      )
-      throw error
     }
-
-    const toolCalls = response.content
-      .filter((block) => isToolUseBlock(block))
-      .map((toolCall) => toAnthropicModelToolCall(toolCall))
-    const content = response.content
-      .filter((block) => block.type === 'text')
-      .map((block) => block.text)
-      .join('')
-    const metadata: ModelResponseMetadata = {
-      durationMs: performance.now() - startedAt,
-      model: response.model,
-      provider: this.getProvider(),
-      responseId: response.id,
-      ...(response.stop_reason === null ? {} : {stopReason: response.stop_reason}),
-      usage: {
-        ...(response.usage.cache_creation_input_tokens === null
-          ? {}
-          : {cacheCreationInputTokens: response.usage.cache_creation_input_tokens}),
-        ...(response.usage.cache_read_input_tokens === null
-          ? {}
-          : {cachedInputTokens: response.usage.cache_read_input_tokens}),
-        inputTokens: response.usage.input_tokens,
-        outputTokens: response.usage.output_tokens,
-        totalTokens:
-          response.usage.input_tokens +
-          response.usage.output_tokens +
-          (response.usage.cache_creation_input_tokens ?? 0) +
-          (response.usage.cache_read_input_tokens ?? 0),
-      },
-    }
-    emitModelResponse(options, {content, metadata, response, toolCalls})
-    return new CoreMessage(MessageType.Assistant, {
-      content,
-      payload: {
-        response: metadata,
-        ...(toolCalls.length > 0 ? {toolCalls} : {}),
-      },
-    })
   }
 }
 

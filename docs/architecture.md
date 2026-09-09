@@ -125,7 +125,13 @@ graph version.
 
 `State` currently owns a `Session`. The session package records messages, turn
 context, turn terminal events, and session metadata. `SessionContextBuilder`
-derives model input from those durable records.
+derives model input from those durable records. With an enabled `ContextPolicy`,
+`session/context-policy.ts` prepares the complete frozen provider request, charges
+a tool-free summary call to the same Run, synchronizes a v2 checkpoint and then
+selects the retained suffix. `session/compaction.ts` validates source digests,
+predecessors and tool groups. `session/migration.ts` upgrades closed v1 files
+under stable Session exclusion; ordinary recovery refuses pending migration.
+The [compaction guide](context-compaction.md) owns profiles and migration details.
 
 `SessionRepository` creates, opens and lists append-only session files.
 `SessionDeletionService` removes managed artifacts under the stable Session-ID

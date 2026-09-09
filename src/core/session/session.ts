@@ -7,6 +7,7 @@ import {v7 as uuidv7} from 'uuid'
 import type {JournalLevel} from '../execution/journal.js'
 import type {Message} from '../message/index.js'
 import type {ProviderName} from '../models/provider.js'
+import type {SessionCompactionEntry} from './compaction.js'
 import type {
   PersistedMessage,
   SessionEntry,
@@ -21,6 +22,7 @@ import type {SessionRecorder} from './recorder.js'
 import type {SessionWriterLease} from './writer-lease.js'
 
 import {Message as CoreMessage} from '../message/index.js'
+import {validateCompactionEntries} from './compaction.js'
 import {SessionEntryType} from './entries.js'
 import {SessionHeader} from './header.js'
 
@@ -45,6 +47,7 @@ export interface RecordTurnEventOptions {
 
 export interface SessionOptions {
   entries?: SessionEntry[]
+  formatVersion?: 1 | 2
   journalRoot?: string
   messages?: Message[]
   metadata?: Partial<SessionMetadata>
@@ -52,9 +55,12 @@ export interface SessionOptions {
 }
 
 export class Session {
+  readonly formatVersion: 1 | 2
   readonly journalRoot?: string
+  private activeCompaction?: SessionCompactionEntry
   private closePromise?: Promise<void>
   private closing = false
+  private compactionSaving = false
   private readonly entries: SessionEntry[]
   private ephemeralLease = false
   private readonly messageIds = new Set<string>()
@@ -89,7 +95,9 @@ export class Session {
       throw new Error('Session metadata must match recorder identity and journal binding')
     this.recorder = options.recorder
     this.journalRoot = options.journalRoot
-    this.entries = [...(options.entries ?? [])]
+    this.entries = structuredClone(options.entries ?? [])
+    this.formatVersion = options.formatVersion ?? (this.recorder ? 1 : 2)
+    this.activeCompaction = validateCompactionEntries(this.entries, id, this.formatVersion)
 
     const header = new SessionHeader({
       id: rootMessageId,
@@ -126,6 +134,7 @@ export class Session {
   }
 
   appendMessages(messages: Message[], options: AppendMessageOptions = {}): Message[] {
+    if (this.compactionSaving) throw new Error('Compaction synchronization is pending')
     const pendingIds = new Set(this.messageIds)
     for (const message of messages) {
       if (pendingIds.has(message.id)) throw new Error(`Message already exists in session: ${message.id}`)
@@ -181,8 +190,28 @@ export class Session {
     return pending
   }
 
+  async commitCompaction(candidate: SessionCompactionEntry, level: JournalLevel): Promise<void> {
+    if (!this.hasManagedLease() || this.compactionSaving || this.closing)
+      throw new Error('Compaction requires exclusive live Session ownership')
+    if (this.getFile() && level === 'memory') throw new Error('Persistent compaction requires synchronization')
+    const entry = structuredClone(candidate)
+    validateCompactionEntries([...this.entries, entry], this.getId(), this.formatVersion)
+    this.compactionSaving = true
+    try {
+      this.addEntry(entry)
+      await this.synchronize(level)
+      this.activeCompaction = entry
+    } finally {
+      this.compactionSaving = false
+    }
+  }
+
   async flush(): Promise<void> {
     await this.recorder?.flush()
+  }
+
+  getCompaction(): SessionCompactionEntry | undefined {
+    return this.activeCompaction ? structuredClone(this.activeCompaction) : undefined
   }
 
   getConversationMessages(): Message[] {

@@ -74,11 +74,17 @@ export async function runExecCommand(
     },
     settings: resolvedOptions.settings,
   })
+  if (resolvedOptions.settings.contextPolicy?.mode === 'budgeted') process.stderr.write('Context mode: budgeted\n')
   agent.logger.setDebugEnabled(resolvedOptions.debug === true)
   const userMessages: Message[] = [new Message(MessageType.User, {content: prompt, role: Role.User})]
   process.on('SIGINT', stop)
   try {
-    const response = await agent.invoke(userMessages, {signal: controller.signal})
+    const response = await agent.invoke(userMessages, {
+      onEvent(event) {
+        if (event.type === 'context-prepared') process.stderr.write('Context preparation: ' + event.outcome + '\n')
+      },
+      signal: controller.signal,
+    })
     return response.content
   } finally {
     try {

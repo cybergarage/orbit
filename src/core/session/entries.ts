@@ -4,10 +4,12 @@
 import type {MessagePayload, MessageType} from '../message/index.js'
 import type {ProviderName} from '../models/provider.js'
 import type {Role} from '../models/role.js'
+import type {SessionCompactionEntry} from './compaction.js'
 
 export const SESSION_FORMAT_VERSION = 1
 
 export const SessionEntryType = {
+  Compaction: 'compaction',
   Message: 'message',
   Session: 'session',
   TurnContext: 'turn_context',
@@ -45,7 +47,7 @@ export interface SessionHeaderEntry {
   systemPrompt?: string
   timestamp: string
   type: typeof SessionEntryType.Session
-  version: typeof SESSION_FORMAT_VERSION
+  version: 1 | 2
 }
 
 export interface SessionMessageEntry {
@@ -80,7 +82,12 @@ export interface SessionTurnEventEntry {
   type: typeof SessionEntryType.TurnEvent
 }
 
-export type SessionEntry = SessionHeaderEntry | SessionMessageEntry | SessionTurnContextEntry | SessionTurnEventEntry
+export type SessionEntry =
+  | SessionCompactionEntry
+  | SessionHeaderEntry
+  | SessionMessageEntry
+  | SessionTurnContextEntry
+  | SessionTurnEventEntry
 
 export interface SessionMetadata {
   createdAt: string

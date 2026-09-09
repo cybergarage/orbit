@@ -86,8 +86,10 @@ export type {
   ModelToolCallPayload,
   ModelToolResultPayload,
 } from './model.js'
+export type {PreparedModelInvocation} from './model.js'
 export type {Prompt} from './prompt.js'
 export {splitSystemPrompt} from './prompt.js'
 export type {Provider, ProviderName} from './provider.js'
 export {createProvider, getProvider, getProviderNames, isProvider, isProviderName} from './provider.js'
+
 export {getRoles, Role} from './role.js'

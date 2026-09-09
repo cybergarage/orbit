@@ -67,6 +67,21 @@ export class SessionRecorder {
       const parsed = parseSessionFile(fsSync.readFileSync(resolved, 'utf8'), resolved)
       if (parsed.recovered)
         fsSync.writeFileSync(resolved, parsed.entries.map((entry) => encodeSessionEntry(entry)).join(''), {mode: 0o600})
+      if (parsed.entries.some((entry) => entry.type === 'compaction')) {
+        const descriptor = fsSync.openSync(resolved, 'r+')
+        try {
+          fsSync.fsyncSync(descriptor)
+        } finally {
+          fsSync.closeSync(descriptor)
+        }
+
+        const directory = fsSync.openSync(path.dirname(resolved), 'r')
+        try {
+          fsSync.fsyncSync(directory)
+        } finally {
+          fsSync.closeSync(directory)
+        }
+      }
     })
     return new SessionRecorder(resolved, claim)
   }

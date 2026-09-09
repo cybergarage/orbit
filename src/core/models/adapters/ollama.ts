@@ -7,12 +7,20 @@ import {performance} from 'node:perf_hooks'
 import {Ollama} from 'ollama'
 
 import type {Message} from '../../message/index.js'
-import type {Model, ModelInvokeOptions, ModelOutputPart, ModelResponseMetadata, ModelToolCall} from '../model.js'
+import type {
+  Model,
+  ModelInvokeOptions,
+  ModelOutputPart,
+  ModelResponseMetadata,
+  ModelToolCall,
+  PreparedModelInvocation,
+} from '../model.js'
 import type {Provider, ProviderName} from '../provider.js'
 
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
+import {freezeModelRequest} from '../prepared.js'
 import {getModelOutputParts, getToolCalls, getToolResult, getToolResultImages, stringifyToolResult} from './tools.js'
 
 export interface OllamaAgentOptions {
@@ -48,70 +56,85 @@ export class OllamaAgent implements Model {
   }
 
   async invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
-    options?.signal?.addEventListener('abort', this.abort, {once: true})
-    const request = {
-      messages: messages.map((message) => toOllamaMessage(message)),
-      model: this.model,
-      ...(options?.tools && options.tools.length > 0 ? {tools: options.tools.map((tool) => toOllamaTool(tool))} : {}),
-    }
-    emitModelRequest(
-      options,
+    return this.prepare(messages, options).invoke()
+  }
+
+  prepare(messages: Message[], options?: Partial<ModelInvokeOptions>): PreparedModelInvocation {
+    const request = freezeModelRequest(
       {
-        messageCount: request.messages.length,
+        messages: messages.map((message) => toOllamaMessage(message)),
         model: this.model,
-        provider: this.getProvider(),
-        toolCount: options?.tools?.length ?? 0,
+        // Provider wire field.
+        // eslint-disable-next-line camelcase
+        ...(options?.maxOutputTokens === undefined ? {} : {options: {num_predict: options.maxOutputTokens}}),
+        ...(options?.tools && options.tools.length > 0 ? {tools: options.tools.map((tool) => toOllamaTool(tool))} : {}),
+      },
+      options?.maxOutputTokens,
+    )
+    return {
+      invoke: async () => {
+        options?.signal?.addEventListener('abort', this.abort, {once: true})
+        emitModelRequest(
+          options,
+          {
+            messageCount: request.messages.length,
+            model: this.model,
+            provider: this.getProvider(),
+            toolCount: options?.tools?.length ?? 0,
+          },
+          request,
+        )
+        const startedAt = performance.now()
+        let response
+        try {
+          response = await this.client.chat(request)
+        } catch (error) {
+          emitModelFailure(
+            options,
+            {durationMs: performance.now() - startedAt, model: this.model, provider: this.getProvider()},
+            error,
+          )
+          throw error
+        } finally {
+          options?.signal?.removeEventListener('abort', this.abort)
+        }
+
+        const toolCalls = response.message.tool_calls?.map(toOllamaModelToolCall) ?? []
+        const {content} = response.message
+        const parts = toOllamaOutputParts(response.message, toolCalls)
+        const metadata: ModelResponseMetadata = {
+          durationMs: performance.now() - startedAt,
+          model: response.model,
+          provider: this.getProvider(),
+          providerMetadata: {
+            createdAt:
+              response.created_at instanceof Date ? response.created_at.toISOString() : String(response.created_at),
+            done: response.done,
+            evalDurationNs: response.eval_duration,
+            loadDurationNs: response.load_duration,
+            ...(response.logprobs === undefined ? {} : {logprobs: response.logprobs}),
+            promptEvalDurationNs: response.prompt_eval_duration,
+            totalDurationNs: response.total_duration,
+          },
+          ...(response.done_reason === undefined ? {} : {stopReason: response.done_reason}),
+          usage: {
+            inputTokens: response.prompt_eval_count,
+            outputTokens: response.eval_count,
+            totalTokens: response.prompt_eval_count + response.eval_count,
+          },
+        }
+        emitModelResponse(options, {content, metadata, response, toolCalls})
+        return new CoreMessage(MessageType.Assistant, {
+          content,
+          payload: {
+            ...(parts.length > 0 ? {parts} : {}),
+            response: metadata,
+            ...(toolCalls.length > 0 ? {toolCalls} : {}),
+          },
+        })
       },
       request,
-    )
-    const startedAt = performance.now()
-    let response
-    try {
-      response = await this.client.chat(request)
-    } catch (error) {
-      emitModelFailure(
-        options,
-        {durationMs: performance.now() - startedAt, model: this.model, provider: this.getProvider()},
-        error,
-      )
-      throw error
-    } finally {
-      options?.signal?.removeEventListener('abort', this.abort)
     }
-
-    const toolCalls = response.message.tool_calls?.map(toOllamaModelToolCall) ?? []
-    const {content} = response.message
-    const parts = toOllamaOutputParts(response.message, toolCalls)
-    const metadata: ModelResponseMetadata = {
-      durationMs: performance.now() - startedAt,
-      model: response.model,
-      provider: this.getProvider(),
-      providerMetadata: {
-        createdAt:
-          response.created_at instanceof Date ? response.created_at.toISOString() : String(response.created_at),
-        done: response.done,
-        evalDurationNs: response.eval_duration,
-        loadDurationNs: response.load_duration,
-        ...(response.logprobs === undefined ? {} : {logprobs: response.logprobs}),
-        promptEvalDurationNs: response.prompt_eval_duration,
-        totalDurationNs: response.total_duration,
-      },
-      ...(response.done_reason === undefined ? {} : {stopReason: response.done_reason}),
-      usage: {
-        inputTokens: response.prompt_eval_count,
-        outputTokens: response.eval_count,
-        totalTokens: response.prompt_eval_count + response.eval_count,
-      },
-    }
-    emitModelResponse(options, {content, metadata, response, toolCalls})
-    return new CoreMessage(MessageType.Assistant, {
-      content,
-      payload: {
-        ...(parts.length > 0 ? {parts} : {}),
-        response: metadata,
-        ...(toolCalls.length > 0 ? {toolCalls} : {}),
-      },
-    })
   }
 }
 

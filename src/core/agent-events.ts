@@ -3,9 +3,11 @@
 
 import type {Message} from './message/index.js'
 import type {ModelToolCall} from './models/index.js'
+import type {ContextPreparationEvent} from './session/context-policy.js'
 import type {ToolResult} from './tools/index.js'
 
 export const AgentEventType = {
+  ContextPrepared: 'context-prepared',
   MessageCompleted: 'message-completed',
   ModelStarted: 'model-started',
   ToolCompleted: 'tool-completed',
@@ -52,5 +54,6 @@ export type AgentEvent =
   | AgentToolCompletedEvent
   | AgentToolStartedEvent
   | AgentToolUpdatedEvent
+  | (ContextPreparationEvent & {iteration: number; type: typeof AgentEventType.ContextPrepared})
 
 export type AgentEventHandler = (event: AgentEvent) => void

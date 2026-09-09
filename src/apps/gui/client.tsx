@@ -43,6 +43,7 @@ const token = document.querySelector<HTMLMetaElement>('meta[name="orbit-token"]'
 // eslint-disable-next-line complexity
 function App() {
   const [runtime, setRuntime] = useState<RuntimeSnapshot>()
+  const [contextNotices, setContextNotices] = useState<Record<string, string>>({})
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [thread, setThread] = useState<ThreadSnapshot>()
   const [logs, setLogs] = useState<LogRecord[]>([])
@@ -108,6 +109,17 @@ function App() {
     })
     source.addEventListener('diagnostic', (message) => {
       const event = JSON.parse((message as MessageEvent).data) as DiagnosticEvent
+      if (event.type === 'context.prepared' && event.threadId) {
+        const id = event.threadId
+        setContextNotices((current) => ({
+          ...current,
+          [id]:
+            event.data?.outcome === 'compacted'
+              ? 'Conversation compacted'
+              : 'Compaction failed; original context retained',
+        }))
+      }
+
       if (event.threadId !== undefined) {
         const {threadId} = event
         setRunPresentations((current) => ({
@@ -415,7 +427,8 @@ function App() {
           <div className="title">{thread === undefined ? 'New conversation' : sessionTitle(thread, sessions)}</div>
           <div className="topbar-actions">
             <span className="badge">
-              {thread?.provider ?? runtime?.provider ?? '…'} · {thread?.model ?? runtime?.model ?? '…'}
+              {thread?.provider ?? runtime?.provider ?? '…'} · {thread?.model ?? runtime?.model ?? '…'} · Context:{' '}
+              {runtime?.contextMode ?? 'disabled'} {thread ? contextNotices[thread.id] : ''}
             </span>
             {selectedSession === undefined ? null : (
               <button

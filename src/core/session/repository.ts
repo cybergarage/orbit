@@ -38,6 +38,7 @@ import {Session} from './session.js'
 export interface CreateSessionOptions {
   createdAt?: string
   cwd?: string
+  formatVersion?: 1 | 2
   id?: string
   model?: string
   originator?: string
@@ -105,10 +106,11 @@ export class SessionRepository {
       ...(options.systemPrompt === undefined ? {} : {systemPrompt: options.systemPrompt}),
       timestamp: createdAt,
       type: SessionEntryType.Session,
-      version: SESSION_FORMAT_VERSION,
+      version: options.formatVersion ?? SESSION_FORMAT_VERSION,
     }
     const recorder = SessionRecorder.create(file, header, this.scope(id))
     return new Session({
+      formatVersion: header.version,
       journalRoot: this.journalRoot,
       metadata: metadataFromHeader(header, file),
       recorder,
@@ -228,6 +230,7 @@ export class SessionRepository {
       )
     return new Session({
       entries: parsed.entries.slice(1),
+      formatVersion: parsed.header.version,
       journalRoot: this.journalRoot,
       messages,
       metadata: metadataFromHeader(parsed.header, resolvedFile),

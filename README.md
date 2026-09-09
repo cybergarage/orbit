@@ -251,8 +251,8 @@ USAGE
     [--restarters-disabled] [--reviewed-artifacts <value>] [--session-root <value>] [--writers-stopped]
 
 ARGUMENTS
-  ACTION     (initialize|inspect|recover|resume)
-  [SESSION]  Exact session ID for recovery
+  ACTION     (initialize|inspect|recover|resume|migrate-transcript|resume-transcript)
+  [SESSION]  Exact session ID for inspection, recovery or transcript migration
 
 FLAGS
   --exclusive-storage-control   Confirm external exclusive administration of both roots

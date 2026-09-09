@@ -155,7 +155,12 @@ export async function submitInteractiveInput(
   })
   let reply: Message
   try {
-    reply = await agent.invoke([userMessage])
+    reply = await agent.invoke([userMessage], {
+      onEvent(event) {
+        if (event.type === 'context-prepared')
+          state.logger?.info({eventType: 'context.prepared', ...event}, 'Context preparation finished')
+      },
+    })
   } finally {
     await agent.close()
   }
@@ -316,6 +321,7 @@ function InteractiveApp({
 }: InteractiveSessionOptions) {
   const {exit} = useApp()
   const active = useRef<undefined | {agent: Agent; controller: AbortController}>(undefined)
+  const [contextNotice, setContextNotice] = useState('')
   const [approval, setApproval] = useState<ApprovalRequest | undefined>()
   const [blocked, setBlocked] = useState(false)
   const [state, setState] = useState<InteractiveState>(() =>
@@ -426,6 +432,14 @@ function InteractiveApp({
       onAgentCreated?.(agent)
       agent
         .invoke([userMessage], {
+          onEvent(event) {
+            if (event.type === 'context-prepared')
+              setContextNotice(
+                event.outcome === 'compacted'
+                  ? 'Conversation compacted'
+                  : 'Compaction failed; original context retained',
+              )
+          },
           onRunSnapshot: (snapshot) => setApproval(snapshot.approvals[0]),
           signal: controller.signal,
         })
@@ -481,6 +495,7 @@ function InteractiveApp({
 
   return (
     <Box flexDirection="column">
+      {contextNotice ? <Text dimColor>{contextNotice}</Text> : null}
       <Text>Interactive mode. Press Ctrl+C or type /exit to leave.</Text>
       {approval ? (
         <Text color="yellow">
@@ -491,7 +506,10 @@ function InteractiveApp({
       {blocked ? (
         <Text color="red">Execution resources remain quarantined. Query the run before reusing this session.</Text>
       ) : null}
-      <Text dimColor>Current model: {formatProviderModel(state.provider, state.model)}</Text>
+      <Text dimColor>
+        Current model: {formatProviderModel(state.provider, state.model)} · Context:{' '}
+        {state.settings?.contextPolicy?.mode ?? 'disabled'}
+      </Text>
       <Box flexDirection="column" marginTop={1}>
         {state.messages.length === 0 ? <Text dimColor>No messages yet.</Text> : null}
         {state.messages.map((message, index) => (
@@ -524,6 +542,7 @@ export async function runInteractiveSession(options: InteractiveSessionOptions):
     options.session ??
     repository.create({
       cwd: options.cwd,
+      formatVersion: options.settings?.contextPolicy?.mode === 'budgeted' ? 2 : 1,
       model: options.initialModel,
       originator: 'orbit-interactive',
       provider: options.initialProvider,

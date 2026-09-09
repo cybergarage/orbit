@@ -16,6 +16,7 @@ import type {
 import {isMessageType} from '../message/index.js'
 import {isProvider} from '../models/provider.js'
 import {getRoles} from '../models/role.js'
+import {parseCompaction, validateCompactionEntries} from './compaction.js'
 import {SESSION_FORMAT_VERSION, SessionEntryType, TurnPhase} from './entries.js'
 
 export interface ParsedSessionFile {
@@ -61,12 +62,17 @@ export function parseSessionFile(raw: string, file: string): ParsedSessionFile {
   }
 
   validateEntrySequence(entries, file)
+  validateCompactionEntries(entries, header.id, header.version)
   return {entries, header, recovered}
 }
 
 function parseEntry(value: unknown, file: string, line: number): SessionEntry {
   const entry = requireRecord(value, file, line, 'entry')
   switch (entry.type) {
+    case SessionEntryType.Compaction: {
+      return parseCompaction(entry)
+    }
+
     case SessionEntryType.Message: {
       return parseMessageEntry(entry, file, line)
     }
@@ -91,7 +97,7 @@ function parseEntry(value: unknown, file: string, line: number): SessionEntry {
 
 function parseHeaderEntry(entry: Record<string, unknown>, file: string, line: number): SessionHeaderEntry {
   const version = requireNumber(entry.version, file, line, 'version')
-  if (version !== SESSION_FORMAT_VERSION) {
+  if (version !== SESSION_FORMAT_VERSION && version !== 2) {
     throw sessionFileError(file, line, `Unsupported session format version: ${version}`)
   }
 
@@ -112,7 +118,7 @@ function parseHeaderEntry(entry: Record<string, unknown>, file: string, line: nu
       : {systemPrompt: requireString(entry.systemPrompt, file, line, 'systemPrompt')}),
     timestamp: requireString(entry.timestamp, file, line, 'timestamp'),
     type: SessionEntryType.Session,
-    version: SESSION_FORMAT_VERSION,
+    version,
   }
 }
 

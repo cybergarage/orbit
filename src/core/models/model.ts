@@ -81,9 +81,15 @@ export interface ModelToolResultPayload {
 export interface ModelInvokeOptions extends OperatorOptions {
   diagnosticContext?: DiagnosticContext
   diagnostics?: DiagnosticEventBus
+  maxOutputTokens?: number
   maxToolIterations?: number
   signal?: AbortSignal
   tools?: ModelToolSpec[]
+}
+
+export interface PreparedModelInvocation {
+  invoke(): Promise<Message>
+  readonly request: Readonly<Record<string, unknown>>
 }
 
 export interface Model extends Operator<Message[], Message, ModelInvokeOptions> {
@@ -91,4 +97,5 @@ export interface Model extends Operator<Message[], Message, ModelInvokeOptions> 
   getName(suffix?: string): string
   getProvider(): ProviderName
   invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message>
+  prepare?(messages: Message[], options?: Partial<ModelInvokeOptions>): PreparedModelInvocation
 }

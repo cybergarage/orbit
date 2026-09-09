@@ -35,10 +35,39 @@ describe('storage command', () => {
     }
   })
 
+  it('inspects a session and explicitly migrates its transcript without stranding a guard on repeat', async () => {
+    const log = stub(StorageCommand.prototype, 'log')
+    const sessionRoot = path.join(root, 'sessions')
+    const roots = ['--session-root', sessionRoot]
+    const conditions = ['--writers-stopped', '--restarters-disabled', '--exclusive-storage-control']
+    try {
+      await StorageCommand.run(['initialize', ...roots, ...conditions], project)
+      const repository = new SessionRepository({rootDir: sessionRoot})
+      const session = repository.create({cwd: root, id: 'migration-cli'})
+      const file = session.getFile()!
+      await session.close()
+      await StorageCommand.run(['inspect', 'migration-cli', ...roots], project)
+      expect(JSON.parse(log.lastCall.args[0]!).state).to.equal('none')
+      await StorageCommand.run(['migrate-transcript', 'migration-cli', ...roots, ...conditions], project)
+      expect(JSON.parse(fs.readFileSync(file, 'utf8').split('\n')[0]).version).to.equal(2)
+      await StorageCommand.run(['migrate-transcript', 'migration-cli', ...roots, ...conditions], project).then(
+        () => {
+          throw new Error('Repeated v1 migration accepted')
+        },
+        (error) => expect(String(error)).to.contain('version-1'),
+      )
+      const reopened = repository.open(file)
+      expect(reopened.formatVersion).to.equal(2)
+      await reopened.close()
+    } finally {
+      log.restore()
+    }
+  })
+
   it('requires offline conditions and explicit digest review for torn metadata', async () => {
     const log = stub(StorageCommand.prototype, 'log')
-    const sessionRoot = path.join(root, 'sessions');
-      const roots = ['--session-root', sessionRoot]
+    const sessionRoot = path.join(root, 'sessions')
+    const roots = ['--session-root', sessionRoot]
     const conditions = ['--writers-stopped', '--restarters-disabled', '--exclusive-storage-control']
     try {
       await StorageCommand.run(['initialize', ...roots], project).then(

@@ -32,6 +32,10 @@ bind each single-use permission to the actual call.
 
 `ThreadManager` and the application service project the same run snapshots.
 Session history supplies model context; optional diagnostics observe the work.
+Optional budgeted preparation uses the same Run for a tool-free summary call.
+A checkpoint changes selected model input while preserving canonical history;
+it does not prove an operation completed or grant permission. The latest user
+turn remains intact. See [Input budgets and compaction](../context-compaction.md).
 The required execution journal has a separate storage and failure contract.
 An `incomplete` result preserves unknown effects and ownership; requesting stop
 does not establish quiescence. A completed turn may report a failed target test.

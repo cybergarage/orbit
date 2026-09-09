@@ -48,7 +48,9 @@ where the platform supports POSIX permissions.
 
 ## File format
 
-The current format version is `1`. Every entry is one JSON object followed by
+The default compatibility format is `1`; budgeted Sessions use transcript `2`
+with compaction checkpoints. See [Input budgets and compaction](context-compaction.md).
+Every entry is one JSON object followed by
 a newline. The entry's top-level `type` is its discriminator.
 
 ### Session header
@@ -245,9 +247,9 @@ automatically.
 
 `Session` is the canonical source for model-visible conversation history.
 After an agent records new input, `SessionContextBuilder` projects the current
-session into a provider-neutral `SessionModelContext`. The initial linear
-implementation returns copied user, assistant, and tool messages in their
-persisted oldest-to-newest order.
+session into a provider-neutral `SessionModelContext`. Uncompacted Sessions return copied user, assistant and tool messages in their
+persisted oldest-to-newest order. A valid v2 checkpoint instead supplies its
+untrusted summary followed by the retained original suffix.
 
 Every model iteration is assembled as:
 
@@ -271,9 +273,11 @@ top-level `system` field.
 
 `SessionContextBuilder` is exported and can be injected through
 `AgentOptions.deps.sessionContextBuilder` for embedding and deterministic
-tests. The version 1 builder does not compact, branch, filter by modality, or
-enforce a token budget. Those policies can be added at this projection
-boundary without changing callers back to complete-history submission.
+tests. Budgeted Agent calls use the shared managed preparer and synchronous
+checkpoint projection; a custom builder is not a budget bypass. See
+[Input budgets and compaction](context-compaction.md) for profiles, failure
+behavior and exclusive v1-to-v2 migration. Arbitrary branching and split-turn
+compaction are not implemented.
 
 ## Interactive mode
 
