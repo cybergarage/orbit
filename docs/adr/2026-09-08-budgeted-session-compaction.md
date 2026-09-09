@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-08
-decision-date: null
+decision-date: 2026-09-09
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -19,7 +19,7 @@ solve bounded model input.
 
 ## Decision
 
-**Proposed, not accepted or implemented.** Recommend a managed asynchronous
+**Accepted on 2026-09-09; implementation not started.** Use a managed asynchronous
 context-preparation step that produces a validated, synchronized compaction
 checkpoint, followed by a pure synchronous projection of that checkpoint and
 retained conversation. The application enables this behavior through an
@@ -234,7 +234,7 @@ these systems were not executed in this investigation.
 ## Implementation and Confirmation
 
 Not started. No implementation commits or completion date are recorded.
-Before implementation, obtain explicit acceptance and record its actual date.
+The author delegated acceptance after review on 2026-09-09.
 Implementation should proceed by dependencies, not book chapter tags or gates.
 
 | Verification        | Required evidence                                                                                                                                                                                          |
@@ -254,15 +254,36 @@ After implementation, record full implementation hashes and executed evidence
 in a later documentation commit. Do not mark completed with required acceptance
 checks still unverified. Existing five partial ADRs are not completed by this work.
 
+### Review and delegated acceptance — 2026-09-09
+
+Reviewed against clean source at `d5939bb1cf7746748bac659dcc18f3bf30dbe3ab`;
+there were no implementation changes after the proposal. The author explicitly
+delegated acceptance if review found no blocking problem. Accept the recommended
+contract, including explicit profiles, compatibility mode, protected whole turns,
+managed tool-free summaries and exclusive transcript migration. Prior decisions
+retain their rationale and status. The following implementation clarifications
+preserve, rather than replace, the proposed safety requirements:
+
+- Generic writer recovery must refuse a pending transcript migration intent;
+  only migration-aware exclusive recovery may validate its digests and finish it.
+- The frozen request inspected by the estimator must be the request sent by the
+  adapter, with the validated output cap already applied. Re-projecting mutable
+  inputs after estimation is not sufficient.
+- Disabled compatibility mode does not silently consume compaction records as
+  ordinary transcript messages. A v2 Session with checkpoints still replays its
+  validated context; disabling the budget only disables automatic preparation.
+
+No implementation or new platform/quality evidence is claimed by acceptance.
+
 ## Follow-up Work
 
-Author decisions are whether to adopt (1) explicit profiles and an unbudgeted
+The delegated acceptance includes (1) explicit profiles and an unbudgeted
 compatibility mode, (2) whole-turn protection with explicit stopping, (3) a
 managed tool-free summarizer, and (4) transcript v2 with exclusive migration and
-replay activation distinct from a previous API acknowledgement. These are one
-cohesive bounded-context contract; acceptance can request changes to any part.
+replay activation distinct from a previous API acknowledgement. These form one
+cohesive bounded-context contract.
 
-After acceptance, implement and verify before drafting chapter 10's operational
+Implement and verify before drafting chapter 10's operational
 claims. Update architecture, concepts, context/session/model documentation,
 API exports and migration instructions. Initial profiles must be labeled as
 trial values; measurements cannot be inferred from deterministic fixtures.
