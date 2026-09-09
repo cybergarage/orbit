@@ -2,9 +2,11 @@
 status: accepted
 proposed-date: 2026-09-08
 decision-date: 2026-09-09
-implementation-status: not-started
+implementation-status: partial
 implementation-completed-date: null
-implementation-commits: []
+implementation-commits:
+  - 2a33ed20e27a5a526d1923cad20890cc46185135
+  - 8fbfee61243b27d5d243aeaf0d127d019af32261
 superseded-by: []
 ---
 
@@ -19,7 +21,7 @@ solve bounded model input.
 
 ## Decision
 
-**Accepted on 2026-09-09; implementation not started.** Use a managed asynchronous
+**Accepted on 2026-09-09; implementation partial.** Use a managed asynchronous
 context-preparation step that produces a validated, synchronized compaction
 checkpoint, followed by a pure synchronous projection of that checkpoint and
 retained conversation. The application enables this behavior through an
@@ -233,9 +235,10 @@ these systems were not executed in this investigation.
 
 ## Implementation and Confirmation
 
-Not started. No implementation commits or completion date are recorded.
-The author delegated acceptance after review on 2026-09-09.
-Implementation should proceed by dependencies, not book chapter tags or gates.
+The author delegated acceptance after review on 2026-09-09. The acceptance
+commit preserved `not-started`; the following later implementation evidence
+records delivered behavior without changing the accepted reasons. Completion
+remains null because the open items below are not confirmed.
 
 | Verification        | Required evidence                                                                                                                                                                                          |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -253,6 +256,58 @@ Implementation should proceed by dependencies, not book chapter tags or gates.
 After implementation, record full implementation hashes and executed evidence
 in a later documentation commit. Do not mark completed with required acceptance
 checks still unverified. Existing five partial ADRs are not completed by this work.
+
+### Implementation evidence — 2026-09-09
+
+Implementation commit: `2a33ed20e27a5a526d1923cad20890cc46185135`.
+Additional boundary tests: `8fbfee61243b27d5d243aeaf0d127d019af32261`.
+The implementation includes public `ContextPolicy`, `ContextProfile`,
+`RequestEstimator`, prepared model invocations, structured summaries, transcript
+v2 entries and exclusive migration/inspection. Agent snapshots the JSON profile
+per Run; injected estimator functions remain in memory. CLI, Ink, Service and
+GUI consume the shared policy and context events. Maintained architecture,
+concepts, glossary, settings/session guides and generated CLI help were updated.
+
+| Area                     | Executed evidence and limits                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Accounting               | `test/core/prepared-model.test.ts` captures the same frozen request passed to fake OpenAI/Anthropic/Ollama SDK clients, including tool schemas and output caps. `context-compaction.test.ts` checks unknown accounting, mismatched/invalid profiles, protected overflow and summary-request overflow. These are SDK-boundary fixtures, not live provider measurements.                 |
+| Thresholds and summaries | Below/at/above trigger, success, empty/oversized/invalid-test output, invented source IDs, tool-call output, original-input fallback and refusal when it cannot fit. Summary calls consume the owning Run's model allowance.                                                                                                                                                           |
+| Ownership                | Cooperative cancellation activates no checkpoint. A noncooperative summary crosses the Run deadline, returns incomplete with retained ownership, and remains quarantined after late settlement until explicit stopped-work reconciliation. The original result stays unchanged.                                                                                                        |
+| Replay                   | Original IDs and latest input survive compaction/reopen; repeated checkpoints validate predecessor and digest. Tampered originals, missing predecessors, stale heads and invalid retained boundaries reject replay. Nested projected payloads are isolated.                                                                                                                            |
+| Saving                   | `compaction-save-interruption.mjs` reports 27 passing cases: observed append/sync boundaries and injected sync failure. A failed sync does not activate the live candidate; surviving complete entries are validated and re-synchronized when reopened.                                                                                                                                |
+| Migration                | `compaction-migration-interruption.mjs` reports 38 passing boundaries around guard/intent/backup/replacement writes, syncs, rename and removal. Each child must reach the named boundary and exit with the expected code; timeout or a crash elsewhere fails. Normal admission/isOpen and generic recovery refuse pending migration; exclusive resume validates source/target digests. |
+| CLI and application      | Actual storage command tests cover read-only Session inspection, explicit v1 upgrade and repeated-upgrade rejection without a stranded guard. Service integration verifies new persistent v2 Sessions and `context.prepared` diagnostics. GUI/Ink display changes are source/build verified; this work does not claim new visual interaction or transport-fault trials.                |
+| macOS                    | Node 26.5.0 arm64: headers:check, build and full test succeed, 474 passing. ESLint reports 0 errors and 19 warnings (15 existing warnings and four complexity warnings in changed runtime paths).                                                                                                                                                                                      |
+| Linux                    | Fresh Node 22.23.2 arm64 Debian container: reproducible npm ci, headers:check, native build and full test succeed, 474 passing. No real credentials, models or personal Session roots are used.                                                                                                                                                                                        |
+
+The book's isolated `examples/context-compaction-demo.mjs` runs on both Unix
+environments through the real public Agent/Session APIs. With explicitly
+artificial character accounting, the request changes from 4,496 to 835 units;
+4 original messages remain, the projected conversation has 3 messages, and
+reopen uses one ordinary call without regenerating the summary. It checks
+failed-summary fallback and protected-input refusal. These numbers describe
+this deterministic fixture only, not provider tokens or optimal settings.
+
+### Open confirmation and restart conditions
+
+- Migration retains a `.v1-backup` containing the original conversation. The
+  existing deletion service does not remove that additional copy. A scoped
+  implementation that validates its Session ID, v1 format, canonical location
+  and single-link identity before removing it during explicit Session deletion
+  is awaiting the author's specific permission after automatic approval review
+  rejected that code change. No backup-deletion code or real-data deletion was
+  performed. Do not claim all conversation copies are erased. Resume this
+  integration only after the backup policy is confirmed, then test rejection
+  and interrupted deletion before recording completion.
+- Live model semantic preservation, actual provider counting/cost and product
+  thresholds remain unmeasured. Resume with an isolated coding target, model
+  configuration, representative long outputs and explicit quality criteria.
+- Windows, real operational exclusion/restart control and physical storage
+  failures remain deferred by the author. Resume when a supported environment,
+  target application/storage and relevant SLI/SLO conditions are available.
+- The existing five accepted/partial execution and storage ADRs retain their
+  statuses and accepted reasons. This change neither completes their deferred
+  trials nor adopts unrelated Skill/Graph/evaluation designs.
 
 ### Review and delegated acceptance — 2026-09-09
 

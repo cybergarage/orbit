@@ -290,7 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                |
 | ---------- | ---------- | -------------- | --------------------------------------------------------------------------------------- |
-| 2026-09-08 | accepted   | not-started    | [Budgeted Session Compaction](2026-09-08-budgeted-session-compaction.md)                |
+| 2026-09-08 | accepted   | partial        | [Budgeted Session Compaction](2026-09-08-budgeted-session-compaction.md)                |
 | 2026-08-22 | accepted   | completed      | [GUI Application Architecture](2026-08-22-gui-application.md)                           |
 | 2026-08-22 | accepted   | completed      | [Session Persistence Design](2026-08-22-session-persistence.md)                         |
 | 2026-08-23 | accepted   | completed      | [Model Response and Tool Integration](2026-08-23-model-response-tool-integration.md)    |
@@ -343,7 +343,7 @@ or book production. [Bounded managed Everything schema verification](2026-09-07-
 now records the requested compatibility scope and Unix integration results.
 Book/application production can proceed; broader MCP functionality is not inferred.
 
-[Budgeted Session compaction](2026-09-08-budgeted-session-compaction.md) was accepted on 2026-09-09 through delegated review and remains not-started. It does not adopt the future compaction
+[Budgeted Session compaction](2026-09-08-budgeted-session-compaction.md) was accepted on 2026-09-09 through delegated review and is now partial. Its implementation record links the frozen-request, managed-summary and transcript-v2 implementation, both Unix suites (474 passing each), and open backup/quality/platform confirmation. It does not adopt the future compaction
 phases of the historical linear-assembly ADR or change any accepted/partial
 record. Model profiles, transcript v2 migration and whole-turn protection are included
 in the acceptance; the review clarifies migration-aware recovery and frozen requests.

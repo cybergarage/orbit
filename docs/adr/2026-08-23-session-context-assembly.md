@@ -5,7 +5,7 @@ decision-date: null
 implementation-status: completed
 implementation-completed-date: 2026-08-23
 implementation-commits:
-  - "e72fb72e72f1419c5e146746394df0c232d9e353"
+  - 'e72fb72e72f1419c5e146746394df0c232d9e353'
 superseded-by: []
 ---
 
@@ -696,3 +696,12 @@ testable projection boundary rather than by caller-managed array concatenation.
 - [OpenAI Responses API: create a response](https://developers.openai.com/api/reference/cli/resources/responses/methods/create)
 - [Orbit session documentation](../session.md)
 - [Orbit session persistence analysis](2026-08-22-session-persistence.md)
+
+### Implemented extension — 2026-09-09
+
+[Budgeted Session Compaction](2026-09-08-budgeted-session-compaction.md) adds
+optional managed input budgeting and transcript v2 checkpoints in
+`2a33ed20e27a5a526d1923cad20890cc46185135`. Its separate implementation record
+owns validation and open confirmation. This extension preserves this record's
+original rationale and completed scope; it does not adopt all historical
+future phases or replace canonical Session ownership.
