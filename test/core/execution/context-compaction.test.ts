@@ -419,6 +419,122 @@ describe('budgeted context preparation', () => {
     }
   })
 
+  for (const tokens of [1999, 2000, 2001])
+    it('uses the declared trigger boundary at ' + tokens, async () => {
+      const session = new Session()
+      const model = fixtureModel(oldConversation(session))
+      const selected: ContextPolicy = {
+        estimator(request) {
+          const messages = request.messages as string[]
+          const count = messages[0].startsWith('Summarize')
+            ? 2000
+            : messages[0].startsWith('Untrusted')
+              ? 900
+              : messages.length === 1
+                ? 100
+                : tokens
+          return {
+            components: {fixture: count},
+            kind: 'estimated',
+            model: profile.model,
+            provider: profile.provider,
+            revision: 'boundary',
+            tokens: count,
+          }
+        },
+        mode: 'budgeted',
+        profile,
+      }
+      const {result} = await execute(session, model, selected)
+      expect(result.outcome).to.equal('completed')
+      expect(model.requests).to.have.length(tokens < 2000 ? 1 : 2)
+    })
+
+  it('rejects a missing predecessor, stale source head and invalid retained boundary on replay', async () => {
+    const session = new Session()
+    await execute(session, fixtureModel(oldConversation(session)))
+    for (const change of [
+      {previousId: 'missing'},
+      {sourceHeadId: 'missing'},
+      {firstRetainedId: 'missing'},
+      {prefixEndId: 'missing'},
+    ]) {
+      const entries = structuredClone(session.getEntries())
+      Object.assign(entries.find((entry) => entry.type === 'compaction')!, change)
+      expect(
+        () =>
+          new Session({
+            entries,
+            formatVersion: 2,
+            messages: session.getConversationMessages(),
+            metadata: session.getMetadata(),
+          }),
+      ).to.throw()
+    }
+  })
+
+  it('retains ownership after a noncooperative summary exceeds the Run deadline', async () => {
+    const session = new Session()
+    oldConversation(session)
+    let finish!: (message: Message) => void
+    let entered!: () => void
+    const pending = new Promise<Message>((resolve) => {
+      finish = resolve
+    })
+    const started = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    const model: Model = {
+      getModel: () => 'fixture',
+      getName: () => 'fixture',
+      getProvider: () => 'ollama',
+      async invoke() {
+        throw new Error('Unexpected raw call')
+      },
+      prepare(messages) {
+        return {
+          invoke() {
+            entered()
+            return pending
+          },
+          request: freezeModelRequest({messages: messages.map((message) => message.content)}),
+        }
+      },
+    }
+    const logs = new MemorySessionLogStore()
+    const agent = new Agent({
+      contextPolicy: policy,
+      cwd: os.tmpdir(),
+      deps: {createModel: () => model},
+      execution: {limits: {cleanupMs: 15, elapsedMs: 150}},
+      logStore: logs,
+      settings: {model: 'fixture', provider: 'ollama'},
+      state: new State(session),
+      toolProfile: 'none',
+    })
+    try {
+      const handle = await agent.startRun([new Message(MessageType.User, {content: 'Continue'})])
+      await started
+      const result = await handle.finished
+      expect(result.outcome).to.equal('incomplete')
+      expect(result.quiescence).to.equal(false)
+      expect(result.unresolved.some((item) => item.includes('context-summary'))).to.equal(true)
+      expect(session.getCompaction()).to.equal(undefined)
+      finish(new Message(MessageType.Assistant, {content: '{}'}))
+      await pending
+      expect(handle.getSnapshot().quarantined).to.equal(true)
+      expect(handle.getSnapshot().unresolved).to.deep.equal([])
+      await agent.supervisor.reconcileRun(result.runId, {confirmedStopped: true, operations: []})
+      await agent.close()
+      expect(handle.getSnapshot().result).to.deep.equal(result)
+      expect(handle.getSnapshot().unresolved).to.deep.equal([])
+    } finally {
+      finish(new Message(MessageType.Assistant, {content: '{}'}))
+      await agent.close()
+      await logs.close()
+    }
+  })
+
   it('migrates an explicit v1 transcript and reopens the same v2 checkpoint', async () => {
     const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-context-v2-')))
     const repository = new SessionRepository({rootDir: root})
