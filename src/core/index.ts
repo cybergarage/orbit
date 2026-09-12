@@ -53,6 +53,32 @@ export {
   OrbitErrorCode,
 } from './errors/index.js'
 export type {OrbitErrorOptions} from './errors/index.js'
+export {
+  compareEvaluationReports,
+  EVALUATION_FORMAT_LIMITS,
+  evaluationClaimsDigest,
+  evaluationDigest,
+  inspectEvaluationEvidence,
+  sealEvaluationReport,
+  validateEvaluationPlan,
+} from './evaluation/index.js'
+export type {
+  EvaluationAttempt,
+  EvaluationCategory,
+  EvaluationComparison,
+  EvaluationDisposition,
+  EvaluationEvidence,
+  EvaluationImports,
+  EvaluationInspection,
+  EvaluationMeasurement,
+  EvaluationMetric,
+  EvaluationMetricSummary,
+  EvaluationPlan,
+  EvaluationReport,
+  EvaluationReportPayload,
+  EvaluationRow,
+  EvaluationVariantSummary,
+} from './evaluation/index.js'
 export * from './execution/index.js'
 export {runInteractiveSession} from './interactive.js'
 export type {

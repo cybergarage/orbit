@@ -202,3 +202,20 @@ as new instructions. Journal admission/readiness records contain metadata only.
 ThreadManager compares selections before replay; CLI, Ink and GUI share that
 contract. Product root discovery lives in `src/apps/skill-catalog.ts`.
 See [Explicit Skill selection](skills.md) for APIs, limits and reader migration.
+
+## Read-only workflow evaluation
+
+`src/core/evaluation/` provides bounded JSON parsing, closed revision-1 schemas,
+trusted-plan validation, evidence inspection and report comparison. Public APIs
+are exported through both package entry points. `json.ts` checks input bounds
+before materializing the tree; `plan.ts` validates schedules and seals immutable
+reports; `evidence.ts` reuses journal, transcript/Skill and Graph validators;
+`metrics.ts` preserves units, provenance and coverage; `comparison.ts` enforces
+one trial per slot, revision history and per-variant denominators.
+
+The module consumes supplied text only. It does not call the filesystem journal
+inspector, Agent, models, tools, graders or application services. Applications
+continue to use the existing managed Run/Graph entry points for execution and own
+isolation, independent grading and exported reports. No execution resource,
+authorization path, mandatory record version or deletion scope is added. See
+[Workflow evaluation](workflow-evaluation.md) for the public format and trust limits.

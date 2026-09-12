@@ -159,3 +159,16 @@ success additionally requires final namespace synchronization. See
   separately.
 
 See [Orbit Concepts](README.md) for document ownership and status rules.
+
+### Evaluation plan
+
+A trusted, pre-dispatch declaration of cases, independent checks, evidence policy,
+variants and scheduled trial slots. It is supplied separately from reports;
+a report cannot designate its own trust authority.
+
+### Evaluation report
+
+An immutable application-owned export of trial facts, evidence, grading and
+measurements bound to a plan. Core inspects supplied text and compares fixed
+per-variant denominators. A report is not a required Session/journal record,
+a runner or proof of real-model quality. See [Workflow evaluation](../workflow-evaluation.md).
