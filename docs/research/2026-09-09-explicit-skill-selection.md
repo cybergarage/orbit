@@ -162,7 +162,7 @@ The proposed ADR supplies a concrete order, UI contract and test matrix.
 
 ## Related Decisions and References
 
-- [Proposed Run-scoped Skill Selection](../adr/2026-09-09-run-scoped-skill-selection.md).
+- [Run-scoped Skill Selection](../adr/2026-09-09-run-scoped-skill-selection.md).
 - [Accepted Budgeted Session Compaction](../adr/2026-09-08-budgeted-session-compaction.md).
 - [Earlier cross-product Skill ownership investigation](2026-09-03-grok-bot-architecture-and-skill-ownership.md), retained as historical evidence; this note does not adopt Grok Bot scheduling or agent rosters.
 
@@ -220,3 +220,11 @@ tests on macOS arm64 Node 26.5.0, with 0 lint errors and 19 existing warnings.
 No source/test/dependency changes resulted. Linux and live UI trials were not
 rerun; earlier Unix results remain historical evidence. Documentation metadata,
 local links and proposal status are checked separately from runtime behavior.
+
+## Subsequent adoption — 2026-09-12
+
+The author explicitly accepted the reviewed recommendation in the linked
+[ADR acceptance record](../adr/2026-09-09-run-scoped-skill-selection.md#author-acceptance--2026-09-12).
+The ADR is accepted / not-started. This note preserves the original investigation
+and review as non-binding historical evidence; it does not claim implementation
+or resolve the separate backup-deletion authorization and deferred trials.

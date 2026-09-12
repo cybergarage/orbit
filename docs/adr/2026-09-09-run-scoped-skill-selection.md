@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-09
-decision-date: null
+decision-date: 2026-09-12
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -19,11 +19,48 @@ standing prompt accumulation and treating instructional text as tool permission.
 
 ## Decision
 
-**Proposed; not accepted or implemented.** Introduce a bounded, source-identified
+**Accepted on 2026-09-12 by the author; implementation not started.** Introduce a bounded, source-identified
 Skill catalog and explicit selections on managed Agent/Service Runs. Preserve
 the existing single-file Skill API. Core owns reading, validation, per-Run input
 and durable snapshots; the application chooses catalog roots and the user's
-selection. Names below are proposed API names, not current exports.
+selection. Names below describe the intended API, not current exports.
+
+### Author acceptance — 2026-09-12
+
+The author explicitly accepts the recommendation including the 2026-09-12 review
+in `7f7f3beb075a83887e6d29f024ea97bb98b6f555`. This is a direct decision on Skill
+selection, not reuse of the earlier compaction delegation. The accepted costs are:
+
+- Explicit roots and source IDs, bounded full-file listing, a strict parser with
+  a maintained dependency, and preservation of the permissive legacy Skill API.
+- One-Run application, exact source snapshots and compatible reader deployment,
+  including complete unknown-record refusal and the existing torn-tail exception.
+- Root rebinding and detected-replacement relisting, ordered replay identity at
+  every entry point, dedicated-summary exclusion, BOM/body/order validation,
+  pending-I/O ownership and the specified UI selection lifecycle.
+- A revision-1 encoded-record ceiling of 4 MiB, distinct from product limits;
+  lowering product limits does not invalidate previously valid stored records.
+
+The bounds are initial, unmeasured values to validate in implementation trials,
+not optimal settings. At acceptance, local HEAD is the review commit above, the
+working tree is clean, and source/test/dependency content is unchanged from the
+proposal. Public main is `7b4903fb88db5ed53cac7ef5986c75e22a626897`; its difference
+from local HEAD consists only of the four reviewed documents. No new material
+contradiction was found against the reviewed Run, budget and storage conditions.
+
+This decision adds Skill selection to the existing architecture without
+superseding or re-accepting any of the six accepted / partial execution, storage
+and compaction decisions. Their reasons and implementation evidence remain
+unchanged. The `.v1-backup` deletion authorization is still pending and is
+explicitly excluded from this acceptance. Windows, representative application,
+operational and physical-fault trials retain the author's existing deferrals.
+Bounded managed Everything support remains verified; broad support is not implied.
+
+Only the adoption record is authorized in this step. Implementation status is
+not-started, completion date is null, and implementation commits are empty. No
+runtime, dependency, test, manuscript, figure or completed example is produced.
+The original investigation and dated review below are historical evidence; their
+proposed/not-started statements describe their own point in time.
 
 ### Catalog, roots and identity
 
@@ -38,7 +75,7 @@ source diagnostic. No root means no active Skill feature.
 Discover only immediate child directories containing `SKILL.md`. Do not recurse
 arbitrarily, follow candidate-directory/file symlinks, or auto-read scripts and
 linked resources. Stream enumeration with bounded entries and bytes; sort the
-bounded results for reproducible display. Proposed initial ceilings are 8
+bounded results for reproducible display. Initial product ceilings are 8
 roots, 4,096 inspected directory entries, 128 candidates, 64 KiB per file,
 2 MiB total bytes read per listing and 4 selected skills per Run. Validate
 positive finite integers and report which limit stopped listing. Return
@@ -169,7 +206,7 @@ the exact stored source under its recorded parser/projection revision; reject an
 inconsistent body even if the source digest is valid. Reject unsupported revisions
 rather than reinterpret history with a newer parser. Bound snapshot count and
 bytes on both append and decode; JSON escaping and stored derived bodies can
-exceed the source-byte total. Propose a fixed 4 MiB UTF-8 encoded skill_context
+exceed the source-byte total. Use a fixed 4 MiB UTF-8 encoded skill_context
 line ceiling for record revision 1, checked before JSON parsing and before append.
 This is an unmeasured format bound, not a whole-Session memory guarantee. Readers
 validate historical records under their recorded format revision, not a newly
@@ -305,7 +342,7 @@ Primary source links and limits are in the research note.
 ## Implementation and Confirmation
 
 Not started. No implementation hashes or completion date are recorded. The
-following are required tests after explicit adoption; baseline tests are not
+following are required implementation tests; baseline tests are not
 substitutes.
 
 | Area             | Required confirmation                                                                                                                                                                                      |
@@ -326,6 +363,14 @@ Record implementation commit hashes and evidence in a later documentation
 commit, never pre-fill them in this proposal.
 
 ## Follow-up Work
+
+Implement the accepted scope only when implementation is requested, then run the
+confirmation matrix and record full implementation hashes in a later evidence
+commit. Parser package/version and API spelling remain implementation choices
+within these adopted constraints. Preserve all deferred checks and do not infer
+implementation completion from this acceptance.
+
+### Pre-acceptance decision checklist (historical)
 
 Author decision is needed on the recommended cohesive scope, especially:
 (1) explicit roots and source IDs without silent precedence, (2) bounded full

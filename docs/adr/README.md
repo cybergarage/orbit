@@ -290,7 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                |
 | ---------- | ---------- | -------------- | --------------------------------------------------------------------------------------- |
-| 2026-09-09 | proposed   | not-started    | [Run-scoped Skill Selection](2026-09-09-run-scoped-skill-selection.md)                  |
+| 2026-09-09 | accepted   | not-started    | [Run-scoped Skill Selection](2026-09-09-run-scoped-skill-selection.md)                  |
 | 2026-09-08 | accepted   | partial        | [Budgeted Session Compaction](2026-09-08-budgeted-session-compaction.md)                |
 | 2026-08-22 | accepted   | completed      | [GUI Application Architecture](2026-08-22-gui-application.md)                           |
 | 2026-08-22 | accepted   | completed      | [Session Persistence Design](2026-08-22-session-persistence.md)                         |
@@ -369,5 +369,11 @@ The four earlier records remain accepted / partial, and the new implementation
 starts only after the acceptance commit.
 
 The [Skill proposal review](2026-09-09-run-scoped-skill-selection.md#review-findings-and-author-decision--2026-09-12) clarifies ordered request replay, dedicated
-summary input, exact snapshot validation and interrupted preparation. It remains
-proposed / not-started; baseline verification does not approve or implement it.
+summary input, exact snapshot validation and interrupted preparation. The review
+left it proposed / not-started; baseline verification did not approve or implement it.
+
+[Run-scoped Skill Selection](2026-09-09-run-scoped-skill-selection.md#author-acceptance--2026-09-12)
+was explicitly accepted by the author on 2026-09-12, including the review and
+revision-1 4 MiB record ceiling. It is accepted / not-started, with no implementation
+hashes or completion date. The six prior partial decisions, deferred trials and
+pending backup-deletion authorization are unchanged.
