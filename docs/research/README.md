@@ -117,6 +117,7 @@ at pinned revisions by default. If either is not relevant, record why.
 
 | Investigated | Status     | Topic                                                                                                                                   |
 | ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-12   | current    | [Workflow Evaluation Evidence and Comparable Trials](2026-09-12-workflow-evaluation-evidence.md)                                        |
 | 2026-09-12   | current    | [Bounded Processor Graph Execution](2026-09-12-bounded-processor-graph-execution.md)                                                    |
 | 2026-09-09   | current    | [Explicit Skill Selection and Run-scoped Instructions](2026-09-09-explicit-skill-selection.md)                                          |
 | 2026-09-08   | current    | [Input Budgets and Durable Session Compaction](2026-09-08-input-budgets-and-compaction.md)                                              |
@@ -135,9 +136,11 @@ at pinned revisions by default. If either is not relevant, record why.
 The [Skill proposal review](../adr/2026-09-09-run-scoped-skill-selection.md#review-findings-and-author-decision--2026-09-12) clarifies ordered request replay, dedicated
 summary input, exact snapshot validation and interrupted preparation. That review
 left the ADR proposed / not-started. The author subsequently accepted it on
-2026-09-12; implementation remains not-started. Research and baseline verification
+2026-09-12. It was not-started at acceptance; its subsequent [implementation evidence](../adr/2026-09-09-run-scoped-skill-selection.md#implementation-evidence--2026-09-12) records accepted / partial. Research and baseline verification
 do not themselves authorize implementation.
 
-The [bounded Graph investigation](2026-09-12-bounded-processor-graph-execution.md) updates the execution baseline and recommends a single managed Run with coarse Agent nodes. Its linked ADR was accepted by the author on 2026-09-12 and remains not-started; existing accepted/partial records and deferred trials are unchanged. The earlier adaptive-runtime note remains historical evidence, including broader directions outside the new proposal.
+The [bounded Graph investigation](2026-09-12-bounded-processor-graph-execution.md) updates the execution baseline and recommends a single managed Run with coarse Agent nodes. Its linked ADR was accepted by the author on 2026-09-12 with implementation not-started at acceptance. Its subsequent [implementation evidence](../adr/2026-09-12-managed-processor-graph.md#implementation-evidence--2026-09-12) records accepted / partial; the earlier accepted/partial records and deferred trials are unchanged. The earlier adaptive-runtime note remains historical evidence, including broader directions outside the new proposal.
 
 The [Graph proposal review](2026-09-12-bounded-processor-graph-execution.md#same-baseline-proposal-review--2026-09-12) corrects value/finalizer assumptions and makes staged catalog validation, replay binding, transcript synchronization and failure-prefix decoding explicit. That review left the ADR proposed / not-started. The author subsequently accepted it; the seven accepted/partial ADRs and deferred trials are unchanged.
+
+The [evaluation investigation](2026-09-12-workflow-evaluation-evidence.md) reuses the optimization-papers research and compares current Run/Graph evidence with missing historical measurements. Its [ADR](../adr/2026-09-12-evidence-based-workflow-evaluation.md) is proposed / not-started; all eight accepted/partial decisions and author-deferred trials remain unchanged.

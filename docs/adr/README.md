@@ -290,6 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                |
 | ---------- | ---------- | -------------- | --------------------------------------------------------------------------------------- |
+| 2026-09-12 | proposed   | not-started    | [Evidence-based Workflow Evaluation](2026-09-12-evidence-based-workflow-evaluation.md)  |
 | 2026-09-12 | accepted   | partial        | [Managed Processor Graph](2026-09-12-managed-processor-graph.md)                        |
 | 2026-09-09 | accepted   | partial        | [Run-scoped Skill Selection](2026-09-09-run-scoped-skill-selection.md)                  |
 | 2026-09-08 | accepted   | partial        | [Budgeted Session Compaction](2026-09-08-budgeted-session-compaction.md)                |
@@ -388,3 +389,5 @@ authorization are unchanged.
 [Managed Processor Graph](2026-09-12-managed-processor-graph.md#author-acceptance--2026-09-12) was explicitly accepted on 2026-09-12, including the review corrections, one Run/turn, input protection and reader migration costs. It was not-started at acceptance. The subsequent [implementation evidence](2026-09-12-managed-processor-graph.md#implementation-evidence--2026-09-12) records the shared Graph runtime and Unix verification as accepted / partial, with a null completion date and full implementation hashes. It extends the shared lifecycle/journal without superseding the seven earlier accepted/partial decisions.
 
 The [Graph proposal review](2026-09-12-managed-processor-graph.md#proposal-review--2026-09-12) corrects value/finalizer assumptions and makes staged catalog validation, replay binding, transcript synchronization and failure-prefix decoding explicit. That review left the ADR proposed / not-started; the subsequent author acceptance is recorded above. The seven accepted/partial ADRs and deferred trials are unchanged.
+
+[Evidence-based Workflow Evaluation](2026-09-12-evidence-based-workflow-evaluation.md) proposes a bounded read-only core contract for supplied evidence and comparison, with trial execution, independent grading and export storage owned by applications. Missing measurements and planned-slot denominators remain explicit. It is proposed / not-started, does not supersede any of the eight accepted/partial records and does not authorize candidate selection or implementation.

@@ -45,9 +45,9 @@ Orbit emits structured model, tool, turn, and thread events and persists
 session records. These are useful prerequisites for later evaluation, but they
 do not constitute an adaptive control plane.
 
-Orbit does not currently define graph versions, evaluation datasets, objective
-functions, candidate generation, replay isolation, promotion policy, canary
-routing, or graph rollback.
+Orbit now compiles bounded immutable Processor Graphs with descriptor identities and records their managed execution paths. Saved inspection checks journal/transcript evidence without automatically resuming interrupted work. See [Processor Graphs](../processor-graphs.md) for the implemented scope.
+
+Orbit does not currently implement evaluation datasets/report APIs, objective functions, candidate generation, replay isolation, promotion policy, canary routing or graph rollback. The [evaluation proposal](../adr/2026-09-12-evidence-based-workflow-evaluation.md) would add read-only evidence comparison; it is not accepted or implemented.
 
 ## Directional Model
 
