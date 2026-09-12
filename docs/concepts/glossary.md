@@ -38,8 +38,7 @@ implementation claim, or delivery commitment.
 ### Edge
 
 A declared, validated transition from one Processor output to another
-Processor input. General graph edges are directional and not currently
-implemented.
+Processor input. The managed Graph supports declared serial edges and router labels; parallel edges remain directional.
 
 ### Execution plane
 
@@ -49,7 +48,7 @@ budgets and policy, records evidence, and produces a terminal outcome.
 ### Graph version
 
 An immutable identity for a Processor Graph definition and the policies needed
-to execute it. Graph versions are directional and not currently implemented.
+to execute it. The managed Graph binds this identity at admission; adaptive version promotion remains directional.
 
 ### Operator
 
@@ -66,8 +65,7 @@ not a Processor.
 ### Processor Graph
 
 A versioned composition of Processor nodes and declared transitions with an
-entry, terminal outcomes, budgets, and traceable routing. Orbit does not
-currently implement a general Processor Graph. See
+entry, terminal outcomes, budgets, and traceable routing. Orbit implements bounded serial Graphs with declared routing; general parallel composition remains directional. See
 [Processor Graph](processor-graph.md).
 
 ### Projector
@@ -85,7 +83,7 @@ an event or result. It is not currently a distinct Orbit interface.
 
 A conceptual Processor role that selects one of a graph node's declared
 outgoing edges from explicit state and output. It cannot invent an undeclared
-destination. Orbit does not currently implement Router as a runtime primitive.
+destination. The managed Graph implements this role as a trusted pure adapter.
 
 ### Run
 

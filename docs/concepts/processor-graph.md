@@ -2,8 +2,7 @@
 
 ## Purpose
 
-The Processor Graph is Orbit's directional model for composing Processors and
-making agent control flow explicit, inspectable, versioned, and testable.
+The Processor Graph composes executable stages with explicit, inspectable, versioned and testable control flow. Orbit implements a bounded serial subset; broader composition is labeled directional below.
 
 ## Conceptual Model
 
@@ -25,14 +24,9 @@ only when they have explicit guards and budgets.
 
 ## Current Orbit Implementation
 
-Orbit currently supports a linear `OperatorSequence` and a
-`ProcessorRegistry`. The `Agent` contains one hard-coded cycle between model
-invocation and tool execution. That cycle is observable and bounded, but it is
-not represented as a graph definition.
+The managed Graph runtime compiles serial Agent/tool/transform stages and declared routers with finite visits. It retains one Run, one protected Session turn, one environment/catalog and one Skill snapshot. Agent nodes reuse the common model/tool loop; its internal iterations are not Graph nodes. Legacy OperatorSequence and ProcessorRegistry retain their behavior.
 
-Orbit does not currently provide a graph schema, graph builder, Router
-Processor, graph validator, graph executor, graph persistence, graph migration,
-or graph-version binding for runs.
+The public descriptor and private configuration are frozen separately. Journal v2 records the binding, acknowledged visits and selected routes, with keyed value digests rather than automatic restart checkpoints. Graph-specific values are published only after confirmed completion; an observed edge is not evidence of destination execution. See [Managed Processor Graphs](../processor-graphs.md) for the implemented API and migration contract.
 
 ## Directional Model
 
@@ -50,9 +44,7 @@ Runs should not observe an in-place topology mutation. A revised graph becomes
 a new candidate version and affects only runs admitted under an explicit
 promotion policy.
 
-An initial implementation should extract the existing bounded model/tool loop
-without changing its behavior. General fan-out, joins, subgraphs, and adaptive
-promotion can follow only when their semantics and evaluation are justified.
+The first implementation reuses the existing bounded model/tool loop as a coarse Agent stage. General fan-out, joins, subgraphs and adaptive promotion remain unimplemented directions requiring separate evidence and adoption.
 
 ## Invariants
 
@@ -87,4 +79,4 @@ promotion can follow only when their semantics and evaluation are justified.
 - [Adaptive Processor Graph Runtime research](../research/2026-09-02-adaptive-processor-graph-runtime.md)
 - [Architecture Decision Records](../adr/README.md)
 
-The [2026-09-12 bounded execution research](../research/2026-09-12-bounded-processor-graph-execution.md) and [Managed Processor Graph ADR](../adr/2026-09-12-managed-processor-graph.md) compare the earlier internal-loop-first direction with coarse Agent nodes under the implemented Run contracts. The author accepted the latter on 2026-09-12 with one Run/turn, the reviewed lifecycle conditions and explicit journal compatibility costs. See the [acceptance record](../adr/2026-09-12-managed-processor-graph.md#author-acceptance--2026-09-12). It is accepted / not-started; Graph is not implemented. The broader internal-loop-first direction above remains historical/directional and does not expand the adopted first scope; the current implementation section is unchanged.
+The [bounded execution research](../research/2026-09-12-bounded-processor-graph-execution.md) preserves the comparison with the earlier internal-loop-first direction. The [accepted Graph ADR](../adr/2026-09-12-managed-processor-graph.md) owns the chosen first scope and its implementation evidence. It does not adopt broader adaptive execution.

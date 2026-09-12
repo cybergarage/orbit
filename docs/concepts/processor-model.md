@@ -43,8 +43,7 @@ properties. `ProcessorRegistry` stores Processors by type and name. The current
 Processor types are aliases of the four `OperatorType` values: agent, model,
 sequence, and tool.
 
-Projector, Reducer, Router, graph context, typed ports, and general processor
-middleware are not currently implemented.
+The managed Graph adds versioned adapters, validated whole-value connections and routers alongside these legacy interfaces. Projector, Reducer, generalized graph context, named ports and general processor middleware remain unimplemented.
 
 ## Directional Model
 
@@ -89,3 +88,7 @@ policy.
 
 - [Current Architecture](../architecture.md)
 - [Adaptive Processor Graph Runtime research](../research/2026-09-02-adaptive-processor-graph-runtime.md)
+
+## Bounded managed composition
+
+The [managed Graph runtime](../processor-graphs.md) adds explicit versioned Agent/tool/transform/router adapters alongside these legacy Processor interfaces. Agent stages share the existing loop and Run ownership. General Projector/Reducer/composite roles remain directional; they are not implied by this first runtime.

@@ -29,7 +29,7 @@ export async function inspectExecutionJournal(root: string, sessionId: string): 
           for (const line of text.split('\n').slice(0, -1)) {
             const record = JSON.parse(line) as JournalRecord
             if (
-              record.version !== 1 ||
+              ![1, 2].includes(record.version) ||
               record.runId !== child.name ||
               record.sessionId !== sessionId ||
               record.sequence !== records.length + 1

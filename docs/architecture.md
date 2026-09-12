@@ -119,9 +119,7 @@ See [the maintained schema profile](tools.md#managed-mcp-schema-support).
 - `ProcessorRegistry` registers processors by their type and name.
 
 The current `Processor` types reuse `OperatorType`, whose supported values are
-agent, model, sequence, and tool. No runtime component currently executes
-arbitrary processor edges, routes by state, validates a graph, or persists a
-graph version.
+agent, model, sequence, and tool. The bounded Graph compiler/executor is a separate explicit API in the same package. It validates immutable JSON descriptors and trusted versioned adapters, then reuses Agent's managed setup and shared loop. Serial nodes and routers share one Run, protected Session turn, catalog and Skill snapshot. `graph-journal.ts` validates required v2 visits/transitions and `graph-inspection.ts` observes them without execution. `ThreadManager` and `OrbitApplicationService` provide typed Graph submission and observation. See [Managed Processor Graphs](processor-graphs.md) for limits and migration.
 
 ## State and persistence
 
@@ -178,7 +176,7 @@ MCP tools, workspace settings and context, injected dependencies at external
 boundaries, and the public thread event API. These are implemented seams, not a
 plugin system for replacing every runtime component.
 
-The broader Processor Graph and adaptive execution models are directional.
+General parallel Graph composition and adaptive execution remain directional.
 They must pass through research and ADR review before they change the runtime.
 
 ## Related documentation

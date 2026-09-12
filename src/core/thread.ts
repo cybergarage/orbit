@@ -9,6 +9,7 @@ import type {ApprovalReply, RunHandle, RunSnapshot} from './execution/run.js'
 import type {SessionLoggerFactory} from './logs/index.js'
 import type {Message, MessagePayload, MessageType} from './message/index.js'
 import type {ModelToolCall, ProviderName, Role} from './models/index.js'
+import type {CompiledProcessorGraph, GraphJSON, GraphSnapshot, GraphValue} from './processor/index.js'
 import type {ContextPreparationEvent} from './session/context-policy.js'
 import type {SkillCatalog, SkillSelection} from './skills/catalog.js'
 import type {ToolResult} from './tools/index.js'
@@ -19,6 +20,7 @@ import {InvalidInputError, ModelAbortError, OrbitError} from './errors/index.js'
 import {canonicalJSON} from './execution/journal.js'
 import {RunExecutionError} from './execution/run.js'
 import {Message as CoreMessage, MessageType as CoreMessageType} from './message/index.js'
+import {boundedGraphJSON, graphBinding} from './processor/graph-definition.js'
 import {Session, type SessionRepository} from './session/index.js'
 import {normalizeSkillSelections} from './skills/catalog.js'
 import {State} from './state.js'
@@ -32,6 +34,7 @@ export type ThreadStatus = (typeof ThreadStatus)[keyof typeof ThreadStatus]
 
 export const ThreadEventType = {
   ContextPrepared: AgentEventType.ContextPrepared,
+  GraphCompleted: 'graph-completed',
   MessageCompleted: AgentEventType.MessageCompleted,
   ModelStarted: AgentEventType.ModelStarted,
   RunCancelled: 'run-cancelled',
@@ -134,6 +137,7 @@ export interface ThreadRunFailedEvent extends ThreadEventBase {
 
 export type ThreadEvent =
   | (ContextPreparationEvent & ThreadEventBase & {iteration: number; type: typeof ThreadEventType.ContextPrepared})
+  | (ThreadEventBase & {type: typeof ThreadEventType.GraphCompleted; value: GraphValue})
   | ThreadMessageCompletedEvent
   | ThreadModelStartedEvent
   | ThreadRunCancelledEvent
@@ -148,11 +152,17 @@ export type ThreadEventHandler = (event: ThreadEvent) => void
 
 export interface ThreadAgent {
   close(): Promise<void>
+  getGraphSnapshot?(id: string): GraphSnapshot | undefined
   getRun?(id: string): RunSnapshot | undefined
   /** Records new messages into its configured session and runs one turn. */
   invoke(newMessages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message>
   replyApproval?(id: string, reply: ApprovalReply): Promise<'recorded'>
   readonly skillCatalog?: SkillCatalog
+  startGraphRun?(
+    graph: CompiledProcessorGraph,
+    input: GraphJSON,
+    options?: Partial<AgentInvokeOptions>,
+  ): Promise<RunHandle<GraphValue>>
   startRun?(messages: Message[], options?: Partial<AgentInvokeOptions>): Promise<RunHandle<Message>>
 }
 
@@ -168,6 +178,7 @@ export interface ThreadManagerOptions {
 
 export interface CreateThreadOptions {
   agent?: AgentOptions
+  formatVersion?: 1 | 2
   id?: string
 }
 
@@ -178,9 +189,13 @@ export interface ThreadRunOptions {
   skills?: SkillSelection[]
 }
 
-export interface ThreadRunHandle {
+interface InternalThreadRunOptions extends ThreadRunOptions {
+  graph?: {definition: CompiledProcessorGraph; input: GraphJSON}
+}
+
+export interface ThreadRunHandle<T = ThreadMessage> {
   admitted: Promise<void>
-  completion: Promise<ThreadMessage>
+  completion: Promise<T>
   id: string
   threadId: string
 }
@@ -215,7 +230,10 @@ export class ThreadManager {
   private readonly onRunSnapshot?: (snapshot: RunSnapshot) => void
   private readonly runThreads = new Map<string, string>()
   private readonly sessionRepository?: SessionRepository
-  private readonly submissions = new Map<string, {content: string; handle: ThreadRunHandle}>()
+  private readonly submissions = new Map<
+    string,
+    {content: string; handle: ThreadRunHandle<GraphValue | ThreadMessage>}
+  >()
   private readonly threads = new Map<string, ManagedThread>()
 
   constructor(options: ThreadManagerOptions = {}) {
@@ -275,14 +293,15 @@ export class ThreadManager {
     const session =
       options.agent?.state?.getSession() ??
       (this.sessionRepository === undefined
-        ? new Session({metadata: {cwd: options.agent?.cwd, id}})
+        ? new Session({formatVersion: options.formatVersion, metadata: {cwd: options.agent?.cwd, id}})
         : this.sessionRepository.create({
             cwd: options.agent?.cwd,
             formatVersion:
-              options.agent?.skillCatalog ||
+              options.formatVersion ??
+              (options.agent?.skillCatalog ||
               (options.agent?.contextPolicy ?? options.agent?.settings?.contextPolicy)?.mode === 'budgeted'
                 ? 2
-                : 1,
+                : 1),
             id,
             model: options.agent?.model?.name,
             originator: 'orbit-thread-manager',
@@ -315,6 +334,11 @@ export class ThreadManager {
     }
     this.threads.set(id, thread)
     return this.snapshot(thread)
+  }
+
+  getGraphSnapshot(runId: string): GraphSnapshot | undefined {
+    const threadId = this.runThreads.get(runId)
+    return threadId ? this.threads.get(threadId)?.agent.getGraphSnapshot?.(runId) : undefined
   }
 
   getRun(id: string): RunSnapshot | undefined {
@@ -392,46 +416,22 @@ export class ThreadManager {
     return this.startRun(threadId, content, options).completion
   }
 
-  startRun(threadId: string, content: string, options: ThreadRunOptions = {}): ThreadRunHandle {
-    if (this.closed) throw new Error('Thread manager is closed')
-    if (content.trim().length === 0) {
-      throw new InvalidInputError('Message content cannot be empty.')
-    }
-
-    const thread = this.requireThread(threadId)
-    options = {...options, skills: normalizeSkillSelections(options.skills)}
-    const submission = canonicalJSON({
-      content,
-      skillCatalog: options.skillCatalogRevision ?? thread.agent.skillCatalog?.configuration ?? null,
-      skills: options.skills,
+  startGraphRun(
+    threadId: string,
+    graph: CompiledProcessorGraph,
+    input: GraphJSON,
+    options: ThreadRunOptions = {},
+  ): ThreadRunHandle<GraphValue> {
+    graphBinding(graph, graph.descriptor.entry)
+    input = boundedGraphJSON(input, graph.profile.valueBytes)
+    return this.startThreadRun<GraphValue>(threadId, typeof input === 'string' ? input : JSON.stringify(input), {
+      ...options,
+      graph: {definition: graph, input},
     })
-    const requestKey = options.requestId ? `${threadId}:${options.requestId}` : undefined
-    const prior = requestKey ? this.submissions.get(requestKey) : undefined
-    if (prior) {
-      if (prior.content !== submission) throw new InvalidInputError('Conflicting request ID')
-      return prior.handle
-    }
+  }
 
-    if (this.getActiveRunForThread(threadId) !== undefined) {
-      throw new InvalidInputError(`Thread is already running: ${threadId}`)
-    }
-
-    const run = createActiveRun(threadId)
-    this.activeRuns.set(run.id, run)
-    thread.lastRunId = run.id
-    this.runThreads.set(run.id, threadId)
-    const completion = this.executeRun(thread, content, options, run)
-    completion.catch(() => {})
-    const handle = {
-      admitted: run.admitted,
-      completion,
-      get id() {
-        return run.id
-      },
-      threadId,
-    }
-    if (requestKey) this.submissions.set(requestKey, {content: submission, handle})
-    return handle
+  startRun(threadId: string, content: string, options: ThreadRunOptions = {}): ThreadRunHandle {
+    return this.startThreadRun<ThreadMessage>(threadId, content, options)
   }
 
   subscribe(handler: ThreadEventHandler): () => void {
@@ -452,9 +452,9 @@ export class ThreadManager {
   private async executeRun(
     thread: ManagedThread,
     content: string,
-    options: ThreadRunOptions,
+    options: InternalThreadRunOptions,
     run: ActiveRun,
-  ): Promise<ThreadMessage> {
+  ): Promise<GraphValue | ThreadMessage> {
     const {threadId} = run
     const forwardAbort = () => run.controller.abort(options.signal?.reason)
     options.signal?.addEventListener('abort', forwardAbort, {once: true})
@@ -476,8 +476,11 @@ export class ThreadManager {
         turnId: run.id,
       }
       let response: Message
-      if (thread.agent.startRun) {
-        const handle = await thread.agent.startRun([userMessage], invokeOptions)
+      if (options.graph && !thread.agent.startGraphRun) throw new Error('Agent does not support Graph execution')
+      if (thread.agent.startRun || options.graph) {
+        const handle = options.graph
+          ? await thread.agent.startGraphRun!(options.graph.definition, options.graph.input, invokeOptions)
+          : await thread.agent.startRun!([userMessage], invokeOptions)
         if (handle.id !== run.id) {
           this.activeRuns.delete(run.id)
           this.runThreads.delete(run.id)
@@ -499,7 +502,19 @@ export class ThreadManager {
         if (result.outcome !== 'completed') throw new RunExecutionError(result)
         const value = handle.value()
         if (!value) throw new RunExecutionError({...result, reason: 'Recovered run; query its recorded result'})
-        response = value
+        if (options.graph) {
+          const output = value as GraphValue
+          this.emit({
+            runId: run.id,
+            threadId,
+            timestamp: new Date().toISOString(),
+            type: ThreadEventType.GraphCompleted,
+            value: output,
+          })
+          return output
+        }
+
+        response = value as Message
       } else {
         this.emit({
           message: serializeMessage(userMessage),
@@ -642,6 +657,60 @@ export class ThreadManager {
       status: this.getActiveRunForThread(thread.id) === undefined ? ThreadStatus.Idle : ThreadStatus.Running,
       updatedAt: thread.updatedAt,
     }
+  }
+
+  private startThreadRun<T extends GraphValue | ThreadMessage>(
+    threadId: string,
+    content: string,
+    options: InternalThreadRunOptions,
+  ): ThreadRunHandle<T> {
+    if (this.closed) throw new Error('Thread manager is closed')
+    if (!options.graph && content.trim().length === 0) {
+      throw new InvalidInputError('Message content cannot be empty.')
+    }
+
+    const thread = this.requireThread(threadId)
+    options = {...options, skills: normalizeSkillSelections(options.skills)}
+    const submission = canonicalJSON({
+      ...(options.graph
+        ? {
+            configuration: options.graph.definition.configuration,
+            graph: options.graph.definition.identity,
+            input: options.graph.input,
+            profile: options.graph.definition.profile,
+          }
+        : {}),
+      content,
+      skillCatalog: options.skillCatalogRevision ?? thread.agent.skillCatalog?.configuration ?? null,
+      skills: options.skills,
+    })
+    const requestKey = options.requestId ? `${threadId}:${options.requestId}` : undefined
+    const prior = requestKey ? this.submissions.get(requestKey) : undefined
+    if (prior) {
+      if (prior.content !== submission) throw new InvalidInputError('Conflicting request ID')
+      return prior.handle as ThreadRunHandle<T>
+    }
+
+    if (this.getActiveRunForThread(threadId) !== undefined) {
+      throw new InvalidInputError(`Thread is already running: ${threadId}`)
+    }
+
+    const run = createActiveRun(threadId)
+    this.activeRuns.set(run.id, run)
+    thread.lastRunId = run.id
+    this.runThreads.set(run.id, threadId)
+    const completion = this.executeRun(thread, content, options, run) as Promise<T>
+    completion.catch(() => {})
+    const handle = {
+      admitted: run.admitted,
+      completion,
+      get id() {
+        return run.id
+      },
+      threadId,
+    }
+    if (requestKey) this.submissions.set(requestKey, {content: submission, handle})
+    return handle
   }
 }
 

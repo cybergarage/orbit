@@ -8,11 +8,16 @@ import path from 'node:path'
 import type {SessionWriterLease} from '../session/writer-lease.js'
 
 import {consumeWriterLease} from '../session/writer-lease.js'
+import {validateGraphRecord} from './graph-journal.js'
 
 export type JournalLevel = 'file-and-directory-sync' | 'file-sync' | 'memory'
 export type JournalKind =
   | 'approval-requested'
   | 'authorization-decided'
+  | 'graph-bound'
+  | 'graph-node-completed'
+  | 'graph-node-started'
+  | 'graph-transition'
   | 'late-settlement'
   | 'operation-intent'
   | 'operation-result'
@@ -29,7 +34,7 @@ export interface JournalRecord {
   sequence: number
   sessionId: string
   timestamp: string
-  version: 1
+  version: 1 | 2
 }
 export interface ExecutionJournal {
   append(
@@ -38,6 +43,7 @@ export interface ExecutionJournal {
     data: Record<string, unknown>,
     elapsedMs?: number,
     eventId?: string,
+    version?: 1 | 2,
   ): Promise<JournalRecord>
   close(): Promise<void>
   digest(value: unknown): string
@@ -104,6 +110,7 @@ export class MemoryExecutionJournal implements ExecutionJournal {
     data: Record<string, unknown>,
     elapsedMs = 0,
     eventId: string = randomUUID(),
+    version?: 1 | 2,
   ): Promise<JournalRecord> {
     safeIdentity(runId)
     if (this.closed) return Promise.reject(new Error('Execution journal is closed'))
@@ -112,6 +119,7 @@ export class MemoryExecutionJournal implements ExecutionJournal {
       const existing = this.entries.find((record) => record.eventId === eventId)
       if (existing) {
         if (
+          (version !== undefined && existing.version !== version) ||
           existing.runId !== runId ||
           existing.kind !== kind ||
           canonicalJSON(existing.data) !== canonicalJSON(frozenData)
@@ -129,7 +137,7 @@ export class MemoryExecutionJournal implements ExecutionJournal {
         sequence: this.entries.filter((entry) => entry.runId === runId).length + 1,
         sessionId: this.sessionId,
         timestamp: new Date().toISOString(),
-        version: 1,
+        version: version ?? this.entries.find((entry) => entry.runId === runId)?.version ?? 1,
       }
       validateNext(this.entries, record)
       await this.persist(record)
@@ -313,6 +321,19 @@ export function validateNext(entries: JournalRecord[], record: JournalRecord): v
       'requestId',
       'responderScope',
     ],
+    'graph-bound': ['graph', 'descriptor', 'configuration', 'profile', 'turnId'],
+    'graph-node-completed': [
+      'graph',
+      'nodeId',
+      'visitId',
+      'outputDigest',
+      'outcome',
+      'operations',
+      'messages',
+      'transcriptHighWater',
+    ],
+    'graph-node-started': ['graph', 'nodeId', 'visitId', 'visit', 'inputDigest', 'budget', 'transcriptHighWater'],
+    'graph-transition': ['graph', 'visitId', 'edgeId', 'destination', 'label', 'outputDigest'],
     'late-settlement': ['settled', 'operations'],
     'operation-intent': [
       'authorization',
@@ -346,7 +367,15 @@ export function validateNext(entries: JournalRecord[], record: JournalRecord): v
   if (
     !allowed[record.kind] ||
     !record.data ||
-    Object.keys(record.data).some((key) => !allowed[record.kind].includes(key))
+    Object.keys(record.data).some(
+      (key) =>
+        !allowed[record.kind].includes(key) &&
+        !(
+          record.version === 2 &&
+          ((['operation-intent', 'operation-result'].includes(record.kind) && key === 'visitId') ||
+            (record.kind === 'run-ready' && key === 'transcriptHighWater'))
+        ),
+    )
   )
     throw new Error('Unsupported execution metadata')
   safeIdentity(record.runId)
@@ -355,9 +384,11 @@ export function validateNext(entries: JournalRecord[], record: JournalRecord): v
   if (typeof record.timestamp !== 'string' || !Number.isFinite(Date.parse(record.timestamp)) || record.elapsedMs < 0)
     throw new Error('Invalid journal envelope')
   const run = entries.filter((entry) => entry.runId === record.runId)
+  validateGraphRecord(entries, record)
   validateSkillEvidence(record, run)
   if (
-    record.version !== 1 ||
+    ![1, 2].includes(record.version) ||
+    (run.length > 0 && run[0].version !== record.version) ||
     !Number.isFinite(record.elapsedMs) ||
     record.sequence !== run.length + 1 ||
     typeof record.eventId !== 'string' ||

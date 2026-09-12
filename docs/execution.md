@@ -135,7 +135,7 @@ raw prompts, commands, patches or secret environment values; HMAC bindings allow
 equality checks without exposing guessable plain hashes. Transcripts and full
 optional logs can still contain sensitive content under their own policies.
 
-Each JSONL record carries version 1, identity, sequence, timestamp, elapsed time,
+Each JSONL record carries a Run-local version (1 for ordinary Runs, 2 for Graph Runs), identity, sequence, timestamp, elapsed time,
 event ID, kind and bounded metadata. `run-admitted` is the first/version header.
 Required barriers cover admission, ready, authorization, intent, result and
 terminal summary. A terminal summary includes the synchronized transcript
@@ -196,3 +196,7 @@ See [registration, migration and recovery](session-storage.md) before upgrading
 existing CLI, GUI or library deployments. The [recovery ADR](adr/2026-09-08-session-writer-recovery-guard.md)
 retains the earlier two-writer reproduction and subsequent verification evidence.
 Windows and representative product trials remain separate verification work.
+
+## Managed Graph Runs
+
+[Processor Graphs](processor-graphs.md) reuse this supervisor, authorization, ownership and storage service. Their v2 required records extend the journal with a bound definition and acknowledged visit/route evidence. Ordinary v1 Runs coexist in the same Session; all records within a Run keep one version. The Graph guide specifies transcript v2 migration, read-only inspection and the distinct final-value API.

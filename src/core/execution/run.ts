@@ -8,6 +8,7 @@ import type {SkillSelection} from '../skills/catalog.js'
 import type {ExecutionJournal, JournalKind, JournalLevel, JournalRecord} from './journal.js'
 
 import {normalizeSkillSelections} from '../skills/catalog.js'
+import {currentGraphVisit, GraphDeclaredFailure} from './graph-state.js'
 import {canonicalJSON, copyJSON, safeIdentity} from './journal.js'
 import {recordReconciliation} from './recovery.js'
 
@@ -104,6 +105,7 @@ export interface RunStartOptions<T> {
   execute(context: RunContext): Promise<T>
   input: unknown
   journal: () => Promise<ExecutionJournal>
+  journalVersion?: 1 | 2
   limits?: Partial<RunLimits>
   onApproval?: (request: ApprovalRequest) => Promise<void> | void
   onSnapshot?: (snapshot: RunSnapshot) => void
@@ -284,11 +286,12 @@ export class RunContext {
     }
   }
 
-  async ready(catalog: unknown): Promise<void> {
+  async ready(catalog: unknown, transcriptHighWater?: number): Promise<void> {
     this.check()
     this.catalog = this.journal.digest(catalog)
     await this.record('run-ready', {
       catalog: this.catalog,
+      ...(transcriptHighWater === undefined ? {} : {transcriptHighWater}),
       ...(this.skillResolution ? {skills: this.skillResolution} : {}),
     })
     this.phase = 'running'
@@ -296,14 +299,25 @@ export class RunContext {
   }
 
   async record(kind: JournalKind, data: Record<string, unknown>, finalizing = false): Promise<void> {
+    const visitId = currentGraphVisit(this)
+    if (visitId && ['operation-intent', 'operation-result'].includes(kind)) data = {...data, visitId}
     const promise = this.track('journal', this.journal.append(this.id, kind, data, this.elapsed()))
+    // A cancelled caller wait does not prove a failed append. The append stays
+    // owned, and an actual late rejection still poisons mandatory recording.
+    promise.catch(() => {
+      this.recordingFailed = true
+      if (!finalizing) this.requestStop('recording-failed')
+    })
     try {
       await (finalizing
         ? until(promise, this.cleanupDeadline ?? performance.now() + this.limits.cleanupMs)
         : this.wait('record-ack', promise))
     } catch (error) {
-      this.recordingFailed = true
-      if (!finalizing) this.requestStop('recording-failed')
+      if (!(error instanceof RunStoppedError)) {
+        this.recordingFailed = true
+        if (!finalizing) this.requestStop('recording-failed')
+      }
+
       throw error
     }
   }
@@ -598,6 +612,8 @@ export class RunSupervisor {
             requestId: options.requestId,
           },
           performance.now() - startedAt,
+          undefined,
+          options.journalVersion,
         ),
         startedAt + limits.elapsedMs,
       ).catch((error) => {
@@ -633,6 +649,7 @@ export class RunSupervisor {
     setValue: (value: T) => void,
   ): Promise<RunResult> {
     let reason = 'completed'
+    let declaredFailure = false
     let synchronized: unknown
     let cleanupStarted = false
     try {
@@ -647,7 +664,8 @@ export class RunSupervisor {
       )
     } catch (error) {
       reason = error instanceof Error ? error.message : 'execution-failed'
-      context.requestStop(context.stopReason ?? 'runtime-failed')
+      if (error instanceof GraphDeclaredFailure) declaredFailure = true
+      else context.requestStop(context.stopReason ?? 'runtime-failed')
     }
 
     context.cleanupDeadline ??= performance.now() + context.limits.cleanupMs
@@ -692,7 +710,9 @@ export class RunSupervisor {
               ? 'budget-exceeded'
               : context.stopReason
                 ? 'cancelled'
-                : 'completed',
+                : declaredFailure
+                  ? 'failed'
+                  : 'completed',
       quiescence: unresolved.length === 0 && !context.operations.some((operation) => operation.status === 'unknown'),
       reason: context.stopReason ?? reason,
       recording: {

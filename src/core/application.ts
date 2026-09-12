@@ -12,6 +12,7 @@ import type {ApprovalReply, RunSnapshot} from './execution/run.js'
 import type {Logger, LogLevel} from './logger/index.js'
 import type {LogPage, LogQuery, LogRecord, LogStoreHealth, SessionLoggerFactory, SessionLogStore} from './logs/index.js'
 import type {ProviderName} from './models/index.js'
+import type {CompiledProcessorGraph, GraphJSON} from './processor/index.js'
 import type {SessionListOptions, SessionListResult, SessionRepository, SessionSummary} from './session/index.js'
 import type {WorkspaceSettings, WorkspaceSettingsSource} from './settings.js'
 import type {SkillSelection} from './skills/index.js'
@@ -31,6 +32,7 @@ import {recoveredRunSnapshot} from './execution/run.js'
 import {createCompositeLogger} from './logger/index.js'
 import {FileSessionLogStore, LogEventType, LogOutcome, StoreSessionLoggerFactory} from './logs/index.js'
 import {Message, MessageType, Role} from './models/index.js'
+import {inspectGraphRun} from './processor/graph-inspection.js'
 import {parseSessionFile} from './session/codec.js'
 import {SessionRepository as Repository, SessionDeletionService} from './session/index.js'
 import {loadWorkspaceSettingsWithSources} from './settings.js'
@@ -239,7 +241,7 @@ export class OrbitApplicationService {
     return this.closePromise
   }
 
-  createThread(): ThreadSnapshot {
+  createThread(options: {formatVersion?: 1 | 2} = {}): ThreadSnapshot {
     const systemMessages =
       this.systemPrompt === undefined || this.systemPrompt.length === 0
         ? undefined
@@ -254,6 +256,7 @@ export class OrbitApplicationService {
         settings: this.settings,
         skillCatalog: this.skillCatalog,
       },
+      formatVersion: options.formatVersion,
     })
     const event = this.diagnostics.emit({
       data: {cwd: this.runtime.cwd, model: this.runtime.model, provider: this.runtime.provider},
@@ -296,6 +299,10 @@ export class OrbitApplicationService {
     return this.diagnostics.list(afterSequence)
   }
 
+  getGraphSnapshot(runId: string) {
+    return this.threadManager.getGraphSnapshot(runId)
+  }
+
   getLogHealth(): LogStoreHealth {
     return this.logs.getHealth()
   }
@@ -328,6 +335,37 @@ export class OrbitApplicationService {
     return this.skillCatalog
       ? this.skillCatalog.list(signal)
       : {candidates: [], complete: true, issues: ['No Skill catalog configured']}
+  }
+
+  async queryGraphRun(id: string) {
+    const root = this.repository.journalRoot
+    const children = await fs.readdir(root, {withFileTypes: true}).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return []
+      throw error
+    })
+    for (const child of children) {
+      if (!child.isDirectory() || child.name === 'deletions') continue
+      // eslint-disable-next-line no-await-in-loop
+      const inspection = await inspectExecutionJournal(root, child.name)
+      const run = inspection.runs.find((item) => item.runId === id)
+      if (!run) continue
+      const result = inspectGraphRun(run.records)
+      if (run.issue || !inspection.keyAvailable) return {...result, issue: run.issue ?? 'Missing journal key'}
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const summary = await this.repository.findById(child.name)
+        if (!summary) return result
+        // eslint-disable-next-line no-await-in-loop
+        const parsed = parseSessionFile(await fs.readFile(summary.file, 'utf8'), summary.file)
+        return inspectGraphRun(run.records, {
+          entries: parsed.entries.slice(1),
+          formatVersion: parsed.header.version,
+          sessionId: parsed.header.id,
+        })
+      } catch {
+        return {...result, issue: 'Transcript unavailable or invalid'}
+      }
+    }
   }
 
   async queryRun(id: string): Promise<RunSnapshot | undefined> {
@@ -407,6 +445,20 @@ export class OrbitApplicationService {
     return parseSessionFile(await fs.readFile(summary.file, 'utf8'), summary.file).entries.filter(
       (entry) => entry.type === 'skill_context',
     )
+  }
+
+  async startGraphRun(
+    threadId: string,
+    graph: CompiledProcessorGraph,
+    input: GraphJSON,
+    options: {requestId?: string; skills?: SkillSelection[]} = {},
+  ) {
+    const handle = this.threadManager.startGraphRun(threadId, graph, input, {
+      ...options,
+      skillCatalogRevision: this.skillCatalog?.configuration,
+    })
+    await handle.admitted
+    return handle
   }
 
   async startRun(

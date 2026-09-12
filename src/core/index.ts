@@ -120,6 +120,19 @@ export {splitSystemPrompt} from './models/prompt.js'
 export type {Provider, ProviderName} from './models/provider.js'
 export {createProvider, getProvider, getProviderNames, isProvider, isProviderName} from './models/provider.js'
 export {getRoles, Role} from './models/role.js'
+export {inspectGraphRun} from './processor/graph-inspection.js'
+export type {GraphInspection, GraphTranscriptEvidence} from './processor/graph-inspection.js'
+export {CompiledProcessorGraph, compileProcessorGraph, DEFAULT_GRAPH_PROFILE} from './processor/index.js'
+export type {
+  GraphAdapter,
+  GraphDefinition,
+  GraphDescriptor,
+  GraphJSON,
+  GraphNode,
+  GraphProfile,
+  GraphSnapshot,
+  GraphValue,
+} from './processor/index.js'
 export {OperatorSequence, ProcessorRegistry} from './processor/index.js'
 export {OperatorType} from './processor/index.js'
 export type {
@@ -219,6 +232,7 @@ export {
   loadWorkspaceSettingsWithSourcesSync,
   mergeWorkspaceSettings,
 } from './settings.js'
+
 export type {
   McpServerSettings,
   McpSettings,
@@ -229,8 +243,8 @@ export type {
   WorkspaceSettings,
   WorkspaceSettingsSource,
 } from './settings.js'
-export * from './skills/index.js'
 
+export * from './skills/index.js'
 export {State} from './state.js'
 
 export {serializeMessage, ThreadEventType, ThreadManager, ThreadStatus} from './thread.js'
@@ -256,8 +270,8 @@ export type {
   ThreadToolStartedEvent,
   ThreadToolUpdatedEvent,
 } from './thread.js'
-
 export {GptTokenizer} from './tokenizer/index.js'
+
 export type {Tokenizer} from './tokenizer/index.js'
 export {
   BuiltinToolName,
@@ -305,6 +319,6 @@ export type {
   ToolSource,
   WriteToolInput,
 } from './tools/index.js'
-export {LocalWorkspaceLocator} from './workspace.js'
 
+export {LocalWorkspaceLocator} from './workspace.js'
 export type {LocalWorkspaceLocatorOptions, WorkspaceLocator} from './workspace.js'

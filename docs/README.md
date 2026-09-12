@@ -58,13 +58,14 @@ routing contract belongs in an ADR, and its implemented structure appears in
 - [Agent Runtime](concepts/agent-runtime.md): how an agent turn progresses
 - [Processor Model](concepts/processor-model.md): the executable-step
   abstraction
-- [Processor Graph](concepts/processor-graph.md): the directional composition
-  model
+- [Processor Graph](concepts/processor-graph.md): bounded managed composition and broader directions
 - [Adaptive Execution](concepts/adaptive-execution.md): the directional model
   for evaluated graph evolution
 - [Glossary](concepts/glossary.md): shared terminology and status qualifiers
 
 ## Current feature documentation
+
+- [Managed Processor Graphs](processor-graphs.md): compilation, typed values, shared Run ownership and journal v2 migration.
 
 - [Managed Execution](execution.md): run APIs, one-operation approval, required journal, recovery and migration.
 

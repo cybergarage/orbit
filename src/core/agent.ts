@@ -23,6 +23,8 @@ import type {
   ModelToolResultPayload,
   ProviderName,
 } from './models/index.js'
+import type {CompiledProcessorGraph, GraphJSON} from './processor/graph-definition.js'
+import type {GraphInvocation, GraphSnapshot, GraphValue} from './processor/graph-execution.js'
 import type {Operator, OperatorOptions} from './processor/index.js'
 import type {ContextPolicy} from './session/context-policy.js'
 import type {Session, SessionContextBuilder as SessionContextBuilderType, SessionError} from './session/index.js'
@@ -52,6 +54,14 @@ import {
 } from './logs/index.js'
 import {createMcpToolManager} from './mcp.js'
 import {getModel, Message, MessageType} from './models/index.js'
+import {boundedGraphJSON, graphBinding} from './processor/graph-definition.js'
+import {
+  bindGraphJournal,
+  executeProcessorGraph,
+  graphHandle,
+  graphSynchronize,
+  validateGraphCatalog,
+} from './processor/graph-execution.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
 import {prepareSessionContext} from './session/context-policy.js'
 import {SessionContextBuilder, TurnPhase} from './session/index.js'
@@ -86,6 +96,7 @@ interface ManagedInvokeOptions extends AgentInvokeOptions {
   contextPolicy?: ContextPolicy
   executionContext?: RunContext
   executionPolicy?: ExecutionPolicy
+  graph?: GraphInvocation
   mcp?: McpToolManager
   skillReader?: SkillCatalog
 }
@@ -139,6 +150,8 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   private readonly cwd: string
   private readonly diagnostics?: DiagnosticEventBus
   private readonly execution: NonNullable<AgentOptions['execution']>
+  private readonly graphHandles = new Map<string, RunHandle<GraphValue>>()
+  private readonly graphSnapshots = new Map<string, GraphSnapshot>()
   private readonly journals = new Map<string, Promise<ExecutionJournal>>()
   private readonly mcpFactory: NonNullable<NonNullable<AgentOptions['deps']>['createMcpToolManager']>
   private readonly model: Model
@@ -210,6 +223,15 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     }
   }
 
+  bindGraph(graph: CompiledProcessorGraph) {
+    graphBinding(graph, graph.descriptor.entry)
+    return {
+      getGraphSnapshot: (runId: string) => this.getGraphSnapshot(runId),
+      startRun: (input: GraphJSON, options: Partial<AgentInvokeOptions> = {}) =>
+        this.startGraphRun(graph, input, options),
+    }
+  }
+
   close(): Promise<void> {
     this.closePromise ??= (async () => {
       const deadline = performance.now() + (this.execution.limits?.cleanupMs ?? DEFAULT_RUN_LIMITS.cleanupMs)
@@ -243,6 +265,11 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       }
     })()
     return this.closePromise
+  }
+
+  getGraphSnapshot(runId: string): GraphSnapshot | undefined {
+    const snapshot = this.graphSnapshots.get(runId)
+    return snapshot ? copyJSON(snapshot) : undefined
   }
 
   getModel(): Model {
@@ -287,108 +314,55 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     return this.invokeSession(session, messages, options)
   }
 
+  async startGraphRun(
+    graph: CompiledProcessorGraph,
+    input: GraphJSON,
+    options: Partial<AgentInvokeOptions> = {},
+    session = this.getSession(),
+  ): Promise<RunHandle<GraphValue>> {
+    graphBinding(graph, graph.descriptor.entry)
+    if (session.formatVersion !== 2) throw new Error('Graph requires explicit transcript v2 migration')
+    input = boundedGraphJSON(input, graph.profile.valueBytes)
+    const invocation: GraphInvocation = {
+      graph,
+      input,
+      observe: (snapshot) => this.graphSnapshots.set(snapshot.runId, snapshot),
+    }
+    const handle = await this.startManagedRun<GraphValue>(
+      [new Message(MessageType.User, {content: typeof input === 'string' ? input : JSON.stringify(input)})],
+      options,
+      session,
+      invocation,
+    )
+    let wrapped = this.graphHandles.get(handle.id)
+    if (!wrapped) {
+      wrapped = graphHandle(handle)
+      this.graphHandles.set(handle.id, wrapped)
+    }
+
+    if (!this.graphSnapshots.has(handle.id) && handle.getSnapshot().result?.recording.status === 'recovered') {
+      const records = (await this.getJournal(session)).records().filter((record) => record.runId === handle.id)
+      const bound = records.find((record) => record.kind === 'graph-bound')
+      const starts = records.filter((record) => record.kind === 'graph-node-started')
+      const last = [...records].reverse().find((record) => record.kind === 'graph-node-completed')
+      this.graphSnapshots.set(handle.id, {
+        graph: String(bound?.data.graph ?? graph.identity),
+        recovered: true,
+        runId: handle.id,
+        visits: starts.length,
+        ...(last ? {outputDigest: String(last.data.outputDigest)} : {}),
+      })
+    }
+
+    return wrapped
+  }
+
   async startRun(
     messages: Message[],
     options: Partial<AgentInvokeOptions> = {},
     session = this.getSession(),
   ): Promise<RunHandle<Message>> {
-    const skills = normalizeSkillSelections(options.skills)
-    if (skills.length > 0 && !this.skillCatalog) throw new Error('Skill catalog is not configured')
-    options = {...options, skills, tools: options.tools ? [...options.tools] : undefined}
-    messages = messages.map(
-      (message) =>
-        new Message(message.type, {
-          contents: copyJSON(message.contents),
-          id: message.id,
-          role: message.role,
-          timestamp: message.timestamp,
-          ...(message.payload === undefined ? {} : {payload: copyJSON(message.payload)}),
-        }),
-    )
-    let manager: McpToolManager | undefined
-    const skillReader = this.skillCatalog?.createReader()
-    const policy = this.execution.policy ?? {
-      generation: 'workspace-confirm-v1',
-      profile: 'workspace-confirm' as const,
-      roots: [this.cwd],
-    }
-    const frozenPolicy = Object.freeze({...policy, roots: Object.freeze([...policy.roots])})
-    const contextPolicy: ContextPolicy =
-      this.contextPolicy.mode === 'budgeted'
-        ? {...this.contextPolicy, profile: copyJSON(this.contextPolicy.profile)}
-        : {mode: 'disabled'}
-    const contextConfiguration =
-      contextPolicy.mode === 'budgeted'
-        ? {mode: contextPolicy.mode, profile: contextPolicy.profile}
-        : {mode: contextPolicy.mode}
-    // Estimators are injected behavior, not JSON settings or journal evidence.
-    const settings = copyJSON({...this.settings, contextPolicy: contextConfiguration})
-    const serialized = messages.map((message) => ({
-      contents: message.contents,
-      role: message.role,
-      type: message.type,
-      ...(message.payload === undefined ? {} : {payload: message.payload}),
-    }))
-    return this.supervisor.startRun<Message>({
-      async cleanup() {
-        const results = await Promise.allSettled([manager?.close(), skillReader?.settle()])
-        if (results.some((result) => result.status === 'rejected'))
-          throw new Error('Managed resource cleanup remains unconfirmed')
-      },
-      configuration: {
-        contextPolicy: contextConfiguration,
-        cwd: this.cwd,
-        model: this.model.getModel(),
-        policy: {generation: policy.generation, profile: policy.profile, roots: [...policy.roots]},
-        provider: this.model.getProvider(),
-        skillCatalog: this.skillCatalog?.configuration ?? null,
-        sources: this.settings.mcp ?? {},
-      },
-      execute: async (run) => {
-        manager = this.mcpFactory(settings, {
-          cwd: this.cwd,
-          diagnosticContext: {runId: run.id, sessionId: session.getId()},
-          diagnostics: this.diagnostics,
-          execution: {policy: frozenPolicy, run},
-        })
-        return runWithLogContext(
-          {runId: run.id, sessionId: session.getId(), threadId: session.getId(), turnId: run.id},
-          () =>
-            this.invokeSessionWithTurn(session, messages, run.id, {
-              ...options,
-              contextPolicy,
-              executionContext: run,
-              executionPolicy: frozenPolicy,
-              mcp: manager,
-              signal: run.signal,
-              skillReader,
-            }),
-        )
-      },
-      input: {
-        ...(skills.length > 0 ? {skillCatalog: this.skillCatalog?.configuration, skills} : {}),
-        limits: options.limits ?? {},
-        maxToolIterations: options.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS,
-        messages: serialized,
-        tools: (options.tools ?? []).map((tool) => ({
-          name: tool.name,
-          schema:
-            tool.inputSchema ??
-            adaptInvokableTool(tool, tool.source ?? {id: tool.name, kind: 'custom'}).spec.inputSchema,
-        })),
-      },
-      journal: () => this.getJournal(session),
-      limits: {...this.execution.limits, ...options.limits},
-      onApproval: this.execution.onApproval,
-      onSnapshot: options.onRunSnapshot,
-      requestedSkills: skills,
-      requestId: options.requestId ?? options.turnId ?? uuidv7(),
-      responderScope: this.execution.responderScope,
-      runId: options.turnId,
-      sessionId: session.getId(),
-      signal: options.signal,
-      synchronize: async () => session.synchronize((await this.getJournal(session)).level),
-    })
+    return this.startManagedRun<Message>(messages, options, session)
   }
 
   // eslint-disable-next-line max-params
@@ -467,8 +441,6 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     return pending
   }
 
-  // Session recording, tool iteration, and terminal-state handling intentionally share one lifecycle boundary.
-
   private async invokeSession(
     session: Session,
     messages: Message[],
@@ -497,13 +469,16 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     throw new RunExecutionError(result)
   }
 
+  // Session recording, tool iteration, and terminal-state handling intentionally share one lifecycle boundary.
+
   // eslint-disable-next-line complexity
   private async invokeSessionWithTurn(
     session: Session,
     messages: Message[],
     turnId: string,
     options?: Partial<ManagedInvokeOptions>,
-  ): Promise<Message> {
+  ): Promise<GraphValue | Message> {
+    const graph = options?.graph
     const maxToolIterations = options?.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS
     if (!Number.isSafeInteger(maxToolIterations) || maxToolIterations < 0) throw new Error('Invalid maxToolIterations')
     const run = options!.executionContext!
@@ -609,7 +584,8 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
 
       const toolSnapshot = registry.snapshot()
       for (const spec of toolSnapshot.specs()) assertManagedTool(toolSnapshot.get(spec.name)!, managed)
-      await run.ready(toolSnapshot.specs())
+      if (graph) validateGraphCatalog(graph.graph, toolSnapshot)
+      await run.ready(toolSnapshot.specs(), graph ? await graphSynchronize(run, session) : undefined)
       const toolRuntime = new ToolRuntime(
         toolSnapshot,
         (definition, input, context) => executeManagedTool(run, definition, input, context, managed),
@@ -643,204 +619,275 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         'agent tools loaded',
       )
 
-      for (let iteration = 0; iteration <= maxToolIterations; iteration += 1) {
-        throwIfAborted(options?.signal)
-        this.logger.debug({iteration, maxToolIterations}, 'agent model iteration started')
-        emitAgentEvent(options?.onEvent, {iteration, type: AgentEventType.ModelStarted})
-        const iterationOptions =
-          modelOptions.diagnostics === undefined
-            ? modelOptions
-            : {
-                ...modelOptions,
-                diagnosticContext: {...modelOptions.diagnosticContext, iteration},
-              }
-        const context = this.sessionContextBuilder.build(session)
-        const modelStartedAt = performance.now()
-        if (diagnostics === undefined) {
-          this.logger.info(
-            {
-              eventType: LogEventType.ModelRequestStarted,
-              iteration,
-              messageCount: context.messages.length,
-              model: this.model.getModel(),
-              outcome: LogOutcome.Started,
-              provider: this.model.getProvider(),
-              toolCount: toolSnapshot.specs().length,
-            },
-            'model request started',
-          )
-        }
-
-        let modelMessage: Message
-        try {
-          // Tool loops are sequential because each model response depends on the previous tool results.
-
-          const prepared =
-            options?.contextPolicy?.mode === 'budgeted'
-              ? // Context preparation is sequential because it uses this iteration history.
-                // eslint-disable-next-line no-await-in-loop
-                await prepareSessionContext({
-                  model: this.model,
-                  modelOptions: iterationOptions,
-                  onEvent: (event) =>
-                    emitAgentEvent(options?.onEvent, {iteration, type: AgentEventType.ContextPrepared, ...event}),
-                  policy: options.contextPolicy,
-                  prefix: [
-                    ...this.messages,
-                    ...skillPrefix(options?.activeSkills ?? []).map(
-                      (content) => new Message(MessageType.User, {content}),
-                    ),
-                  ],
-                  run,
-                  session,
-                })
-              : undefined
-          run.consume('modelCalls')
-          // The next model iteration depends on these results.
-          // eslint-disable-next-line no-await-in-loop
-          modelMessage = await run.wait(
-            'model',
-            prepared
-              ? prepared.invoke()
-              : this.model.invoke(
-                  [
-                    ...this.messages,
-                    ...skillPrefix(options?.activeSkills ?? []).map(
-                      (content) => new Message(MessageType.User, {content}),
-                    ),
-                    ...context.messages,
-                  ],
-                  iterationOptions,
-                ),
-          )
-        } catch (error) {
+      let graphIteration = 0
+      const runAgentStage = async (stageMax = maxToolIterations): Promise<Message> => {
+        for (let localIteration = 0; localIteration <= stageMax; localIteration += 1) {
+          const iteration = graph ? graphIteration++ : localIteration
+          throwIfAborted(options?.signal)
+          this.logger.debug({iteration, maxToolIterations}, 'agent model iteration started')
+          emitAgentEvent(options?.onEvent, {iteration, type: AgentEventType.ModelStarted})
+          const iterationOptions =
+            modelOptions.diagnostics === undefined
+              ? modelOptions
+              : {
+                  ...modelOptions,
+                  diagnosticContext: {...modelOptions.diagnosticContext, iteration},
+                }
+          const context = this.sessionContextBuilder.build(session)
+          const modelStartedAt = performance.now()
           if (diagnostics === undefined) {
-            this.logger.error(
-              {
-                durationMs: performance.now() - modelStartedAt,
-                error: error instanceof Error ? error.message : String(error),
-                eventType: LogEventType.ModelRequestFailed,
-                iteration,
-                model: this.model.getModel(),
-                outcome: LogOutcome.Failed,
-                provider: this.model.getProvider(),
-              },
-              'model request failed',
-            )
-          }
-
-          throw error
-        }
-
-        throwIfAborted(options?.signal)
-        const [storedModelMessage] = session.appendMessages([modelMessage], {iteration, turnId})
-        emitAgentEvent(options?.onEvent, {
-          iteration,
-          message: storedModelMessage,
-          type: AgentEventType.MessageCompleted,
-        })
-        this.logger.debug({iteration, role: modelMessage.role}, 'agent model iteration completed')
-        if (diagnostics === undefined) {
-          const response = modelResponseMetadata(modelMessage)
-          this.logger.info(
-            {
-              durationMs: response?.durationMs ?? performance.now() - modelStartedAt,
-              eventType: LogEventType.ModelRequestCompleted,
-              iteration,
-              model: response?.model ?? this.model.getModel(),
-              outcome: LogOutcome.Succeeded,
-              provider: response?.provider ?? this.model.getProvider(),
-              ...(response?.responseId === undefined ? {} : {requestId: response.responseId}),
-              ...(response?.usage === undefined ? {} : {usage: {...response.usage}}),
-            },
-            'model request completed',
-          )
-        }
-
-        const toolCalls = getToolCalls(storedModelMessage)
-        run.consume('toolRequests', toolCalls.length)
-        this.logger.debug({iteration, toolCallCount: toolCalls.length}, 'agent tool calls received')
-        if (toolCalls.length === 0) {
-          recordTerminal(TurnPhase.Completed)
-          // The terminal flush belongs to this iteration and must finish before returning the response.
-          // eslint-disable-next-line no-await-in-loop
-          await session.flush()
-          const turnCompleted = diagnostics?.emit({
-            data: {durationMs: performance.now() - turnStartedAt, iteration},
-            level: 'info',
-            runId: turnId,
-            sessionId: session.getId(),
-            threadId: session.getId(),
-            turnId,
-            type: LogEventType.TurnCompleted,
-          })
-          if (turnCompleted === undefined) {
             this.logger.info(
               {
-                durationMs: performance.now() - turnStartedAt,
-                eventType: LogEventType.TurnCompleted,
+                eventType: LogEventType.ModelRequestStarted,
                 iteration,
-                outcome: LogOutcome.Succeeded,
+                messageCount: context.messages.length,
+                model: this.model.getModel(),
+                outcome: LogOutcome.Started,
+                provider: this.model.getProvider(),
+                toolCount: toolSnapshot.specs().length,
               },
-              'agent turn completed',
+              'model request started',
             )
           }
 
-          return storedModelMessage
-        }
+          let modelMessage: Message
+          try {
+            // Tool loops are sequential because each model response depends on the previous tool results.
 
-        if (iteration === maxToolIterations) {
-          this.logger.debug({maxToolIterations, toolCallCount: toolCalls.length}, 'agent max tool iterations exceeded')
-          run.requestStop('budget-exceeded')
-          run.check()
-        }
+            const prepared =
+              options?.contextPolicy?.mode === 'budgeted'
+                ? // Context preparation is sequential because it uses this iteration history.
+                  // eslint-disable-next-line no-await-in-loop
+                  await prepareSessionContext({
+                    model: this.model,
+                    modelOptions: iterationOptions,
+                    onEvent: (event) =>
+                      emitAgentEvent(options?.onEvent, {iteration, type: AgentEventType.ContextPrepared, ...event}),
+                    policy: options.contextPolicy,
+                    prefix: [
+                      ...this.messages,
+                      ...skillPrefix(options?.activeSkills ?? []).map(
+                        (content) => new Message(MessageType.User, {content}),
+                      ),
+                    ],
+                    run,
+                    session,
+                  })
+                : undefined
+            run.consume('modelCalls')
+            // The next model iteration depends on these results.
+            // eslint-disable-next-line no-await-in-loop
+            modelMessage = await run.wait(
+              'model',
+              prepared
+                ? prepared.invoke()
+                : this.model.invoke(
+                    [
+                      ...this.messages,
+                      ...skillPrefix(options?.activeSkills ?? []).map(
+                        (content) => new Message(MessageType.User, {content}),
+                      ),
+                      ...context.messages,
+                    ],
+                    iterationOptions,
+                  ),
+            )
+          } catch (error) {
+            if (diagnostics === undefined) {
+              this.logger.error(
+                {
+                  durationMs: performance.now() - modelStartedAt,
+                  error: error instanceof Error ? error.message : String(error),
+                  eventType: LogEventType.ModelRequestFailed,
+                  iteration,
+                  model: this.model.getModel(),
+                  outcome: LogOutcome.Failed,
+                  provider: this.model.getProvider(),
+                },
+                'model request failed',
+              )
+            }
 
-        // Tool execution for one model turn can run in parallel before the next model call.
-        const signal = options?.signal ?? new AbortController().signal
+            throw error
+          }
 
-        const callIds = new Set<string>()
-        for (const call of toolCalls) {
-          if (typeof call.id !== 'string' || call.id.length === 0 || callIds.has(call.id))
-            throw new InvalidInputError('Tool call IDs must be unique within a model response')
-          callIds.add(call.id)
-        }
-
-        run.consume('toolRounds')
-        // The next model iteration depends on these results.
-        // eslint-disable-next-line no-await-in-loop
-        const toolResults = await toolRuntime.executeAll(
-          toolCalls,
-          (toolCall): ToolExecutionContext => ({
-            callId: toolCall.id,
-            cwd: this.cwd,
-            emitUpdate(update) {
-              emitAgentEvent(options?.onEvent, {
-                iteration,
-                toolCall,
-                type: AgentEventType.ToolUpdated,
-                update,
-              })
-            },
-            iteration,
-            signal,
-          }),
-          (toolCall, execute) => this.observeToolExecution(toolCall, execute, iteration, options),
-        )
-        const storedToolMessages = session.appendMessages(
-          toolResults.map((result) => createToolResultMessage(result.toolCall, result.result)),
-          {iteration, turnId},
-        )
-        for (const [index, message] of storedToolMessages.entries()) {
+          throwIfAborted(options?.signal)
+          const [storedModelMessage] = session.appendMessages([modelMessage], {iteration, turnId})
           emitAgentEvent(options?.onEvent, {
             iteration,
-            message,
-            toolCall: toolResults[index].toolCall,
-            type: AgentEventType.ToolCompleted,
+            message: storedModelMessage,
+            type: AgentEventType.MessageCompleted,
           })
+          this.logger.debug({iteration, role: modelMessage.role}, 'agent model iteration completed')
+          if (diagnostics === undefined) {
+            const response = modelResponseMetadata(modelMessage)
+            this.logger.info(
+              {
+                durationMs: response?.durationMs ?? performance.now() - modelStartedAt,
+                eventType: LogEventType.ModelRequestCompleted,
+                iteration,
+                model: response?.model ?? this.model.getModel(),
+                outcome: LogOutcome.Succeeded,
+                provider: response?.provider ?? this.model.getProvider(),
+                ...(response?.responseId === undefined ? {} : {requestId: response.responseId}),
+                ...(response?.usage === undefined ? {} : {usage: {...response.usage}}),
+              },
+              'model request completed',
+            )
+          }
+
+          const toolCalls = getToolCalls(storedModelMessage)
+          run.consume('toolRequests', toolCalls.length)
+          this.logger.debug({iteration, toolCallCount: toolCalls.length}, 'agent tool calls received')
+          if (toolCalls.length === 0) {
+            if (!graph) {
+              recordTerminal(TurnPhase.Completed)
+              // The terminal flush belongs to this iteration and must finish before returning the response.
+              // eslint-disable-next-line no-await-in-loop
+              await session.flush()
+              const turnCompleted = diagnostics?.emit({
+                data: {durationMs: performance.now() - turnStartedAt, iteration},
+                level: 'info',
+                runId: turnId,
+                sessionId: session.getId(),
+                threadId: session.getId(),
+                turnId,
+                type: LogEventType.TurnCompleted,
+              })
+              if (turnCompleted === undefined) {
+                this.logger.info(
+                  {
+                    durationMs: performance.now() - turnStartedAt,
+                    eventType: LogEventType.TurnCompleted,
+                    iteration,
+                    outcome: LogOutcome.Succeeded,
+                  },
+                  'agent turn completed',
+                )
+              }
+            }
+
+            return storedModelMessage
+          }
+
+          if (localIteration === stageMax) {
+            this.logger.debug(
+              {maxToolIterations, toolCallCount: toolCalls.length},
+              'agent max tool iterations exceeded',
+            )
+            run.requestStop('budget-exceeded')
+            run.check()
+          }
+
+          // Tool execution for one model turn can run in parallel before the next model call.
+          const signal = options?.signal ?? new AbortController().signal
+
+          const callIds = new Set<string>()
+          for (const call of toolCalls) {
+            if (typeof call.id !== 'string' || call.id.length === 0 || callIds.has(call.id))
+              throw new InvalidInputError('Tool call IDs must be unique within a model response')
+            callIds.add(call.id)
+          }
+
+          run.consume('toolRounds')
+          // The next model iteration depends on these results.
+          // eslint-disable-next-line no-await-in-loop
+          const toolResults = await toolRuntime.executeAll(
+            toolCalls,
+            (toolCall): ToolExecutionContext => ({
+              callId: toolCall.id,
+              cwd: this.cwd,
+              emitUpdate(update) {
+                emitAgentEvent(options?.onEvent, {
+                  iteration,
+                  toolCall,
+                  type: AgentEventType.ToolUpdated,
+                  update,
+                })
+              },
+              iteration,
+              signal,
+            }),
+            (toolCall, execute) => this.observeToolExecution(toolCall, execute, iteration, options),
+          )
+          const storedToolMessages = session.appendMessages(
+            toolResults.map((result) => createToolResultMessage(result.toolCall, result.result)),
+            {iteration, turnId},
+          )
+          for (const [index, message] of storedToolMessages.entries()) {
+            emitAgentEvent(options?.onEvent, {
+              iteration,
+              message,
+              toolCall: toolResults[index].toolCall,
+              type: AgentEventType.ToolCompleted,
+            })
+          }
         }
+
+        throw new Error(`Agent exceeded maximum tool iterations: ${stageMax}`)
       }
 
-      throw new Error(`Agent exceeded maximum tool iterations: ${maxToolIterations}`)
+      if (!graph) return await runAgentStage()
+      const value = await executeProcessorGraph(graph, run, session, {
+        async agent(input, configuration) {
+          const config = configuration as null | {instruction?: string; maxToolIterations?: number}
+          const stageMax = config?.maxToolIterations ?? maxToolIterations
+          if (!Number.isSafeInteger(stageMax) || stageMax < 0 || stageMax > maxToolIterations)
+            throw new Error('Invalid graph Agent iteration limit')
+          if (
+            graphIteration > 0 ||
+            graph.graph.descriptor.nodes.find((node) => node.id === graph.graph.descriptor.entry)?.kind !== 'agent' ||
+            config?.instruction !== undefined
+          )
+            session.appendMessages(
+              [
+                new Message(MessageType.User, {
+                  content: [config?.instruction, typeof input === 'string' ? input : JSON.stringify(input)]
+                    .filter((value) => value !== undefined)
+                    .join('\n'),
+                }),
+              ],
+              {turnId},
+            )
+          await run.wait('graph-step-input', session.flush())
+          const message = await runAgentStage(stageMax)
+          return {
+            contents: copyJSON(message.contents),
+            role: message.role,
+            type: message.type,
+            ...(message.payload === undefined ? {} : {payload: copyJSON(message.payload)}),
+          } as GraphJSON
+        },
+        tool: async (name, input) => {
+          const definition = toolSnapshot.get(name)!
+          const before = run.operations.length
+          const result = await executeManagedTool(
+            run,
+            definition,
+            input,
+            {callId: uuidv7(), cwd: this.cwd, emitUpdate() {}, signal: run.signal},
+            managed,
+          )
+          if (
+            run.operations
+              .slice(before)
+              .some((operation) => ['cancelled-before-start', 'denied', 'invalid'].includes(operation.status))
+          )
+            throw new Error('Graph tool was not admitted')
+          return copyJSON(result) as unknown as GraphJSON
+        },
+      })
+      recordTerminal(TurnPhase.Completed)
+      await session.flush()
+      this.emitTurnTerminal(
+        diagnostics,
+        session,
+        turnId,
+        LogEventType.TurnCompleted,
+        LogOutcome.Succeeded,
+        turnStartedAt,
+      )
+      return value
     } catch (error) {
       if (options?.signal?.aborted && !(error instanceof ModelAbortError)) {
         const abortError = new ModelAbortError('Agent invocation aborted.', {cause: error})
@@ -983,6 +1030,149 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
 
     return execution
   }
+
+  private async startManagedRun<T>(
+    messages: Message[],
+    options: Partial<AgentInvokeOptions>,
+    session: Session,
+    graph?: GraphInvocation,
+  ): Promise<RunHandle<T>> {
+    const skills = normalizeSkillSelections(options.skills)
+    if (skills.length > 0 && !this.skillCatalog) throw new Error('Skill catalog is not configured')
+    options = {...options, skills, tools: options.tools ? [...options.tools] : undefined}
+    if (graph && options.tools)
+      options.tools = options.tools.map((tool) =>
+        Object.freeze({
+          description: tool.description,
+          getName: tool.getName.bind(tool),
+          inputSchema: tool.inputSchema ? copyJSON(tool.inputSchema) : undefined,
+          invoke: tool.invoke.bind(tool),
+          name: tool.name,
+          scheduling: tool.scheduling,
+          schema: tool.schema,
+          source: tool.source ? copyJSON(tool.source) : undefined,
+        }),
+      )
+    messages = messages.map(
+      (message) =>
+        new Message(message.type, {
+          contents: copyJSON(message.contents),
+          id: message.id,
+          role: message.role,
+          timestamp: message.timestamp,
+          ...(message.payload === undefined ? {} : {payload: copyJSON(message.payload)}),
+        }),
+    )
+    let manager: McpToolManager | undefined
+    let skillReader = graph ? undefined : this.skillCatalog?.createReader()
+    const policy = this.execution.policy ?? {
+      generation: 'workspace-confirm-v1',
+      profile: 'workspace-confirm' as const,
+      roots: [this.cwd],
+    }
+    const frozenPolicy = Object.freeze({...policy, roots: Object.freeze([...policy.roots])})
+    const contextPolicy: ContextPolicy =
+      this.contextPolicy.mode === 'budgeted'
+        ? {...this.contextPolicy, profile: copyJSON(this.contextPolicy.profile)}
+        : {mode: 'disabled'}
+    const contextConfiguration =
+      contextPolicy.mode === 'budgeted'
+        ? {mode: contextPolicy.mode, profile: contextPolicy.profile}
+        : {mode: contextPolicy.mode}
+    // Estimators are injected behavior, not JSON settings or journal evidence.
+    const settings = copyJSON({...this.settings, contextPolicy: contextConfiguration})
+    const serialized = messages.map((message) => ({
+      contents: message.contents,
+      role: message.role,
+      type: message.type,
+      ...(message.payload === undefined ? {} : {payload: message.payload}),
+    }))
+    return this.supervisor.startRun<T>({
+      async cleanup() {
+        const results = await Promise.allSettled([manager?.close(), skillReader?.settle()])
+        if (results.some((result) => result.status === 'rejected'))
+          throw new Error('Managed resource cleanup remains unconfirmed')
+      },
+      configuration: {
+        contextPolicy: contextConfiguration,
+        cwd: this.cwd,
+        model: this.model.getModel(),
+        policy: {generation: policy.generation, profile: policy.profile, roots: [...policy.roots]},
+        provider: this.model.getProvider(),
+        skillCatalog: this.skillCatalog?.configuration ?? null,
+        sources: this.settings.mcp ?? {},
+      },
+      execute: async (run) => {
+        if (graph) {
+          await bindGraphJournal(graph, run)
+          run.check()
+          // Check locally known capabilities before managed MCP discovery.
+          const known = new ToolRegistry()
+          for (const definition of this.toolDefinitions) known.register(definition)
+          for (const [index, tool] of [...this.tools, ...(options.tools ?? [])].entries())
+            known.register(adaptInvokableTool(tool, tool.source ?? {id: `agent:${index}`, kind: 'custom'}))
+          validateGraphCatalog(graph.graph, known.snapshot(), true)
+          skillReader = this.skillCatalog?.createReader()
+        }
+
+        manager = this.mcpFactory(settings, {
+          cwd: this.cwd,
+          diagnosticContext: {runId: run.id, sessionId: session.getId()},
+          diagnostics: this.diagnostics,
+          execution: {policy: frozenPolicy, run},
+        })
+        return runWithLogContext(
+          {runId: run.id, sessionId: session.getId(), threadId: session.getId(), turnId: run.id},
+          () =>
+            this.invokeSessionWithTurn(session, messages, run.id, {
+              ...options,
+              ...(graph ? {graph} : {}),
+              contextPolicy,
+              executionContext: run,
+              executionPolicy: frozenPolicy,
+              mcp: manager,
+              signal: run.signal,
+              skillReader,
+            }) as Promise<T>,
+        )
+      },
+      input: {
+        ...(graph
+          ? {
+              graph: graph.graph.identity,
+              graphConfiguration: graph.graph.configuration,
+              graphInput: graph.input,
+              graphProfile: graph.graph.profile,
+            }
+          : {}),
+        ...(skills.length > 0 ? {skillCatalog: this.skillCatalog?.configuration, skills} : {}),
+        limits: options.limits ?? {},
+        maxToolIterations: options.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS,
+        messages: serialized,
+        tools: (options.tools ?? []).map((tool) => ({
+          name: tool.name,
+          ...(graph
+            ? {description: tool.description, scheduling: tool.scheduling ?? 'serial', source: tool.source ?? null}
+            : {}),
+          schema:
+            tool.inputSchema ??
+            adaptInvokableTool(tool, tool.source ?? {id: tool.name, kind: 'custom'}).spec.inputSchema,
+        })),
+      },
+      journal: () => this.getJournal(session),
+      ...(graph ? {journalVersion: 2 as const} : {}),
+      limits: {...this.execution.limits, ...options.limits},
+      onApproval: this.execution.onApproval,
+      onSnapshot: options.onRunSnapshot,
+      requestedSkills: skills,
+      requestId: options.requestId ?? options.turnId ?? uuidv7(),
+      responderScope: this.execution.responderScope,
+      runId: options.turnId,
+      sessionId: session.getId(),
+      signal: options.signal,
+      synchronize: async () => session.synchronize((await this.getJournal(session)).level),
+    })
+  }
 }
 
 function emitAgentEvent(handler: AgentEventHandler | undefined, event: AgentEvent): void {
@@ -1052,6 +1242,7 @@ function serializeSessionError(error: unknown): SessionError {
 
 function toModelInvokeOptions(options: Partial<AgentInvokeOptions> | undefined): Partial<ModelInvokeOptions> {
   const result: Record<string, unknown> = {...options}
+  delete result.graph
   delete result.contextPolicy
   delete result.executionPolicy
   delete result.executionContext

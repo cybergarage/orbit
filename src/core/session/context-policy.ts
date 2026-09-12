@@ -8,6 +8,7 @@ import type {Model, ModelInvokeOptions, PreparedModelInvocation} from '../models
 import type {SessionCompactionEntry} from './compaction.js'
 import type {Session} from './session.js'
 
+import {currentGraphVisit} from '../execution/graph-state.js'
 import {Message, MessageType} from '../message/index.js'
 import {getToolCalls} from '../models/adapters/tools.js'
 import {GptTokenizer} from '../tokenizer/index.js'
@@ -170,7 +171,14 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
     run.operations.some((operation) => operation.status === 'unknown')
   )
     throw new ContextBudgetError('unresolved-execution-prevents-compaction')
-  const cut = all.map((message) => message.type).lastIndexOf(MessageType.User)
+  const protectedEntry = currentGraphVisit(run)
+    ? session.getEntries().find((entry) => entry.type === 'message' && entry.turnId === run.id)
+    : undefined
+  const cut =
+    protectedEntry?.type === 'message'
+      ? all.findIndex((message) => message.id === protectedEntry.message.id)
+      : all.map((message) => message.type).lastIndexOf(MessageType.User)
+  if (currentGraphVisit(run) && cut < 0) throw new ContextBudgetError('missing-protected-graph-turn')
   const previous = session.getCompaction()
   const previousCut = previous ? all.findIndex((message) => message.id === previous.firstRetainedId) : 0
   const protectedRequest = prepareRequest(options, [...options.prefix, ...all.slice(Math.max(0, cut))])
@@ -269,7 +277,10 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
 }
 
 function hasPendingEffects(run: RunContext): boolean {
-  return [...run.pending.keys()].some((key) => !key.startsWith('run-body:'))
+  const visit = currentGraphVisit(run)
+  return [...run.pending.keys()].some(
+    (key) => !key.startsWith('run-body:') && !(visit && key.startsWith(`graph-node:${visit}:`)),
+  )
 }
 
 function summaryUsage(message: Message): Record<string, number> | undefined {
