@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Build first. Open the printed loopback URL, create a session, send edit and
-// approve once. This proxy deliberately breaks its own isolated HTTP/SSE flow.
+// approve once. With --skills, select the isolated review Skill before sending.
+// This proxy deliberately breaks its own isolated HTTP/SSE flow.
 import fs from 'node:fs/promises'
 import http from 'node:http'
 import os from 'node:os'
@@ -16,9 +17,23 @@ import {
   MessageType,
   OrbitApplicationService,
   SessionRepository,
+  SkillCatalog,
   ToolProfile,
 } from '../../../../dist/core/index.js'
 const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-gui-faults-'))
+const withSkills = process.argv.includes('--skills')
+let skillCatalog
+const selectedCalls = []
+if (withSkills) {
+  const directory = path.join(root, 'skills', 'review')
+  await fs.mkdir(directory, {recursive: true})
+  await fs.writeFile(
+    path.join(directory, 'SKILL.md'),
+    '---\nname: review\ndescription: Inspect isolated edits and their results\n---\nGUI_FAULT_SKILL: Report actual tool results.\n',
+  )
+  skillCatalog = new SkillCatalog([{directory: path.join(root, 'skills'), id: 'isolated'}])
+}
+
 const repository = new SessionRepository({rootDir: path.join(root, 'sessions')})
 repository.initializeStorage({
   allWritersStopped: true,
@@ -51,7 +66,8 @@ const service = new OrbitApplicationService({
           getModel: () => 'fixture',
           getName: () => 'model',
           getProvider: () => 'ollama',
-          async invoke() {
+          async invoke(messages) {
+            if (withSkills) selectedCalls.push(messages.some((message) => message.content.includes('GUI_FAULT_SKILL')))
             return ++calls === 1
               ? new Message(MessageType.Assistant, {
                   payload: {
@@ -77,6 +93,7 @@ const service = new OrbitApplicationService({
   provider: 'ollama',
   repository,
   settingsSources: [],
+  skillCatalog,
 })
 service.updatePreferences({diagnosticCapture: 'off'})
 const server = await startGuiServer({service, token: 'isolated-fixture-token'})
@@ -170,6 +187,7 @@ process.once('SIGTERM', async () => {
       delayed,
       failed,
       replayed,
+      ...(withSkills ? {selectedCalls} : {}),
     }),
   )
   await server.close()

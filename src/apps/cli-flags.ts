@@ -46,6 +46,10 @@ export const agentFlags = {
     options: getProvider(),
     required: false,
   }),
+  'skill-root': Flags.string({
+    description: 'Explicit Skill root ID=DIRECTORY (repeatable); replaces the workspace default',
+    multiple: true,
+  }),
 }
 
 export function toAgentOptions(flags: {
@@ -61,6 +65,7 @@ export function toAgentOptions(flags: {
   'openai-api-key-env'?: string
   openaiApiKeyEnv?: string
   provider?: string
+  'skill-root'?: string[]
 }): AgentOptions {
   const anthropicApiKeyEnv = flags['anthropic-api-key-env'] ?? flags.anthropicApiKeyEnv
   const ollamaHost = flags['ollama-host'] ?? flags.ollamaHost
@@ -68,6 +73,7 @@ export function toAgentOptions(flags: {
   const executionPolicy = flags['execution-policy']
   const journalLevel = flags['journal-level']
   return {
+    ...(flags['skill-root'] ? {skillRoots: flags['skill-root']} : {}),
     ...(executionPolicy === 'unrestricted' || executionPolicy === 'workspace-confirm' ? {executionPolicy} : {}),
     ...(journalLevel === 'file-sync' || journalLevel === 'file-and-directory-sync' ? {journalLevel} : {}),
     ...(flags.debug ? {debug: true} : {}),

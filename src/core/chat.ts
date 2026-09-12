@@ -14,6 +14,7 @@ export interface AgentOptions {
   model?: string
   provider?: ProviderName
   settings?: WorkspaceSettings
+  skillRoots?: string[]
 }
 
 export interface ResolvedAgentOptions {

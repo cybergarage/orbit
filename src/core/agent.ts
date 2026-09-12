@@ -27,6 +27,7 @@ import type {Operator, OperatorOptions} from './processor/index.js'
 import type {ContextPolicy} from './session/context-policy.js'
 import type {Session, SessionContextBuilder as SessionContextBuilderType, SessionError} from './session/index.js'
 import type {WorkspaceSettings} from './settings.js'
+import type {SkillCatalog, SkillSelection, SkillSnapshot} from './skills/index.js'
 import type {
   InvokableTool,
   ToolDefinition,
@@ -55,6 +56,8 @@ import {formatOperatorName, OperatorType} from './processor/index.js'
 import {prepareSessionContext} from './session/context-policy.js'
 import {SessionContextBuilder, TurnPhase} from './session/index.js'
 import {loadWorkspaceSettingsSync, mergeWorkspaceSettings} from './settings.js'
+import {normalizeSkillSelections} from './skills/index.js'
+import {skillPrefix} from './skills/record.js'
 import {State} from './state.js'
 import {adaptInvokableTool, createBuiltinTools, ToolProfile, ToolRegistry, ToolRuntime} from './tools/index.js'
 
@@ -69,25 +72,29 @@ export interface AgentInvokeOptions extends OperatorOptions {
 
   maxToolIterations?: number
   onEvent?: AgentEventHandler
+  onRunAdmitted?: () => void
   onRunSnapshot?: (snapshot: RunSnapshot) => void
   requestId?: string
   signal?: AbortSignal
+  skills?: SkillSelection[]
   tools?: AgentTool[]
   turnId?: string
 }
 
 interface ManagedInvokeOptions extends AgentInvokeOptions {
+  activeSkills?: SkillSnapshot[]
   contextPolicy?: ContextPolicy
   executionContext?: RunContext
   executionPolicy?: ExecutionPolicy
   mcp?: McpToolManager
+  skillReader?: SkillCatalog
 }
 
 export interface AgentOptions {
   contextPolicy?: ContextPolicy
   cwd?: string
-
   defaultToolProfile?: ToolProfileName
+
   deps?: {
     createMcpToolManager?: (settings: WorkspaceSettings, options: McpToolManagerFactoryOptions) => McpToolManager
     createModel?: typeof getModel
@@ -112,6 +119,7 @@ export interface AgentOptions {
     provider?: ProviderName
   }
   settings?: WorkspaceSettings
+  skillCatalog?: SkillCatalog
   state?: State
   toolDefinitions?: ToolDefinition[]
   toolProfile?: ToolProfileName
@@ -123,6 +131,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   public readonly logger: Logger
   public readonly messages: Message[]
   public readonly settings: WorkspaceSettings
+  public readonly skillCatalog?: SkillCatalog
   public readonly state: State
   readonly supervisor = new RunSupervisor()
   public readonly tools: AgentTool[]
@@ -142,6 +151,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   // eslint-disable-next-line complexity
   constructor(options: AgentOptions = {}) {
     const createModel = options.deps?.createModel ?? getModel
+    this.skillCatalog = options.skillCatalog
     this.settings = mergeWorkspaceSettings(loadWorkspaceSettingsSync(options.cwd), options.settings)
     this.contextPolicy = options.contextPolicy ?? this.settings.contextPolicy ?? {mode: 'disabled'}
     this.cwd = path.resolve(options.cwd ?? process.cwd())
@@ -282,7 +292,9 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     options: Partial<AgentInvokeOptions> = {},
     session = this.getSession(),
   ): Promise<RunHandle<Message>> {
-    options = {...options, tools: options.tools ? [...options.tools] : undefined}
+    const skills = normalizeSkillSelections(options.skills)
+    if (skills.length > 0 && !this.skillCatalog) throw new Error('Skill catalog is not configured')
+    options = {...options, skills, tools: options.tools ? [...options.tools] : undefined}
     messages = messages.map(
       (message) =>
         new Message(message.type, {
@@ -294,6 +306,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         }),
     )
     let manager: McpToolManager | undefined
+    const skillReader = this.skillCatalog?.createReader()
     const policy = this.execution.policy ?? {
       generation: 'workspace-confirm-v1',
       profile: 'workspace-confirm' as const,
@@ -318,7 +331,9 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     }))
     return this.supervisor.startRun<Message>({
       async cleanup() {
-        await manager?.close()
+        const results = await Promise.allSettled([manager?.close(), skillReader?.settle()])
+        if (results.some((result) => result.status === 'rejected'))
+          throw new Error('Managed resource cleanup remains unconfirmed')
       },
       configuration: {
         contextPolicy: contextConfiguration,
@@ -326,6 +341,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         model: this.model.getModel(),
         policy: {generation: policy.generation, profile: policy.profile, roots: [...policy.roots]},
         provider: this.model.getProvider(),
+        skillCatalog: this.skillCatalog?.configuration ?? null,
         sources: this.settings.mcp ?? {},
       },
       execute: async (run) => {
@@ -345,10 +361,12 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
               executionPolicy: frozenPolicy,
               mcp: manager,
               signal: run.signal,
+              skillReader,
             }),
         )
       },
       input: {
+        ...(skills.length > 0 ? {skillCatalog: this.skillCatalog?.configuration, skills} : {}),
         limits: options.limits ?? {},
         maxToolIterations: options.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS,
         messages: serialized,
@@ -363,6 +381,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       limits: {...this.execution.limits, ...options.limits},
       onApproval: this.execution.onApproval,
       onSnapshot: options.onRunSnapshot,
+      requestedSkills: skills,
       requestId: options.requestId ?? options.turnId ?? uuidv7(),
       responderScope: this.execution.responderScope,
       runId: options.turnId,
@@ -460,6 +479,12 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         throw new ModelAbortError('Agent cancelled before admission', {cause: error})
       throw error
     })
+    try {
+      options?.onRunAdmitted?.()
+    } catch {
+      /* Admission observers cannot alter execution. */
+    }
+
     const result = await handle.finished
     const value = handle.value()
     if (result.outcome === 'completed' && value) return value
@@ -503,6 +528,38 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       })
       session.recordTurnEvent({phase: TurnPhase.Started, turnId})
       session.appendMessages(messages, {turnId})
+      if (options?.skills?.length) {
+        if (session.formatVersion !== 2) throw new Error('Skill selection requires explicit transcript v2 migration')
+        const activeSkills = await options.executionContext!.wait(
+          'skill-resolution',
+          options.skillReader!.resolve(options.skills, options.signal),
+        )
+        options.executionContext!.check()
+        const snapshot = {
+          id: uuidv7(),
+          sessionId: session.getId(),
+          skills: activeSkills,
+          timestamp: new Date().toISOString(),
+          turnId,
+          type: 'skill_context' as const,
+          version: 1 as const,
+        }
+        try {
+          await options.executionContext!.wait(
+            'skill-save',
+            session.commitSkills(snapshot, options.executionContext!.journal.level),
+          )
+        } catch (error) {
+          options.executionContext!.recordingFailed = true
+          options.executionContext!.requestStop('recording-failed')
+          throw error
+        }
+
+        options.executionContext!.check()
+        options = {...options, activeSkills}
+        options.executionContext!.setSkillResolution(snapshot.id, activeSkills)
+      }
+
       const turnStarted = diagnostics?.emit({
         data: {messageCount: messages.length},
         level: 'info',
@@ -622,7 +679,12 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                   onEvent: (event) =>
                     emitAgentEvent(options?.onEvent, {iteration, type: AgentEventType.ContextPrepared, ...event}),
                   policy: options.contextPolicy,
-                  prefix: this.messages,
+                  prefix: [
+                    ...this.messages,
+                    ...skillPrefix(options?.activeSkills ?? []).map(
+                      (content) => new Message(MessageType.User, {content}),
+                    ),
+                  ],
                   run,
                   session,
                 })
@@ -632,7 +694,18 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           // eslint-disable-next-line no-await-in-loop
           modelMessage = await run.wait(
             'model',
-            prepared ? prepared.invoke() : this.model.invoke([...this.messages, ...context.messages], iterationOptions),
+            prepared
+              ? prepared.invoke()
+              : this.model.invoke(
+                  [
+                    ...this.messages,
+                    ...skillPrefix(options?.activeSkills ?? []).map(
+                      (content) => new Message(MessageType.User, {content}),
+                    ),
+                    ...context.messages,
+                  ],
+                  iterationOptions,
+                ),
           )
         } catch (error) {
           if (diagnostics === undefined) {

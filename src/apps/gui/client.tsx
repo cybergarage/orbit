@@ -16,6 +16,8 @@ import type {
   RuntimeSnapshot,
   SessionListResult,
   SessionSummary,
+  SkillListing,
+  SkillSelection,
   StartApplicationRunResult,
   ThreadMessage,
   ThreadSnapshot,
@@ -46,11 +48,15 @@ function App() {
   const [contextNotices, setContextNotices] = useState<Record<string, string>>({})
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [thread, setThread] = useState<ThreadSnapshot>()
+  useEffect(() => setSkillHistory(''), [thread?.id])
   const [logs, setLogs] = useState<LogRecord[]>([])
   const [preferences, setPreferences] = useState<GuiPreferences>({
     debugPanelVisible: true,
     diagnosticCapture: 'metadata',
   })
+  const [skillList, setSkillList] = useState<SkillListing>({candidates: [], complete: true, issues: []})
+  const [pendingSkills, setPendingSkills] = useState<Record<string, SkillSelection[]>>({})
+  const [skillHistory, setSkillHistory] = useState('')
   const [prompt, setPrompt] = useState('')
   const [runPresentations, setRunPresentations] = useState<Record<string, GuiRunPresentation>>({})
   const [error, setError] = useState<string>()
@@ -95,6 +101,7 @@ function App() {
   useEffect(() => {
     Promise.all([
       api<RuntimeSnapshot>('/api/runtime').then(setRuntime),
+      api<SkillListing>('/api/skills').then(setSkillList),
       api<GuiPreferences>('/api/preferences').then(setPreferences),
       loadSessions(),
     ]).catch(showError(setError))
@@ -241,13 +248,17 @@ function App() {
     }
   }
 
-  const retrySubmission = useRef<undefined | {content: string; requestId: string; threadId: string}>(undefined)
+  const retrySubmission = useRef<
+    undefined | {content: string; requestId: string; selectionKey: string; threadId: string}
+  >(undefined)
   const submit = async () => {
     if (thread === undefined || prompt.trim().length === 0) return
     const threadId = thread.id
     const presentation = runPresentations[threadId] ?? reconcileGuiRunWithThread(undefined, thread.status)
     if (isGuiRunActive(presentation) || pendingSubmissions.current.has(threadId)) return
     const content = prompt
+    const skills = content.startsWith('/') ? [] : (pendingSkills[threadId] ?? [])
+    const selectionKey = JSON.stringify(skills)
     pendingSubmissions.current.add(threadId)
     try {
       setError(undefined)
@@ -258,10 +269,16 @@ function App() {
           content,
           requestId: (() => {
             const prior = retrySubmission.current
-            if (!prior || prior.content !== content || prior.threadId !== threadId)
-              retrySubmission.current = {content, requestId: crypto.randomUUID(), threadId}
+            if (
+              !prior ||
+              prior.content !== content ||
+              prior.threadId !== threadId ||
+              prior.selectionKey !== selectionKey
+            )
+              retrySubmission.current = {content, requestId: crypto.randomUUID(), selectionKey, threadId}
             return retrySubmission.current!.requestId
           })(),
+          skills,
         }),
         headers: {'Content-Type': 'application/json'},
         method: 'POST',
@@ -273,6 +290,7 @@ function App() {
             ? acceptGuiRun(current[threadId] ?? idleGuiRunPresentation, result.runId)
             : idleGuiRunPresentation,
       }))
+      if (result.kind === 'run') setPendingSkills((current) => ({...current, [threadId]: []}))
       retrySubmission.current = undefined
       await refreshThread(result.threadId)
     } catch (nextError) {
@@ -497,6 +515,67 @@ function App() {
           <div ref={messagesEnd} />
         </div>
         <div className="composer-wrap">
+          <details>
+            <summary>Skills · pending {(pendingSkills[thread?.id ?? ''] ?? []).length}</summary>
+            <button
+              disabled={runActive}
+              onClick={() => api<SkillListing>('/api/skills').then(setSkillList).catch(showError(setError))}
+            >
+              Refresh Skill catalog
+            </button>
+            <button
+              disabled={runActive || !thread}
+              onClick={() => thread && setPendingSkills((current) => ({...current, [thread.id]: []}))}
+            >
+              Clear pending Skills
+            </button>
+            {skillList.candidates.map((candidate) => (
+              <label key={candidate.id} style={{display: 'block'}}>
+                <input
+                  checked={(pendingSkills[thread?.id ?? ''] ?? []).some(
+                    (s) => s.id === candidate.id && s.digest === candidate.digest,
+                  )}
+                  disabled={runActive || !thread}
+                  onChange={(event) => {
+                    if (!thread) return
+                    const {checked} = event.target
+                    setPendingSkills((current) => ({
+                      ...current,
+                      [thread.id]: checked
+                        ? [
+                            ...(current[thread.id] ?? []).filter((s) => s.id !== candidate.id),
+                            {digest: candidate.digest, id: candidate.id},
+                          ]
+                        : (current[thread.id] ?? []).filter((s) => s.id !== candidate.id),
+                    }))
+                  }}
+                  type="checkbox"
+                />
+                {candidate.name} — {candidate.file} — {candidate.description}
+              </label>
+            ))}
+            {skillList.issues.map((issue, index) => (
+              <div key={index}>{issue}</div>
+            ))}
+            {thread?.run?.skills && (
+              <p>
+                {thread.run.result ? 'Finished' : thread.run.skills.resolved ? 'Resolved' : 'Loading'} Skills:{' '}
+                {thread.run.skills.requested.map((s) => s.id).join(', ')}
+              </p>
+            )}
+            <button
+              disabled={!thread}
+              onClick={() =>
+                thread &&
+                api(`/api/sessions/${encodeURIComponent(thread.id)}/skills`)
+                  .then((value) => setSkillHistory(JSON.stringify(value, null, 2)))
+                  .catch(showError(setError))
+              }
+            >
+              Inspect saved Skill sources
+            </button>
+            {skillHistory && <pre>{skillHistory}</pre>}
+          </details>
           <div className={`composer ${runActive ? 'drafting' : ''}`}>
             <textarea
               aria-describedby="composer-instructions"

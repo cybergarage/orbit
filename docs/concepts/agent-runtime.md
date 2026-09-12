@@ -45,6 +45,11 @@ refuses admission until externally exclusive offline recovery. This assumes
 cooperating upgraded processes on one host and supported local storage.
 See [Managed Execution](../execution.md) for the current API and limits.
 
+Explicitly selected Skills apply to one Run as user-level instructions. Core
+validates their source and records exact bytes before model use. Historical
+snapshots remain inspectable without becoming current instructions; selection
+never grants tool permission. See [Explicit Skill selection](../skills.md).
+
 This is a fixed Agent loop, not a data-driven Processor Graph.
 
 ## Directional Model

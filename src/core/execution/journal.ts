@@ -326,8 +326,8 @@ export function validateNext(entries: JournalRecord[], record: JournalRecord): v
       'variant',
     ],
     'operation-result': ['operationId', 'status', 'outputDigest'],
-    'run-admitted': ['configuration', 'level', 'limits', 'mode', 'requestDigest', 'requestId'],
-    'run-ready': ['catalog'],
+    'run-admitted': ['configuration', 'level', 'limits', 'mode', 'requestDigest', 'requestId', 'skills'],
+    'run-ready': ['catalog', 'skills'],
     'run-terminal': [
       'cleanupErrors',
       'operations',
@@ -355,6 +355,7 @@ export function validateNext(entries: JournalRecord[], record: JournalRecord): v
   if (typeof record.timestamp !== 'string' || !Number.isFinite(Date.parse(record.timestamp)) || record.elapsedMs < 0)
     throw new Error('Invalid journal envelope')
   const run = entries.filter((entry) => entry.runId === record.runId)
+  validateSkillEvidence(record, run)
   if (
     record.version !== 1 ||
     !Number.isFinite(record.elapsedMs) ||
@@ -384,6 +385,42 @@ export function validateNext(entries: JournalRecord[], record: JournalRecord): v
     !run.some((entry) => entry.kind === 'run-ready')
   )
     throw new Error('Tool intent before ready')
+}
+
+function validateSkillEvidence(record: JournalRecord, run: JournalRecord[]): void {
+  const selected = (value: unknown) => {
+    if (!Array.isArray(value) || value.length === 0) throw new Error('Invalid journal Skill selections')
+    const ids = new Set<string>()
+    for (const item of value) {
+      if (
+        !item ||
+        Object.keys(item).sort().join(',') !== 'digest,id' ||
+        typeof item.id !== 'string' ||
+        !/^[a-f0-9]{64}$/u.test(item.id) ||
+        typeof item.digest !== 'string' ||
+        !/^[a-f0-9]{64}$/u.test(item.digest) ||
+        ids.has(item.id)
+      )
+        throw new Error('Invalid journal Skill identity')
+      ids.add(item.id)
+    }
+
+    return value
+  }
+
+  if (record.kind === 'run-admitted' && record.data.skills !== undefined) selected(record.data.skills)
+  if (record.kind !== 'run-ready') return
+  const requested = run.find((entry) => entry.kind === 'run-admitted')?.data.skills
+  if (requested === undefined && record.data.skills === undefined) return
+  const evidence = record.data.skills as undefined | {resolved: unknown; snapshotId: string}
+  if (
+    !evidence ||
+    Object.keys(evidence).sort().join(',') !== 'resolved,snapshotId' ||
+    typeof evidence.snapshotId !== 'string' ||
+    !evidence.snapshotId ||
+    canonicalJSON(selected(evidence.resolved)) !== canonicalJSON(selected(requested))
+  )
+    throw new Error('Skill readiness must match the admitted ordered selection')
 }
 
 export async function exists(file: string, io = fs): Promise<boolean> {

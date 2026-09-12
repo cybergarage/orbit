@@ -265,6 +265,8 @@ describe('interactive helpers', () => {
     expect(slashCommandHelpMessage).to.equal(
       [
         'Slash commands:',
+        '/skills - List Skill IDs and digests',
+        '/skill ID@DIGEST - Select for the next Run; /skill clear removes pending selections',
         '/help - Show slash commands',
         '/exit - Exit interactive mode',
         '/session - Show the current session information',

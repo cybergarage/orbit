@@ -101,6 +101,19 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
   app.post('/api/sessions/:sessionId/resume', async (request, response) => {
     response.json(await options.service.resumeSession(request.params.sessionId))
   })
+  app.get('/api/skills', async (request, response) => {
+    const controller = new AbortController()
+    const abort = () => controller.abort()
+    response.once('close', abort)
+    try {
+      response.json(await options.service.listSkills(controller.signal))
+    } finally {
+      response.off('close', abort)
+    }
+  })
+  app.get('/api/sessions/:sessionId/skills', async (request, response) =>
+    response.json(await options.service.skillHistory(request.params.sessionId)),
+  )
   app.get('/api/threads/:threadId', (request, response) => {
     const thread = options.service.getThread(request.params.threadId)
     if (thread === undefined) return response.status(404).json({error: 'Thread not found.'})
@@ -114,7 +127,18 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
           .string()
           .regex(/^[A-Za-z0-9_-]{1,160}$/u)
           .parse(request.body.requestId)
-    response.status(202).json(await options.service.startRun(request.params.threadId, content, requestId))
+    response.status(202).json(
+      await options.service.startRun(request.params.threadId, content, {
+        requestId,
+        skills: z
+          .array(
+            z.object({digest: z.string().regex(/^[a-f0-9]{64}$/u), id: z.string().regex(/^[a-f0-9]{64}$/u)}).strict(),
+          )
+          .max(128)
+          .optional()
+          .parse(request.body.skills),
+      }),
+    )
   })
   app.get('/api/runs/:runId', async (request, response) => {
     const snapshot = await options.service.queryRun(request.params.runId)

@@ -14,6 +14,7 @@ import type {LogPage, LogQuery, LogRecord, LogStoreHealth, SessionLoggerFactory,
 import type {ProviderName} from './models/index.js'
 import type {SessionListOptions, SessionListResult, SessionRepository, SessionSummary} from './session/index.js'
 import type {WorkspaceSettings, WorkspaceSettingsSource} from './settings.js'
+import type {SkillSelection} from './skills/index.js'
 import type {ThreadAgentFactory, ThreadEvent, ThreadMessage, ThreadSnapshot} from './thread.js'
 
 import {Agent} from './agent.js'
@@ -30,8 +31,10 @@ import {recoveredRunSnapshot} from './execution/run.js'
 import {createCompositeLogger} from './logger/index.js'
 import {FileSessionLogStore, LogEventType, LogOutcome, StoreSessionLoggerFactory} from './logs/index.js'
 import {Message, MessageType, Role} from './models/index.js'
+import {parseSessionFile} from './session/codec.js'
 import {SessionRepository as Repository, SessionDeletionService} from './session/index.js'
 import {loadWorkspaceSettingsWithSources} from './settings.js'
+import {SkillCatalog} from './skills/index.js'
 import {serializeMessage, ThreadEventType, ThreadManager} from './thread.js'
 import {ToolProfile} from './tools/index.js'
 
@@ -93,6 +96,7 @@ export interface OrbitApplicationServiceOptions {
   repository?: SessionRepository
   settings?: WorkspaceSettings
   settingsSources?: WorkspaceSettingsSource[]
+  skillCatalog?: SkillCatalog
   version?: string
 }
 
@@ -105,6 +109,7 @@ export class OrbitApplicationService {
   readonly logs: SessionLogStore
   readonly repository: SessionRepository
   readonly runtime: RuntimeSnapshot
+  readonly skillCatalog?: SkillCatalog
   private closePromise?: Promise<void>
   private readonly deletionService: SessionDeletionService
   private readonly detachDiagnosticLogger: () => void
@@ -122,6 +127,7 @@ export class OrbitApplicationService {
     options: OrbitApplicationServiceOptions &
       Required<Pick<OrbitApplicationServiceOptions, 'contexts' | 'cwd' | 'settingsSources'>>,
   ) {
+    this.skillCatalog = options.skillCatalog
     const resolved = resolveAgentOptions(
       {
         model: options.model,
@@ -178,6 +184,7 @@ export class OrbitApplicationService {
             defaultToolProfile: ToolProfile.Coding,
             diagnostics: this.diagnostics,
             execution: {...options.execution, onApproval() {}, responderScope: 'local-gui'},
+            skillCatalog: this.skillCatalog,
           })),
       loggerFactory: this.loggerFactory,
       onEvent: (event) => this.handleThreadEvent(event),
@@ -224,6 +231,7 @@ export class OrbitApplicationService {
   close(): Promise<void> {
     this.closePromise ??= (async () => {
       await this.threadManager.close()
+      await this.skillCatalog?.settle()
       this.displayMessages.clear()
       this.detachDiagnosticLogger()
       if (this.ownsLogs) await this.logs.close()
@@ -244,6 +252,7 @@ export class OrbitApplicationService {
         messages: systemMessages,
         model: {name: this.runtime.model, provider: this.runtime.provider},
         settings: this.settings,
+        skillCatalog: this.skillCatalog,
       },
     })
     const event = this.diagnostics.emit({
@@ -315,6 +324,12 @@ export class OrbitApplicationService {
     return this.repository.listPage(options)
   }
 
+  async listSkills(signal?: AbortSignal) {
+    return this.skillCatalog
+      ? this.skillCatalog.list(signal)
+      : {candidates: [], complete: true, issues: ['No Skill catalog configured']}
+  }
+
   async queryRun(id: string): Promise<RunSnapshot | undefined> {
     const live = this.getRun(id)
     if (live) return live
@@ -358,6 +373,7 @@ export class OrbitApplicationService {
       agent: {
         diagnostics: this.diagnostics,
         settings: this.settings,
+        skillCatalog: this.skillCatalog,
       },
     })
     const event = this.diagnostics.emit({
@@ -385,7 +401,20 @@ export class OrbitApplicationService {
     return thread
   }
 
-  async startRun(threadId: string, content: string, requestId?: string): Promise<StartApplicationRunResult> {
+  async skillHistory(sessionId: string) {
+    const summary = await this.repository.findById(sessionId)
+    if (!summary) throw new Error('Session not found')
+    return parseSessionFile(await fs.readFile(summary.file, 'utf8'), summary.file).entries.filter(
+      (entry) => entry.type === 'skill_context',
+    )
+  }
+
+  async startRun(
+    threadId: string,
+    content: string,
+    request?: string | {requestId?: string; skills?: SkillSelection[]},
+  ): Promise<StartApplicationRunResult> {
+    const {requestId, skills} = typeof request === 'string' ? {requestId: request, skills: undefined} : (request ?? {})
     if (content.startsWith('/')) {
       const thread = this.threadManager.getThread(threadId)
       if (thread === undefined) throw new Error(`Unknown thread: ${threadId}`)
@@ -420,7 +449,11 @@ export class OrbitApplicationService {
       return {kind: 'command', response, threadId}
     }
 
-    const handle = this.threadManager.startRun(threadId, content, {requestId})
+    const handle = this.threadManager.startRun(threadId, content, {
+      requestId,
+      skillCatalogRevision: this.skillCatalog?.configuration,
+      skills,
+    })
     handle.completion.catch(() => {})
     await handle.admitted
     return {kind: 'run', runId: handle.id, threadId: handle.threadId}

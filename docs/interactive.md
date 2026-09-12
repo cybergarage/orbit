@@ -64,9 +64,31 @@
 <td style="text-align: left;"><p>Disable debug logging</p></td>
 <td style="text-align: left;"><p>Turns debug logging off for subsequent requests</p></td>
 </tr>
+<tr>
+<td style="text-align: left;"><p>/skills</p></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><p>List Skill metadata</p></td>
+<td style="text-align: left;"><p>Displays source IDs and digests without activating instructions</p></td>
+</tr>
+<tr>
+<td style="text-align: left;"><p>/skill</p></td>
+<td style="text-align: left;"><p>ID@DIGEST</p></td>
+<td style="text-align: left;"><p>Select a Skill</p></td>
+<td style="text-align: left;"><p>Adds a pending one-Run selection</p></td>
+</tr>
+<tr>
+<td style="text-align: left;"><p>/skill</p></td>
+<td style="text-align: left;"><p>clear</p></td>
+<td style="text-align: left;"><p>Clear pending Skills</p></td>
+<td style="text-align: left;"><p>Leaves historical snapshots intact</p></td>
+</tr>
 </tbody>
 </table>
 
 ## Managed operations
 
 The default workspace-confirm policy allows reads inside the workspace and asks before edits, commands and MCP operations. Use Y or N for the displayed single-operation request. Ctrl+C during a run requests stop; an incomplete result means cleanup or effects remain unconfirmed. The interface reports the run result and required recording failure. An application owner can select --execution-policy unrestricted explicitly; limits and required recording still apply. Persistent recording defaults to file-and-directory-sync; --journal-level file-sync explicitly selects weaker acknowledgement when needed. See [Managed Execution](execution.md) for ownership and migration details.
+
+## Selected instructions
+
+Use /skills to inspect explicit sources and /skill ID@DIGEST to select the next Run’s instructions. Successful admission consumes pending choices; rejected admission retains them. Local slash commands do not consume selections. Use /skill clear to clear the pending set. See [Explicit Skill selection](skills.md) for source validation and reader migration.

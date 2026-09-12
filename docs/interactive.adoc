@@ -18,3 +18,11 @@ limits and required recording still apply.
 Persistent recording defaults to file-and-directory-sync; --journal-level
 file-sync explicitly selects weaker acknowledgement when needed.
 See link:execution.md[Managed Execution] for ownership and migration details.
+
+== Selected instructions
+
+Use /skills to inspect explicit sources and /skill ID@DIGEST to select the next Run's instructions.
+Successful admission consumes pending choices; rejected admission retains them.
+Local slash commands do not consume selections.
+Use /skill clear to clear the pending set.
+See link:skills.md[Explicit Skill selection] for source validation and reader migration.

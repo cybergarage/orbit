@@ -4,8 +4,10 @@
 import {randomUUID} from 'node:crypto'
 import {performance} from 'node:perf_hooks'
 
+import type {SkillSelection} from '../skills/catalog.js'
 import type {ExecutionJournal, JournalKind, JournalLevel, JournalRecord} from './journal.js'
 
+import {normalizeSkillSelections} from '../skills/catalog.js'
 import {canonicalJSON, copyJSON, safeIdentity} from './journal.js'
 import {recordReconciliation} from './recovery.js'
 
@@ -74,6 +76,7 @@ export interface RunSnapshot {
   runId: string
   sequence: number
   sessionId: string
+  skills?: {requested: SkillSelection[]; resolved?: SkillSelection[]; snapshotId?: string}
   stopRequest?: string
   unresolved: string[]
   version: 1
@@ -104,6 +107,7 @@ export interface RunStartOptions<T> {
   limits?: Partial<RunLimits>
   onApproval?: (request: ApprovalRequest) => Promise<void> | void
   onSnapshot?: (snapshot: RunSnapshot) => void
+  requestedSkills?: SkillSelection[]
   requestId: string
   responderScope?: string
   runId?: string
@@ -139,6 +143,7 @@ export class RunContext {
   private readonly releasedPromise: Promise<void>
   private resolveRelease!: () => void
   private resolveStop!: () => void
+  private skillResolution?: {resolved: SkillSelection[]; snapshotId: string}
   private readonly stopped: Promise<void>
   private terminalSealed = false
   private timer?: ReturnType<typeof setTimeout>
@@ -282,7 +287,10 @@ export class RunContext {
   async ready(catalog: unknown): Promise<void> {
     this.check()
     this.catalog = this.journal.digest(catalog)
-    await this.record('run-ready', {catalog: this.catalog})
+    await this.record('run-ready', {
+      catalog: this.catalog,
+      ...(this.skillResolution ? {skills: this.skillResolution} : {}),
+    })
     this.phase = 'running'
     this.emit()
   }
@@ -373,6 +381,11 @@ export class RunContext {
     this.clearTimer()
   }
 
+  setSkillResolution(snapshotId: string, skills: SkillSelection[]): void {
+    this.skillResolution = {resolved: normalizeSkillSelections(skills), snapshotId}
+    this.emit()
+  }
+
   snapshot(): RunSnapshot {
     return copyJSON({
       approvals: [...this.approvals.values()]
@@ -381,6 +394,9 @@ export class RunContext {
             entry.grant === undefined && Date.now() < entry.request.expiresAt && !this.result && !this.stopReason,
         )
         .map((entry) => entry.request),
+      ...(this.options.requestedSkills?.length
+        ? {skills: {requested: this.options.requestedSkills, ...this.skillResolution}}
+        : {}),
       budget: this.budget,
       phase: this.phase,
       quarantined: Boolean(this.result) && !this.released,
@@ -577,6 +593,7 @@ export class RunSupervisor {
             level: journal.level,
             limits,
             mode: journal.mode,
+            ...(options.requestedSkills?.length ? {skills: normalizeSkillSelections(options.requestedSkills)} : {}),
             requestDigest,
             requestId: options.requestId,
           },
@@ -793,7 +810,24 @@ export function recoveredRunSnapshot(
         unresolved: ['recovery-required'],
       }
   const settled = run.some((entry) => entry.kind === 'late-settlement' && entry.data.settled === true)
+  const requested = normalizeSkillSelections(
+    (run.find((entry) => entry.kind === 'run-admitted')?.data.skills ?? []) as SkillSelection[],
+  )
+  const readySkills = run.find((entry) => entry.kind === 'run-ready')?.data.skills as
+    | undefined
+    | {resolved: SkillSelection[]; snapshotId: string}
+
   return {
+    ...(requested.length > 0
+      ? {
+          skills: {
+            requested,
+            ...(readySkills
+              ? {resolved: normalizeSkillSelections(readySkills.resolved), snapshotId: readySkills.snapshotId}
+              : {}),
+          },
+        }
+      : {}),
     approvals: [],
     budget: {modelCalls: 0, toolRequests: 0, toolRounds: 0},
     phase: 'terminal',

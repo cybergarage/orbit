@@ -67,7 +67,7 @@ export class SessionRecorder {
       const parsed = parseSessionFile(fsSync.readFileSync(resolved, 'utf8'), resolved)
       if (parsed.recovered)
         fsSync.writeFileSync(resolved, parsed.entries.map((entry) => encodeSessionEntry(entry)).join(''), {mode: 0o600})
-      if (parsed.entries.some((entry) => entry.type === 'compaction')) {
+      if (parsed.entries.some((entry) => entry.type === 'compaction' || entry.type === 'skill_context')) {
         const descriptor = fsSync.openSync(resolved, 'r+')
         try {
           fsSync.fsyncSync(descriptor)

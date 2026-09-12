@@ -46,6 +46,7 @@ USAGE
 * [`orbit help [COMMAND]`](#orbit-help-command)
 * [`orbit resume [SESSION]`](#orbit-resume-session)
 * [`orbit session [SESSION]`](#orbit-session-session)
+* [`orbit skills`](#orbit-skills)
 * [`orbit storage ACTION [SESSION]`](#orbit-storage-action-session)
 
 ## `orbit delete SESSION`
@@ -83,7 +84,8 @@ Send a prompt to the agent and print the response
 USAGE
   $ orbit exec [PROMPT] [--anthropic-api-key-env <value>] [--debug] [--execution-policy
     workspace-confirm|unrestricted] [--journal-level file-and-directory-sync|file-sync] [--lang en|ja] [--model <value>]
-    [--ollama-host <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai]
+    [--ollama-host <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai] [--skill-root
+    <value>...] [--skill <value>...]
 
 ARGUMENTS
   [PROMPT]  Prompt to send to the agent
@@ -102,6 +104,8 @@ FLAGS
   --openai-api-key-env=<value>     Environment variable name for the OpenAI API key
   --provider=<option>              LLM provider (overrides workspace setting)
                                    <options: anthropic|ollama|openai>
+  --skill=<value>...               Select Skill ID@DIGEST for this Run (repeatable)
+  --skill-root=<value>...          Explicit Skill root ID=DIRECTORY (repeatable); replaces the workspace default
 
 DESCRIPTION
   Send a prompt to the agent and print the response
@@ -122,7 +126,8 @@ Start the local Orbit graphical interface
 USAGE
   $ orbit gui [--anthropic-api-key-env <value>] [--debug] [--execution-policy
     workspace-confirm|unrestricted] [--journal-level file-and-directory-sync|file-sync] [--lang en|ja] [--model <value>]
-    [--ollama-host <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai] [--port <value>]
+    [--ollama-host <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai] [--skill-root
+    <value>...] [--port <value>]
 
 FLAGS
   --anthropic-api-key-env=<value>  Environment variable name for the Anthropic API key
@@ -139,6 +144,7 @@ FLAGS
   --port=<value>                   Loopback port (uses an available port by default)
   --provider=<option>              LLM provider (overrides workspace setting)
                                    <options: anthropic|ollama|openai>
+  --skill-root=<value>...          Explicit Skill root ID=DIRECTORY (repeatable); replaces the workspace default
 
 DESCRIPTION
   Start the local Orbit graphical interface
@@ -174,7 +180,8 @@ Resume a saved interactive session
 USAGE
   $ orbit resume [SESSION] [--anthropic-api-key-env <value>] [--debug] [--execution-policy
     workspace-confirm|unrestricted] [--journal-level file-and-directory-sync|file-sync] [--lang en|ja] [--model <value>]
-    [--ollama-host <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai] [--all] [--last]
+    [--ollama-host <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai] [--skill-root
+    <value>...] [--all] [--last]
 
 ARGUMENTS
   [SESSION]  Exact ID of the saved session to resume
@@ -195,6 +202,7 @@ FLAGS
   --openai-api-key-env=<value>     Environment variable name for the OpenAI API key
   --provider=<option>              LLM provider (overrides workspace setting)
                                    <options: anthropic|ollama|openai>
+  --skill-root=<value>...          Explicit Skill root ID=DIRECTORY (repeatable); replaces the workspace default
 
 DESCRIPTION
   Resume a saved interactive session
@@ -240,6 +248,24 @@ EXAMPLES
 ```
 
 _See code: [src/cli/session.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/session.ts)_
+
+## `orbit skills`
+
+List bounded Skill metadata and source digests without running a model
+
+```
+USAGE
+  $ orbit skills [--json] [--skill-root <value>...]
+
+FLAGS
+  --json                   Print JSON metadata
+  --skill-root=<value>...  Explicit root ID=DIRECTORY; replaces the workspace default
+
+DESCRIPTION
+  List bounded Skill metadata and source digests without running a model
+```
+
+_See code: [src/cli/skills.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/skills.ts)_
 
 ## `orbit storage ACTION [SESSION]`
 

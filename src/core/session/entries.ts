@@ -4,6 +4,7 @@
 import type {MessagePayload, MessageType} from '../message/index.js'
 import type {ProviderName} from '../models/provider.js'
 import type {Role} from '../models/role.js'
+import type {SessionSkillEntry} from '../skills/record.js'
 import type {SessionCompactionEntry} from './compaction.js'
 
 export const SESSION_FORMAT_VERSION = 1
@@ -12,6 +13,7 @@ export const SessionEntryType = {
   Compaction: 'compaction',
   Message: 'message',
   Session: 'session',
+  SkillContext: 'skill_context',
   TurnContext: 'turn_context',
   TurnEvent: 'turn_event',
 } as const
@@ -86,6 +88,7 @@ export type SessionEntry =
   | SessionCompactionEntry
   | SessionHeaderEntry
   | SessionMessageEntry
+  | SessionSkillEntry
   | SessionTurnContextEntry
   | SessionTurnEventEntry
 

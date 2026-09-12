@@ -164,3 +164,10 @@ The migration backup contains original conversation data and remains until an
 operator handles it under the application's retention policy. It is not a second
 registered Session. Windows and physical-storage-failure trials remain unverified;
 current automated evidence targets macOS and Linux.
+
+## Explicit Skill selection
+
+Selected Skill instructions are protected ordinary-request prefixes in both
+budget modes. The dedicated summarizer receives no active Skill bodies; frozen
+bodies return in the subsequent answering request. Historical snapshots remain
+separate from canonical conversation-message digests. See [Skills](skills.md).

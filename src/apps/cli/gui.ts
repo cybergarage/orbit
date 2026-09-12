@@ -8,6 +8,7 @@ import {type AgentOptions, resolveWorkspaceAgentOptions} from '../../core/chat.j
 import {OrbitApplicationService} from '../../core/index.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
 import {startGuiServer} from '../gui/server.js'
+import {productSkillCatalog} from '../skill-catalog.js'
 
 export async function runGuiCommand(options: AgentOptions & {port?: number; version?: string}): Promise<void> {
   const cwd = process.cwd()
@@ -22,6 +23,7 @@ export async function runGuiCommand(options: AgentOptions & {port?: number; vers
     model: resolved.model,
     provider: resolved.provider,
     settings: resolved.settings,
+    skillCatalog: await productSkillCatalog(cwd, options.skillRoots),
     version: options.version,
   })
   const server = await startGuiServer({port: options.port, service}).catch(async (error: unknown) => {

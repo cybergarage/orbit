@@ -3,12 +3,13 @@
 
 import {Box, render, Text, useApp, useInput} from 'ink'
 import process from 'node:process'
-import {useRef, useState} from 'react'
+import {useEffect, useRef, useState} from 'react'
 
 import type {ApprovalRequest} from './execution/run.js'
 import type {Logger} from './logger/index.js'
 import type {SessionRepository} from './session/index.js'
 import type {WorkspaceSettings} from './settings.js'
+import type {SkillCatalog, SkillSelection} from './skills/index.js'
 
 import {RunExecutionError} from './execution/run.js'
 import {FileSessionLogStore, StoreSessionLoggerFactory} from './logs/index.js'
@@ -19,6 +20,7 @@ import {
   formatSessionInformation,
   Session,
 } from './session/index.js'
+import {parseSkillSelection} from './skills/index.js'
 import {State} from './state.js'
 import {ToolProfile} from './tools/index.js'
 
@@ -35,6 +37,7 @@ export interface InteractiveSessionOptions {
   session?: Session
   sessionRepository?: SessionRepository
   settings?: WorkspaceSettings
+  skillCatalog?: SkillCatalog
   systemPrompt?: string
 }
 
@@ -52,9 +55,11 @@ export interface InteractiveState {
   logger?: Logger
   messages: Message[]
   model: string
+  pendingSkills?: SkillSelection[]
   provider: ProviderName
   session?: Session
   settings?: WorkspaceSettings
+  skillCatalog?: SkillCatalog
   systemPrompt?: string
 }
 
@@ -66,6 +71,8 @@ export interface ModelCommandResult {
 export type SlashCommandResult = ModelCommandResult
 
 const slashCommandHelpItems = [
+  {command: '/skills', description: 'List Skill IDs and digests'},
+  {command: '/skill ID@DIGEST', description: 'Select for the next Run; /skill clear removes pending selections'},
   {command: '/help', description: 'Show slash commands'},
   {command: '/exit', description: 'Exit interactive mode'},
   {command: '/session', description: 'Show the current session information'},
@@ -92,6 +99,7 @@ export function createInitialInteractiveState(
     | 'provider'
     | 'session'
     | 'settings'
+    | 'skillCatalog'
     | 'systemPrompt'
   >,
 ): InteractiveState {
@@ -104,6 +112,38 @@ export function createInitialInteractiveState(
       (message) => message.type === MessageType.User || message.type === MessageType.Assistant,
     ),
     ...options,
+  }
+}
+
+export async function handleSkillCommand(
+  state: InteractiveState,
+  input: string,
+  signal?: AbortSignal,
+): Promise<SlashCommandResult | undefined> {
+  if (input !== '/skills' && !input.startsWith('/skill ')) return
+  if (input === '/skill clear')
+    return {message: 'Pending Skill selections cleared', nextState: {...state, pendingSkills: []}}
+  if (!state.skillCatalog) return {message: 'No Skill catalog configured', nextState: state}
+  if (input === '/skills') {
+    const list = await state.skillCatalog.list(signal)
+    return {
+      message:
+        [
+          ...list.candidates.map(
+            (c) =>
+              `${c.id}@${c.digest} ${JSON.stringify(c.name)} ${JSON.stringify(c.file)} ${JSON.stringify(c.description)}`,
+          ),
+          ...list.issues.map((issue) => JSON.stringify(issue)),
+        ].join('\n') || 'No Skills found',
+      nextState: state,
+    }
+  }
+
+  const selection = parseSkillSelection(input.slice(7).trim())
+  const pendingSkills = [...(state.pendingSkills ?? []).filter((item) => item.id !== selection.id), selection]
+  return {
+    message: `Pending Skill: ${selection.id}. Resolution happens after Run admission.`,
+    nextState: {...state, pendingSkills},
   }
 }
 
@@ -120,7 +160,7 @@ export async function submitInteractiveInput(
   if (input.startsWith('/')) state.logger?.info({command: input}, 'interactive command submitted')
   if (input === '/exit') return state
 
-  const commandResult = handleSlashCommand(state, input)
+  const commandResult = (await handleSkillCommand(state, input)) ?? handleSlashCommand(state, input)
   if (commandResult) {
     return {
       ...commandResult.nextState,
@@ -132,7 +172,8 @@ export async function submitInteractiveInput(
   const systemMessages = state.systemPrompt
     ? [new Message(MessageType.Session, {content: state.systemPrompt, role: Role.System})]
     : []
-  const session = state.session ?? new Session({messages: state.conversationMessages})
+  const session =
+    state.session ?? new Session({messages: state.conversationMessages})
   const agent = new AgentClass({
     cwd: state.cwd,
     defaultToolProfile: ToolProfile.Coding,
@@ -151,6 +192,7 @@ export async function submitInteractiveInput(
       provider: state.provider,
     },
     settings: state.settings,
+    skillCatalog: state.skillCatalog,
     state: new State(session),
   })
   let reply: Message
@@ -160,7 +202,24 @@ export async function submitInteractiveInput(
         if (event.type === 'context-prepared')
           state.logger?.info({eventType: 'context.prepared', ...event}, 'Context preparation finished')
       },
+      onRunAdmitted() {
+        state = {...state, pendingSkills: []}
+      },
+      skills: state.pendingSkills,
     })
+  } catch (error) {
+    return {
+      ...state,
+      conversationMessages: session.getConversationMessages(),
+      isLoading: error instanceof RunExecutionError && !error.result.quiescence,
+      messages: [
+        ...state.messages,
+        userMessage,
+        new Message(MessageType.Assistant, {
+          content: error instanceof Error ? error.message : 'Interactive request failed',
+        }),
+      ],
+    }
   } finally {
     await agent.close()
   }
@@ -317,10 +376,18 @@ function InteractiveApp({
   onAgentCreated,
   session,
   settings,
+  skillCatalog,
   systemPrompt,
 }: InteractiveSessionOptions) {
   const {exit} = useApp()
   const active = useRef<undefined | {agent: Agent; controller: AbortController}>(undefined)
+  const listing = useRef<AbortController | undefined>(undefined)
+  useEffect(
+    () => () => {
+      listing.current?.abort()
+    },
+    [],
+  )
   const [contextNotice, setContextNotice] = useState('')
   const [approval, setApproval] = useState<ApprovalRequest | undefined>()
   const [blocked, setBlocked] = useState(false)
@@ -332,6 +399,7 @@ function InteractiveApp({
       logger,
       model: initialModel,
       provider: initialProvider,
+      skillCatalog,
       ...(session === undefined ? {} : {session}),
       settings,
       systemPrompt,
@@ -340,6 +408,11 @@ function InteractiveApp({
 
   useInput((value, key) => {
     if (key.ctrl && value === 'c') {
+      if (listing.current) {
+        listing.current.abort()
+        return
+      }
+
       if (active.current) {
         active.current.controller.abort('user')
         setApproval(undefined)
@@ -378,6 +451,34 @@ function InteractiveApp({
         return
       }
 
+      if (nextInput === '/skills' || nextInput.startsWith('/skill ')) {
+        const controller = new AbortController()
+        listing.current = controller
+        setState({...state, input: '', isLoading: true})
+        handleSkillCommand(state, nextInput, controller.signal)
+          .then((result) => {
+            if (result)
+              setState({
+                ...result.nextState,
+                input: '',
+                isLoading: false,
+                messages: [...state.messages, new Message(MessageType.Assistant, {content: result.message})],
+              })
+          })
+          .catch((error) =>
+            setState({
+              ...state,
+              input: '',
+              isLoading: false,
+              messages: [...state.messages, new Message(MessageType.Assistant, {content: String(error)})],
+            }),
+          )
+          .finally(() => {
+            listing.current = undefined
+          })
+        return
+      }
+
       const commandResult = handleSlashCommand(state, nextInput)
       if (commandResult) {
         setState({
@@ -394,7 +495,8 @@ function InteractiveApp({
         ? [new Message(MessageType.Session, {content: state.systemPrompt, role: Role.System})]
         : []
       const userMessage = nextMessages.at(-1) as Message
-      const session = state.session ?? new Session({messages: state.conversationMessages})
+      const session =
+        state.session ?? new Session({messages: state.conversationMessages})
       setState({
         ...state,
         input: '',
@@ -425,6 +527,7 @@ function InteractiveApp({
           provider: state.provider,
         },
         settings: state.settings,
+        skillCatalog: state.skillCatalog,
         state: new State(session),
       })
 
@@ -440,8 +543,19 @@ function InteractiveApp({
                   : 'Compaction failed; original context retained',
               )
           },
-          onRunSnapshot: (snapshot) => setApproval(snapshot.approvals[0]),
+          onRunAdmitted() {
+            setState((current) => ({...current, pendingSkills: []}))
+            setContextNotice(state.pendingSkills?.length ? 'Skill selection admitted; resolving before model use' : '')
+          },
+          onRunSnapshot(snapshot) {
+            setApproval(snapshot.approvals[0])
+            if (snapshot.skills)
+              setContextNotice(
+                `${snapshot.result ? 'Finished' : snapshot.skills.resolved ? 'Resolved' : 'Loading'} Skills: ${snapshot.skills.requested.length}`,
+              )
+          },
           signal: controller.signal,
+          skills: state.pendingSkills,
         })
         .then((reply) => {
           setState((currentState) => ({
@@ -542,7 +656,7 @@ export async function runInteractiveSession(options: InteractiveSessionOptions):
     options.session ??
     repository.create({
       cwd: options.cwd,
-      formatVersion: options.settings?.contextPolicy?.mode === 'budgeted' ? 2 : 1,
+      formatVersion: options.skillCatalog || options.settings?.contextPolicy?.mode === 'budgeted' ? 2 : 1,
       model: options.initialModel,
       originator: 'orbit-interactive',
       provider: options.initialProvider,
@@ -573,6 +687,7 @@ export async function runInteractiveSession(options: InteractiveSessionOptions):
   try {
     await app.waitUntilExit()
   } finally {
+    await options.skillCatalog?.settle()
     await Promise.all([...agents].map((agent) => agent.close()))
     if (options.session === undefined) await session.close()
     await ownedLogStore?.close()

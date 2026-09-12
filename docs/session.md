@@ -533,3 +533,10 @@ Repository deletion rejects mutation of any existing transcript; use `SessionDel
 the application service. Deletion rejects active/quarantined sessions and retains
 a minimal marker; retries can return only `{id}` after the transcript is gone.
 See [Managed Execution](execution.md#recording-and-recovery).
+
+## Explicit Skill selection
+
+Transcript v2 supports versioned `skill_context` records for exact one-Run
+instruction snapshots. They are validated and inspectable but are not
+conversation messages or resumed instructions. See [Skills](skills.md) for
+reader deployment, synchronization and record-size compatibility.

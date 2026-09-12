@@ -1,8 +1,11 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {MessagePayload} from '../message/index.js'
-import type {Role} from '../models/role.js'
+// Compatibility fixture: codec from dee5e7aee3bca09ced563c54bca374c41d901010.
+// Only import paths differ; do not update this decoder with new record support.
+
+import type {MessagePayload} from '../../../../src/core/message/index.js'
+import type {Role} from '../../../../src/core/models/role.js'
 import type {
   PersistedMessage,
   SessionEntry,
@@ -11,15 +14,13 @@ import type {
   SessionMessageEntry,
   SessionTurnContextEntry,
   SessionTurnEventEntry,
-} from './entries.js'
+} from '../../../../src/core/session/entries.js'
 
-import {isMessageType} from '../message/index.js'
-import {isProvider} from '../models/provider.js'
-import {getRoles} from '../models/role.js'
-import {SKILL_RECORD_BYTES} from '../skills/parser.js'
-import {hasSkillRecordType, parseSkillEntry, validateSkillEntries} from '../skills/record.js'
-import {parseCompaction, validateCompactionEntries} from './compaction.js'
-import {SESSION_FORMAT_VERSION, SessionEntryType, TurnPhase} from './entries.js'
+import {isMessageType} from '../../../../src/core/message/index.js'
+import {isProvider} from '../../../../src/core/models/provider.js'
+import {getRoles} from '../../../../src/core/models/role.js'
+import {parseCompaction, validateCompactionEntries} from '../../../../src/core/session/compaction.js'
+import {SESSION_FORMAT_VERSION, SessionEntryType, TurnPhase} from '../../../../src/core/session/entries.js'
 
 export interface ParsedSessionFile {
   entries: SessionEntry[]
@@ -29,7 +30,6 @@ export interface ParsedSessionFile {
 
 export function encodeSessionEntry(entry: SessionEntry): string {
   assertJsonValue(entry, '$')
-  if (entry.type === 'skill_context') parseSkillEntry(entry)
   return `${JSON.stringify(entry)}\n`
 }
 
@@ -43,8 +43,6 @@ export function parseSessionFile(raw: string, file: string): ParsedSessionFile {
   for (const [index, line] of lines.entries()) {
     if (line.trim().length === 0) continue
 
-    if (Buffer.byteLength(line, 'utf8') > SKILL_RECORD_BYTES && hasSkillRecordType(line))
-      throw sessionFileError(file, index + 1, 'Skill record exceeds 4 MiB')
     let parsed: unknown
     try {
       parsed = JSON.parse(line)
@@ -67,7 +65,6 @@ export function parseSessionFile(raw: string, file: string): ParsedSessionFile {
   }
 
   validateEntrySequence(entries, file)
-  validateSkillEntries(entries, header.id, header.version)
   validateCompactionEntries(entries, header.id, header.version)
   return {entries, header, recovered}
 }
@@ -93,10 +90,6 @@ function parseEntry(value: unknown, file: string, line: number): SessionEntry {
 
     case SessionEntryType.TurnEvent: {
       return parseTurnEventEntry(entry, file, line)
-    }
-
-    case 'skill_context': {
-      return parseSkillEntry(entry)
     }
 
     default: {

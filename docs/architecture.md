@@ -48,10 +48,12 @@ invocation performs the following sequence:
 
 1. `RunSupervisor` deduplicates submitted input and acknowledges admission in
    the required execution journal before starting execution resources.
-2. Under the admitted run, authorize MCP startup, discover and validate the
-   catalog, freeze tool definitions, and acknowledge ready before a model call.
-3. Agent records turn context and messages, builds session context, invokes the
-   model, and records its response.
+2. Agent records turn context, start and input messages. It resolves selected
+   Skills and synchronizes their complete snapshot, authorizes MCP startup,
+   discovers tools and acknowledges journal readiness before any model call.
+3. Agent builds session context with the one-Run Skill prefix, invokes the model
+   and records its response. Budgeted preparation excludes that prefix from the
+   dedicated summary call and restores it for ordinary answering iterations.
 4. Parse each tool call, prepare its immutable operation, decide policy, obtain
    any single-operation approval, and acknowledge intent before dispatch.
 5. Record known tool outcomes and repeat within the shared finite budget.
@@ -189,3 +191,16 @@ They must pass through research and ADR review before they change the runtime.
 - [Session Logs](logging.md)
 - [GUI Integration](gui-integration.md)
 - [Architecture Decisions](adr/README.md)
+
+## Selected instructions
+
+`src/core/skills/` owns explicit-root discovery, the strict YAML parser, bounded
+asynchronous loading, source identity and the revisioned snapshot validator.
+The legacy single-file Skill remains separate. Applications select catalog
+roots and ordered ID/digest pairs; core searches no implicit locations.
+Agent tracks loading/saving in its Run and adds frozen instructions to ordinary
+requests. Session v2 records retain exact sources without projecting old bodies
+as new instructions. Journal admission/readiness records contain metadata only.
+ThreadManager compares selections before replay; CLI, Ink and GUI share that
+contract. Product root discovery lives in `src/apps/skill-catalog.ts`.
+See [Explicit Skill selection](skills.md) for APIs, limits and reader migration.

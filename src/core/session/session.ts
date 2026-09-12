@@ -7,6 +7,7 @@ import {v7 as uuidv7} from 'uuid'
 import type {JournalLevel} from '../execution/journal.js'
 import type {Message} from '../message/index.js'
 import type {ProviderName} from '../models/provider.js'
+import type {SessionSkillEntry} from '../skills/record.js'
 import type {SessionCompactionEntry} from './compaction.js'
 import type {
   PersistedMessage,
@@ -22,6 +23,7 @@ import type {SessionRecorder} from './recorder.js'
 import type {SessionWriterLease} from './writer-lease.js'
 
 import {Message as CoreMessage} from '../message/index.js'
+import {parseSkillEntry, validateSkillEntries} from '../skills/record.js'
 import {validateCompactionEntries} from './compaction.js'
 import {SessionEntryType} from './entries.js'
 import {SessionHeader} from './header.js'
@@ -97,6 +99,7 @@ export class Session {
     this.journalRoot = options.journalRoot
     this.entries = structuredClone(options.entries ?? [])
     this.formatVersion = options.formatVersion ?? (this.recorder ? 1 : 2)
+    validateSkillEntries(this.entries, id, this.formatVersion)
     this.activeCompaction = validateCompactionEntries(this.entries, id, this.formatVersion)
 
     const header = new SessionHeader({
@@ -206,6 +209,15 @@ export class Session {
     }
   }
 
+  async commitSkills(entry: SessionSkillEntry, level: JournalLevel): Promise<void> {
+    if (!this.hasManagedLease() || this.closing) throw new Error('Skill snapshot requires managed ownership')
+    if (this.getFile() && level === 'memory') throw new Error('Persistent Skill snapshots require synchronization')
+    const validated = parseSkillEntry(entry)
+    validateSkillEntries([...this.entries, validated], this.getId(), this.formatVersion)
+    this.addEntry(validated)
+    await this.synchronize(level)
+  }
+
   async flush(): Promise<void> {
     await this.recorder?.flush()
   }
@@ -244,6 +256,10 @@ export class Session {
 
   getMetadata(): SessionMetadata {
     return {...this.metadata}
+  }
+
+  getSkillContexts(): SessionSkillEntry[] {
+    return structuredClone(this.entries.filter((entry): entry is SessionSkillEntry => entry.type === 'skill_context'))
   }
 
   hasManagedLease(): boolean {

@@ -7,3 +7,6 @@ command,arguments,description,effect
 "/debug","",Show debug logging state,Prints whether debug logging is on or off
 "/debug","on",Enable debug logging,Turns debug logging on for subsequent requests
 "/debug","off",Disable debug logging,Turns debug logging off for subsequent requests
+"/skills","",List Skill metadata,Displays source IDs and digests without activating instructions
+"/skill","ID@DIGEST",Select a Skill,Adds a pending one-Run selection
+"/skill","clear",Clear pending Skills,Leaves historical snapshots intact

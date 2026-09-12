@@ -115,6 +115,13 @@ The durable ordered record of messages, turn context, and turn events used to
 reconstruct history and model context. Session records are distinct from
 runtime logs.
 
+### Skill selection
+
+An ordered choice of catalog source IDs and expected content digests for one Run.
+The current implementation validates and snapshots complete instruction sources
+before use. It is neither tool authority nor a standing instruction. Historical
+snapshots do not reactivate on resume. See [Skills](../skills.md).
+
 ### State
 
 The durable and transient facts available to runtime decisions. The current

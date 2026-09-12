@@ -155,3 +155,10 @@ boundary. Tools can emit `tool-updated` events before their final result; Bash
 uses these updates for incremental stdout and stderr chunks.
 
 See [Managed Execution](execution.md) for compatibility changes and ownership.
+
+## Explicit Skill selection
+
+Configure `skillCatalog` on the service for read-only listing and structured
+`startRun(threadId, content, {requestId, skills})`. Reconnect snapshots expose
+requested/resolved IDs and digests; only explicit `skillHistory(sessionId)`
+requests return full bodies. See [Skills](skills.md).

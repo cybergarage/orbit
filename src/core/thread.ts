@@ -10,14 +10,17 @@ import type {SessionLoggerFactory} from './logs/index.js'
 import type {Message, MessagePayload, MessageType} from './message/index.js'
 import type {ModelToolCall, ProviderName, Role} from './models/index.js'
 import type {ContextPreparationEvent} from './session/context-policy.js'
+import type {SkillCatalog, SkillSelection} from './skills/catalog.js'
 import type {ToolResult} from './tools/index.js'
 
 import {AgentEventType} from './agent-events.js'
 import {Agent} from './agent.js'
 import {InvalidInputError, ModelAbortError, OrbitError} from './errors/index.js'
+import {canonicalJSON} from './execution/journal.js'
 import {RunExecutionError} from './execution/run.js'
 import {Message as CoreMessage, MessageType as CoreMessageType} from './message/index.js'
 import {Session, type SessionRepository} from './session/index.js'
+import {normalizeSkillSelections} from './skills/catalog.js'
 import {State} from './state.js'
 
 export const ThreadStatus = {
@@ -149,6 +152,7 @@ export interface ThreadAgent {
   /** Records new messages into its configured session and runs one turn. */
   invoke(newMessages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message>
   replyApproval?(id: string, reply: ApprovalReply): Promise<'recorded'>
+  readonly skillCatalog?: SkillCatalog
   startRun?(messages: Message[], options?: Partial<AgentInvokeOptions>): Promise<RunHandle<Message>>
 }
 
@@ -170,6 +174,8 @@ export interface CreateThreadOptions {
 export interface ThreadRunOptions {
   requestId?: string
   signal?: AbortSignal
+  skillCatalogRevision?: string
+  skills?: SkillSelection[]
 }
 
 export interface ThreadRunHandle {
@@ -273,7 +279,10 @@ export class ThreadManager {
         : this.sessionRepository.create({
             cwd: options.agent?.cwd,
             formatVersion:
-              (options.agent?.contextPolicy ?? options.agent?.settings?.contextPolicy)?.mode === 'budgeted' ? 2 : 1,
+              options.agent?.skillCatalog ||
+              (options.agent?.contextPolicy ?? options.agent?.settings?.contextPolicy)?.mode === 'budgeted'
+                ? 2
+                : 1,
             id,
             model: options.agent?.model?.name,
             originator: 'orbit-thread-manager',
@@ -390,10 +399,16 @@ export class ThreadManager {
     }
 
     const thread = this.requireThread(threadId)
+    options = {...options, skills: normalizeSkillSelections(options.skills)}
+    const submission = canonicalJSON({
+      content,
+      skillCatalog: options.skillCatalogRevision ?? thread.agent.skillCatalog?.configuration ?? null,
+      skills: options.skills,
+    })
     const requestKey = options.requestId ? `${threadId}:${options.requestId}` : undefined
     const prior = requestKey ? this.submissions.get(requestKey) : undefined
     if (prior) {
-      if (prior.content !== content) throw new InvalidInputError('Conflicting request ID')
+      if (prior.content !== submission) throw new InvalidInputError('Conflicting request ID')
       return prior.handle
     }
 
@@ -415,7 +430,7 @@ export class ThreadManager {
       },
       threadId,
     }
-    if (requestKey) this.submissions.set(requestKey, {content, handle})
+    if (requestKey) this.submissions.set(requestKey, {content: submission, handle})
     return handle
   }
 
@@ -457,6 +472,7 @@ export class ThreadManager {
         onRunSnapshot: this.onRunSnapshot,
         requestId: options.requestId ?? run.id,
         signal: run.controller.signal,
+        skills: options.skills,
         turnId: run.id,
       }
       let response: Message
