@@ -2,9 +2,11 @@
 status: accepted
 proposed-date: 2026-09-12
 decision-date: 2026-09-12
-implementation-status: not-started
+implementation-status: partial
 implementation-completed-date: null
-implementation-commits: []
+implementation-commits:
+  - cdc8dbb05155d126517a6e16f98dc62b9f71907e
+  - fda6333805fce39eb263e532abeb2cd2a99b005e
 superseded-by: []
 ---
 
@@ -198,7 +200,38 @@ For values, prefer whole immutable validated outputs over in-place shared mutati
 
 ## Implementation and Confirmation
 
-Graph implementation has not started; the current task records acceptance only. `implementation-status` remains `not-started`; there are no implementation commits or completion date. Headers/build and 143 focused baseline tests passed on macOS; these are evidence for existing behavior, not confirmation of any item below.
+At acceptance, Graph implementation had not started and the record had no implementation commits or completion date. The headers/build and 143 focused baseline tests then recorded were evidence for existing behavior. The later implementation evidence below supersedes that progress statement, without rewriting the decision or proposal-review rationale.
+
+### Implementation evidence — 2026-09-12
+
+Implementation commit: `cdc8dbb05155d126517a6e16f98dc62b9f71907e`. A subsequent whitespace-only fixture cleanup is `fda6333805fce39eb263e532abeb2cd2a99b005e`; the existing commits were preserved. This evidence is recorded in a later documentation commit. Status is **accepted / partial** with a null completion date because the author-deferred confirmations below remain unverified.
+
+The working tree was clean at acceptance commit `f2f55dba9446773fe0d5bbe4a0ee558b36cc4036`; the reviewed source baseline remained `64f3cc1a31f194a0129efb511b3aa8dc7c029525`. Public main still pointed to `b2b8f445a4284c14f787ed80a895c8342ae1ea71` when checked during implementation. No additional adoption or contradictory new architecture was needed. The seven earlier accepted/partial ADRs, their reasons, storage/maintenance conditions and historical evidence are unchanged. No dependencies were added or updated.
+
+The compiler, executor and inspection API live in [processor/](../../src/core/processor/). [Agent](../../src/core/agent.ts) uses one private managed admission/setup and one internal loop for ordinary and Graph calls. [Graph journal validation](../../src/core/execution/graph-journal.ts) extends the shared journal without a second store. [Thread](../../src/core/thread.ts) and [application service](../../src/core/application.ts) expose typed submissions/values and saved observation. The maintained [feature/migration guide](../processor-graphs.md), architecture and concepts describe the delivered subset; they do not claim a visual editor or adaptive promotion.
+
+Two integration defects were caught by verification and corrected locally. Compaction had treated the active Graph-stage wait as an unresolved effect and selected the last User message as the protection boundary; [context preparation](../../src/core/session/context-policy.ts) now distinguishes that one internal owner and protects the entire active Graph turn. Other pending effects/approvals/unknown operations still prevent compaction. Separately, ordinary Thread cancellation exposed a race where cancelling the caller's journal wait marked a successful owned append as failed. [Run recording](../../src/core/execution/run.ts) now distinguishes the cancelled wait from an actual append rejection, including a rejection arriving later. Neither correction relaxes required persistence or ownership, nor changes ordinary handle value publication.
+
+| Confirmation | Executed evidence |
+| --- | --- |
+| Definition, identity and private values | [Graph tests](../../test/core/execution/graph.test.ts) cover forged compiled objects, frozen callback/configuration references, cyclic/accessor/non-JSON data, versions, unreachable topology, undeclared routes, complete live submission conflicts and private-body omission from metadata. Schemas are structurally validated during read-only inspection without invoking adapters. |
+| Shared Agent/Skill/context | Two Agent stages use one turn, ready and Skill snapshot. Shared model-call exhaustion prevents the second call. Budgeted summary excludes Skill/tools, then ordinary input includes the saved Skill; growth in the protected current turn stops before another model call. The existing ordinary Agent, compaction and Skill tests remain successful. |
+| Tools and outcomes | Local/discovered catalog mismatch gives zero node starts. Direct tool denial records a visit-linked result without intent; request exhaustion dispatches no tool. Unknown managed outcome never takes a retry edge and is explicitly reconciled using the fixture's known lack of external effects. Declared failure is typed; Graph value remains unavailable on failure, cancellation or failed final sync. |
+| Target versus application/core tests | A real isolated Node target test fails, one managed write corrects it and the managed test succeeds: operation statuses are failed/succeeded/succeeded across seven visits, with three requests and zero Agent tool rounds. This is a target test, separate from library/Thread/application-service tests and the Orbit core suite. It is not a completed coding-agent application or real-model trial. |
+| Cancellation, recording and restart | A cancelled pending callback retains ownership and never starts a successor. Save failures at node-start/completion/transition and transcript synchronization stop forwarding. Stop after an acknowledged transition preserves selection without executing its destination. [Seven process-interruption cases](../../test/core/execution/graph-interruption.test.ts) use [explicit exit-73 checkpoints](../../test/core/execution/fixtures/graph-interruption.mjs) at admission, binding, ready, node start/completion, transition and terminal; every restart returns observation without adapter/model redispatch. No timeout is counted as success. |
+| Readers and services | v1/v2/v1 Runs coexist. Persistent same-ID replay rejects changed input and produces no recovered value. The [pre-Graph validator fixture](../../test/core/execution/fixtures/pre-graph-journal.ts), retained from the acceptance source, rejects v2. Unknown/malformed newline-terminated records and unterminated suffixes are distinguished and preserved. Graph inspection checks matching Session identity/v2 and exact visit message ranges/order, using data-entry counts excluding the header. Missing transcript evidence is unavailable, not verified. Application-service submission, observation, replay and shared deletion/minimal tombstone pass. Existing transcript unknown-record and migration/guard tests also pass. |
+| Initial profile | Tests execute 64 serial nodes, compile 128 edges, exhaust at 128 visits, accept a 65,536-byte encoded value and reject the next byte, accept a 262,144-byte descriptor and reject the next byte, and reject a binding exceeding the 1 MiB whole-record ceiling. A 50 ms cooperative stage completes within a 2,000 ms elapsed/1,000 ms cleanup trial. Input exhaustion and the isolated failed-target correction also pass. Defaults were not loosened or claimed optimal. |
+
+Validation environments: macOS arm64 / Node **26.5.0** and isolated Linux aarch64 (LinuxKit 6.12.54, Debian Bookworm container) / Node **22.23.2**. Linux installed from the unchanged lockfile with `npm ci`; external networking was disconnected for headers/build/tests, and build used Linux-native dependencies. In each environment, `npm run headers:check`, `npm run build` and `npm test` passed: **550 tests = 33 new Graph cases + 517 existing cases**. Lint reported zero errors and 39 warnings (including nine additional complexity/fixture warnings compared with the 30-warning acceptance baseline); existing Node loader/fs.Stats warnings remained. The 21 changed source/test/lockfile fingerprints matched across environments before the final whitespace-only fixture cleanup. After that cleanup, the unchanged-reader/record-limit case passed again on macOS; no executable behavior changed.
+
+### Remaining confirmation and restart conditions
+
+- Windows and other author-deferred target environments are unverified. This run confirms the two Unix environments above, not every supported Node version, filesystem or deployment.
+- Real-model quality/meaning preservation and representative completed coding-agent/autonomous-agent trials remain deferred until the disposable target, provider/MCP connections and trial conditions are specified. Fixed doubles and the isolated target test do not discharge them.
+- Actual production admission shutdown, automatic restart control and physical storage-fault trials remain deferred until application, deployment/storage topology and SLI/SLO are specified. Existing external-stop/offline-maintenance requirements are not weakened; no real production controls were exercised.
+- Backup deletion remains unauthorized. No backup, unassigned book image or unrelated content was deleted. No chapter-15 prose/figures, finished application, evaluation or candidate-promotion design was produced.
+
+These deferred confirmations keep this ADR partial. They are not treated as a new implementation gate for Unix book production under the author's policy. Review new implementation differences and the exact test conditions above before additional trials; preserve an incomplete effect for external reconciliation rather than rerunning a node.
 
 ### Proposal review — 2026-09-12
 
