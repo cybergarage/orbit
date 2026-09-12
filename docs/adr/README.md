@@ -377,7 +377,9 @@ was explicitly accepted by the author on 2026-09-12, including the review and
 revision-1 4 MiB record ceiling. At acceptance it was not-started with no
 implementation hashes or completion date. The subsequent
 [implementation evidence](2026-09-09-run-scoped-skill-selection.md#implementation-evidence--2026-09-12)
-records the source commit, 515 passing tests on three Unix/Node environments and
-isolated live UI checks. It is now accepted / partial, without a completion date.
+records the first source commit, 515 passing tests on three Unix/Node environments
+and isolated live UI checks. A later conformance commit records 517 passing tests
+on macOS and keeps its Linux rerun deferred. It is accepted / partial, without a
+completion date.
 The six prior partial decisions, deferred trials and pending backup-deletion
 authorization are unchanged.

@@ -4,7 +4,9 @@ proposed-date: 2026-09-09
 decision-date: 2026-09-12
 implementation-status: partial
 implementation-completed-date: null
-implementation-commits: [a77919e501a118418b31be445983d47f34b2d568]
+implementation-commits:
+  - a77919e501a118418b31be445983d47f34b2d568
+  - 09b93b01152c5635beb58cb05552effe7561f617
 superseded-by: []
 ---
 
@@ -365,7 +367,8 @@ commit, never pre-fill them in this proposal.
 
 ### Implementation evidence — 2026-09-12
 
-Implementation commit: `a77919e501a118418b31be445983d47f34b2d568`.
+Implementation commits: `a77919e501a118418b31be445983d47f34b2d568`
+and `09b93b01152c5635beb58cb05552effe7561f617`.
 This evidence is recorded in a subsequent documentation commit. The acceptance
 baseline was `dee5e7aee3bca09ced563c54bca374c41d901010`; it contained no later
 source changes before this implementation. Public main remained
@@ -373,25 +376,24 @@ source changes before this implementation. Public main remained
 decision was needed. The six previous accepted / partial ADRs and the legacy
 `Skill` source and seven tests are unchanged from the acceptance baseline.
 
-| Confirmation area | Implemented behavior and evidence |
-| --- | --- |
-| Catalog and parser | `src/core/skills/catalog.ts` and `parser.ts` implement explicit roots, source IDs, bounded asynchronous reading, private identity observations and strict YAML AST validation. `yaml` is pinned to 2.9.1 through npm and the lockfile. `test/core/skill-selection.test.ts` covers aliases, same-name sources, root rebinding/replacement, invalid metadata/UTF-8, BOM/CRLF, denied reads and product boundaries. Failed reads remain charged against the listing byte allowance because their actual completed bytes are uncertain. |
-| Selection and ownership | Agent, ThreadManager, RunSupervisor and ApplicationService compare ordered selections and catalog configuration before returning prior handles. The core/execution Skill tests cover changed order, exact replay without rereading, delayed open/read/close, failed-close retry, cancellation and retained Run ownership. A Run uses an independent reader copied from the catalog; an unrelated listing is not part of its cleanup. |
-| Input and budget | Ordinary model iterations receive the frozen one-Run prefix with budgeting enabled or disabled. Protected-input overflow refuses model use. The dedicated summary receives neither active Skill instructions nor tools. Tests verify no automatic selection on a subsequent Run or reopen, and unchanged managed tool authorization. |
-| Snapshot and readiness | `skills/record.ts`, Session/codec and the journal validate exact source bytes, derived body/metadata, revision, identity and record order. Snapshot synchronization precedes journal readiness and model use. Tests inject transcript and journal failure and check the fixed 4 MiB revision-1 line ceiling separately from lowered product limits. |
-| Crash and old reader | `test/core/execution/skill-interruption.test.ts` runs `fixtures/skill-save-interruption.mjs` at discovered append/fsync boundaries, requiring exact child exit and reopened content rather than a timeout. A direct macOS run passed 27 interruption/failure cases. The preserved pre-Skill v2 decoder fixture is taken from `dee5e7aee3bca09ced563c54bca374c41d901010`, with only imports/provenance adjusted. It distinguishes complete unknown-record refusal from malformed final-line recovery. |
-| Surfaces and compatibility | Compiled CLI tests cover JSON listing and explicit selection with a fixed model. Service/GUI tests cover pending/resolved state, admission versus loading failure, replay/reopen and authenticated, explicit full-source history. Ink tests cover selection, clear and consumption. Public API and offline reader rollout are documented in `docs/skills.md`, architecture, concepts and the maintained surface/Session documentation. |
+| Confirmation area          | Implemented behavior and evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Catalog and parser         | `src/core/skills/catalog.ts` and `parser.ts` implement explicit roots, source IDs, bounded asynchronous reading, private identity observations and strict YAML AST validation. `yaml` is pinned to 2.9.1 through npm and the lockfile. `test/core/skill-selection.test.ts` covers aliases, same-name sources, root rebinding/replacement, invalid metadata/UTF-8, BOM/CRLF, denied reads and product boundaries. Failed reads remain charged against the listing byte allowance because their actual completed bytes are uncertain. Missing roots make the listing incomplete, and file-versus-listing byte diagnostics identify the stopping limit. |
+| Selection and ownership    | Agent, ThreadManager, RunSupervisor and ApplicationService compare ordered selections and catalog configuration before returning prior handles. The core/execution Skill tests cover changed order, exact replay without rereading, delayed open/read/close, failed-close retry, cancellation and retained Run ownership. Cancellation racing with snapshot synchronization retains the pending synchronization and releases ownership only after late settlement; an actual persistence rejection remains a recording failure. A Run uses an independent reader copied from the catalog; an unrelated listing is not part of its cleanup.           |
+| Input and budget           | Ordinary model iterations receive the frozen one-Run prefix with budgeting enabled or disabled. Protected-input overflow refuses model use. The dedicated summary receives neither active Skill instructions nor tools. Tests verify no automatic selection on a subsequent Run or reopen, and unchanged managed tool authorization.                                                                                                                                                                                                                                                                                                                 |
+| Snapshot and readiness     | `skills/record.ts`, Session/codec and the journal validate exact source bytes, derived body/metadata, revision, identity and record order. Snapshot synchronization precedes journal readiness and model use. Tests inject transcript and journal failure and check the fixed four-snapshot and 4 MiB revision-1 format ceilings separately from lowered product limits.                                                                                                                                                                                                                                                                             |
+| Crash and old reader       | `test/core/execution/skill-interruption.test.ts` runs `fixtures/skill-save-interruption.mjs` at discovered append/fsync boundaries, requiring exact child exit and reopened content rather than a timeout. A direct macOS run passed 27 interruption/failure cases. The preserved pre-Skill v2 decoder fixture is taken from `dee5e7aee3bca09ced563c54bca374c41d901010`, with only imports/provenance adjusted. It distinguishes complete unknown-record refusal from malformed final-line recovery.                                                                                                                                                 |
+| Surfaces and compatibility | Compiled CLI tests cover JSON listing and explicit selection with a fixed model. Service/GUI tests cover pending/resolved state, admission versus loading failure, replay/reopen and authenticated, explicit full-source history. Ink tests cover selection, clear and consumption. Public API and offline reader rollout are documented in `docs/skills.md`, architecture, concepts and the maintained surface/Session documentation.                                                                                                                                                                                                               |
 
-The new Skill tests contribute **41 passing tests**; the previous suite contributes
-**474**, including the seven unchanged legacy Skill tests. Final validation of the
-implementation commit's source succeeded in each environment below. The Linux
-runs used isolated source archives and fresh dependency installation, with native
-esbuild rebuilt inside each container; they used no personal configuration or
-Session data.
+The first implementation commit added **41 passing Skill tests** to the previous
+**474**, including the seven unchanged legacy Skill tests. Validation of that
+commit succeeded in each environment below. The Linux runs used isolated source
+archives and fresh dependency installation, with native esbuild rebuilt inside
+each container; they used no personal configuration or Session data.
 
-| Environment | Commands | Result |
-| --- | --- | --- |
-| macOS arm64, Node 26.5.0 | `npm run headers:check`, `npm run build`, `npm test` | All commands exited 0; 515 tests passed. |
+| Environment               | Commands                                             | Result                                   |
+| ------------------------- | ---------------------------------------------------- | ---------------------------------------- |
+| macOS arm64, Node 26.5.0  | `npm run headers:check`, `npm run build`, `npm test` | All commands exited 0; 515 tests passed. |
 | Linux arm64, Node 20.19.0 | `npm run headers:check`, `npm run build`, `npm test` | All commands exited 0; 515 tests passed. |
 | Linux arm64, Node 22.23.2 | `npm run headers:check`, `npm run build`, `npm test` | All commands exited 0; 515 tests passed. |
 
@@ -399,6 +401,19 @@ Lint reported 0 errors and 29 warnings (the acceptance baseline had 19 warnings)
 `npm run prepack` and the explicit interactive documentation generation succeeded;
 `git diff --check` passed. These results establish deterministic behavior and
 regression coverage, not quality with a real model.
+
+The follow-up implementation commit
+`09b93b01152c5635beb58cb05552effe7561f617` closed four conformance gaps found
+during post-commit review: a missing-only root now makes discovery incomplete,
+byte-limit diagnostics identify the stopped ceiling, revision 1 enforces its
+own four-snapshot bound independently of a lowered product selection limit, and
+cancellation racing with transcript synchronization keeps that I/O owned until
+late settlement. On macOS arm64 with Node 26.5.0, the focused six-test regression
+selection and the final `npm run headers:check`, `npm run build`, `npm test` set
+all exited 0; the full result was **517 passing tests** (**43 Skill tests** plus
+the unchanged 474-test baseline). Lint reported 0 errors and 30 warnings. This
+follow-up was not rerun in the deferred environments, so the Linux rows above
+remain evidence for the first implementation commit only.
 
 Additional macOS live-surface checks used disposable roots and fixed models:
 
