@@ -148,6 +148,91 @@ The author must decide whether to adopt a read-only shared contract now, accept 
 
 All eight accepted/partial lifecycle, authorization, required-journal, recovery, registration, compaction, Skill and Graph decisions remain unchanged. The new ADR is proposed/not-started and has no supersession relationship. Input-budget delegation and previous Skill/Graph acceptance are not evaluation approval. Backup deletion remains unauthorized; author-deferred trials remain deferred.
 
+### Same-source proposal review — 2026-09-13
+
+Reviewed local and public main `1cb6f4f2abe3e89e27c1bdb32f1049183ef0e960`. Public main has advanced from the original investigation; no source/test/dependency or accepted-contract changes followed the proposal. All eight accepted/partial ADR bodies remain unchanged. The 2026-09-12 baseline and external-source comparison above are retained as historical evidence, not relabeled as a new external investigation. Evaluation remains unimplemented.
+
+The review supports the pure core/application split, with the following additional source evidence and corrections:
+
+| Evidence inspected                                                                                                                                                     | Finding                                                                                                                                                                                                         | Non-binding implication                                                                                                                                                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `execution/journal.ts`: `MemoryExecutionJournal.key`, `digest`, `canonicalJSON`; `processor/graph-definition.ts`: descriptor hash; `graph-execution.ts`: `graph-bound` | Journal HMAC keys differ across storage pairs, whereas compiled descriptor identity is unkeyed. The existing JSON helper reads object properties.                                                               | Separate within-journal binding from cross-trial semantic identity. Restrict the proposed effect-free entry to bounded JSON text, not caller objects with getters/Proxy traps. Do not change the existing helper. |
+| `execution/run.ts`: `recoveredRunSnapshot`; `test/core/execution/run.test.ts`: noncooperative work and replay cases                                                    | Late settlement can release quarantine without changing the original incomplete terminal result; recovered counters remain zero. A request ID is Session-scoped, and live replay compares submitted input.      | Preserve terminal and later observation separately. Different report IDs must not count one Run as multiple trials. Evaluation imports never retry or resume it.                                                  |
+| `processor/graph-inspection.ts`, `skills/record.ts`: `parseSkillEntry`, `validateSkillEntries`; `execution/recovery.ts`                                                | Graph inspection verifies path/transcript reference relationships, but does not itself revalidate every Skill payload. The journal reader performs filesystem I/O and reports torn/invalid prefixes separately. | Distinguish raw checks performed by pure core from host-attested external inspection. Apply the appropriate payload validators; carry all reader issues. Do not call the file reader inside the pure function.    |
+| Skill revision-1 4 MiB record bound and the proposed evaluation 2 KiB ordinary-string bound                                                                            | Applying the metadata bound to raw Skill source would reject otherwise valid source records. Large prefixes can exceed the evaluation bundle.                                                                   | Scope bounds explicitly: metadata limits versus existing raw record limits within a bounded total. Oversized evidence is unavailable/out-of-profile, not an invalid Session or verified truncated prefix.         |
+| Original ADR verdict and identity rules                                                                                                                                | Required evidence/checks, per-variant denominators and cross-slot Run uniqueness were insufficiently specified. Empty requirements and pooled rates could give misleading success.                              | Freeze minimum evidence/trust policy and nonempty independent checks, use one exclusive disposition per slot, retain incomparable rows, and compare identical case/repetition schedules per variant.              |
+
+### Executed review probes
+
+On macOS arm64 / Node 26.5.0, headers:check, build and the full existing suite passed (550 tests; 39 existing lint warnings, zero errors). No source/test/dependency changes or evaluation implementation were made. Existing core tests, including interruption, are not measurements of task/model quality. Linux and live model/application trials were not rerun.
+
+An isolated memory-only probe checked three source observations. Two fresh `MemoryExecutionJournal` instances produced different HMACs for identical configuration. Passing an object getter to `canonicalJSON` invoked the getter once. A controlled noncooperative Run was stopped, returned incomplete, then settled: after `whenQuiescent`, recovery reported `quarantined: false` while retaining `result.outcome: incomplete`, `result.quiescence: false` and zero budget counters. All assertions passed; completion required explicit promise settlement, not a timeout-only success.
+
+Reproduce the substantive checks after building Orbit (no provider, filesystem storage or application target is used):
+
+```javascript
+import assert from 'node:assert/strict'
+import {MemoryExecutionJournal, RunSupervisor, canonicalJSON, recoveredRunSnapshot} from './dist/index.js'
+const first = new MemoryExecutionJournal('review-first')
+const second = new MemoryExecutionJournal('review-second')
+const supervisor = new RunSupervisor()
+let release, entered
+const pending = new Promise((resolve) => {
+  release = resolve
+})
+const started = new Promise((resolve) => {
+  entered = resolve
+})
+try {
+  assert.notEqual(first.digest({configuration: 1}), second.digest({configuration: 1}))
+  let calls = 0
+  canonicalJSON({
+    get field() {
+      calls++
+      return 1
+    },
+  })
+  assert.equal(calls, 1)
+  const handle = await supervisor.startRun({
+    configuration: {},
+    input: {},
+    sessionId: 'review-first',
+    requestId: 'review',
+    journal: async () => first,
+    limits: {cleanupMs: 25},
+    async execute(run) {
+      await run.ready([])
+      run.consume('modelCalls')
+      entered()
+      await run.wait('controlled-pending', pending)
+    },
+  })
+  await started
+  handle.requestStop()
+  assert.equal((await handle.finished).outcome, 'incomplete')
+  release()
+  await supervisor.whenQuiescent()
+  const saved = recoveredRunSnapshot(handle.id, 'review-first', first.records(), {mode: 'memory', level: 'memory'})
+  assert.equal(saved.quarantined, false)
+  assert.equal(saved.result.outcome, 'incomplete')
+  assert.equal(saved.result.quiescence, false)
+  assert.equal(saved.budget.modelCalls, 0)
+} finally {
+  release()
+  await supervisor.close()
+  await first.close()
+  await second.close()
+}
+```
+
+### Review alternatives and remaining judgment
+
+For external evidence, requiring all raw records is more independently inspectable but can exceed report limits and expose sensitive payloads. Accepting unqualified boolean attestations hides missing validation. The recommendation is bounded raw inspection plus explicitly trusted, versioned host attestations under a frozen evidence policy; the verdict must disclose which basis was used. Hashes and schema validation do not authenticate those attestations. A raw-only plan can reject insufficient evidence without altering the runtime storage contract.
+
+For grading, freeze one post-quiescence artifact for all independent graders rather than trusting a digest captured before later mutation. For comparison, keep per-variant denominators and exact resource coverage sets rather than pooling variants or silently selecting successful/fully measured rows. Source loss during later reinspection is a new observation, not permission to rewrite an earlier immutable report or auto-restore data. A historical host attestation is not proof that artifacts remain available today.
+
+These costs and the JSON-text entry requirement clarify the proposed scope; they are not adopted decisions. The [ADR review](../adr/2026-09-12-evidence-based-workflow-evaluation.md#proposal-review--2026-09-13) lists author judgment and confirmation conditions. Eight partial records, deferred Windows/representative/operational/physical-fault trials, existing managed MCP scope and the unanswered backup-deletion request remain unchanged.
+
 ## References
 
 - [Current Run implementation](../../src/core/execution/run.ts)
