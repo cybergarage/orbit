@@ -290,7 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                |
 | ---------- | ---------- | -------------- | --------------------------------------------------------------------------------------- |
-| 2026-09-12 | proposed   | not-started    | [Evidence-based Workflow Evaluation](2026-09-12-evidence-based-workflow-evaluation.md)  |
+| 2026-09-12 | accepted   | not-started    | [Evidence-based Workflow Evaluation](2026-09-12-evidence-based-workflow-evaluation.md)  |
 | 2026-09-12 | accepted   | partial        | [Managed Processor Graph](2026-09-12-managed-processor-graph.md)                        |
 | 2026-09-09 | accepted   | partial        | [Run-scoped Skill Selection](2026-09-09-run-scoped-skill-selection.md)                  |
 | 2026-09-08 | accepted   | partial        | [Budgeted Session Compaction](2026-09-08-budgeted-session-compaction.md)                |
@@ -390,6 +390,8 @@ authorization are unchanged.
 
 The [Graph proposal review](2026-09-12-managed-processor-graph.md#proposal-review--2026-09-12) corrects value/finalizer assumptions and makes staged catalog validation, replay binding, transcript synchronization and failure-prefix decoding explicit. That review left the ADR proposed / not-started; the subsequent author acceptance is recorded above. The seven accepted/partial ADRs and deferred trials are unchanged.
 
-[Evidence-based Workflow Evaluation](2026-09-12-evidence-based-workflow-evaluation.md) proposes a bounded read-only core contract for supplied evidence and comparison, with trial execution, independent grading and export storage owned by applications. Missing measurements and planned-slot denominators remain explicit. It is proposed / not-started, does not supersede any of the eight accepted/partial records and does not authorize candidate selection or implementation.
+[Evidence-based Workflow Evaluation](2026-09-12-evidence-based-workflow-evaluation.md) defines the accepted bounded read-only core contract for supplied evidence and comparison, with trial execution, independent grading and export storage owned by applications. Missing measurements and planned-slot denominators remain explicit. At proposal it was proposed / not-started; the author acceptance below now records accepted / not-started. It supersedes none of the eight accepted/partial records and does not authorize candidate selection.
 
-The [evaluation proposal review](2026-09-12-evidence-based-workflow-evaluation.md#proposal-review--2026-09-13) adds minimum evidence/trust requirements, per-variant accounting, one Run per slot, independent immutable grading artifacts and a bounded JSON-text boundary. Author judgment remains pending; the eight accepted/partial decisions are unchanged.
+The [evaluation proposal review](2026-09-12-evidence-based-workflow-evaluation.md#proposal-review--2026-09-13) adds minimum evidence/trust requirements, per-variant accounting, one Run per slot, independent immutable grading artifacts and a bounded JSON-text boundary. That review left author judgment pending; the subsequent explicit acceptance below preserves the eight accepted/partial decisions.
+
+[Evaluation acceptance](2026-09-12-evidence-based-workflow-evaluation.md#author-acceptance--2026-09-13) records the author's 2026-09-13 decision including the review corrections, host trust, fixed denominators, JSON-text boundary and missing-resource costs. Status is accepted / not-started, with a null completion date and no implementation commits. The eight earlier partial records, author-deferred trials and unanswered backup-deletion request are unchanged.

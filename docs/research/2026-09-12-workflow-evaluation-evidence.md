@@ -233,6 +233,10 @@ For grading, freeze one post-quiescence artifact for all independent graders rat
 
 These costs and the JSON-text entry requirement clarify the proposed scope; they are not adopted decisions. The [ADR review](../adr/2026-09-12-evidence-based-workflow-evaluation.md#proposal-review--2026-09-13) lists author judgment and confirmation conditions. Eight partial records, deferred Windows/representative/operational/physical-fault trials, existing managed MCP scope and the unanswered backup-deletion request remain unchanged.
 
+### Subsequent author decision — 2026-09-13
+
+The author [accepted the reviewed recommendation](../adr/2026-09-12-evidence-based-workflow-evaluation.md#author-acceptance--2026-09-13), including host-attested evidence, per-variant accounting and the JSON-text boundary. The ADR is now accepted / not-started, with no implementation evidence. All earlier proposed/pending statements in this investigation record their dated state; the research does not itself approve architecture. The eight partial decisions and author-deferred conditions remain unchanged.
+
 ## References
 
 - [Current Run implementation](../../src/core/execution/run.ts)

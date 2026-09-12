@@ -47,7 +47,7 @@ do not constitute an adaptive control plane.
 
 Orbit now compiles bounded immutable Processor Graphs with descriptor identities and records their managed execution paths. Saved inspection checks journal/transcript evidence without automatically resuming interrupted work. See [Processor Graphs](../processor-graphs.md) for the implemented scope.
 
-Orbit does not currently implement evaluation datasets/report APIs, objective functions, candidate generation, replay isolation, promotion policy, canary routing or graph rollback. The [evaluation proposal](../adr/2026-09-12-evidence-based-workflow-evaluation.md) would add read-only evidence comparison; it is not accepted or implemented.
+Orbit does not currently implement evaluation datasets/report APIs, objective functions, candidate generation, replay isolation, promotion policy, canary routing or graph rollback. The [accepted evaluation design](../adr/2026-09-12-evidence-based-workflow-evaluation.md) specifies read-only evidence comparison; implementation has not started.
 
 ## Directional Model
 

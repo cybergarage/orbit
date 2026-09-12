@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-12
-decision-date: null
+decision-date: 2026-09-13
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -16,9 +16,30 @@ Compare outcomes and resources for the same versioned tasks without equating a c
 
 ## Decision
 
-**Proposed, not accepted; includes the 2026-09-13 review below.** Add a bounded, read-only evaluation evidence contract and pure validation/comparison functions to Orbit core. Applications define cases and trusted graders, provision isolated targets, run trials through the existing managed APIs and persist reports. Core checks supplied evidence and computes transparent counts; it does not execute trials or decide a task's expected behavior.
+**Accepted by the author on 2026-09-13, including the proposal review of that date.** Add a bounded, read-only evaluation evidence contract and pure validation/comparison functions to Orbit core. Applications define cases and trusted graders, provision isolated targets, run trials through the existing managed APIs and persist reports. Core checks supplied evidence and computes transparent counts; it does not execute trials or decide a task's expected behavior.
 
 This is one decision about the first shared evaluation contract. Illustrative names `validateEvaluationPlan`, `inspectEvaluationEvidence` and `compareEvaluationReports` are proposed public APIs, not existing exports. The public inspection boundary accepts bounded JSON text strings containing plans, supplied evidence and reports, returns newly allocated structured results and has no filesystem, network, model, tool, arbitrary callback or automatic replay effects. It rejects non-string arguments before inspecting their properties. Caller-owned object serialization is outside this boundary; accepting arbitrary objects would execute getters or Proxy traps even through the existing canonicalJSON helper. Loading evidence through existing authorized readers remains the host's responsibility. No second supervisor, scheduler, required journal revision, transcript revision, provider telemetry expansion, pricing lookup, ranking or candidate selection is included.
+
+### Author acceptance — 2026-09-13
+
+The author explicitly accepted the recommendation reviewed in `9f68c6b53d4c3a9c974b5cb3efbd14f73ef3f53c`, including its evidence, trust, accounting and compatibility costs:
+
+- Keep core inspection/comparison read-only. Applications own cases, managed trial execution, independent grading, isolation and report access/retention/deletion.
+- Supply the trusted plan separately from reports. Freeze required evidence, recording mode/level, verifier identities/revisions and trust before trials; distinguish direct core inspection from host-attested inspection and preserve the conditions for expected early refusal.
+- Use fixed per-variant case/repetition schedules and one Run per slot. Identical replay/import remains idempotent; reject conflicting or double-counted evidence. Preserve incomparable, indeterminate, confirmed not-run and missing-report cases in their defined accounting.
+- Separate within-journal HMACs from cross-trial semantic/artifact identities. Grade a fixed artifact independently, preserve original terminal results alongside later settlement, and keep immutable report revision history.
+- Accept bounded JSON-text entry, strict parsing, distinct metadata/raw-record limits and compatibility with valid older report revisions even if product creation limits decrease.
+- Add no required journal version or second runner. Accept unavailable historical resources, explicit scope/provenance/coverage and no unmeasured claim that the initial profile is optimal.
+
+At acceptance, local HEAD was the review commit above, the Orbit working tree was clean, and public main was `1cb6f4f2abe3e89e27c1bdb32f1049183ef0e960`. No source, test, dependency or accepted-contract differences followed review. Comparing this request with the reviewed contract revealed no new material contradiction. Evaluation had not already been accepted or implemented, so no status was rolled back. This date records the author's explicit evaluation decision, not earlier input-budget delegation or Skill/Graph acceptance.
+
+Implementation remains **not-started**; its completion date is null and implementation commits are empty. This task records acceptance only. The illustrative API names and all confirmation requirements below still describe work to implement, not current exports or tested evaluator behavior.
+
+This decision adds an optional evaluation contract using existing managed evidence; it supersedes none of the eight accepted/partial lifecycle, authorization, journal, recovery, registration, compaction, Skill or Graph decisions. Their rationale, resource ownership, recording, reader migration, deletion and maintenance conditions remain unchanged. Original proposal/review reasoning and history are retained below and in the linked commits/research. Proposal-era statements about pending author judgment describe their historical state; this acceptance is the current decision.
+
+Backup deletion remains unauthorized. Windows, representative application/model trials, operational restart controls and physical storage-fault trials remain author-deferred with their existing restart conditions. The bounded managed MCP scope is unchanged. No implementation, dependency addition, chapter production, finished application or candidate-selection design accompanies this acceptance.
+
+Acceptance validation on macOS arm64 / Node 26.5.0 passed headers:check, build and all 550 existing tests. Lint retained 39 warnings and zero errors. Source, tests and dependencies remain unchanged; this verifies the baseline, not an implemented evaluator. Document metadata, references and preservation of the eight earlier ADRs are checked separately.
 
 ### Plan, identity and comparison
 
@@ -162,7 +183,7 @@ Implementation is **not started**. No evaluation API, grader, report schema impl
 | Effect-free core and storage | Filesystem/network/model/tool spies remain unused; embedded paths cannot load artifacts; Session deletion/maintenance unchanged; application export retention documented and missing exports do not recreate data                                |
 | Unix and task quality        | Targeted checks plus headers:check/build/test on available Unix; fixed-double correctness separated from real-model case trials and their environment/configuration; timeout alone never counts as success                                       |
 
-Before acceptance the author should judge: (1) shared pure core versus application-only reporting, including host-attested versus core-inspected evidence; (2) unavailable historical resources versus a wider telemetry design; (3) application costs for independent graders/isolation/export lifecycle; (4) minimum evidence, per-variant denominators, expected-stop and indeterminate rules; and (5) JSON-text input, the initial bounded profile and its compatibility cost. These are proposed choices, not inherited approvals.
+The proposal presented the following author judgment points, now accepted as recorded above: (1) shared pure core versus application-only reporting, including host-attested versus core-inspected evidence; (2) unavailable historical resources versus a wider telemetry design; (3) application costs for independent graders/isolation/export lifecycle; (4) minimum evidence, per-variant denominators, expected-stop and indeterminate rules; and (5) JSON-text input, the initial bounded profile and its compatibility cost. Their acceptance is explicit and does not derive from earlier approvals.
 
 ### Proposal review — 2026-09-13
 
@@ -187,7 +208,7 @@ The linked research records the executed probes and baseline test results. None 
 
 ## Follow-up Work
 
-Review and explicitly decide this proposal before implementation. Then implement/verify only the accepted scope, record full source hashes in a later ADR evidence commit and produce chapter 16 after source/example verification. Do not infer measured model quality or optimal limits from deterministic tests.
+Acceptance is recorded above. In a separately requested implementation task, implement/verify only the accepted scope, record full source hashes in a later ADR evidence commit and produce chapter 16 after source/example verification. Do not infer measured model quality or optimal limits from deterministic tests.
 
 All eight existing partial decisions retain their remaining confirmation. Windows, representative application/model trials, operational restart controls and physical storage faults remain author-deferred pending environment/application/SLI/SLO definition. The bounded managed MCP schema work already verified for coding-agent tools is preserved without claiming Everything-wide support. Backup deletion remains unauthorized. Candidate selection, autonomous generation/promotion and the finished application are outside this decision.
 
