@@ -2,9 +2,9 @@
 status: accepted
 proposed-date: 2026-09-09
 decision-date: 2026-09-12
-implementation-status: not-started
+implementation-status: partial
 implementation-completed-date: null
-implementation-commits: []
+implementation-commits: [a77919e501a118418b31be445983d47f34b2d568]
 superseded-by: []
 ---
 
@@ -19,11 +19,12 @@ standing prompt accumulation and treating instructional text as tool permission.
 
 ## Decision
 
-**Accepted on 2026-09-12 by the author; implementation not started.** Introduce a bounded, source-identified
+**Accepted on 2026-09-12 by the author; implementation partial.** Introduce a bounded, source-identified
 Skill catalog and explicit selections on managed Agent/Service Runs. Preserve
 the existing single-file Skill API. Core owns reading, validation, per-Run input
 and durable snapshots; the application chooses catalog roots and the user's
-selection. Names below describe the intended API, not current exports.
+selection. Current exports and migration instructions are documented in
+[Skills](../skills.md); the dated acceptance and review remain historical evidence.
 
 ### Author acceptance — 2026-09-12
 
@@ -341,9 +342,9 @@ Primary source links and limits are in the research note.
 
 ## Implementation and Confirmation
 
-Not started. No implementation hashes or completion date are recorded. The
-following are required implementation tests; baseline tests are not
-substitutes.
+The following confirmation matrix was defined before implementation. Its
+requirements remain in force; current evidence and deferred conditions follow
+the table. Baseline tests alone are not substitutes.
 
 | Area             | Required confirmation                                                                                                                                                                                      |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -362,13 +363,79 @@ recorded implementation status until their own open conditions are resolved.
 Record implementation commit hashes and evidence in a later documentation
 commit, never pre-fill them in this proposal.
 
+### Implementation evidence — 2026-09-12
+
+Implementation commit: `a77919e501a118418b31be445983d47f34b2d568`.
+This evidence is recorded in a subsequent documentation commit. The acceptance
+baseline was `dee5e7aee3bca09ced563c54bca374c41d901010`; it contained no later
+source changes before this implementation. Public main remained
+`7b4903fb88db5ed53cac7ef5986c75e22a626897` when checked. No new architectural
+decision was needed. The six previous accepted / partial ADRs and the legacy
+`Skill` source and seven tests are unchanged from the acceptance baseline.
+
+| Confirmation area | Implemented behavior and evidence |
+| --- | --- |
+| Catalog and parser | `src/core/skills/catalog.ts` and `parser.ts` implement explicit roots, source IDs, bounded asynchronous reading, private identity observations and strict YAML AST validation. `yaml` is pinned to 2.9.1 through npm and the lockfile. `test/core/skill-selection.test.ts` covers aliases, same-name sources, root rebinding/replacement, invalid metadata/UTF-8, BOM/CRLF, denied reads and product boundaries. Failed reads remain charged against the listing byte allowance because their actual completed bytes are uncertain. |
+| Selection and ownership | Agent, ThreadManager, RunSupervisor and ApplicationService compare ordered selections and catalog configuration before returning prior handles. The core/execution Skill tests cover changed order, exact replay without rereading, delayed open/read/close, failed-close retry, cancellation and retained Run ownership. A Run uses an independent reader copied from the catalog; an unrelated listing is not part of its cleanup. |
+| Input and budget | Ordinary model iterations receive the frozen one-Run prefix with budgeting enabled or disabled. Protected-input overflow refuses model use. The dedicated summary receives neither active Skill instructions nor tools. Tests verify no automatic selection on a subsequent Run or reopen, and unchanged managed tool authorization. |
+| Snapshot and readiness | `skills/record.ts`, Session/codec and the journal validate exact source bytes, derived body/metadata, revision, identity and record order. Snapshot synchronization precedes journal readiness and model use. Tests inject transcript and journal failure and check the fixed 4 MiB revision-1 line ceiling separately from lowered product limits. |
+| Crash and old reader | `test/core/execution/skill-interruption.test.ts` runs `fixtures/skill-save-interruption.mjs` at discovered append/fsync boundaries, requiring exact child exit and reopened content rather than a timeout. A direct macOS run passed 27 interruption/failure cases. The preserved pre-Skill v2 decoder fixture is taken from `dee5e7aee3bca09ced563c54bca374c41d901010`, with only imports/provenance adjusted. It distinguishes complete unknown-record refusal from malformed final-line recovery. |
+| Surfaces and compatibility | Compiled CLI tests cover JSON listing and explicit selection with a fixed model. Service/GUI tests cover pending/resolved state, admission versus loading failure, replay/reopen and authenticated, explicit full-source history. Ink tests cover selection, clear and consumption. Public API and offline reader rollout are documented in `docs/skills.md`, architecture, concepts and the maintained surface/Session documentation. |
+
+The new Skill tests contribute **41 passing tests**; the previous suite contributes
+**474**, including the seven unchanged legacy Skill tests. Final validation of the
+implementation commit's source succeeded in each environment below. The Linux
+runs used isolated source archives and fresh dependency installation, with native
+esbuild rebuilt inside each container; they used no personal configuration or
+Session data.
+
+| Environment | Commands | Result |
+| --- | --- | --- |
+| macOS arm64, Node 26.5.0 | `npm run headers:check`, `npm run build`, `npm test` | All commands exited 0; 515 tests passed. |
+| Linux arm64, Node 20.19.0 | `npm run headers:check`, `npm run build`, `npm test` | All commands exited 0; 515 tests passed. |
+| Linux arm64, Node 22.23.2 | `npm run headers:check`, `npm run build`, `npm test` | All commands exited 0; 515 tests passed. |
+
+Lint reported 0 errors and 29 warnings (the acceptance baseline had 19 warnings).
+`npm run prepack` and the explicit interactive documentation generation succeeded;
+`git diff --check` passed. These results establish deterministic behavior and
+regression coverage, not quality with a real model.
+
+Additional macOS live-surface checks used disposable roots and fixed models:
+
+- Whole Ink application: list and select a Skill, submit two Runs, then exit.
+  Observed selected flags `[true, false]` and exactly one saved snapshot; exit 0.
+  The probe exposed a misleading no-selection notice, corrected locally and
+  covered by the final rebuilt code and selection-state tests.
+- Actual GUI browser: select and run, clear selection and run again, explicitly
+  inspect the full saved source, reload and reopen. The two model responses
+  showed selected=true then false; reload did not submit another Run.
+- `test/apps/gui/fixtures/transport-faults.mjs --skills`: approve one isolated
+  write while injecting SSE disconnect, delayed stale HTTP, HTTP 503 and
+  duplicate/reordered events. The GUI reached completed/acknowledged. The fixture
+  exited 0 with `calls: 2`, `selectedCalls: [true, true]`, all three fault flags
+  true, and the single intended file content `once despite transport faults`.
+
+Initial 128-candidate, 64 KiB-file and four-selection boundaries, overflow and
+failed-read accounting were tested. This measures enforcement, not optimal sizing,
+latency under production load or model adherence. No manuscript, figure or completed
+coding application was produced. No backup was deleted.
+
 ## Follow-up Work
 
-Implement the accepted scope only when implementation is requested, then run the
-confirmation matrix and record full implementation hashes in a later evidence
-commit. Parser package/version and API spelling remain implementation choices
-within these adopted constraints. Preserve all deferred checks and do not infer
-implementation completion from this acceptance.
+Implementation remains **partial**, with no completion date. Windows and other
+non-tested environments remain author-deferred: resume with an isolated supported
+runner and filesystem, then validate path identity, I/O ownership and storage
+behavior. Representative model/application trials require a defined coding task,
+isolated project, model/MCP configuration and evaluation criteria. Operational and
+physical-storage-fault trials require the target deployment, restart controls,
+filesystem and SLI/SLO. Preserve these as unconfirmed rather than failed or passed.
+These deferrals do not block the author's next Unix-based writing phase.
+
+Retain the separate `.v1-backup` deletion authorization question. Continue to stop
+old readers/writers and their automatic restart sources for coordinated migration;
+the new record does not make an online downgrade safe. Existing bounded managed
+Everything verification remains evidence for its tested tools only. The older
+ADRs' acceptance reasons, partial statuses and open conditions are unchanged.
 
 ### Pre-acceptance decision checklist (historical)
 

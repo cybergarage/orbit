@@ -225,6 +225,15 @@ local links and proposal status are checked separately from runtime behavior.
 
 The author explicitly accepted the reviewed recommendation in the linked
 [ADR acceptance record](../adr/2026-09-09-run-scoped-skill-selection.md#author-acceptance--2026-09-12).
-The ADR is accepted / not-started. This note preserves the original investigation
+At acceptance the ADR was accepted / not-started. This note preserves the original investigation
 and review as non-binding historical evidence; it does not claim implementation
 or resolve the separate backup-deletion authorization and deferred trials.
+
+
+## Subsequent implementation — 2026-09-12
+
+The [ADR implementation evidence](../adr/2026-09-09-run-scoped-skill-selection.md#implementation-evidence--2026-09-12)
+records commit `a77919e501a118418b31be445983d47f34b2d568`, the current public API,
+Unix and isolated UI results, and the remaining deferred trials. Its state is
+accepted / partial. The earlier investigation and review remain historical;
+this update does not re-accept the decision or resolve backup deletion.

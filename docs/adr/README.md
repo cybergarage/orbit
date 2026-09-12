@@ -290,7 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                |
 | ---------- | ---------- | -------------- | --------------------------------------------------------------------------------------- |
-| 2026-09-09 | accepted   | not-started    | [Run-scoped Skill Selection](2026-09-09-run-scoped-skill-selection.md)                  |
+| 2026-09-09 | accepted   | partial        | [Run-scoped Skill Selection](2026-09-09-run-scoped-skill-selection.md)                  |
 | 2026-09-08 | accepted   | partial        | [Budgeted Session Compaction](2026-09-08-budgeted-session-compaction.md)                |
 | 2026-08-22 | accepted   | completed      | [GUI Application Architecture](2026-08-22-gui-application.md)                           |
 | 2026-08-22 | accepted   | completed      | [Session Persistence Design](2026-08-22-session-persistence.md)                         |
@@ -374,6 +374,10 @@ left it proposed / not-started; baseline verification did not approve or impleme
 
 [Run-scoped Skill Selection](2026-09-09-run-scoped-skill-selection.md#author-acceptance--2026-09-12)
 was explicitly accepted by the author on 2026-09-12, including the review and
-revision-1 4 MiB record ceiling. It is accepted / not-started, with no implementation
-hashes or completion date. The six prior partial decisions, deferred trials and
-pending backup-deletion authorization are unchanged.
+revision-1 4 MiB record ceiling. At acceptance it was not-started with no
+implementation hashes or completion date. The subsequent
+[implementation evidence](2026-09-09-run-scoped-skill-selection.md#implementation-evidence--2026-09-12)
+records the source commit, 515 passing tests on three Unix/Node environments and
+isolated live UI checks. It is now accepted / partial, without a completion date.
+The six prior partial decisions, deferred trials and pending backup-deletion
+authorization are unchanged.
