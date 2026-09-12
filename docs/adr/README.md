@@ -290,6 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                |
 | ---------- | ---------- | -------------- | --------------------------------------------------------------------------------------- |
+| 2026-09-12 | proposed   | not-started    | [Managed Processor Graph](2026-09-12-managed-processor-graph.md)                        |
 | 2026-09-09 | accepted   | partial        | [Run-scoped Skill Selection](2026-09-09-run-scoped-skill-selection.md)                  |
 | 2026-09-08 | accepted   | partial        | [Budgeted Session Compaction](2026-09-08-budgeted-session-compaction.md)                |
 | 2026-08-22 | accepted   | completed      | [GUI Application Architecture](2026-08-22-gui-application.md)                           |
@@ -383,3 +384,5 @@ on macOS and keeps its Linux rerun deferred. It is accepted / partial, without a
 completion date.
 The six prior partial decisions, deferred trials and pending backup-deletion
 authorization are unchanged.
+
+[Managed Processor Graph](2026-09-12-managed-processor-graph.md) proposes serial/declared/finite composition under one Run and turn, a shared Agent loop seam, and version-2 graph journal evidence. It does not accept or implement Graph and does not supersede any accepted ADR. Its explicit author decisions include input protection and reader migration costs.

@@ -117,6 +117,7 @@ at pinned revisions by default. If either is not relevant, record why.
 
 | Investigated | Status     | Topic                                                                                                                                   |
 | ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-12   | current    | [Bounded Processor Graph Execution](2026-09-12-bounded-processor-graph-execution.md)                                                    |
 | 2026-09-09   | current    | [Explicit Skill Selection and Run-scoped Instructions](2026-09-09-explicit-skill-selection.md)                                          |
 | 2026-09-08   | current    | [Input Budgets and Durable Session Compaction](2026-09-08-input-budgets-and-compaction.md)                                              |
 | 2026-09-08   | current    | [Session Storage Registration Review](2026-09-08-session-storage-registration-review.md)                                                |
@@ -128,7 +129,7 @@ at pinned revisions by default. If either is not relevant, record why.
 | 2026-09-03   | current    | [LangGraph Concepts, Intermediate Representations, and Orbit Processors](2026-09-03-langgraph-concepts-intermediate-representations.md) |
 | 2026-09-03   | current    | [Visual Agent Graph Authoring with React Flow and LangGraph.js](2026-09-03-visual-agent-graph-authoring-react-flow-langgraph.md)        |
 | 2026-09-03   | current    | [Grok Bot Architecture and Skill Ownership](2026-09-03-grok-bot-architecture-and-skill-ownership.md)                                    |
-| 2026-09-02   | current    | [Adaptive Processor Graph Runtime](2026-09-02-adaptive-processor-graph-runtime.md)                                                      |
+| 2026-09-02   | superseded | [Adaptive Processor Graph Runtime](2026-09-02-adaptive-processor-graph-runtime.md)                                                      |
 | 2026-09-02   | current    | [Agent Workflow Optimization Papers](2026-09-02-agent-workflow-optimization-papers.md)                                                  |
 
 The [Skill proposal review](../adr/2026-09-09-run-scoped-skill-selection.md#review-findings-and-author-decision--2026-09-12) clarifies ordered request replay, dedicated
@@ -136,3 +137,5 @@ summary input, exact snapshot validation and interrupted preparation. That revie
 left the ADR proposed / not-started. The author subsequently accepted it on
 2026-09-12; implementation remains not-started. Research and baseline verification
 do not themselves authorize implementation.
+
+The [bounded Graph investigation](2026-09-12-bounded-processor-graph-execution.md) updates the execution baseline and recommends a single managed Run with coarse Agent nodes. Its linked ADR is proposed / not-started; existing accepted/partial records and deferred trials are unchanged. The earlier adaptive-runtime note remains historical evidence, including broader directions outside the new proposal.

@@ -86,3 +86,5 @@ promotion can follow only when their semantics and evaluation are justified.
 - [Current Architecture](../architecture.md)
 - [Adaptive Processor Graph Runtime research](../research/2026-09-02-adaptive-processor-graph-runtime.md)
 - [Architecture Decision Records](../adr/README.md)
+
+The [2026-09-12 bounded execution research](../research/2026-09-12-bounded-processor-graph-execution.md) and [Managed Processor Graph proposal](../adr/2026-09-12-managed-processor-graph.md) compare the earlier internal-loop-first direction with coarse Agent nodes under the implemented Run contracts. The proposal recommends the latter with one Run/turn and explicit journal compatibility costs. It remains proposed / not-started; the current implementation section above is unchanged.

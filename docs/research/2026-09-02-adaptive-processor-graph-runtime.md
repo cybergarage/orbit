@@ -1,12 +1,17 @@
 ---
-status: current
+status: superseded
 investigation-date: 2026-09-02
 orbit-commit: ea34703b1f4111926b2480cebd298c4cd5e6b748
 related-adrs: []
-superseded-by: []
+superseded-by:
+  - docs/research/2026-09-12-bounded-processor-graph-execution.md
 ---
 
 # Adaptive Processor Graph Runtime
+
+## Later investigation
+
+The [2026-09-12 bounded Graph investigation](2026-09-12-bounded-processor-graph-execution.md) supersedes this note as the execution baseline after managed Runs, mandatory recording, input budgeting and Skills were implemented. It recommends Agent as a coarse managed node rather than graph-expanding the inner loop first. This is a non-binding recommendation, not adoption. The original evidence and broader adaptive research below remain historical and are not retroactively rewritten.
 
 ## Purpose
 
