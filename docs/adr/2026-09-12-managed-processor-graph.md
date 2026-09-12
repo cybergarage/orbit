@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-12
-decision-date: null
+decision-date: 2026-09-12
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -16,7 +16,25 @@ Allow an application to declare serial work, select among declared branches and 
 
 ## Decision
 
-**Proposed recommendation; not accepted.** Add a validated programmatic graph whose entire invocation is one managed Run and one Session turn. Use the existing Agent model/tool loop as a coarse node through a shared internal execution seam. Do not graph-expand that loop, introduce a second Run owner, or implement while this record is proposed.
+**Accepted by the author on 2026-09-12, including the proposal review.** Add a validated programmatic graph whose entire invocation is one managed Run and one Session turn. Use the existing Agent model/tool loop as a coarse node through a shared internal execution seam. Do not graph-expand that loop or introduce a second Run owner. This acceptance records the design only; implementation is a separate requested task.
+
+### Author acceptance — 2026-09-12
+
+The author explicitly accepted the reviewed recommendation in `05ac5d42c4a1767cb3e5eb7561daecdd88c6558e`, including the following costs and implementation conditions:
+
+- Reuse the common Agent loop as a stage within one Run, protected conversation turn, environment, catalog and Skill snapshot. Accept that active-turn protection may exhaust input capacity before the visit limit.
+- Use explicit trusted adapter versions, immutable JSON, finite visits, staged definition/catalog validation, direct-tool request accounting and complete submitted-option replay comparison at every entry and after restart.
+- Gate Graph values on acknowledged completion; preserve typed declared-failure outcomes through the common finalizer. Keep synchronized entry positions, valid failure prefixes, and the distinction between unknown complete records and torn suffixes.
+- Require explicit transcript-v2 migration and Run-scoped journal-v1/v2 coexistence. Stop old processes and automatic restart sources before new-format use. Observe interrupted work without automatic middle-node continuation.
+- Treat the numeric profile as a starting point for measured confirmation, never an unmeasured optimum.
+
+At acceptance, local HEAD was the review commit above and the working tree was clean; public main was `b2b8f445a4284c14f787ed80a895c8342ae1ea71`. No source, test, dependency or accepted-contract differences existed after review, and no new material contradiction was found. Graph had not been adopted or implemented, so no existing implementation state was rolled back. The decision date records this explicit author judgment, not the prior input-budget delegation or Skill acceptance.
+
+This ADR extends the managed lifecycle and required journal only for the defined Graph scope. It preserves the seven earlier accepted/partial decisions, their rationale and all outstanding evidence. It does not supersede their common ownership, authorization, storage, context or Skill contracts. The proposal and review history remains in the dated sections and linked commits; proposal-era language there records that earlier state. Backup deletion is not authorized. Windows, representative application/model trials, operational restart control and physical-fault trials remain author-deferred without weakening the adopted operational conditions.
+
+Implementation remains `not-started`, its completion date is null and implementation commits are empty. This acceptance does not claim any Graph behavior or confirmation-table item implemented.
+
+Acceptance validation on macOS arm64 / Node 26.5.0 passed headers:check, build and all 517 existing tests. Lint retained 30 existing warnings and no errors; existing Node warnings remain. This rerun validates the unchanged baseline, not Graph implementation. Document metadata, local references, formatting and unchanged earlier ADRs were also checked.
 
 ### Scope and responsibility
 
@@ -27,7 +45,7 @@ Initial scope:
 - Serial nodes, explicit router nodes, declared edges, explicit success/failure terminals and cycles subject to a global visit cap.
 - One Session, workspace/policy, model configuration, resolved tool catalog, context policy and ordered Skill selection per graph Run. Agent nodes reuse that environment; tool nodes use its frozen catalog.
 - Programmatic TypeScript construction with bounded JSON descriptors and runtime validation. No graph-file code evaluation or arbitrary module loading.
-- Public proposed entry shape: a compiled graph's `startRun(newInput, options)` returns the existing `RunHandle<GraphValue>`; snapshot, stop, approval reply and close use the same supervisor ownership rules. Concrete exported names must be checked during implementation, but these behaviors are part of the proposed contract.
+- Public entry shape: a compiled graph's `startRun(newInput, options)` returns the existing `RunHandle<GraphValue>`; snapshot, stop, approval reply and close use the same supervisor ownership rules. Concrete exported names must be checked during implementation, but these behaviors are part of the accepted design contract.
 - A library/application-service entry accepts an explicit compiled graph; existing Agent/CLI/GUI requests keep their current default behavior. This does not include a graph editor, a GUI workflow picker or silently applying graphs to ordinary requests.
 
 Exclude parallel fan-out/join, subgraphs, scheduling, autonomous topology generation, evaluation/promotion, per-node model/catalog changes and durable middle-node continuation.
@@ -70,13 +88,13 @@ Each visit has a monotonic visit number plus a unique invocation ID, even on rep
 
 Managed tool nodes resolve through the frozen tool catalog, consume the existing tool request allowance, and use the same preparation, confirmation, last-moment revalidation, intent acknowledgement, execution and result acknowledgement as Agent tools. Assign unique call/operation IDs and include the active visit ID on version-2 operation-intent/result records. Initialization MCP operations have no active visit. Validate these references against the active graph visit and list them in its completion record. Direct tool results are graph values; do not fabricate an assistant tool call in the conversation. A later Agent input may explicitly project that value into a new user/task message through a trusted transform.
 
-A typed known failure (for example a target command's nonzero exit with confirmed completion) can become validated output routed through a declared label. A model's statement that tests passed cannot replace the actual managed command result. Router/transform nodes have no tool executor capability and must be trusted, bounded, cooperative computations. Declaring a JavaScript callback pure cannot prevent it using ambient Node APIs; unsupported/untrusted executable nodes are rejected, and the proposal makes no isolation guarantee against malicious host code.
+A typed known failure (for example a target command's nonzero exit with confirmed completion) can become validated output routed through a declared label. A model's statement that tests passed cannot replace the actual managed command result. Router/transform nodes have no tool executor capability and must be trusted, bounded, cooperative computations. Declaring a JavaScript callback pure cannot prevent it using ambient Node APIs; unsupported/untrusted executable nodes are rejected, and this design makes no isolation guarantee against malicious host code.
 
 Arbitrary exceptions, invalid values, unknown route labels, policy denial requiring termination, cancellation, recording failure, budget exhaustion and unknown effects stop scheduling. They cannot follow an ordinary retry edge. No implicit catch-all retry or automatic compensation is added. Known domain failures can follow only an explicitly declared, validated route while the Run is still usable.
 
 Await node completion, validate and freeze its result, synchronize any newly appended conversation/Skill records at the journal storage level, acknowledge `graph-node-completed`, compute/validate the one successor, and acknowledge `graph-transition` before starting that successor. A successor never starts if result or transition acknowledgement fails. Pure router decisions are recorded just like work nodes and count toward the cap.
 
-An explicit success terminal yields `completed` and a bounded `GraphValue` containing the final value and graph identity. An explicit failure terminal yields `failed` with reason `graph-declared-failure`; preserve the typed last result in a proposed graph-specific `getGraphSnapshot(runId)` view so it can be inspected in the live process. Expose the Graph handle's value only after its final result is completed, quiescent and recording-acknowledged; otherwise it is undefined, with any known typed last value available only as a labeled Graph observation. This is a proposed Graph-specific publication rule, not today's ordinary `RunHandle.value()` behavior: the current supervisor stores a body value before cleanup/synchronization can fail. Preserve ordinary Agent handle behavior while wrapping/caching the Graph view. Recovery exposes the recorded outcome/digest, not an invented missing body. Neither completed nor a route named `passed` is a quality score. Existing `RunResult.operations`, recording status, quiescence and unresolved resources remain authoritative. Cancellation/budget/unknown effects keep the existing outcome mapping, regardless of the last route label.
+An explicit success terminal yields `completed` and a bounded `GraphValue` containing the final value and graph identity. An explicit failure terminal yields `failed` with reason `graph-declared-failure`; preserve the typed last result in a graph-specific `getGraphSnapshot(runId)` view so it can be inspected in the live process. Expose the Graph handle's value only after its final result is completed, quiescent and recording-acknowledged; otherwise it is undefined, with any known typed last value available only as a labeled Graph observation. This is an adopted Graph-specific publication rule, not today's ordinary `RunHandle.value()` behavior: the current supervisor stores a body value before cleanup/synchronization can fail. Preserve ordinary Agent handle behavior while wrapping/caching the Graph view. Recovery exposes the recorded outcome/digest, not an invented missing body. Neither completed nor a route named `passed` is a quality score. Existing `RunResult.operations`, recording status, quiescence and unresolved resources remain authoritative. Cancellation/budget/unknown effects keep the existing outcome mapping, regardless of the last route label.
 
 Add a narrow internal body-disposition result for the Graph adapter to report the declared failure reason to the common finalizer. Throwing `Error('graph-declared-failure')` is insufficient: current `RunSupervisor.execute` records `runtime-failed`. Do not pass a new arbitrary stop string and accidentally obtain `cancelled`. The declared failure supplies `failed / graph-declared-failure` only when no real stop, required-recording failure or unresolved ownership takes precedence; those retain the common outcome rules and the selected failure terminal remains separate path evidence. Do not expose a public capability to forge successful finalization or clear a stop. Verify success/failure terminal races with user stop, budget, synchronization and late settlement.
 
@@ -94,7 +112,7 @@ These limits do not preempt synchronous non-yielding JavaScript. That existing i
 
 ### Required graph evidence and compatibility
 
-Introduce **journal envelope version 2 for Graph Runs**. Keep version 1 ordinary Run records readable and leave ordinary Run writers on their existing version until they use Graph. A journal may contain version-1 ordinary Runs both before and after version-2 Graph Runs written by upgraded processes; every record within one Run uses its admitted version. This is a proposed persistent-format extension, not an already supported field addition.
+Introduce **journal envelope version 2 for Graph Runs**. Keep version 1 ordinary Run records readable and leave ordinary Run writers on their existing version until they use Graph. A journal may contain version-1 ordinary Runs both before and after version-2 Graph Runs written by upgraded processes; every record within one Run uses its admitted version. This is an adopted persistent-format extension, not an already supported field addition.
 
 A version-2 Graph Run contains the existing admission/ready/operation/stop/terminal/settlement semantics plus:
 
@@ -119,9 +137,9 @@ Distinguish file decoders precisely. Current journal writers refuse any untermin
 
 New recovery scans may inspect mixed historical Runs, but must reject malformed complete graph records and preserve truncated tail bytes under the current recovery rules. Missing binding, ready, completion or transition after interruption is observed as incomplete/failed evidence, never interpreted as an instruction to execute. Same-request replay returns a recovered observation; no automatic mid-node continuation, model reinvocation or effect repetition. The minimal deletion record survives deletion through the existing service; new graph evidence is removed with its owning journal, not from a separate graph store.
 
-### Initial profile proposed for measurement
+### Initial profile for measurement
 
-Propose 64 nodes, 128 edges, 128 node visits, a 256 KiB canonical descriptor and 64 KiB for each encoded graph value as a starting coding profile. These give explicit finite metadata/route bounds within the existing 1 MiB record ceiling; they are not performance or usability optima. Schema/configuration parsing must have bounded depth/size and no remote resolution. Validate actual encoded record size as well as each component; component limits do not guarantee their sum fits.
+Use 64 nodes, 128 edges, 128 node visits, a 256 KiB canonical descriptor and 64 KiB for each encoded graph value as a starting coding profile. These give explicit finite metadata/route bounds within the existing 1 MiB record ceiling; they are not performance or usability optima. Schema/configuration parsing must have bounded depth/size and no remote resolution. Validate actual encoded record size as well as each component; component limits do not guarantee their sum fits.
 
 Keep existing finite Run defaults; a caller may choose other valid finite limits before admission. Measure at least a serial success, one failed target test followed by correction, visit exhaustion, input-budget exhaustion and slow cooperative operations. Record observed constraints and any required adjustments rather than silently loosening the accepted profile during implementation. Wider application/SLI/SLO and real-model quality trials remain deferred under author policy.
 
@@ -140,11 +158,11 @@ Baseline: `64f3cc1a31f194a0129efb511b3aa8dc7c029525`, investigated 2026-09-12. O
 
 `Agent.startRun` currently owns initialization and calls private `invokeSessionWithTurn`, which resolves Skills and records ready on each invocation. Journal validation rejects duplicate ready and undeclared metadata. A memory-only probe reproduces both rejections, including close failure from a poisoned queue. These facts rule out pretending the proposed graph is already available through existing composition.
 
-The prior directional graph concept recommended extracting the internal model/tool cycle first. A12 recommended Agent as a node. Neither is an accepted Graph decision. The [new research](../research/2026-09-12-bounded-processor-graph-execution.md) compares them against the updated baseline; this proposal recommends the latter with an explicit shared managed seam.
+The prior directional graph concept recommended extracting the internal model/tool cycle first. A12 recommended Agent as a node. Neither earlier directional note itself adopted Graph. The [new research](../research/2026-09-12-bounded-processor-graph-execution.md) compares them against the updated baseline; this ADR now adopts the latter with an explicit shared managed seam.
 
 ### Relationship to accepted decisions
 
-This proposal extends [Managed Run Lifecycle](2026-09-07-managed-run-lifecycle.md) with graph visits and extends [Required Execution Journal](2026-09-07-required-execution-journal.md) with a versioned graph record state machine. It retains one admission/ready/terminal, shared budgets, ownership and failure semantics. The literal closed journal version/kind set changes only upon acceptance and implementation of this ADR; existing adoption reasons and records are not rewritten or marked superseded by a proposal.
+This decision extends [Managed Run Lifecycle](2026-09-07-managed-run-lifecycle.md) with graph visits and extends [Required Execution Journal](2026-09-07-required-execution-journal.md) with a versioned graph record state machine. It retains one admission/ready/terminal, shared budgets, ownership and failure semantics. The literal closed journal version/kind set changes in implementation of this accepted extension; the acceptance record alone does not change the current decoder. Existing adoption reasons and records are not rewritten or marked superseded.
 
 [Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md), [writer recovery](2026-09-08-session-writer-recovery-guard.md) and [storage registration](2026-09-08-session-storage-registration-guard.md) remain controlling for each effect and persisted resource. [Budgeted compaction](2026-09-08-budgeted-session-compaction.md) and [Skill selection](2026-09-09-run-scoped-skill-selection.md) remain controlling for every model request. Graph's single turn intentionally avoids broadening those adopted lifetimes. All seven accepted/partial records retain their status, rationale, evidence and deferred checks.
 
@@ -176,11 +194,11 @@ Pinned primary links and contrary evidence are in the [source table](../research
 | Graph-expand Agent's internal loop now           | Matches old directional text; much larger compatibility surface around context, Skills and incomplete tool calls. Defer.                             |
 | General LangGraph-backed executor                | Reuses mature features, but introduces scheduler/state/checkpoint semantics needing reconciliation with Orbit. Not justified for this bounded scope. |
 
-For values, prefer whole immutable validated outputs over in-place shared mutation or general reducers. For persistence, prefer mandatory bounded path evidence over optional logs or complete checkpoints. For graph authoring, prefer TypeScript with closed descriptors over an executable JSON/JavaScript loader. These choices form the one bounded execution contract and remain proposed together.
+For values, prefer whole immutable validated outputs over in-place shared mutation or general reducers. For persistence, prefer mandatory bounded path evidence over optional logs or complete checkpoints. For graph authoring, prefer TypeScript with closed descriptors over an executable JSON/JavaScript loader. These choices form the one bounded execution contract accepted together by the author.
 
 ## Implementation and Confirmation
 
-No Graph implementation is authorized or present. `implementation-status` remains `not-started`; there are no implementation commits or completion date. Headers/build and 143 focused baseline tests passed on macOS; these are evidence for existing behavior, not confirmation of any item below.
+Graph implementation has not started; the current task records acceptance only. `implementation-status` remains `not-started`; there are no implementation commits or completion date. Headers/build and 143 focused baseline tests passed on macOS; these are evidence for existing behavior, not confirmation of any item below.
 
 ### Proposal review — 2026-09-12
 
@@ -212,7 +230,7 @@ Initial numeric profile trials measure constraints, not optimum values. Windows,
 
 ## Follow-up Work
 
-Author decision points before acceptance:
+The author accepted these review decision points on 2026-09-12; retain them as implementation constraints:
 
 1. Agent as one stage with internal setup/loop reuse, rather than graph-expanding the model/tool loop.
 2. One Run/one protected turn and one environment/catalog/Skill selection, including possible earlier input-budget exhaustion.
@@ -221,7 +239,7 @@ Author decision points before acceptance:
 5. The Graph-specific value publication and declared-failure disposition, staged catalog validation, replay binding and failure-prefix interpretation clarified in review. Ordinary Agent behavior remains compatible.
 6. The finite starting profile and confirmation matrix, with initial values subject to measured trials rather than optimality claims.
 
-After review and explicit adoption, implementation can follow technical dependencies: descriptor validation and reader compatibility; shared managed Agent seam; graph scheduling/required evidence; application-service integration and parity/fault tests; maintained documentation. This is not an implementation authorization or chapter gate. Keep backup deletion pending and the seven earlier partial decisions unchanged. New material contradictions need their own rationale rather than rewriting adopted reasons.
+On a separate implementation request, work can follow technical dependencies: descriptor validation and reader compatibility; shared managed Agent seam; graph scheduling/required evidence; application-service integration and parity/fault tests; maintained documentation. This is not an implementation authorization or chapter gate. Keep backup deletion pending and the seven earlier partial decisions unchanged. New material contradictions need their own rationale rather than rewriting adopted reasons.
 
 ## References
 

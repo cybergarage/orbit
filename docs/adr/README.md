@@ -290,7 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                |
 | ---------- | ---------- | -------------- | --------------------------------------------------------------------------------------- |
-| 2026-09-12 | proposed   | not-started    | [Managed Processor Graph](2026-09-12-managed-processor-graph.md)                        |
+| 2026-09-12 | accepted   | not-started    | [Managed Processor Graph](2026-09-12-managed-processor-graph.md)                        |
 | 2026-09-09 | accepted   | partial        | [Run-scoped Skill Selection](2026-09-09-run-scoped-skill-selection.md)                  |
 | 2026-09-08 | accepted   | partial        | [Budgeted Session Compaction](2026-09-08-budgeted-session-compaction.md)                |
 | 2026-08-22 | accepted   | completed      | [GUI Application Architecture](2026-08-22-gui-application.md)                           |
@@ -385,6 +385,6 @@ completion date.
 The six prior partial decisions, deferred trials and pending backup-deletion
 authorization are unchanged.
 
-[Managed Processor Graph](2026-09-12-managed-processor-graph.md) proposes serial/declared/finite composition under one Run and turn, a shared Agent loop seam, and version-2 graph journal evidence. It does not accept or implement Graph and does not supersede any accepted ADR. Its explicit author decisions include input protection and reader migration costs.
+[Managed Processor Graph](2026-09-12-managed-processor-graph.md#author-acceptance--2026-09-12) was explicitly accepted on 2026-09-12, including the review corrections, one Run/turn, input protection and reader migration costs. Implementation is not-started with no completion date or implementation commits. It extends the shared lifecycle/journal for Graph without superseding the seven accepted/partial decisions.
 
-The [Graph proposal review](2026-09-12-managed-processor-graph.md#proposal-review--2026-09-12) corrects value/finalizer assumptions and makes staged catalog validation, replay binding, transcript synchronization and failure-prefix decoding explicit. The proposal remains proposed / not-started; the seven accepted/partial ADRs and deferred trials are unchanged.
+The [Graph proposal review](2026-09-12-managed-processor-graph.md#proposal-review--2026-09-12) corrects value/finalizer assumptions and makes staged catalog validation, replay binding, transcript synchronization and failure-prefix decoding explicit. That review left the ADR proposed / not-started; the subsequent author acceptance is recorded above. The seven accepted/partial ADRs and deferred trials are unchanged.

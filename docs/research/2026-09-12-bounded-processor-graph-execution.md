@@ -178,3 +178,7 @@ The author must judge the Agent-as-node granularity, one Run/one turn cost, init
 - [Current Skill guide](../skills.md)
 - [Directional Processor Graph](../concepts/processor-graph.md)
 - External fixed-revision source links are listed in the comparison table above.
+
+### Subsequent decision — 2026-09-12
+
+The author explicitly accepted the reviewed recommendation in [Managed Processor Graph](../adr/2026-09-12-managed-processor-graph.md#author-acceptance--2026-09-12). The ADR is accepted / not-started, with no implementation commits or completion date. The investigation and review above retain their historical non-binding status and evidence; adoption comes from the author's decision, not from this research. The seven earlier partial decisions, outstanding backup-deletion answer and author-directed trial deferrals remain unchanged.
