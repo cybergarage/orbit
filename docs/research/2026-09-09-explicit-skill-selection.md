@@ -165,3 +165,58 @@ The proposed ADR supplies a concrete order, UI contract and test matrix.
 - [Proposed Run-scoped Skill Selection](../adr/2026-09-09-run-scoped-skill-selection.md).
 - [Accepted Budgeted Session Compaction](../adr/2026-09-08-budgeted-session-compaction.md).
 - [Earlier cross-product Skill ownership investigation](2026-09-03-grok-bot-architecture-and-skill-ownership.md), retained as historical evidence; this note does not adopt Grok Bot scheduling or agent rosters.
+
+## Review clarification — 2026-09-12
+
+This addendum preserves the 2026-09-09 investigation and its non-binding
+recommendation. Local HEAD and public main are
+`7b4903fb88db5ed53cac7ef5986c75e22a626897`, confirmed with `git ls-remote`.
+Source/test content is unchanged from the original baseline; no new runtime
+implementation is inferred from this documentation review.
+
+Additional source inspection found the integration constraints below. They refine
+the same recommendation rather than replace the external comparison findings.
+
+| Source                                                                                          | Observation and implication for the proposal                                                                                                                                                                       |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/core/thread.ts:startRun`                                                                   | Returns a cached handle after comparing only content. Selection comparison must happen before this short circuit.                                                                                                  |
+| `src/core/execution/run.ts:startRun/admit`                                                      | Request replay compares canonical submitted input or its persisted digest; the separate configuration digest does not replace that comparison. Ordered selections and catalog revision must enter submitted input. |
+| `src/core/agent.ts:startRun/invokeSessionWithTurn`                                              | Admission precedes turn context, started event and user messages. Both budgeted and disabled model paths need the same active prefix.                                                                              |
+| `src/core/session/context-policy.ts:prepareSessionContext`                                      | Ordinary requests include the protected prefix; the summary request is prepared from its dedicated prompt alone. Keep Skill content outside this summary and reattach it for ordinary answering.                   |
+| `src/core/session/codec.ts:parseSessionFile`                                                    | Unknown complete record types fail, while malformed non-newline final JSON is recoverable. Coordinated old-reader shutdown remains necessary.                                                                      |
+| `src/core/session/session.ts:recordTurnContext/synchronize` and `src/core/execution/journal.ts` | Transcript acknowledgement and journal readiness are separate writes. A resolved snapshot alone does not prove model execution or successful Run completion.                                                       |
+
+Re-executed Skill/context/workspace plus Session, ThreadManager and compaction
+suites: 76 passing on macOS arm64 Node 26.5.0. The command is the earlier Mocha
+command with `test/core/session.test.ts`, `test/core/thread.test.ts` and
+`test/core/execution/context-compaction.test.ts` added. These are baseline tests,
+not tests of the proposed catalog.
+
+A memory-only probe using the rebuilt current `Skill` and `parseSessionFile`
+confirmed six cases: legacy repeated-name/block-scalar behavior, unknown
+turn-context-field loss, complete unknown-record refusal, malformed-tail recovery,
+BOM-stripping hash mismatch, and exact BOM-preserving hash equality. Reproduce the
+last two with UTF-8 bytes containing an initial BOM and CRLF: default
+`new TextDecoder('utf-8', {fatal: true})` removes the BOM, whereas
+`{fatal: true, ignoreBOM: true}` preserves it. Hash original bytes and validate
+stored UTF-8 round-trip before deriving metadata/body; do not hash only a decoded
+parser view. This experiment used no user Session data.
+
+Pi's same pinned `skills.ts` was fetched again and confirms full-file metadata
+reads and metadata-only prompt rendering. The Codex pinned source fetch failed
+in this review; its original inspected evidence is reused, not claimed as a new
+successful retrieval. Neither external application was executed.
+
+The ADR now specifies ordered replay identity, separate summary input, exact byte
+preservation and deterministic body validation, admission/snapshot/readiness
+ordering, bounded asynchronous cleanup and metadata-only reconnect notifications.
+These remain proposed conditions. No YAML package was installed or strict parser
+executed, and no model-quality or physical-storage guarantee follows from the
+baseline checks. Author adoption and subsequent implementation tests are still
+required. Existing backup-approval and author-deferred trials remain open.
+
+The final review validation also passed headers:check, build and all 474 existing
+tests on macOS arm64 Node 26.5.0, with 0 lint errors and 19 existing warnings.
+No source/test/dependency changes resulted. Linux and live UI trials were not
+rerun; earlier Unix results remain historical evidence. Documentation metadata,
+local links and proposal status are checked separately from runtime behavior.

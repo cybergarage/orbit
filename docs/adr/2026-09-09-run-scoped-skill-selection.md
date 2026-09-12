@@ -28,7 +28,7 @@ selection. Names below are proposed API names, not current exports.
 ### Catalog, roots and identity
 
 `SkillCatalog` accepts explicit `{id, directory}` roots and a limits profile.
-Require unique root IDs, canonicalize configured roots and report aliases to
+Require unique root IDs, canonicalize all configured roots before exposing candidates, and report aliases to
 the same real root as a configuration conflict. The library searches no implicit
 home, ancestor or plugin locations. CLI/GUI may default to `.orbit/skills` under
 the nearest marked workspace and show that root; additional roots are explicit
@@ -45,9 +45,14 @@ positive finite integers and report which limit stopped listing. Return
 `complete: false` with issues on incomplete discovery; exact listed IDs remain
 selectable because no name resolution depends on a supposedly complete list.
 These are initial product bounds to measure, not optimal settings.
+Counts and byte ceilings apply to the entire listing, including invalid candidates,
+failed reads and overflow probes; bound each read before allocation. Sort returned
+entries, but do not promise the same partial subset across filesystem enumeration
+orders. Missing roots are diagnostics; invalid root IDs or canonical-root conflicts
+reject the configuration as a whole before returning selectable candidates.
 
 Each candidate has a stable opaque ID derived from its configured root ID and
-canonical relative file identity, display name, description, source/root,
+canonical root path and relative file path (a versioned, unambiguous tuple, not inode alone), display name, description, source/root,
 base directory, SHA-256 content digest and byte count. ID is not an authority
 token and the client cannot supply a replacement path. Same-name candidates
 remain visible with source labels; select by ID plus expected digest. Do not
@@ -60,6 +65,15 @@ checks the byte limit and digest, and freezes the resulting snapshot. Changes,
 missing files or conflicts require a refreshed list and explicit reselection.
 Do not silently load the latest changed body. Recheck while loading within the
 owning Run; cached listings are not evidence that selected bytes still match.
+Canonical-root identity and candidate observations are retained as private catalog
+validation data, distinct from the stable public ID. Compare the current root,
+directory and opened file with those observations and recheck after the bounded
+read. A detected replacement, even with identical bytes, requires relisting.
+Rebinding a root ID to another canonical directory changes candidate IDs and the
+catalog configuration fingerprint. Labels and IDs are not signed provenance;
+ordinary path checks cannot defend against every hostile ancestor race.
+After resolution, use the frozen bytes even if the source later changes; never
+re-read a selected body in later iterations of the same Run.
 
 ### Metadata and legacy behavior
 
@@ -72,6 +86,15 @@ the containing skill directory; description is nonempty and at most 1,024
 characters. Allow quoted and block scalar strings, CRLF and an initial UTF-8
 BOM. Require valid UTF-8, closed frontmatter and nonempty instructions. Reject
 unknown metadata keys in this initial catalog format, with actionable issues.
+Validate the parsed syntax tree before object expansion: one mapping with exactly
+the two allowed scalar keys, no duplicate keys, aliases, anchors, explicit tags,
+merge keys or additional YAML documents. Reject parser warnings as well as errors.
+Measure description length in Unicode code points; render control characters as
+escaped data in terminals and text in the GUI, never as terminal/HTML markup.
+Hash original bytes before parsing. Decode UTF-8 fatally without discarding a BOM,
+and retain BOM and CRLF in the stored source; remove at most the initial BOM only
+in the parser view. Define body derivation as the text after the closing delimiter
+with outer whitespace trimmed, under a named immutable projection revision.
 Do not claim full Agent Skills specification compatibility or infer a tool
 grant from unsupported metadata.
 
@@ -84,13 +107,28 @@ legacy parsing underneath existing applications.
 ### One Run of application, budget and permission
 
 Expose selections on `Agent.startRun` and `OrbitApplicationService.startRun` as
-IDs plus expected digests. Snapshot configured catalog/profile identity at
-admission and include the selection fingerprint in request-ID comparison.
+IDs plus expected digests. Keep existing Service calls with a request-ID string valid through an overload or
+an additive options entry point; do not silently reinterpret a string as options.
+Snapshot configured catalog/profile identity at admission. Include the ordered
+selection IDs/expected digests and immutable catalog/parser/limits revision in
+submitted input, not only in the separate configuration digest. Apply this
+comparison in ThreadManager before its cached-handle return, in the supervisor's
+in-memory comparison, and in persisted request-digest recovery. Same request and
+same ordered selections return the original Run without rereading files; changed
+selection order/content under the same request ID is a conflict. A retry after a
+failed admitted Run requires a new request ID and explicit selection. A recovered
+Run is observed, never silently executed again.
 Resolve selected content under the same Run cancellation/resource tracking,
 then save and synchronize the snapshot before the first model call. A read,
 validation or required-recording failure stops preparation; it never runs with
 silently omitted selections. Loading is configuration-data reading explicitly
 authorized by the selected catalog; it does not execute an instruction.
+Use asynchronous bounded I/O, track open/read/close and transcript synchronization
+in the owning Run, and check cancellation before and after awaits. A deadline may
+finish the caller while I/O is still pending; retain ownership/quarantine until it
+settles and close every descriptor, including late opens. A byte limit does not
+make synchronous filesystem work cancellable. Read-only catalog queries use their
+own request cancellation/cleanup scope and never acquire a writable Session lease.
 
 Build a per-Run user-level instruction prefix after standing workspace/system
 instructions and before the selected conversation. Label each block with its
@@ -98,8 +136,16 @@ source, base directory and one-Run scope. Escape structured labels separately
 from body text. Do not mutate Agent's standing `messages` array or permanently
 append the body as a user conversation message. Include the full active body
 and wrapper in the accepted frozen-request budget. Protect them for every model
-iteration of this Run; refuse if the protected input cannot fit. The
-summarization call has no tools and cannot activate another Skill.
+ordinary answering/tool iteration of this Run; refuse if the protected input cannot
+fit. With budgeting disabled, inject the same prefix but promise no token-fit
+check or automatic compaction. Keep the existing no-policy compatibility mode.
+The separate summarization call receives only its dedicated summary instruction
+and eligible historical conversation, without tools or the active Skill prefix.
+It still consumes the owning Run's model-call allowance. Preserve the frozen
+active prefix outside the summary and reattach it to the prepared answering
+request after compaction. This clarifies "every iteration"; it does not change the
+accepted tool-free summarization contract or send Skill instructions to the
+summarizer.
 
 At the next Run, active selections are empty unless explicitly supplied again.
 Resuming a Session does not re-read or automatically reactivate an old body.
@@ -118,7 +164,36 @@ content digest, exact UTF-8 source snapshot (including frontmatter), derived
 body and parser/projection revision. Validate the digest against that complete
 source snapshot, not against the body alone. Record once
 per admitted Run before model use; validate duplicates, identity, digest and
-ordering against the associated turn. Empty selections need no record. A
+ordering against the associated turn. Recompute the derived body and metadata from
+the exact stored source under its recorded parser/projection revision; reject an
+inconsistent body even if the source digest is valid. Reject unsupported revisions
+rather than reinterpret history with a newer parser. Bound snapshot count and
+bytes on both append and decode; JSON escaping and stored derived bodies can
+exceed the source-byte total. Propose a fixed 4 MiB UTF-8 encoded skill_context
+line ceiling for record revision 1, checked before JSON parsing and before append.
+This is an unmeasured format bound, not a whole-Session memory guarantee. Readers
+validate historical records under their recorded format revision, not a newly
+lowered listing/selection product profile. Future format-ceiling changes require
+explicit reader compatibility; they do not silently invalidate old snapshots.
+
+After admission, append turn context, started event and input messages as today;
+resolve all selections, append one complete skill_context, synchronize the
+transcript, then acknowledge readiness in the journal before any model call
+(including a compaction summary). Extend existing run-admitted data with requested
+IDs/digests and run-ready data with the resolved snapshot reference and ordered
+IDs/digests, preserving the existing tool catalog and journal kind semantics.
+A failed resolution records no partial selection set and never becomes active.
+Journal readiness failure after transcript sync leaves inspectable resolved bytes
+but no permission to call the model. These two stores are not an atomic transaction.
+Recovery checks the evidence and does not infer activation from snapshot presence.
+
+Require matching Session/turn identity, an earlier unique turn context and started
+event, and a snapshot before any assistant/tool message or terminal event of that
+turn. The first user input may precede it. A missing terminal event after a crash
+is incomplete execution evidence, not invalid snapshot content. Invalid complete
+records refuse reopen without rewriting them; only a malformed final JSON line
+without its newline uses existing torn-tail recovery. No recovered snapshot is
+resumed as active input. Empty selections need no record. A
 snapshot describes the resolved instruction bytes, not successful execution
 or proof that the model followed them. Required journal records refer to IDs
 and digests; optional diagnostics omit bodies by default.
@@ -136,8 +211,11 @@ Persistent Skill selection requires transcript v2. Reuse the accepted exclusive
 v1 migration; do not silently upgrade. Older v2 readers reject the new record
 type, rather than silently discard a field and rewrite incomplete evidence.
 Deploy compatible readers/writers together and stop older binaries and their
-restart sources before enabling selections. Files without selections remain
-readable under their previous contract. Existing Session deletion removes the
+restart sources before enabling selections. A complete unknown skill_context record is rejected by the current v2 decoder;
+a malformed final line can still be removed by its existing torn-tail recovery.
+That limitation is why coordinated deployment remains mandatory; refusal is not
+a universal version-negotiation or downgrade barrier. Files without selections
+remain readable under their previous contract. Existing Session deletion removes the
 snapshot with its transcript and retains the minimal deletion record. The
 separate outstanding `.v1-backup` deletion policy is not resolved by this ADR.
 
@@ -147,7 +225,10 @@ Expose a read-only `skills` list with JSON output and source diagnostics.
 `exec --skill ID@DIGEST` (repeatable) passes explicit selections; plain mentions
 of a Skill name in text do not activate it. Ink offers a catalog list and a
 pending next-Run selection/clear operation. Consume the pending selection on
-successful admission, retain it when admission is rejected, and show loading
+successful managed admission, not merely creation of a ThreadRunHandle; retain it
+when admission is rejected. Local slash commands do not consume a pending
+selection. If loading fails after admission, show the failed Run and require an
+explicit retry; do not silently carry selections into the next prompt. Show loading
 or resolution failure distinctly from active use.
 
 GUI lists server-configured candidates with source and digest, submits only
@@ -156,7 +237,10 @@ loopback capability/origin controls; clients cannot provide arbitrary file
 paths or new roots. Transport reconnection reads the Run snapshot and must not
 re-submit a selection as another Run. Library callers can use the same catalog
 and structured Run options without a terminal. Historical inspection shows what
-was selected and the Run outcome separately.
+was selected and the Run outcome separately. Keep ordinary Run snapshots and
+reconnect events metadata-only (requested/resolved state, IDs and digests).
+Provide exact source only through an explicit Session-history detail request under
+the existing access controls; do not stream every full body in every GUI event.
 
 ## Consequences
 
@@ -250,6 +334,69 @@ application with exact stored bodies, and (4) rejection by older v2 readers
 once the new record is present. Numerical limits are initial testable bounds.
 Review these together before acceptance. No Skill implementation or chapter-11
 working example is claimed here.
+
+### Review findings and author decision — 2026-09-12
+
+Reviewed local/public main `7b4903fb88db5ed53cac7ef5986c75e22a626897`;
+`git diff` from the proposal shows no source/test changes. The research baseline
+`37c976daa5ea139ce48c2872ef9269f16312946c` has the same source/test content.
+The recommendation remains proposed / not-started. No adopted decision is replaced.
+
+The review found underspecified integration points, corrected above:
+
+- `thread.ts:startRun` currently compares only text before returning a prior
+  handle; `execution/run.ts:RunSupervisor.startRun/admit` compares submitted
+  input, not configuration. Adding a selection field only at Agent is insufficient.
+- `context-policy.ts:prepareSessionContext` deliberately excludes ordinary
+  prefixes from its summary request. Keep that separation and cover both
+  budgeted and disabled input paths in `agent.ts`.
+- `codec.ts:parseEntry/parseTurnContextEntry` rejects a complete unknown record
+  but drops unknown context fields; malformed terminal JSON remains recoverable.
+  Preserve that distinction rather than claim universal old-reader refusal.
+- Exact-source hashing must preserve BOM/CRLF. A correct source digest alone
+  cannot validate an independently modified stored body; deterministic derivation
+  and known parser/projection revisions are also required.
+- Admission, transcript synchronization and journal readiness are separate steps.
+  Pending UI state, interrupted preparation and unacknowledged I/O must agree
+  with the already accepted ownership and cleanup rules.
+
+Author adoption must explicitly include the original four choices plus these
+clarifications: stable root/path identity with relisting after detected replacement,
+ordered request replay identity across all entry points, summary-prefix exclusion,
+and strict snapshot validation/partial-write recovery with coordinated reader
+rollout. Alternatives remain body-as-message (rejected recommendation because of
+re-injection), ID-only evidence (loses original instructions), and transcript v3
+(stronger early format refusal but a broader migration). This review selects no
+new outcome on the author's behalf. The YAML package/version and API spelling
+remain implementation choices to verify after adoption, not a claimed dependency
+or a reason to reopen the accepted storage/run architecture.
+
+Add the following to the post-adoption confirmation matrix:
+
+- Same text/request ID with different selections or reversed order conflicts in
+  Agent, ThreadManager, Service and GUI; an exact replay never reopens Skill files.
+- A root ID rebound to another directory with byte-identical Skill content cannot
+  silently reuse an old candidate ID; partial enumeration does not claim stable
+  subset membership; listing and loading enforce the same file identity rules.
+- BOM/CRLF byte round-trip, valid digest with altered derived body, unknown parser
+  revision, invalid event order and selected-set overflow refuse append/reopen.
+- Cancellation before/after open/read/close, late descriptor resolution and
+  transcript/journal sync failure preserve ownership until cleanup is confirmed.
+- Active prefix in every ordinary iteration with either budget mode; zero Skill
+  bodies/tools in the dedicated summary; no activation after reopen or clear.
+- Complete unknown record refusal and malformed-tail recovery are tested with the
+  actual old decoder; coordinated migration is not replaced by a timeout assertion.
+
+Review verification on macOS arm64 Node 26.5.0: targeted 76 tests, headers:check,
+build and the full 474-test suite passed; lint reports 0 errors and 19 existing
+warnings. A memory-only probe confirms the six baseline codec/parser/BOM cases
+recorded in the research addendum. No source/test/dependency files changed.
+Linux and live UI/model trials were not rerun. Proposed Skill behavior is untested.
+
+Existing six accepted / partial ADRs, `.v1-backup` deletion approval pending,
+Windows and deferred application/operational/physical-fault trials are unchanged.
+The bounded managed MCP follow-up is already verified; broad Everything support
+is not implied or reopened.
 
 ## References
 

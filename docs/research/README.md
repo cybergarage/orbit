@@ -130,3 +130,7 @@ at pinned revisions by default. If either is not relevant, record why.
 | 2026-09-03   | current    | [Grok Bot Architecture and Skill Ownership](2026-09-03-grok-bot-architecture-and-skill-ownership.md)                                    |
 | 2026-09-02   | current    | [Adaptive Processor Graph Runtime](2026-09-02-adaptive-processor-graph-runtime.md)                                                      |
 | 2026-09-02   | current    | [Agent Workflow Optimization Papers](2026-09-02-agent-workflow-optimization-papers.md)                                                  |
+
+The [Skill proposal review](../adr/2026-09-09-run-scoped-skill-selection.md#review-findings-and-author-decision--2026-09-12) clarifies ordered request replay, dedicated
+summary input, exact snapshot validation and interrupted preparation. It remains
+proposed / not-started; baseline verification does not approve or implement it.

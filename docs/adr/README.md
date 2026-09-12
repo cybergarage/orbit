@@ -367,3 +367,7 @@ records Linux/macOS priority and explicitly deferred environment/application/SLO
 trials. Earlier proposed/review summaries above describe their historical state.
 The four earlier records remain accepted / partial, and the new implementation
 starts only after the acceptance commit.
+
+The [Skill proposal review](2026-09-09-run-scoped-skill-selection.md#review-findings-and-author-decision--2026-09-12) clarifies ordered request replay, dedicated
+summary input, exact snapshot validation and interrupted preparation. It remains
+proposed / not-started; baseline verification does not approve or implement it.
