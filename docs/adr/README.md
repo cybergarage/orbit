@@ -386,3 +386,5 @@ The six prior partial decisions, deferred trials and pending backup-deletion
 authorization are unchanged.
 
 [Managed Processor Graph](2026-09-12-managed-processor-graph.md) proposes serial/declared/finite composition under one Run and turn, a shared Agent loop seam, and version-2 graph journal evidence. It does not accept or implement Graph and does not supersede any accepted ADR. Its explicit author decisions include input protection and reader migration costs.
+
+The [Graph proposal review](2026-09-12-managed-processor-graph.md#proposal-review--2026-09-12) corrects value/finalizer assumptions and makes staged catalog validation, replay binding, transcript synchronization and failure-prefix decoding explicit. The proposal remains proposed / not-started; the seven accepted/partial ADRs and deferred trials are unchanged.

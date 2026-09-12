@@ -139,3 +139,5 @@ left the ADR proposed / not-started. The author subsequently accepted it on
 do not themselves authorize implementation.
 
 The [bounded Graph investigation](2026-09-12-bounded-processor-graph-execution.md) updates the execution baseline and recommends a single managed Run with coarse Agent nodes. Its linked ADR is proposed / not-started; existing accepted/partial records and deferred trials are unchanged. The earlier adaptive-runtime note remains historical evidence, including broader directions outside the new proposal.
+
+The [Graph proposal review](2026-09-12-bounded-processor-graph-execution.md#same-baseline-proposal-review--2026-09-12) corrects value/finalizer assumptions and makes staged catalog validation, replay binding, transcript synchronization and failure-prefix decoding explicit. The proposal remains proposed / not-started; the seven accepted/partial ADRs and deferred trials are unchanged.
