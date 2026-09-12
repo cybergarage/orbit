@@ -71,7 +71,8 @@ document. The original BOM and line endings remain in the snapshot.
 | Selected Skills per Run | 4 |
 
 These are bounded starting values, not tuned quality or latency optima.
-`complete: false` and `issues` explain where discovery stopped. Reaching a
+`complete: false` and `issues` explain where discovery stopped, including when a
+configured root is missing. Reaching a
 ceiling can conservatively stop without checking for another entry/EOF. Listed
 IDs are usable in a partial result; filesystem enumeration does not promise the
 same partial subset each time. Empty or missing roots produce diagnostics.
@@ -151,10 +152,11 @@ ordering and the immutable revision. A snapshot is evidence of resolved input,
 not of successful execution or model compliance. Transcript and journal are
 separate acknowledgements; a saved snapshot alone never authorizes model use.
 
-Revision 1 has a fixed 4 MiB UTF-8 JSON-line ceiling, checked before decode and
-append. It is independent of current product limits: lowering those limits
-does not reject earlier valid snapshots. JSON escaping and duplicated derived
-bodies count toward this limit. It is not a whole-Session memory bound.
+Revision 1 permits at most four snapshots and has a fixed 4 MiB UTF-8 JSON-line
+ceiling, checked before decode and append. These format bounds are independent
+of current product limits: lowering those limits does not reject earlier valid
+snapshots. JSON escaping and duplicated derived bodies count toward this limit.
+It is not a whole-Session memory bound.
 `session.getSkillContexts()` returns copies. Application `skillHistory(sessionId)`
 and authenticated `GET /api/sessions/:sessionId/skills` provide explicit details.
 Session deletion removes these records with the transcript under the existing

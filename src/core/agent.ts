@@ -550,8 +550,14 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
             session.commitSkills(snapshot, options.executionContext!.journal.level),
           )
         } catch (error) {
-          options.executionContext!.recordingFailed = true
-          options.executionContext!.requestStop('recording-failed')
+          // A stop can win the caller wait while the owned append/sync is still
+          // completing. Keep it pending for late settlement; only an actual
+          // persistence rejection marks recording as failed.
+          if (!(error instanceof RunStoppedError)) {
+            options.executionContext!.recordingFailed = true
+            options.executionContext!.requestStop('recording-failed')
+          }
+
           throw error
         }
 

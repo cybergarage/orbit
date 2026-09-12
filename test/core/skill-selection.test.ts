@@ -21,7 +21,13 @@ import {
   State,
 } from '../../src/core/index.js'
 import {encodeSessionEntry, parseSessionFile} from '../../src/core/session/codec.js'
-import {parseSkillSource, SKILL_RECORD_BYTES, skillDigest} from '../../src/core/skills/parser.js'
+import {skillId} from '../../src/core/skills/catalog.js'
+import {
+  parseSkillSource,
+  SKILL_RECORD_BYTES,
+  SKILL_RECORD_SNAPSHOTS,
+  skillDigest,
+} from '../../src/core/skills/parser.js'
 import {parseSkillEntry, validateSkillEntries} from '../../src/core/skills/record.js'
 
 const source = (name = 'review', body = 'SKILL_SENTINEL: inspect the target tests.') =>
@@ -143,6 +149,13 @@ describe('explicit run-scoped Skill selection', () => {
     expect(list.issues.join(' ')).to.include('Missing Skill root')
   })
 
+  it('marks a listing incomplete when its only configured root is missing', async () => {
+    const list = await new SkillCatalog([{directory: path.join(root, 'absent'), id: 'missing'}]).list()
+    expect(list.complete).to.equal(false)
+    expect(list.candidates).to.deep.equal([])
+    expect(list.issues).to.deep.equal(['Missing Skill root: missing'])
+  })
+
   it('requires relisting after content or byte-identical inode replacement', async () => {
     const file = await write(root)
     const catalog = new SkillCatalog([{directory: root, id: 'a'}])
@@ -181,6 +194,12 @@ describe('explicit run-scoped Skill selection', () => {
     const list = await small.list()
     expect(list.complete).to.equal(false)
     expect(list.candidates).to.deep.equal([])
+    expect(list.issues.join(' ')).to.include('Skill listing byte limit exceeded')
+    const fileLimited = await new SkillCatalog([{directory: root, id: 'a'}], {
+      fileBytes: 20,
+      listingBytes: 1000,
+    }).list()
+    expect(fileLimited.issues.join(' ')).to.include('Skill file byte limit exceeded')
     const catalog = new SkillCatalog([{directory: root, id: 'a'}], {selections: 1})
     const {candidates} = await catalog.list()
     await assert.rejects(catalog.resolve(candidates), /selection limit/)
@@ -348,6 +367,16 @@ describe('explicit run-scoped Skill selection', () => {
       const tiny = new SkillCatalog([{directory: root, id: 'fixture'}], {fileBytes: 1, selections: 1})
       expect((await tiny.list()).complete).to.equal(false)
       expect(parseSkillEntry(record).skills).to.have.length(2)
+      const snapshots = Array.from({length: SKILL_RECORD_SNAPSHOTS + 1}, (_, index) => {
+        const skill = structuredClone(record.skills[0])
+        skill.rootId = `root-${index}`
+        skill.id = skillId(skill.rootId, skill.rootDirectory, skill.file)
+        return skill
+      })
+      expect(parseSkillEntry({...record, skills: snapshots.slice(0, SKILL_RECORD_SNAPSHOTS)}).skills).to.have.length(
+        SKILL_RECORD_SNAPSHOTS,
+      )
+      expect(() => parseSkillEntry({...record, skills: snapshots})).to.throw('snapshot limit')
     } finally {
       await f.agent.close()
       await f.logs.close()

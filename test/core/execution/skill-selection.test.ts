@@ -333,6 +333,58 @@ describe('managed Skill execution and surfaces', () => {
     }
   })
 
+  it('retains ownership when cancellation interrupts transcript synchronization', async () => {
+    const session = new Session({formatVersion: 2})
+    const {c, selected} = await catalog()
+    const entered = deferred<void>()
+    const release = deferred<void>()
+    let synchronizations = 0
+    stub(session, 'synchronize').callsFake(async () => {
+      synchronizations++
+      if (synchronizations === 1) {
+        entered.resolve()
+        await release.promise
+      }
+
+      return synchronizations
+    })
+    let calls = 0
+    const a = agent(
+      session,
+      c,
+      model(async () => {
+        calls++
+        return new Message(MessageType.Assistant)
+      }),
+      {execution: {limits: {cleanupMs: 15, elapsedMs: 1000}}},
+    )
+    const settled = deferred<void>()
+    try {
+      const handle = await a.startRun([new Message(MessageType.User, {content: 'Inspect'})], {
+        onRunSnapshot(snapshot) {
+          if (snapshot.result && snapshot.unresolved.length === 0) settled.resolve()
+        },
+        skills: [selected[0]],
+      })
+      await entered.promise
+      expect(handle.requestStop('user')).to.equal('requested')
+      const result = await handle.finished
+      expect(result.outcome).to.equal('incomplete')
+      expect(result.quiescence).to.equal(false)
+      expect(result.unresolved.some((name) => name.startsWith('skill-save:'))).to.equal(true)
+      expect(calls).to.equal(0)
+      release.resolve()
+      await settled.promise
+      await a.supervisor.whenQuiescent()
+      expect(handle.getSnapshot().unresolved).to.deep.equal([])
+      expect(synchronizations).to.be.greaterThan(1)
+    } finally {
+      release.resolve()
+      restore()
+      await a.close()
+    }
+  })
+
   it('blocks model use when journal readiness fails after a synchronized snapshot', async () => {
     const session = new Session({formatVersion: 2})
     const {c, selected} = await catalog()

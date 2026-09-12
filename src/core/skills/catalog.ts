@@ -169,6 +169,11 @@ export class SkillCatalog {
   private async listOwned(signal?: AbortSignal): Promise<SkillListing> {
     if (this.failedCloses.size > 0) throw new Error('Skill resource cleanup requires settle()')
     const result: SkillListing = {candidates: [], complete: true, issues: []}
+    const issue = (message: string) => {
+      result.complete = false
+      result.issues.push(message)
+    }
+
     const roots: Array<SkillRoot & {identity: string}> = []
     const realRoots = new Set<string>()
     const seenObjects = new Set<string>()
@@ -180,7 +185,7 @@ export class SkillCatalog {
         directory = await this.io.realpath(root.directory)
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-        result.issues.push(`Missing Skill root: ${root.id}`)
+        issue(`Missing Skill root: ${root.id}`)
         continue
       }
 
@@ -195,11 +200,6 @@ export class SkillCatalog {
     let bytes = 0
     let candidates = 0
     let entries = 0
-    const issue = (message: string) => {
-      result.complete = false
-      result.issues.push(message)
-    }
-
     for (const root of roots) {
       check(signal)
       let dir: Awaited<ReturnType<SkillIO['opendir']>>
@@ -243,8 +243,11 @@ export class SkillCatalog {
             const read = await this.read(file, Math.min(this.limits.fileBytes + 1, remaining), signal, (count) => {
               bytes += count
             })
-            if (!read.eof || read.bytes.length > this.limits.fileBytes)
-              throw new Error('Skill file or listing byte limit exceeded')
+            if (!read.eof) {
+              if (read.bytes.length > this.limits.fileBytes) throw new Error('Skill file byte limit exceeded')
+              throw new Error('Skill listing byte limit exceeded')
+            }
+
             const after = await this.observe(root.directory, base, file)
             if (canonicalJSON(before) !== canonicalJSON(after) || read.identity !== before.file)
               throw new Error('Skill identity changed')

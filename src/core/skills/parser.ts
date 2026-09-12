@@ -6,6 +6,7 @@ import {isAlias, isMap, isScalar, parseDocument, visit} from 'yaml'
 
 export const SKILL_PROJECTION_REVISION = 'yaml-2.9.1-body-v1'
 export const SKILL_RECORD_BYTES = 4 * 1024 * 1024
+export const SKILL_RECORD_SNAPSHOTS = 4
 export function skillDigest(bytes: string | Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex')
 }

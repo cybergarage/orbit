@@ -8,7 +8,13 @@ import type {SkillSnapshot} from './catalog.js'
 
 import {canonicalJSON, copyJSON} from '../execution/journal.js'
 import {normalizeSkillSelections, skillId} from './catalog.js'
-import {parseSkillSource, SKILL_PROJECTION_REVISION, SKILL_RECORD_BYTES, skillDigest} from './parser.js'
+import {
+  parseSkillSource,
+  SKILL_PROJECTION_REVISION,
+  SKILL_RECORD_BYTES,
+  SKILL_RECORD_SNAPSHOTS,
+  skillDigest,
+} from './parser.js'
 
 export interface SessionSkillEntry {
   id: string
@@ -29,6 +35,7 @@ export function parseSkillEntry(value: unknown): SessionSkillEntry {
     entry.skills.length === 0
   )
     throw new Error('Invalid Skill context record')
+  if (entry.skills.length > SKILL_RECORD_SNAPSHOTS) throw new Error('Skill context record snapshot limit exceeded')
   for (const key of ['id', 'sessionId', 'turnId', 'timestamp'] as const)
     if (typeof entry[key] !== 'string' || !entry[key]) throw new Error('Invalid Skill record identity')
   if (Buffer.byteLength(JSON.stringify(entry), 'utf8') > SKILL_RECORD_BYTES)
