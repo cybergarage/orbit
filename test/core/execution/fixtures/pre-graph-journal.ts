@@ -133,4 +133,3 @@ function validateSkillEvidence(record: JournalRecord, run: JournalRecord[]): voi
   )
     throw new Error('Skill readiness must match the admitted ordered selection')
 }
-
