@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-09-12
 decision-date: 2026-09-13
-implementation-status: not-started
+implementation-status: partial
 implementation-completed-date: null
-implementation-commits: []
+implementation-commits:
+  - e86897db01b8595ce89c4cbfbf251d6b7a85191c
 superseded-by: []
 ---
 
@@ -15,6 +16,14 @@ superseded-by: []
 Compare outcomes and resources for the same versioned tasks without equating a completed Run, passing core tests or missing telemetry with successful application work. Preserve failed, cancelled, unknown and unexecuted trials in the comparison. The first application is a coding agent; the contract must also work for an ordinary Agent and a bounded Graph.
 
 ## Decision
+
+**Current implementation (2026-09-13): accepted / partial.** Commit
+`e86897db01b8595ce89c4cbfbf251d6b7a85191c` implements the text APIs, revision-1
+format, inspection/comparison, exports, tests and maintained documentation. See
+[implementation evidence](#implementation-evidence--2026-09-13) below. The
+acceptance-time statements about illustrative APIs and not-started work are
+preserved as history; they do not describe current exports. The completion date
+remains null because the author-deferred confirmation remains open.
 
 **Accepted by the author on 2026-09-13, including the proposal review of that date.** Add a bounded, read-only evaluation evidence contract and pure validation/comparison functions to Orbit core. Applications define cases and trusted graders, provision isolated targets, run trials through the existing managed APIs and persist reports. Core checks supplied evidence and computes transparent counts; it does not execute trials or decide a task's expected behavior.
 
@@ -168,6 +177,87 @@ Within the recommended option, accepting explicit unavailable historical metrics
 
 ## Implementation and Confirmation
 
+### Implementation evidence — 2026-09-13
+
+Implementation commit: `e86897db01b8595ce89c4cbfbf251d6b7a85191c`.
+This evidence is recorded in a subsequent documentation commit. The starting
+HEAD was the acceptance record `b72d8e92b6d2ac06cfcef1b5f3c2f7e7c274b383`, with
+a clean working tree; public main was
+`1cb6f4f2abe3e89e27c1bdb32f1049183ef0e960`. No implementation, dependency or
+accepted-contract changes had intervened. The accepted design was implemented
+without repeating acceptance or introducing a replacement decision.
+
+The maintained [feature guide](../workflow-evaluation.md) owns the exact API,
+revision-1 field definitions, trust boundary, resource arithmetic and migration
+rules. `src/core/evaluation/` implements `validateEvaluationPlan`,
+`inspectEvaluationEvidence`, `compareEvaluationReports`, report sealing and
+digest helpers, with deliberate package/core exports and associated types.
+Applications retain execution, grading, isolation and export lifecycle. No Run,
+Agent loop, authorization/ownership path, required journal revision, Session
+format, deletion/maintenance service, dependency or external runner was added or
+changed. The existing eight ADR files and their rationale remain byte-for-byte
+unchanged from acceptance.
+
+| Confirmation area                | Observed evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plan and accounting              | Nonempty independent checks; trusted plan supplied separately; verifier/revision/scope, minimum recording and stage applicability; fixed equal schedules; exact 2/5 denominator; runtime outcomes, refusal, indeterminate, authoritative non-dispatch and missing-report rows.                                                                                                                                                                                                                    |
+| Identity and corrections         | Canonical report replay is idempotent; conflicting IDs/digests/plan binding, duplicate slots, Run/request/storage reuse and namespace aliases are rejected. Predecessor history and one selected revision retain the original trial/terminal; lost artifacts and later settlement remain separate observations.                                                                                                                                                                                   |
+| Required evidence                | Missing/untrusted/conflicting/incomplete host claims cannot establish pass. Raw journal/transcript inspection reuses validateNext, parseSessionFile (Skill/compaction validation) and inspectGraphRun; tests cover identity, original terminal, operations, high-water, recording mismatch, missing admission digest, torn suffix, unknown complete record and altered Skill derivation.                                                                                                          |
+| Quality and ownership            | Independent expected-output/forbidden-change checks are bound to unchanged post-quiescence artifacts. Invalid authority/scope, mutated artifacts, grader exception/timeout/cancellation and missing output remain indeterminate. A decisive valid failure survives another unknown check. An incomplete original terminal remains incomplete after settlement.                                                                                                                                    |
+| Measurements                     | Recovered zero, visit-prefix counters and incomplete optional diagnostics become unavailable. Source IDs, duplicate aliases, normal/summary and Run/visit scopes, token subsets, compatible coverage sets, censored approval-inclusive monotonic time, cost provenance/rounding and aggregate overflow are tested. No overall sum of overlapping resource definitions is produced.                                                                                                                |
+| Format and compatibility         | Non-string/getter/Proxy rejection without access, closed fields/revisions, decoded duplicate keys, Unicode/BOM, finite/safe numbers (including underflow/rounded integer cases), canonical order, mutation isolation and byte/depth/value/slot limits. Historical 4 MiB Skill raw records remain readable; one extra byte is out of profile. Stricter producer limits do not lower revision-1 reader ceilings.                                                                                    |
+| Effects and actual managed paths | Actual fixed-model Agent and Graph records with Skill snapshots are imported without another model call, filesystem access or fetch. Both model-failure paths are retained. Existing recovery placeholder counters are contrasted with final live counters. The package's compiled exports are checked separately.                                                                                                                                                                                |
+| Small coding profile             | Two isolated temporary targets receive the same sum.mjs fix through the existing managed write tool, once via ordinary Agent and once via an Agent Graph node. The host's fixed content/change-scope oracle checks unchanged bytes after quiescence. Each trial records two model requests, a separate Run and a report; both compare successfully in a bundle below 100 KiB. This is a deterministic integration fixture, not a finished app, target-project test suite or real-model benchmark. |
+
+Verification commands on macOS arm64 / Node 26.5.0 and Linux arm64 / Node
+22.23.2 (native Debian bookworm container) passed:
+
+```sh
+TS_NODE_PROJECT=tsconfig.test.json npx mocha --forbid-only 'test/core/evaluation/*.test.ts'
+npm run headers:check
+npm run build
+npm test
+```
+
+Each environment passed **73 evaluation tests and all 623 tests**: 550 existing
+core/application tests plus 73 new evaluation tests. Lint reported 47 warnings
+(39 existing, eight new complexity/test-helper warnings), zero errors. The new
+warnings are not hidden; behavior checks do not remove this maintainability
+follow-up. Native builds, targeted verification and full tests all exited zero;
+a timeout alone was never counted as success. Mac/Linux source and test bytes
+matched after format; unrelated export-spacing changes were omitted with
+identical TypeScript token streams. Package-lock and existing runtime/test paths
+were unchanged.
+
+The initial Linux offline install lacked the native esbuild package and failed.
+A separate npm ci using the unchanged lockfile acquired the Linux dependencies;
+all subsequent verification ran with container networking disabled. The first
+full Linux run then stopped in formatting because macOS AppleDouble files were
+included in the transfer. Only metadata in this task's temporary copy was
+removed, and an attribute-free archive was verified again. These setup failures
+are not runtime or test successes, and neither changed repository data nor
+authorized backup deletion.
+
+The tested initial limits remain product starting points, not measured optima.
+No new material architecture decision was required. Required terminal facts are
+validated more specifically in the evaluator without weakening or rewriting the
+existing journal/runtime readers.
+
+**Remaining confirmation and restart conditions:** keep this ADR partial, with
+null implementation completion date. Windows and other untested environments
+remain author-deferred; resume with their supported Node/runtime and saved
+cross-platform path evidence. Representative real-model/application trials
+require defined versioned cases, provider/MCP settings and isolated targets.
+Operational restart controls and physical storage-fault trials require the
+application, storage environment and SLI/SLO. Core's text inspection does not
+prove OS isolation, physical durability, honest host attestations or real-model
+quality. Author-deferred work does not block current Unix book production.
+The eight earlier partial records and bounded managed MCP scope remain intact;
+backup deletion is still unanswered and unauthorized. Chapter 16, a finished
+application and candidate selection were not produced in this implementation.
+
+### Acceptance-time implementation plan
+
 Implementation is **not started**. No evaluation API, grader, report schema implementation or chapter example accompanies this proposal. Existing-source tests establish its prerequisites only. A future implementation must include deliberate exports, types, current feature/architecture documentation, format migration notes and deterministic tests before the ADR can be recorded as implemented.
 
 | Confirmation area            | Required evidence after adoption                                                                                                                                                                                                                 |
@@ -207,6 +297,11 @@ An alternative public API accepting caller objects is not recommended for the in
 The linked research records the executed probes and baseline test results. None is a test of a new evaluator. The ADR remains proposed / not-started, with null decision/completion dates and no implementation commits. Author judgment must include these corrections; previous input-budget delegation and Skill/Graph decisions are not approval. Initial limits remain starting values awaiting use tests.
 
 ## Follow-up Work
+
+The implementation above is now recorded. Next, produce chapter 16 from the
+verified source and the book analysis under a separate request; retain the
+remaining confirmation and resume conditions above. The following implementation
+request was the acceptance-time plan and remains historical.
 
 Acceptance is recorded above. In a separately requested implementation task, implement/verify only the accepted scope, record full source hashes in a later ADR evidence commit and produce chapter 16 after source/example verification. Do not infer measured model quality or optimal limits from deterministic tests.
 
