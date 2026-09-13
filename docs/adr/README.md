@@ -288,26 +288,27 @@ its own final hash in a tracked file.
 
 ## Decision index
 
-| Proposed   | Status     | Implementation | Decision                                                                                |
-| ---------- | ---------- | -------------- | --------------------------------------------------------------------------------------- |
-| 2026-09-12 | accepted   | partial        | [Evidence-based Workflow Evaluation](2026-09-12-evidence-based-workflow-evaluation.md)  |
-| 2026-09-12 | accepted   | partial        | [Managed Processor Graph](2026-09-12-managed-processor-graph.md)                        |
-| 2026-09-09 | accepted   | partial        | [Run-scoped Skill Selection](2026-09-09-run-scoped-skill-selection.md)                  |
-| 2026-09-08 | accepted   | partial        | [Budgeted Session Compaction](2026-09-08-budgeted-session-compaction.md)                |
-| 2026-08-22 | accepted   | completed      | [GUI Application Architecture](2026-08-22-gui-application.md)                           |
-| 2026-08-22 | accepted   | completed      | [Session Persistence Design](2026-08-22-session-persistence.md)                         |
-| 2026-08-23 | accepted   | completed      | [Model Response and Tool Integration](2026-08-23-model-response-tool-integration.md)    |
-| 2026-08-23 | accepted   | completed      | [Session History and Model Context Assembly](2026-08-23-session-context-assembly.md)    |
-| 2026-08-23 | accepted   | completed      | [Session Resume Behavior and CLI Design](2026-08-23-session-resume-cli.md)              |
-| 2026-08-23 | superseded | completed      | [Vibe Coding Tool Architecture](2026-08-23-vibe-coding-tools.md)                        |
-| 2026-08-25 | accepted   | completed      | [Session-scoped Logging Architecture](2026-08-25-session-scoped-logging.md)             |
-| 2026-08-25 | accepted   | completed      | [Session Records versus Runtime Logs](2026-08-25-session-versus-runtime-log-content.md) |
-| 2026-08-25 | accepted   | completed      | [User-Accessible Session Information](2026-08-25-session-information-access.md)         |
-| 2026-09-07 | accepted   | partial        | [Managed Run Lifecycle](2026-09-07-managed-run-lifecycle.md)                            |
-| 2026-09-07 | accepted   | partial        | [Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md)      |
-| 2026-09-07 | accepted   | partial        | [Required Execution Journal](2026-09-07-required-execution-journal.md)                  |
-| 2026-09-08 | accepted   | partial        | [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)            |
-| 2026-09-08 | accepted   | partial        | [Session Storage Registration Guard](2026-09-08-session-storage-registration-guard.md)  |
+| Proposed   | Status     | Implementation | Decision                                                                                   |
+| ---------- | ---------- | -------------- | ------------------------------------------------------------------------------------------ |
+| 2026-09-13 | proposed   | not-started    | [Application-owned Workflow Selection](2026-09-13-application-owned-workflow-selection.md) |
+| 2026-09-12 | accepted   | partial        | [Evidence-based Workflow Evaluation](2026-09-12-evidence-based-workflow-evaluation.md)     |
+| 2026-09-12 | accepted   | partial        | [Managed Processor Graph](2026-09-12-managed-processor-graph.md)                           |
+| 2026-09-09 | accepted   | partial        | [Run-scoped Skill Selection](2026-09-09-run-scoped-skill-selection.md)                     |
+| 2026-09-08 | accepted   | partial        | [Budgeted Session Compaction](2026-09-08-budgeted-session-compaction.md)                   |
+| 2026-08-22 | accepted   | completed      | [GUI Application Architecture](2026-08-22-gui-application.md)                              |
+| 2026-08-22 | accepted   | completed      | [Session Persistence Design](2026-08-22-session-persistence.md)                            |
+| 2026-08-23 | accepted   | completed      | [Model Response and Tool Integration](2026-08-23-model-response-tool-integration.md)       |
+| 2026-08-23 | accepted   | completed      | [Session History and Model Context Assembly](2026-08-23-session-context-assembly.md)       |
+| 2026-08-23 | accepted   | completed      | [Session Resume Behavior and CLI Design](2026-08-23-session-resume-cli.md)                 |
+| 2026-08-23 | superseded | completed      | [Vibe Coding Tool Architecture](2026-08-23-vibe-coding-tools.md)                           |
+| 2026-08-25 | accepted   | completed      | [Session-scoped Logging Architecture](2026-08-25-session-scoped-logging.md)                |
+| 2026-08-25 | accepted   | completed      | [Session Records versus Runtime Logs](2026-08-25-session-versus-runtime-log-content.md)    |
+| 2026-08-25 | accepted   | completed      | [User-Accessible Session Information](2026-08-25-session-information-access.md)            |
+| 2026-09-07 | accepted   | partial        | [Managed Run Lifecycle](2026-09-07-managed-run-lifecycle.md)                               |
+| 2026-09-07 | accepted   | partial        | [Prepared Operation Authorization](2026-09-07-prepared-operation-authorization.md)         |
+| 2026-09-07 | accepted   | partial        | [Required Execution Journal](2026-09-07-required-execution-journal.md)                     |
+| 2026-09-08 | accepted   | partial        | [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md)               |
+| 2026-09-08 | accepted   | partial        | [Session Storage Registration Guard](2026-09-08-session-storage-registration-guard.md)     |
 
 The Vibe Coding Tool Architecture supersession is partial: the 2026-09-07
 authorization decision replaces permission-free defaults and managed admission/

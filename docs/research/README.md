@@ -117,6 +117,7 @@ at pinned revisions by default. If either is not relevant, record why.
 
 | Investigated | Status     | Topic                                                                                                                                   |
 | ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-13   | current    | [Human-selected Workflow Candidates](2026-09-13-human-selected-workflow-candidates.md)                                                  |
 | 2026-09-12   | current    | [Workflow Evaluation Evidence and Comparable Trials](2026-09-12-workflow-evaluation-evidence.md)                                        |
 | 2026-09-12   | current    | [Bounded Processor Graph Execution](2026-09-12-bounded-processor-graph-execution.md)                                                    |
 | 2026-09-09   | current    | [Explicit Skill Selection and Run-scoped Instructions](2026-09-09-explicit-skill-selection.md)                                          |
@@ -148,3 +149,5 @@ The [evaluation investigation](2026-09-12-workflow-evaluation-evidence.md) reuse
 The [evaluation review](2026-09-12-workflow-evaluation-evidence.md#same-source-proposal-review--2026-09-13) distinguishes portable identities from journal HMACs, host attestations from raw inspection and immutable terminal results from later settlement. That review retained the original investigation and left the linked ADR proposed / not-started.
 
 The author [accepted the reviewed evaluation contract](../adr/2026-09-12-evidence-based-workflow-evaluation.md#author-acceptance--2026-09-13) on 2026-09-13. Its subsequent [implementation evidence](../adr/2026-09-12-evidence-based-workflow-evaluation.md#implementation-evidence--2026-09-13) records accepted / partial, public text APIs and Unix validation. The proposal/review state descriptions above are historical; research remains non-binding evidence and is not the implementation record.
+
+The [candidate-selection investigation](2026-09-13-human-selected-workflow-candidates.md) distinguishes current per-Run Graph binding and read-only evaluation from proposed application-owned selection. Its [ADR](../adr/2026-09-13-application-owned-workflow-selection.md) remains proposed / not-started. Transactional host storage, evidence eligibility, capture boundaries and recovery costs require review and author judgment; the nine accepted/partial decisions are unchanged.
