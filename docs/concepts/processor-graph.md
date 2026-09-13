@@ -28,6 +28,8 @@ The managed Graph runtime compiles serial Agent/tool/transform stages and declar
 
 The public descriptor and private configuration are frozen separately. Journal v2 records the binding, acknowledged visits and selected routes, with keyed value digests rather than automatic restart checkpoints. Graph-specific values are published only after confirmed completion; an observed edge is not evidence of destination execution. See [Managed Processor Graphs](../processor-graphs.md) for the implemented API and migration contract.
 
+The [human selection coordinator](../workflow-selection.md) fixes its candidate at application request capture, before Run admission. A subsequent selection does not replace a captured or running Graph. This product-level capture is separate from the Graph journal binding at admission.
+
 ## Directional Model
 
 A future graph runtime should separate definition from execution:
@@ -44,7 +46,7 @@ Runs should not observe an in-place topology mutation. A revised graph becomes
 a new candidate version and affects only runs admitted under an explicit
 promotion policy.
 
-The first implementation reuses the existing bounded model/tool loop as a coarse Agent stage. General fan-out, joins, subgraphs and adaptive promotion remain unimplemented directions requiring separate evidence and adoption.
+The first implementation reuses the existing bounded model/tool loop as a coarse Agent stage. General fan-out, joins, subgraphs and automatic promotion remain unimplemented directions requiring separate evidence and adoption.
 
 ## Invariants
 

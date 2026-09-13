@@ -1,0 +1,68 @@
+# Human-selected workflow candidates
+
+Orbit provides candidate inspection and an application coordinator for choosing a finite, human-authored Graph in a fixed environment. It reuses [Graph execution](processor-graphs.md) and [workflow evaluation](workflow-evaluation.md). A valid Graph, passing evidence and human selection are different facts. There is no automatic winner, generated code, background dispatch queue or file rollback.
+
+## Responsibilities and public API
+
+The package exports `sealWorkflowCandidate`, `parseWorkflowCandidate`, `inspectWorkflowCandidate`, `parseWorkflowScope`, `MemoryWorkflowStore`, `WorkflowSelectionService`, `encodeWorkflowSubmission` and `inspectWorkflowRunBinding`, plus their public types.
+
+Core text inspection consumes bounded JSON without invoking models, tools or host callbacks. The coordinator receives an explicitly bound `WorkflowTarget`, `WorkflowStore` and `WorkflowAuthority`. The host supplies trusted plans, honest versioned executable bundles, human authentication, target mapping, authority revocation and evidence retention. The store is a control record, separate from mandatory execution recording.
+
+`OrbitApplicationService.createWorkflowSelection(threadId, configuration)` binds an existing Thread to a scope. `workflowContext(threadId)` obtains its declared context digest; configure `selectionProjector` when constructing the application/Agent. The service forwards the retained projection through ThreadManager to the same Agent. Direct `startRun` and `startGraphRun` reject for a Thread bound through this factory. Trusted standalone Agent/Thread integrations must provide the same exclusive product routing; those low-level APIs are not an authentication boundary.
+
+The standard CLI/Ink/GUI do not ship a candidate picker or a persistent selection deployment. Product hosts render the same `inspectCandidates` state and `prepareSelection` preview, then call the coordinator using their authenticated human capability. Standard GUI message input rejects unknown selection fields instead of silently treating them as ordinary messages. Do not send selection instructions as model text or silently fall back from a selected product route. No finished application is supplied here.
+
+## Candidate and evaluation binding
+
+A revision-1 manifest contains `id`, `label`, `digest`, `graph`, `profile`, `configuration`, ordered `adapters` (`id`, `version`), `context`, `prepared`, `projector`, `mapping` and a retained `bundle` reference. `sealWorkflowCandidate` computes the canonical digest. Registration checks it against a previously compiled immutable Graph; JSON cannot load code. A changed closure without a new honest adapter/projector version is a host trust violation, not detectable code attestation.
+
+Register using `registerCandidate(manifestText, compiledGraph, trustedPlanText, reportsText, policyText, capability)`. The policy contains revision 1, its `id` and `version`, trusted `plan` digest, applicable `variant`, `mapping`, exact evaluation `configuration`, and required `metrics` (`key`, nonnegative total `maximum`). Its provenance is trusted host input, never a field imported as authority from a report.
+
+The initial mapping uses existing evaluation configuration fields:
+
+| Evaluation field       | Required candidate value                      |
+| ---------------------- | --------------------------------------------- |
+| `graph`                | Compiled Graph identity                       |
+| `privateConfiguration` | Private configuration digest                  |
+| `adapter`              | Digest of the ordered used adapter references |
+| `mappingMethod`        | Host's versioned task/target mapping          |
+| `environment`          | Fixed declaration `context` digest            |
+| `catalog`              | Actual prepared snapshot `prepared` digest    |
+| `limits`               | Graph `profile` digest                        |
+| `application`          | Trusted projector version ID                  |
+
+All other configuration fields must equal the trusted plan variant. The host's mapping must document how fresh evaluation fixtures relate to the permitted runtime task class; it is not a claim that arbitrary tasks or mutable conversations are identical. The context/projector covers system instructions, model/settings, estimator/code versions, local and MCP tools, policy, limits and ordered Skills. Mutable target edits do not themselves select a new Graph.
+
+Inspection runs the existing evaluator. Every planned slot in the chosen variant must be comparable and pass its trusted case policy. Missing reports, unexecuted slots, invalid mandatory evidence, failures and indeterminate outcomes cannot disappear from the denominator. Expected refusal can pass only under that existing case contract. Each required metric must cover every planned slot with compatible units/accounting/provenance and a sum within its limit. Optional incomplete measurements remain in findings. No quality superiority, real-model result or optimum limit is inferred.
+
+Evidence text and immutable inspection are retained once per binding, not copied into each request. `replaceEvidence` appends a new binding, keeping earlier plan/report/policy text and decision references. A corrected active binding requires another human confirmation before fresh capture. `setAvailability` blocks fresh choice/capture; it does not erase prior captures. Inspecting cached state revalidates retained evidence rather than accepting a mutable `eligible` flag. This initial store contract retains the entire bounded scope and refuses missing payloads; it offers no pruning or paged backend. A future host tombstone/paging adapter must preserve continuity and prove its behavior before use.
+
+## Human choice and request capture
+
+`MemoryWorkflowStore` requires `{context, prepared, projector, mapping}`; every candidate must match the same prepared digest as well as the declared context. A new memory scope has generation 0 and no selected candidate. `prepareSelection(candidateId, reason, capability)` is read-only and returns canonical JSON binding the current/next candidates, generation, context, store mode/level, evidence/plan/policy, authority revision, principal, expiry and optional missing measurements. Display these facts and existing captures from `inspectCandidates` before explicit confirmation. `confirmSelection(selectionRequestId, previewText, capability)` commits one decision and pointer increment atomically. Identical committed retry requires current read authority and returns the existing decision; changed input rejects. A→B→A creates three generations and invalidates an old preview.
+
+The host's synchronous `WorkflowAuthority.verify` must authenticate the opaque capability for `read`, `register`, `confirm`, `dispatch` or `maintain`. It returns scope, principal, scoped epoch and expiry. Confirmation authority must arise from a human control surface, never from model/tool data. Scope revocation and evidence changes serialize through the same transaction; an unrelated network authorization check is insufficient. `revokeScopeAuthority` increments the epoch. Existing operation approval still governs each tool/MCP launch.
+
+`startSelectedGraphRun` takes revision-1 JSON `{revision: 1, id: requestId, input: graphInput, skills: [{id, digest}]}`. Skills are ordered. Other overrides are rejected by this fixed-profile entry. Full caller input is compared before active selection or bundle resolution. Capture retains Session/storage, selected generation, evidence, exact managed input/expectation, request ID and the coordinator incarnation. Session-to-storage assignment is one-to-one within the scope; the host must also enforce uniqueness across scopes and canonical physical storage aliases.
+
+Only an acknowledged newly captured receipt grants its creating coordinator one dispatch. It consumes that entitlement before using the existing Graph entry. Concurrent callers/restarted coordinators return `kind: observation`; a live same-process retry may reuse `kind: live` and its handle. No read, timeout, expiry or restart transfers dispatch rights. Captured work retains its old candidate even after new choice/evidence withdrawal. A definite pre-dispatch availability rejection or typed busy rejection is recorded and consumes that request ID. Another attempt requires a new ID. Uncertain failure remains unverified.
+
+The Agent shares its ordinary managed-input encoder with `previewGraphSubmission`; Application/Thread forward the frozen envelope. Actual input must equal the retained canonical text before preparation. Declared fixed context is checked before MCP preparation, then the trusted synchronous projector receives copied frozen declaration, validated catalog and synchronized ordered Skill snapshots before ready/first visit. A mismatch starts no visit/model/node tool call. Authorized MCP startup and Skill persistence may already have occurred; the existing Run owns cleanup, cancellation and uncertain effects. The projector must be bounded and side-effect-free; in-process noncooperative callbacks are not isolated.
+
+## Observation, uncertainty and storage
+
+A live receipt records its owning Run ID. `recordObservation` appends authorized host observations; it does not overwrite earlier results or grant execution. After completion, hosts record the original result separately from later settlement. The read-only `inspectWorkflowRunBinding(root, sessionId, requestId, retainedInput)` checks bounded stable journal reads, structure/sequence, unique admission and HMAC input equality using the existing Session key. It returns `matched`, `conflicting` or `unverified`, with original terminal and later settlement separately. It never opens a writer, repairs/truncates a tail, calls start, or exports the key. Missing keys, aliases, duplicate bindings, unknown complete records, torn tails and detected concurrent changes remain unverified. A match authenticates the host-held request association, not all external effects.
+
+`MemoryWorkflowStore` is volatile and single-process. A new instance gets a new scope; it cannot restore a prior scope's execution entitlement. Producer ceilings may be lowered without changing `parseWorkflowScope` reader ceilings. Capacity rejects new writes rather than evicting request IDs/history.
+
+`transactional-host` is only a port: no standard persistent backend, database or dependency is installed. A concrete host must initialize the revision-1 unselected state and provide consistent reads and atomic serializable `transact` with an exactly-once synchronous callback, isolation of rollback, validation of complete history, coordinated authority/evidence revisions, cross-scope Session/storage uniqueness and acknowledgement at its declared non-memory durability level. The callback must not be replayed as an optimistic retry; the adapter must obtain appropriate serialization before invoking it. Do not enable persistence based on TypeScript conformance or memory test success.
+
+If commit acknowledgement is unknown, the coordinator freezes fresh selection/capture. Existing lookup is observation only. Stop external admission and automatic restarters, exclude other clients, verify actual backend state/durability and retained journal correspondence, then explicitly call `acknowledgeStoreRecovery` under maintenance authority. It unfreezes verified future operations, never consumes an old dispatch again. There is no cross-store atomic transaction with the Run journal or exactly-once external-effect guarantee. Store unavailability and missing journal evidence are not evidence of absence.
+
+A persistent adapter's qualification must cover multiple processes, atomic choice/capture races, revoked authority, evidence withdrawal, callback rollback, every before/after commit and acknowledgement gap, Run-admission/reply gaps, corruption, bounds, storage aliases, interrupted maintenance and declared sync durability on the actual filesystem/backend. None is established by the memory reference. Existing Session deletion/maintenance and unresolved resource quarantine remain authoritative; selection does not release owners or authorize deletion. Retain active/rollback candidates, all referenced evidence and unresolved receipt identities.
+
+## Bounds and migration
+
+Revision-1 reader ceilings are 64 KiB per manifest/preview, 1 MiB per caller/managed submission, depth 32 and 200,000 JSON values per parsed bundle. Raw evaluation uses existing independent limits. Memory's initial producer limits are 64 candidates, 1,000 combined decisions/receipts and 16 MiB of retained state, including shared evidence text. These are unmeasured starting values, not optimum deployment capacities. Oversize rejects without truncation; lowered producer limits do not retroactively change historical reader validity. Duplicate keys, unknown revisions/fields, nonfinite JSON, accessors and executable objects reject.
+
+Stop old product processes and automatic restart sources before enabling selected scopes; retain transcript v2 and existing storage migration requirements. Old product message routes cannot drop the new envelope. There is no new mandatory journal/transcript version, alternate runner, permission store, resource owner or deletion API. Returning to an older candidate is another human selection; it never undoes edits, cancellation or uncertain termination. The [accepted ADR](adr/2026-09-13-application-owned-workflow-selection.md) tracks implementation evidence and remaining qualification; fixed-double tests are not model quality or persistent deployment evidence.

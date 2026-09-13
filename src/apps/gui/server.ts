@@ -28,7 +28,9 @@ export interface GuiServer {
   url: string
 }
 
-const messageSchema = z.object({content: z.string().trim().min(1)})
+const messageSchema = z
+  .object({content: z.string().trim().min(1), requestId: z.unknown().optional(), skills: z.unknown().optional()})
+  .strict()
 const logQuerySchema = z.object({
   after: z.string().min(1).max(1024).optional(),
   category: z.enum(['lifecycle', 'mcp', 'model', 'runtime', 'security', 'storage', 'tool']).optional(),

@@ -99,6 +99,8 @@ export class RunExecutionError extends Error {
 }
 export class RunStoppedError extends Error {}
 export class ExecutionRequestError extends Error {}
+/** This owning call rejected before creating a new Run. Not evidence about other calls. */
+export class RunAdmissionRejectedError extends ExecutionRequestError {}
 export interface RunStartOptions<T> {
   cleanup?: () => Promise<void>
   configuration: Record<string, unknown>
@@ -534,7 +536,7 @@ export class RunSupervisor {
       this.admissionFailed ||
       [...this.runs.values()].some(({context}) => !context.result || !context.released || context.recordingFailed)
     )
-      return Promise.reject(new ExecutionRequestError('Run supervisor is busy, closed, or quarantined'))
+      return Promise.reject(new RunAdmissionRejectedError('Run supervisor is busy, closed, or quarantined'))
     this.admitting = true
     const promise = this.admit(options)
     this.admission = promise

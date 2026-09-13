@@ -24,6 +24,7 @@ export {
   DEFAULT_RUN_LIMITS,
   ExecutionRequestError,
   recoveredRunSnapshot,
+  RunAdmissionRejectedError,
   RunContext,
   RunExecutionError,
   RunStoppedError,

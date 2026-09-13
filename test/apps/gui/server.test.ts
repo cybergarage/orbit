@@ -53,6 +53,12 @@ describe('GUI server', () => {
         method: 'POST',
       })
       expect(invalidMessage.status).to.equal(400)
+      const unsupportedSelection = await fetch(`${baseUrl}/api/threads/${created.id}/messages`, {
+        body: JSON.stringify({content: 'hello', requestId: 'selected', selection: {scope: 'unqualified'}}),
+        headers: {...headers, 'Content-Type': 'application/json'},
+        method: 'POST',
+      })
+      expect(unsupportedSelection.status).to.equal(400)
 
       const commandResponse = await fetch(`${baseUrl}/api/threads/${created.id}/messages`, {
         body: JSON.stringify({content: '/help'}),

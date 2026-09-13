@@ -172,6 +172,7 @@ export type {
   ProcessorOutput,
   ProcessorType,
 } from './processor/index.js'
+export * from './selection/index.js'
 export {
   createSessionInformation,
   encodeSessionEntry,
@@ -251,6 +252,7 @@ export type {
 } from './session/index.js'
 export {inspectTranscriptMigration} from './session/index.js'
 export type {TranscriptMigrationInspection} from './session/index.js'
+
 export {
   loadWorkspaceSettings,
   loadWorkspaceSettingsSync,
@@ -269,10 +271,9 @@ export type {
   WorkspaceSettings,
   WorkspaceSettingsSource,
 } from './settings.js'
-
 export * from './skills/index.js'
-export {State} from './state.js'
 
+export {State} from './state.js'
 export {serializeMessage, ThreadEventType, ThreadManager, ThreadStatus} from './thread.js'
 export type {
   CreateThreadOptions,
@@ -296,9 +297,10 @@ export type {
   ThreadToolStartedEvent,
   ThreadToolUpdatedEvent,
 } from './thread.js'
-export {GptTokenizer} from './tokenizer/index.js'
 
+export {GptTokenizer} from './tokenizer/index.js'
 export type {Tokenizer} from './tokenizer/index.js'
+
 export {
   BuiltinToolName,
   createBashTool,
@@ -345,6 +347,6 @@ export type {
   ToolSource,
   WriteToolInput,
 } from './tools/index.js'
-
 export {LocalWorkspaceLocator} from './workspace.js'
+
 export type {LocalWorkspaceLocatorOptions, WorkspaceLocator} from './workspace.js'

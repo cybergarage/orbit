@@ -48,7 +48,7 @@ budgets and policy, records evidence, and produces a terminal outcome.
 ### Graph version
 
 An immutable identity for a Processor Graph definition and the policies needed
-to execute it. The managed Graph binds this identity at admission; adaptive version promotion remains directional.
+to execute it. The managed Graph binds this identity at admission; automatic version promotion remains directional; human candidate selection is an application coordination API.
 
 ### Operator
 
@@ -172,3 +172,7 @@ An immutable application-owned export of trial facts, evidence, grading and
 measurements bound to a plan. Core inspects supplied text and compares fixed
 per-variant denominators. A report is not a required Session/journal record,
 a runner or proof of real-model quality. See [Workflow evaluation](../workflow-evaluation.md).
+
+### Workflow candidate and selection scope
+
+A workflow candidate is an immutable, versioned Graph manifest tied to a fixed context and separately trusted evaluation. A selection scope owns human decision generations and request captures. Capture fixes the candidate for that request; later selection cannot rewrite it. A one-use live dispatch entitlement is not Run resource ownership and cannot transfer after restart. See [Workflow selection](../workflow-selection.md).

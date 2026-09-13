@@ -12,11 +12,21 @@ import type {ApprovalReply, RunSnapshot} from './execution/run.js'
 import type {Logger, LogLevel} from './logger/index.js'
 import type {LogPage, LogQuery, LogRecord, LogStoreHealth, SessionLoggerFactory, SessionLogStore} from './logs/index.js'
 import type {ProviderName} from './models/index.js'
-import type {CompiledProcessorGraph, GraphJSON} from './processor/index.js'
+import type {CompiledProcessorGraph, GraphJSON, GraphValue} from './processor/index.js'
+import type {WorkflowExpectation} from './selection/binding.js'
+import type {WorkflowAuthority} from './selection/service.js'
+import type {WorkflowStore} from './selection/store.js'
 import type {SessionListOptions, SessionListResult, SessionRepository, SessionSummary} from './session/index.js'
 import type {WorkspaceSettings, WorkspaceSettingsSource} from './settings.js'
 import type {SkillSelection} from './skills/index.js'
-import type {ThreadAgentFactory, ThreadEvent, ThreadMessage, ThreadSnapshot} from './thread.js'
+import type {
+  ThreadAgentFactory,
+  ThreadEvent,
+  ThreadMessage,
+  ThreadRunHandle,
+  ThreadRunOptions,
+  ThreadSnapshot,
+} from './thread.js'
 
 import {Agent} from './agent.js'
 import {sessionsDir} from './app.js'
@@ -33,6 +43,7 @@ import {createCompositeLogger} from './logger/index.js'
 import {FileSessionLogStore, LogEventType, LogOutcome, StoreSessionLoggerFactory} from './logs/index.js'
 import {Message, MessageType, Role} from './models/index.js'
 import {inspectGraphRun} from './processor/graph-inspection.js'
+import {WorkflowSelectionService} from './selection/service.js'
 import {parseSessionFile} from './session/codec.js'
 import {SessionRepository as Repository, SessionDeletionService} from './session/index.js'
 import {loadWorkspaceSettingsWithSources} from './settings.js'
@@ -96,6 +107,7 @@ export interface OrbitApplicationServiceOptions {
   model?: string
   provider?: ProviderName
   repository?: SessionRepository
+  selectionProjector?: CoreAgentOptions['selectionProjector']
   settings?: WorkspaceSettings
   settingsSources?: WorkspaceSettingsSource[]
   skillCatalog?: SkillCatalog
@@ -121,6 +133,7 @@ export class OrbitApplicationService {
   private readonly ownsLogs: boolean
   private preferences: GuiPreferences
   private readonly runListeners = new Set<(snapshot: RunSnapshot) => void>()
+  private readonly selectedScopes = new Map<string, string>()
   private readonly settings: WorkspaceSettings
   private readonly systemPrompt?: string
   private readonly threadManager: ThreadManager
@@ -186,6 +199,7 @@ export class OrbitApplicationService {
             defaultToolProfile: ToolProfile.Coding,
             diagnostics: this.diagnostics,
             execution: {...options.execution, onApproval() {}, responderScope: 'local-gui'},
+            selectionProjector: options.selectionProjector,
             skillCatalog: this.skillCatalog,
           })),
       loggerFactory: this.loggerFactory,
@@ -283,6 +297,47 @@ export class OrbitApplicationService {
     return thread
   }
 
+  /** Host explicitly binds a scope, its authority/store and one existing Thread. */
+  createWorkflowSelection(
+    threadId: string,
+    configuration: {
+      authority: WorkflowAuthority
+      context: string
+      mapping: string
+      projector: string
+      scope: string
+      storage: string
+      store: WorkflowStore
+    },
+  ) {
+    if (!this.threadManager.getThread(threadId)) throw new Error('Unknown selected Thread')
+    const oldScope = this.selectedScopes.get(threadId)
+    if (oldScope && oldScope !== configuration.scope)
+      throw new Error('Thread already assigned to another selection scope')
+    this.selectedScopes.set(threadId, configuration.scope)
+    return new WorkflowSelectionService<ThreadRunHandle<GraphValue>>(
+      configuration.scope,
+      configuration.store,
+      configuration.authority,
+      {
+        availability: () => ({
+          available: this.threadManager.getThread(threadId)?.status === 'idle',
+          reason: 'Thread is already running',
+        }),
+        context: configuration.context,
+        encode: (graph, input, skills, expectation) =>
+          this.previewSelectedGraph(threadId, graph, input, {skills: skills as SkillSelection[]}, expectation),
+        identify: (handle) => handle.id,
+        mapping: configuration.mapping,
+        projector: configuration.projector,
+        session: threadId,
+        start: (graph, input, options) =>
+          this.dispatchSelectedGraph(threadId, graph, input, {...options, skills: options.skills as SkillSelection[]}),
+        storage: configuration.storage,
+      },
+    )
+  }
+
   async deleteSession(sessionId: string): Promise<boolean> {
     const deleted = await this.deletionService.delete(sessionId)
     if (deleted === undefined) return false
@@ -335,6 +390,16 @@ export class OrbitApplicationService {
     return this.skillCatalog
       ? this.skillCatalog.list(signal)
       : {candidates: [], complete: true, issues: ['No Skill catalog configured']}
+  }
+
+  previewSelectedGraph(
+    threadId: string,
+    graph: CompiledProcessorGraph,
+    input: GraphJSON,
+    options: ThreadRunOptions,
+    expectation: WorkflowExpectation,
+  ): string {
+    return this.threadManager.previewSelectedGraph(threadId, graph, input, options, expectation)
   }
 
   async queryGraphRun(id: string) {
@@ -451,14 +516,10 @@ export class OrbitApplicationService {
     threadId: string,
     graph: CompiledProcessorGraph,
     input: GraphJSON,
-    options: {requestId?: string; skills?: SkillSelection[]} = {},
+    options: ThreadRunOptions = {},
   ) {
-    const handle = this.threadManager.startGraphRun(threadId, graph, input, {
-      ...options,
-      skillCatalogRevision: this.skillCatalog?.configuration,
-    })
-    await handle.admitted
-    return handle
+    if (this.selectedScopes.has(threadId)) throw new Error('Thread requires its workflow selection coordinator')
+    return this.dispatchSelectedGraph(threadId, graph, input, options)
   }
 
   async startRun(
@@ -466,6 +527,7 @@ export class OrbitApplicationService {
     content: string,
     request?: string | {requestId?: string; skills?: SkillSelection[]},
   ): Promise<StartApplicationRunResult> {
+    if (this.selectedScopes.has(threadId)) throw new Error('Thread requires its workflow selection coordinator')
     const {requestId, skills} = typeof request === 'string' ? {requestId: request, skills: undefined} : (request ?? {})
     if (content.startsWith('/')) {
       const thread = this.threadManager.getThread(threadId)
@@ -548,6 +610,10 @@ export class OrbitApplicationService {
     return this.getPreferences()
   }
 
+  workflowContext(threadId: string): string {
+    return this.threadManager.workflowContext(threadId)
+  }
+
   private appendLocalCommandMessages(thread: ThreadSnapshot, command: string, response: string): void {
     const displayMessages = this.withDisplayMessages(thread).messages
     const commandMessage = new Message(MessageType.User, {
@@ -561,6 +627,20 @@ export class OrbitApplicationService {
       serializeMessage(commandMessage),
       serializeMessage(responseMessage),
     ])
+  }
+
+  private async dispatchSelectedGraph(
+    threadId: string,
+    graph: CompiledProcessorGraph,
+    input: GraphJSON,
+    options: ThreadRunOptions,
+  ) {
+    const handle = this.threadManager.startGraphRun(threadId, graph, input, {
+      ...options,
+      skillCatalogRevision: this.skillCatalog?.configuration,
+    })
+    await handle.admitted
+    return handle
   }
 
   private emitStartupDiagnostics(contexts: Context[], settingsSources: WorkspaceSettingsSource[]): void {

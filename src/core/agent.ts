@@ -73,18 +73,24 @@ import {adaptInvokableTool, createBuiltinTools, ToolProfile, ToolRegistry, ToolR
 
 const DEFAULT_MAX_TOOL_ITERATIONS = 5
 
+import type {WorkflowContextProjector, WorkflowExpectation, WorkflowSubmission} from './selection/binding.js'
+
+import {encodeWorkflowSubmission, parseWorkflowSubmission} from './selection/binding.js'
+import {immutable, selectionDigest} from './selection/validation.js'
+
 export type AgentTool = InvokableTool
 
 export interface AgentInvokeOptions extends OperatorOptions {
   diagnosticContext?: DiagnosticContext
   diagnostics?: DiagnosticEventBus
   limits?: Partial<RunLimits>
-
   maxToolIterations?: number
+
   onEvent?: AgentEventHandler
   onRunAdmitted?: () => void
   onRunSnapshot?: (snapshot: RunSnapshot) => void
   requestId?: string
+  selection?: WorkflowSubmission
   signal?: AbortSignal
   skills?: SkillSelection[]
   tools?: AgentTool[]
@@ -105,12 +111,12 @@ export interface AgentOptions {
   contextPolicy?: ContextPolicy
   cwd?: string
   defaultToolProfile?: ToolProfileName
-
   deps?: {
     createMcpToolManager?: (settings: WorkspaceSettings, options: McpToolManagerFactoryOptions) => McpToolManager
     createModel?: typeof getModel
     sessionContextBuilder?: SessionContextBuilderType
   }
+
   diagnostics?: DiagnosticEventBus
   execution?: {
     allowLegacyTools?: boolean
@@ -129,6 +135,7 @@ export interface AgentOptions {
     name?: string
     provider?: ProviderName
   }
+  selectionProjector?: WorkflowContextProjector
   settings?: WorkspaceSettings
   skillCatalog?: SkillCatalog
   state?: State
@@ -157,6 +164,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   private readonly model: Model
   private observerFailures = 0
   private readonly ownedLogStore?: SessionLogStore
+  private readonly selectionProjector?: WorkflowContextProjector
   private readonly sessionContextBuilder: SessionContextBuilderType
   private readonly toolDefinitions: ToolDefinition[]
 
@@ -198,6 +206,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     ]
     this.tools = [...(options.tools ?? [])]
     this.execution = options.execution ?? {}
+    this.selectionProjector = options.selectionProjector ? Object.freeze({...options.selectionProjector}) : undefined
     this.mcpFactory =
       options.deps?.createMcpToolManager ??
       ((settings, factoryOptions) => createMcpToolManager(settings.mcp, factoryOptions))
@@ -305,6 +314,20 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     return this.invokeSession(this.getSession(), messages, options)
   }
 
+  /** Pure preview on an already-created Agent. Never discovers tools or reads Skills. */
+  previewGraphSubmission(
+    graph: CompiledProcessorGraph,
+    input: GraphJSON,
+    options: Partial<AgentInvokeOptions>,
+    expectation: WorkflowExpectation,
+  ): string {
+    input = boundedGraphJSON(input, graph.profile.valueBytes)
+    const messages = [
+      new Message(MessageType.User, {content: typeof input === 'string' ? input : JSON.stringify(input)}),
+    ]
+    return encodeWorkflowSubmission(this.managedSubmission(messages, options, {graph, input}), expectation)
+  }
+
   replyApproval(id: string, reply: ApprovalReply): Promise<'recorded'> {
     return this.supervisor.replyApproval(id, reply)
   }
@@ -363,6 +386,10 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     session = this.getSession(),
   ): Promise<RunHandle<Message>> {
     return this.startManagedRun<Message>(messages, options, session)
+  }
+
+  workflowContext(): string {
+    return selectionDigest(this.workflowDeclaration())
   }
 
   // eslint-disable-next-line max-params
@@ -468,8 +495,6 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
 
     throw new RunExecutionError(result)
   }
-
-  // Session recording, tool iteration, and terminal-state handling intentionally share one lifecycle boundary.
 
   // eslint-disable-next-line complexity
   private async invokeSessionWithTurn(
@@ -585,6 +610,18 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       const toolSnapshot = registry.snapshot()
       for (const spec of toolSnapshot.specs()) assertManagedTool(toolSnapshot.get(spec.name)!, managed)
       if (graph) validateGraphCatalog(graph.graph, toolSnapshot)
+      if (options?.selection) {
+        run.check()
+        const snapshot = immutable({
+          catalog: copyJSON(toolSnapshot.specs()),
+          declaration: this.workflowDeclaration(),
+          skills: copyJSON(options.activeSkills ?? []),
+        })
+        const prepared = selectionDigest(this.selectionProjector!.project(snapshot))
+        run.check()
+        if (prepared !== options.selection.expectation.prepared) throw new Error('Selected prepared context mismatch')
+      }
+
       await run.ready(toolSnapshot.specs(), graph ? await graphSynchronize(run, session) : undefined)
       const toolRuntime = new ToolRuntime(
         toolSnapshot,
@@ -933,6 +970,44 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     }
   }
 
+  private managedSubmission(
+    messages: Message[],
+    options: Partial<AgentInvokeOptions>,
+    graph?: Pick<GraphInvocation, 'graph' | 'input'>,
+  ): unknown {
+    const skills = normalizeSkillSelections(options.skills)
+    const serialized = messages.map((message) => ({
+      contents: message.contents,
+      role: message.role,
+      type: message.type,
+      ...(message.payload === undefined ? {} : {payload: message.payload}),
+    }))
+    return {
+      ...(graph
+        ? {
+            graph: graph.graph.identity,
+            graphConfiguration: graph.graph.configuration,
+            graphInput: graph.input,
+            graphProfile: graph.graph.profile,
+          }
+        : {}),
+      ...(skills.length > 0 ? {skillCatalog: this.skillCatalog?.configuration, skills} : {}),
+      limits: options.limits ?? {},
+      maxToolIterations: options.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS,
+      messages: serialized,
+      tools: (options.tools ?? []).map((tool) => ({
+        name: tool.name,
+        ...(graph
+          ? {description: tool.description, scheduling: tool.scheduling ?? 'serial', source: tool.source ?? null}
+          : {}),
+        schema:
+          tool.inputSchema ?? adaptInvokableTool(tool, tool.source ?? {id: tool.name, kind: 'custom'}).spec.inputSchema,
+      })),
+    }
+  }
+
+  // Session recording, tool iteration, and terminal-state handling intentionally share one lifecycle boundary.
+
   // Tool execution, error projection, and diagnostics share one lifecycle boundary.
   // eslint-disable-next-line complexity
   private async observeToolExecution(
@@ -1081,12 +1156,16 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         : {mode: contextPolicy.mode}
     // Estimators are injected behavior, not JSON settings or journal evidence.
     const settings = copyJSON({...this.settings, contextPolicy: contextConfiguration})
-    const serialized = messages.map((message) => ({
-      contents: message.contents,
-      role: message.role,
-      type: message.type,
-      ...(message.payload === undefined ? {} : {payload: message.payload}),
-    }))
+    if (options.selection) {
+      options = {...options, selection: parseWorkflowSubmission(options.selection)}
+      if (!graph) throw new Error('Selection requires Graph execution')
+      const expected = encodeWorkflowSubmission(
+        this.managedSubmission(messages, options, graph),
+        options.selection!.expectation,
+      )
+      if (expected !== options.selection!.input) throw new Error('Selected submission mismatch')
+    }
+
     return this.supervisor.startRun<T>({
       async cleanup() {
         const results = await Promise.allSettled([manager?.close(), skillReader?.settle()])
@@ -1103,6 +1182,16 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         sources: this.settings.mcp ?? {},
       },
       execute: async (run) => {
+        if (options.selection) {
+          const e = options.selection.expectation
+          if (
+            !this.selectionProjector ||
+            this.selectionProjector.id !== e.projector ||
+            this.workflowContext() !== e.context
+          )
+            throw new Error('Selected declared context mismatch')
+        }
+
         if (graph) {
           await bindGraphJournal(graph, run)
           run.check()
@@ -1136,29 +1225,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
             }) as Promise<T>,
         )
       },
-      input: {
-        ...(graph
-          ? {
-              graph: graph.graph.identity,
-              graphConfiguration: graph.graph.configuration,
-              graphInput: graph.input,
-              graphProfile: graph.graph.profile,
-            }
-          : {}),
-        ...(skills.length > 0 ? {skillCatalog: this.skillCatalog?.configuration, skills} : {}),
-        limits: options.limits ?? {},
-        maxToolIterations: options.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS,
-        messages: serialized,
-        tools: (options.tools ?? []).map((tool) => ({
-          name: tool.name,
-          ...(graph
-            ? {description: tool.description, scheduling: tool.scheduling ?? 'serial', source: tool.source ?? null}
-            : {}),
-          schema:
-            tool.inputSchema ??
-            adaptInvokableTool(tool, tool.source ?? {id: tool.name, kind: 'custom'}).spec.inputSchema,
-        })),
-      },
+      input: options.selection ? JSON.parse(options.selection.input) : this.managedSubmission(messages, options, graph),
       journal: () => this.getJournal(session),
       ...(graph ? {journalVersion: 2 as const} : {}),
       limits: {...this.execution.limits, ...options.limits},
@@ -1171,6 +1238,37 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       sessionId: session.getId(),
       signal: options.signal,
       synchronize: async () => session.synchronize((await this.getJournal(session)).level),
+    })
+  }
+
+  private workflowDeclaration(): unknown {
+    return copyJSON({
+      allowLegacyTools: this.execution.allowLegacyTools ?? false,
+      cwd: this.cwd,
+      legacyTools: this.tools.map((t) => ({
+        description: t.description,
+        name: t.name,
+        spec: 'spec' in t ? t.spec : null,
+      })),
+      limits: this.execution.limits ?? {},
+      messages: this.messages.map((m) => ({contents: m.contents, role: m.role})),
+      model: this.model.getModel(),
+      policy: this.execution.policy ?? {
+        generation: 'workspace-confirm-v1',
+        profile: 'workspace-confirm',
+        roots: [this.cwd],
+      },
+      projector: this.selectionProjector?.id ?? null,
+      provider: this.model.getProvider(),
+      settings: {
+        ...this.settings,
+        contextPolicy:
+          this.contextPolicy.mode === 'budgeted'
+            ? {mode: 'budgeted', profile: this.contextPolicy.profile}
+            : {mode: 'disabled'},
+      },
+      skillCatalog: this.skillCatalog?.configuration ?? null,
+      tools: this.toolDefinitions.map((t) => t.spec),
     })
   }
 }

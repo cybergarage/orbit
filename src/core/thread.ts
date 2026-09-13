@@ -156,6 +156,12 @@ export interface ThreadAgent {
   getRun?(id: string): RunSnapshot | undefined
   /** Records new messages into its configured session and runs one turn. */
   invoke(newMessages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message>
+  previewGraphSubmission?(
+    graph: CompiledProcessorGraph,
+    input: GraphJSON,
+    options: Partial<AgentInvokeOptions>,
+    expectation: WorkflowExpectation,
+  ): string
   replyApproval?(id: string, reply: ApprovalReply): Promise<'recorded'>
   readonly skillCatalog?: SkillCatalog
   startGraphRun?(
@@ -164,6 +170,7 @@ export interface ThreadAgent {
     options?: Partial<AgentInvokeOptions>,
   ): Promise<RunHandle<GraphValue>>
   startRun?(messages: Message[], options?: Partial<AgentInvokeOptions>): Promise<RunHandle<Message>>
+  workflowContext?(): string
 }
 
 export type ThreadAgentFactory = (options: AgentOptions) => ThreadAgent
@@ -182,8 +189,13 @@ export interface CreateThreadOptions {
   id?: string
 }
 
+import type {WorkflowExpectation, WorkflowSubmission} from './selection/binding.js'
+
+import {parseWorkflowSubmission} from './selection/binding.js'
+
 export interface ThreadRunOptions {
   requestId?: string
+  selection?: WorkflowSubmission
   signal?: AbortSignal
   skillCatalogRevision?: string
   skills?: SkillSelection[]
@@ -355,6 +367,18 @@ export class ThreadManager {
     return [...this.threads.values()].map((thread) => this.snapshot(thread))
   }
 
+  previewSelectedGraph(
+    threadId: string,
+    graph: CompiledProcessorGraph,
+    input: GraphJSON,
+    options: ThreadRunOptions,
+    expectation: WorkflowExpectation,
+  ): string {
+    const {agent} = this.requireThread(threadId)
+    if (!agent.previewGraphSubmission) throw new Error('Agent does not support selection')
+    return agent.previewGraphSubmission(graph, input, {...options}, expectation)
+  }
+
   replyApproval(id: string, reply: ApprovalReply): Promise<'recorded'> {
     const threadId = this.runThreads.get(id)
     const agent = threadId ? this.threads.get(threadId)?.agent : undefined
@@ -439,6 +463,12 @@ export class ThreadManager {
     return () => this.eventHandlers.delete(handler)
   }
 
+  workflowContext(threadId: string): string {
+    const {agent} = this.requireThread(threadId)
+    if (!agent.workflowContext) throw new Error('Agent does not support selection')
+    return agent.workflowContext()
+  }
+
   private emit(event: ThreadEvent): void {
     for (const handler of this.eventHandlers) {
       try {
@@ -471,6 +501,7 @@ export class ThreadManager {
         onEvent: (event) => this.handleAgentEvent(thread, run.id, event),
         onRunSnapshot: this.onRunSnapshot,
         requestId: options.requestId ?? run.id,
+        selection: options.selection,
         signal: run.controller.signal,
         skills: options.skills,
         turnId: run.id,
@@ -670,7 +701,11 @@ export class ThreadManager {
     }
 
     const thread = this.requireThread(threadId)
-    options = {...options, skills: normalizeSkillSelections(options.skills)}
+    options = {
+      ...options,
+      ...(options.selection ? {selection: parseWorkflowSubmission(options.selection)} : {}),
+      skills: normalizeSkillSelections(options.skills),
+    }
     const submission = canonicalJSON({
       ...(options.graph
         ? {
@@ -681,6 +716,7 @@ export class ThreadManager {
           }
         : {}),
       content,
+      ...(options.selection ? {selection: options.selection} : {}),
       skillCatalog: options.skillCatalogRevision ?? thread.agent.skillCatalog?.configuration ?? null,
       skills: options.skills,
     })

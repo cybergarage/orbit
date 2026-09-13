@@ -67,3 +67,7 @@ Before the first Graph in a saved pair, stop old writers/readers and automatic r
 Storage registration, stable Session scopes, guard/owner cleanup and offline maintenance remain unchanged. No Graph-only store exists: deletion removes its journal through SessionDeletionService and keeps the existing minimal tombstone. On interruption, inspect transcript/journal and externally reconcile uncertain effects under the existing execution protocol; do not replay a selected node to obtain missing evidence. Keep external admission/restarters stopped whenever prior migration/maintenance success is unknown. This feature never authorizes deleting backups.
 
 See [Managed execution](execution.md), [input budgets](context-compaction.md), [Skills](skills.md), and the [Graph ADR](adr/2026-09-12-managed-processor-graph.md) for retained decisions and validation evidence. Fixed-double core/application tests and an isolated target's test result do not establish real-model quality or an application's SLI/SLO.
+
+## Human-selected candidates
+
+Applications can register finite Graph candidates with trusted evaluation using [Workflow selection](workflow-selection.md). The coordinator retains the complete request and selection expectation, then uses this same managed Graph path. Selected calls check the fixed declaration and actual catalog/Skill snapshot before ready. Existing explicit Graph calls keep their behavior outside selection-managed product scopes; changing human selection never replaces a captured or running Graph.

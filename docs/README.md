@@ -80,6 +80,8 @@ routing contract belongs in an ADR, and its implemented structure appears in
 - [Local GUI](gui.md)
 - [GUI Integration](gui-integration.md)
 
+- [Workflow selection](workflow-selection.md): human choice, captured requests, memory/host storage and observation.
+
 ## Growth policy
 
 Keep the first-stage structure shallow. Add a new top-level documentation

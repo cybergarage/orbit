@@ -219,3 +219,9 @@ continue to use the existing managed Run/Graph entry points for execution and ow
 isolation, independent grading and exported reports. No execution resource,
 authorization path, mandatory record version or deletion scope is added. See
 [Workflow evaluation](workflow-evaluation.md) for the public format and trust limits.
+
+## Human-selected workflow coordination
+
+`src/core/selection/validation.ts` reuses evaluation for immutable finite candidate eligibility. `store.ts` defines the strict control-state reader, transactional-host contract and volatile memory store. `service.ts` serializes human choice and request capture through that port, retains full input/evidence history and grants one live dispatch. `recovery.ts` performs bounded read-only HMAC journal correspondence checks without writer acquisition.
+
+Application Service binds selected Threads and routes through the existing ThreadManager and Agent Graph path. `binding.ts` and Agent's shared submission projection bind expectations to Run replay; existing owned preparation checks the declaration and actual catalog/Skill snapshot before ready. This adds no runner or mandatory journal version. Standard surfaces do not supply a selection deployment; unknown GUI selection protocol rejects. See [Workflow selection](workflow-selection.md) for host authority, persistent qualification, limits and migration.
