@@ -112,6 +112,33 @@ Host identity projection, authority and storage honesty remain trust dependencie
 - Should any unknown required evidence permit a separate exceptional workflow? The recommendation is no override in this first scope.
 - Are the failure-closed dispatch gap and manual reconciliation costs acceptable without a new cross-store transaction or journal version?
 
+## Same-source Proposal Review — 2026-09-13
+
+The reviewed commit is `ec2bff884372513aabff1dcca5664b7262bf4607`; source, tests, dependencies and nine accepted/partial ADRs are unchanged from the investigation baseline. Public main was rechecked as `1cb6f4f2abe3e89e27c1bdb32f1049183ef0e960`. Preserve the initial findings above as the proposal-time record. This review adds same-baseline evidence and tightens the linked proposal; it is neither acceptance nor an implemented selection guarantee.
+
+### Verified limitations and corrections
+
+- `agent.ts` `startManagedRun` constructs a whitelist for submitted input. `thread.ts` similarly encodes and forwards explicit fields. Merely adding ambient configuration or a TypeScript option cannot establish selection replay. Recommend a shared pure versioned encoder and retained exact dispatch projection, with actual Agent forwarding verified in future tests.
+- `agent.ts` performs MCP discovery and Skill persistence before ready. `mcp.ts` `managedConnect` treats startup as an authorized recorded operation. The original “before any ... tool effect” expectation-check wording was too broad. Recommend a declaration check first, then actual snapshot checking before Graph visits; startup effects, failed recording and unresolved cleanup remain visible.
+- `execution/recovery.ts` `inspectExecutionJournal` validates a readable prefix and key availability, not expected-input HMAC equality. It does not supply the proposed receipt correlation by itself. A read-only binding verifier/qualified host port must use retained exact submission text and authorized key access; absent or damaged evidence remains unverified. Do not call a writable open/start method as an existence test.
+- `evaluation/comparison.ts` and `metrics.ts`, confirmed by existing tests, separate passing checks from comparable configuration and allow compatible measurement subsets. Selection must inspect every scheduled target row and required-resource coverage, not infer eligibility from `passes` or `compatible`. Optional unmeasured resources remain displayed and do not become zero.
+
+### Concurrency and product implications
+
+The initial store transaction did not define dispatch ownership under simultaneous clients. Recommend an atomic creation-only, one-use entitlement for the original live coordinator. Receipt replay or timeout cannot grant another process a right to execute. This does not replace the Run resource owner. A lost acknowledgement or crashed coordinator requires observation; no automatic queue or takeover is added.
+
+Authority/evidence availability changes and capture must serialize in the same scoped control protocol. A successful remote authority check followed by an independent database transaction leaves a race. Require versioned host capabilities/revocations with a transactionally checked epoch, or reject until the host can establish that condition. Initialize scopes with no active candidate, requiring the same human/evidence decision for the first activation.
+
+The recommended capture boundary retains already captured work even after later evidence withdrawal, while blocking fresh capture. Existing tool authorization and actual-context checks still apply. This is a policy cost for author review; do not infer emergency cancellation from candidate invalidation. Rollback remains a new decision and neither undoes edits nor clears uncertain effects.
+
+The review distinguishes fixed executable/environment identity from varying task inputs, conversation and legitimate target edits. A versioned host mapping declares the supported task class. It cannot generalize evaluated quality to arbitrary future tasks. It also adds separate 1 MiB dispatch-submission and 16 MiB memory producer budgets to the original metadata/count limits; these are unmeasured starting values and refuse excess rather than truncating retained inputs.
+
+The recommendation still compares application-only ownership, a full core persistent store and the shared core/Application Service with host storage. The first persistent backend remains unspecified and must be supplied/qualified by a concrete application. The nine accepted/partial decisions, existing external-source comparison at pinned Codex/Pi revisions, deferred trials and backup-deletion boundary remain unchanged. Exact verification results belong to the review record, not a claim of selector implementation.
+
+### Review verification and remaining uncertainty
+
+The isolated macOS arm64 / Node 26.5.0 copy matched the repository source/tests/dependencies before and after pretest formatting/lint. Headers and build passed; full tests reported **622 passing, 1 timeout** in the owner-removal maintenance-death case. The unchanged case passed alone (1 passing, 2 seconds). The remaining timed-out fixture process was terminated explicitly. No cause is established, no recovery implementation was modified, and this is not a clean full-suite result. Reproduce the full-suite/process-load conditions before closing that existing verification item. The proposal's document checks and analysis EPUB passed independently; the new selection behavior remains unimplemented.
+
 ## Related Decisions
 
 The [application-owned selection ADR](../adr/2026-09-13-application-owned-workflow-selection.md) is proposed / not-started. It supersedes no accepted decision.
