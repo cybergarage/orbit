@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-09-13
 decision-date: 2026-09-13
-implementation-status: not-started
+implementation-status: partial
 implementation-completed-date: null
-implementation-commits: []
+implementation-commits:
+  - 0756433a1e0faa1ce1700f1bf67b0a4b333ec1ea
 superseded-by: []
 ---
 
@@ -16,7 +17,7 @@ Allow a human to choose among finite, explicitly registered Graph candidates usi
 
 ## Decision
 
-**Accepted by the author on 2026-09-13, including the same-day review clarifications; implementation has not started.** Add pure core candidate/selection validation and a reusable Application Service coordinator with an application-owned store and authority provider. Use current Graph compilation, evaluation and managed execution. Offer an explicit nonpersistent memory profile and a transactional-host port; do not ship an unqualified persistent backend as part of this first proposal. A persistent application must supply and qualify the store described below before enabling that mode.
+**Accepted by the author on 2026-09-13, including the same-day review clarifications. Implementation is partial; the dated implementation evidence below records the delivered API and remaining host qualification.** Add pure core candidate/selection validation and a reusable Application Service coordinator with an application-owned store and authority provider. Use current Graph compilation, evaluation and managed execution. Offer an explicit nonpersistent memory profile and a transactional-host port; do not ship an unqualified persistent backend as part of this first proposal. A persistent application must supply and qualify the store described below before enabling that mode.
 
 ### Scope and responsibility
 
@@ -175,6 +176,33 @@ Within the recommended option, memory-only delivery is insufficient for durable 
 
 ## Implementation and Confirmation
 
+### Implementation evidence — 2026-09-13
+
+Implementation commit: `0756433a1e0faa1ce1700f1bf67b0a4b333ec1ea` (`feat(selection): coordinate human-selected workflow requests`). The acceptance baseline was `912b9c1e6a910c71c1abf8223dcb0c3a70bc82ba`; no implementation preceded that acceptance. Public main was rechecked as `1cb6f4f2abe3e89e27c1bdb32f1049183ef0e960`. This later documentation record preserves the accepted reasons and historical proposal/review/acceptance wording below. No decision was re-adopted and none of the nine earlier accepted/partial ADRs changed.
+
+`src/core/selection/` implements bounded manifest/evidence inspection, strict revision-1 state reading, a volatile memory store and a transactional-host port, human selection/capture coordination, exact submission binding and read-only HMAC journal correlation. Agent, ThreadManager and Application Service use the existing Graph/Run path. The same prepared digest is required throughout a scope; evidence replacement retains prior text/identity and requires human reconfirmation before fresh capture. The owning call can record definite pre-dispatch refusal, while ambiguous calls remain observational. A typed busy rejection preserves the previous `ExecutionRequestError` compatibility. Current architecture, concepts, glossary and [Workflow selection](../workflow-selection.md) describe the implemented API and migration.
+
+| Confirmation area                 | Implementation / evidence and limits                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Candidate and evidence            | `validation.ts`, `store.ts`; strict text/digests, registered bundle verification, all-slot comparable passes, full required-resource coverage, immutable evidence history and revalidation. Selection tests exercise missing rows, configuration drift, partial metrics, corrected evidence and fixed prepared scope. Trusted mapping and honest closure/version semantics remain host responsibilities.                                             |
+| Human confirmation and CAS        | `service.ts`; unselected generation 0, opaque capabilities, scoped authority epoch, expiry and bound preview in the transaction. Tests exercise forged capability, revocation, stale concurrent choices, exact read-authorized retry and A→B→A. Real identity-provider/transaction integration is not qualified by this double.                                                                                                                      |
+| Capture and dispatch              | Complete caller text and managed input retained before existing Graph start, one creator incarnation, one consumed entitlement, no takeover. Tests exercise concurrent clients, capture acknowledgement loss, read-only recovered lookup, withdrawal, definite refusal and fresh-ID retry. Corrected active evidence cannot authorize a new capture without confirmation.                                                                            |
+| Execution integration             | Shared Agent encoder, frozen Thread forwarding, Application Service factory/ordinary-route fencing, and declared/owned prepared snapshot checks. Tests exercise no second preparation on replay, changed input, preparation mismatch before ready, preserved old running Graph, cancellation and Thread/Application integration. Existing Graph/Skill/budget/permission/ownership suites remain the source for unchanged common mechanics.           |
+| Observation and retention         | Run IDs and append-only host observations remain separate from original/late journal results. The bounded read-only inspector reuses existing validation and HMAC without opening a writer or repairing data. Tests cover matching/conflicting input, missing key/path, aliases, unknown complete record and torn tail. Memory retains all payloads and refuses corruption/capacity; a pruning/paged persistent backend is not supplied or verified. |
+| Product interfaces                | One service exposes preview/state/mode/generation/receipts to hosts; selected Application Threads reject ordinary-run bypass and GUI message schema rejects unsupported selection fields. No standard CLI/Ink/GUI candidate picker or finished product is delivered. A host must bind its human surfaces and reconnect/observation flow before claiming a selected persistent application.                                                           |
+| Bounds and compatibility          | Fixed revision-1 text ceilings and separate memory producer capacity, strict finite JSON and state schemas; no new journal/transcript version or dependency. Tests cover malformed/unknown input, metadata bounds, lower memory capacity with retained history and a new volatile scope. These checks do not establish optimal full-profile throughput or real deployment sizing.                                                                    |
+| Persistent storage / interruption | The public port requires exactly-once synchronous callbacks within atomic serializable transactions and qualified durability. Memory fault doubles verify coordinator behavior only. Actual multi-process backend, cross-scope physical storage identity, sync/acknowledgement failure and offline maintenance remain unverified until a concrete host/backend exists. No entitlement transfers or automatic reconciliation dispatch were added.     |
+
+Verification used fixed local doubles and isolated temporary targets. On macOS arm64 / Node 26.5.0, the final selection/GUI target run passed **29 tests** (28 new selection cases and one existing GUI case with added protocol assertions); `headers:check` and native `build` passed. `npm test` passed **651 tests**, including format/lint with zero errors (existing and new complexity/parameter warnings remain). The earlier intermediate full run passed 648 tests before three final selection conditions were added; it is not substituted for the final run.
+
+The same 211 source/test files were checked byte-for-byte after formatting/lint on Linux aarch64 / Node 22.23.2 (`node:22.23.2-bookworm`, network disabled). The unchanged lockfile matched the existing Linux dependency cache. Linux headers, native build, the 29 target tests and the **651-test full suite** passed. Dependencies were neither added nor updated. Evidence logs and source fingerprints are retained under `/private/tmp/orbit-selection-implementation/`, with Linux results in `linux/`.
+
+The previously intermittent `guarded session recovery / restarts offline maintenance after process death removing owner` passed within both final full suites. The earlier review's 622-pass/one-timeout result and isolated success remain historical unresolved evidence: non-reproduction here does not identify or fix its prior cause. Reopen that investigation under the observed process-load/fault conditions if it recurs; timeout alone is never success.
+
+Implementation remains **partial**, completion date **null**. Before claiming persistent selection, choose the real application's backend, declared storage level, authentication/revocation model, canonical Session/storage assignment, external admission/restarter controls and retention policy, then run that adapter's concurrent-process and every commit/acknowledgement/admission-gap qualification. Product-specific UI/reconnection, representative real-model/application trials, profile sizing, operational/physical storage failure and Windows retain their existing deferred or application-dependent restart conditions. Memory/Unix unit success is not persistent durability, target-project correctness, finished-application acceptance, real-model quality or optimal initial limits. The nine earlier ADRs remain partial; backup deletion remains unauthorized. No chapter 17 body/figures, finished application, autonomous candidate generation or unattended promotion is included.
+
+### Acceptance-time implementation plan (historical)
+
 No implementation has begun. Intended work is pure public types/validators, Application Service coordinator and store/authority ports, a clearly labeled memory reference store, expectation forwarding/checking in existing owned preparation, and consistent trusted product entry/inspection. Any future persistent host adapter needs separate concrete conformance evidence before enabling its mode. No finished application or chapter body is part of this proposal task.
 
 | Confirmation             | Required test/evidence                                                                                                                                                                                                              |
@@ -214,7 +242,7 @@ Review validation on macOS arm64 / Node 26.5.0 used an isolated copy with identi
 
 ## Follow-up Work
 
-The author resolved the proposal/review choices below in the acceptance record. They remain here as historical rationale, not pending approval. Implement the accepted contract and its confirmation table; no implementation is recorded by this acceptance change.
+The author resolved the proposal/review choices below in the acceptance record. They remain here as historical rationale, not pending approval. The dated implementation evidence above is newer than the acceptance change; remaining host qualification follows its explicit restart conditions.
 
 ### Proposal/review author questions (historical)
 
