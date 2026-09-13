@@ -290,7 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                   |
 | ---------- | ---------- | -------------- | ------------------------------------------------------------------------------------------ |
-| 2026-09-13 | proposed   | not-started    | [Application-owned Workflow Selection](2026-09-13-application-owned-workflow-selection.md) |
+| 2026-09-13 | accepted   | not-started    | [Application-owned Workflow Selection](2026-09-13-application-owned-workflow-selection.md) |
 | 2026-09-12 | accepted   | partial        | [Evidence-based Workflow Evaluation](2026-09-12-evidence-based-workflow-evaluation.md)     |
 | 2026-09-12 | accepted   | partial        | [Managed Processor Graph](2026-09-12-managed-processor-graph.md)                           |
 | 2026-09-09 | accepted   | partial        | [Run-scoped Skill Selection](2026-09-09-run-scoped-skill-selection.md)                     |
@@ -398,3 +398,5 @@ The [evaluation proposal review](2026-09-12-evidence-based-workflow-evaluation.m
 [Evaluation acceptance](2026-09-12-evidence-based-workflow-evaluation.md#author-acceptance--2026-09-13) records the author's 2026-09-13 decision including the review corrections, host trust, fixed denominators, JSON-text boundary and missing-resource costs. At acceptance it was not-started; the subsequent [implementation evidence](2026-09-12-evidence-based-workflow-evaluation.md#implementation-evidence--2026-09-13) records accepted / partial, the full implementation commit and Unix validation. The completion date remains null because deferred confirmation is open. The eight earlier partial records, author-deferred trials and unanswered backup-deletion request are unchanged.
 
 The [candidate-selection proposal review](../adr/2026-09-13-application-owned-workflow-selection.md#proposal-review--2026-09-13) clarifies one-use dispatch ownership, exact submitted-input encoding, scoped authority/availability transactions and read-only journal binding verification. Actual catalog checks follow managed MCP startup, so startup effects remain observable. The proposal stays proposed / not-started; the nine accepted/partial ADRs are unchanged.
+
+The author [accepted the reviewed candidate-selection contract](2026-09-13-application-owned-workflow-selection.md#author-acceptance---2026-09-13) on 2026-09-13. Its status is accepted / not-started, with null implementation completion and no implementation commits. Earlier proposed/review descriptions are historical. Host-provided persistent storage and captured-request retention costs are accepted; the nine partial ADRs, deferred trials, prior maintenance-test timeout and unanswered backup deletion remain unchanged.

@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-13
-decision-date: null
+decision-date: 2026-09-13
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -16,7 +16,7 @@ Allow a human to choose among finite, explicitly registered Graph candidates usi
 
 ## Decision
 
-**Proposed recommendation; not accepted and not implemented.** Add pure core candidate/selection validation and a reusable Application Service coordinator with an application-owned store and authority provider. Use current Graph compilation, evaluation and managed execution. Offer an explicit nonpersistent memory profile and a transactional-host port; do not ship an unqualified persistent backend as part of this first proposal. A persistent application must supply and qualify the store described below before enabling that mode.
+**Accepted by the author on 2026-09-13, including the same-day review clarifications; implementation has not started.** Add pure core candidate/selection validation and a reusable Application Service coordinator with an application-owned store and authority provider. Use current Graph compilation, evaluation and managed execution. Offer an explicit nonpersistent memory profile and a transactional-host port; do not ship an unqualified persistent backend as part of this first proposal. A persistent application must supply and qualify the store described below before enabling that mode.
 
 ### Scope and responsibility
 
@@ -214,9 +214,30 @@ Review validation on macOS arm64 / Node 26.5.0 used an isolated copy with identi
 
 ## Follow-up Work
 
+The author resolved the proposal/review choices below in the acceptance record. They remain here as historical rationale, not pending approval. Implement the accepted contract and its confirmation table; no implementation is recorded by this acceptance change.
+
+### Proposal/review author questions (historical)
+
 Author judgment is required for (1) Graph-only variation within a fixed context, (2) explicit memory plus a transactional-host port with no supplied persistent backend, (3) conservative eligibility without mandatory-evidence override, (4) capture as the selection cutoff, and (5) host-trusted receipts and manual reconciliation of cross-store ambiguity without a new journal version. Review these choices before adoption or implementation. The review additionally makes explicit one-use dispatch without takeover, scoped atomic revocation, actual-snapshot checks after permitted MCP startup, a new read-only binding verifier, fixed-workload mapping and the separate submission/memory ceilings. Retaining already captured requests after evidence withdrawal is part of the recommended cutoff and needs explicit author agreement.
 
 Specify a real application's backend, authority and retention policy before claiming persistent selection. Windows, representative real-model/application trials, operational restart controls and physical storage fault qualification retain their existing deferred status and restart conditions. The nine existing ADRs stay accepted / partial. Backup deletion is still awaiting an answer; this proposal grants no deletion permission. Input-budget delegation and Skill/Graph/evaluation acceptance do not authorize this decision.
+
+### Author acceptance - 2026-09-13
+
+The author explicitly accepted the recommendation including all 2026-09-13 review clarifications. The reviewed repository was `2f5d08b1dea494509d0abfc178585f809ae2b746`; there were no subsequent source/test/accepted-contract changes, prior selection implementation, or newly identified material contradictions. Public main was rechecked as `1cb6f4f2abe3e89e27c1bdb32f1049183ef0e960`. Nothing was rolled back. The decision date records the actual acceptance date, not the date of a future implementation.
+
+Accepted costs and boundaries are:
+
+- Finite Graph candidates in a fixed executable/environment context, immutable manifest and adapter identity, versioned task mapping, complete planned-slot eligibility and required evidence/resources. Optional missing measurements and unmeasured initial limits keep their stated meaning.
+- Pure core inspection, Application Service coordination and host-owned authority/transactions/retention. Explicit memory and transactional-host modes are separate. A persistent application must supply and qualify its backend; no standard durable backend is included in this decision.
+- An initially unselected scope, transactional authority/evidence revision checks, human-selected generations and a one-use dispatch entitlement that cannot transfer to another process. Definite admission rejection retains the request binding and requires a fresh ID for another trial.
+- Capture as the application point: already captured requests retain the old choice even after later selection or evidence withdrawal. Existing operation authorization and actual-context checks still apply; no emergency cancellation guarantee is inferred.
+- One exact submission encoder and retained input across all entries; actual-snapshot checking after authorized MCP startup; bounded read-only journal binding verification; manual reconciliation on uncertain acknowledgement without automatic dispatch/restart.
+- Rollback as a new selection, without undoing edits/cancellation/uncertain resource ownership. No new journal version, host-trusted receipts, separate input/memory bounds and historical reader compatibility.
+
+This decision extends the Graph/evaluation application integration and uses the existing Run, preparation authorization, required journal, writer recovery, storage registration, input compaction and Skill contracts. It supersedes none of those nine accepted/partial ADRs and changes none of their rationale or implementation evidence. The exact-input forwarding and read-only verification described above are future implementation requirements, not capabilities established by acceptance. The proposal/review text and validation history are retained; author acceptance resolves their pending-choice language.
+
+`implementation-status` remains `not-started`, `implementation-completed-date` remains `null`, and `implementation-commits` remains empty. Existing Windows, representative application/real-model, operational and physical-storage trials remain deferred under their recorded restart conditions. The prior full-suite maintenance timeout (622 passes, one timeout, isolated retry passed) remains unresolved; this acceptance does not convert it into success. Backup deletion remains unauthorized. Earlier input-budget delegation and Skill/Graph/evaluation decisions were not used as authority for this decision.
 
 ## References
 

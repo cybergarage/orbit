@@ -141,7 +141,7 @@ The isolated macOS arm64 / Node 26.5.0 copy matched the repository source/tests/
 
 ## Related Decisions
 
-The [application-owned selection ADR](../adr/2026-09-13-application-owned-workflow-selection.md) is proposed / not-started. It supersedes no accepted decision.
+At investigation and review, the [application-owned selection ADR](../adr/2026-09-13-application-owned-workflow-selection.md) was proposed / not-started. The author subsequently [accepted the reviewed recommendation](../adr/2026-09-13-application-owned-workflow-selection.md#author-acceptance---2026-09-13) on 2026-09-13 with implementation not-started. It supersedes no accepted decision. This research remains non-binding historical evidence and does not record implementation.
 
 ## References
 
