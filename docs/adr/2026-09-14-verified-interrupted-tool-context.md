@@ -5,6 +5,7 @@ decision-date: 2026-09-14
 implementation-status: partial
 implementation-completed-date: null
 implementation-commits:
+  - fc0d72a36f23db45d9003794dce58c33db63861a
   - b2489fa512010d5c90555f8b32e96cbbc77bf7e8
 superseded-by: []
 ---
@@ -206,6 +207,64 @@ Remaining confirmation before completion:
 - Real provider acceptance/meaning preservation, selected live MCP conditions and representative applications need isolated connection/target settings. Windows, representative usage, production SLI/SLO and physical storage-failure trials remain author-deferred. No initial limit is claimed optimal.
 
 These gaps keep this ADR **partial**. They do not authorize loosening eligibility, automatic recovery, backup removal, changing the chapter-19 application, or re-adopting existing decisions. Continue core verification before a separately requested application integration.
+
+### Additional verification and local correction — 2026-09-15
+
+Implementation/test commit: `fc0d72a36f23db45d9003794dce58c33db63861a`. Comparison began from
+`8d1b095ce4480dc0dba1d8e57e668aa983ec64df`, whose runtime implementation was
+`b2489fa512010d5c90555f8b32e96cbbc77bf7e8`. The decision, eligibility,
+transcript/journal versions and product limits are unchanged.
+
+An initial 12-case filesystem experiment reproduced acceptance in 10 cases
+where a transcript, key or Run file (or its parent) was replaced with identical
+bytes during sync/close. The old final content comparison did not establish
+that acknowledgement still referred to the observed named object. The local
+correction compares detectable file and ancestor identities after close and
+rechecks earlier journal files after later reads/directory acknowledgements.
+This satisfies the existing replacement condition; it does not promise physical
+identity for a copy made before observation or exclude later changes after the
+last check.
+
+Failed evidence closes are retained by Session/journal and retried through
+managed cleanup. Unconfirmed cleanup retains ownership; a settled failed append
+still releases its writer as before. `Session.settleContextEvidence()` and the
+optional journal cleanup hook expose this existing resource responsibility to
+custom integrations. This is a correction within accepted ownership and proof
+requirements, not a new recovery mode or adoption decision.
+
+| Confirmation | Retained evidence and result |
+| --- | --- |
+| Process death | `context-projection-death.test.ts` measures the actual projection-save path, then SIGKILLs a child before/after every append/open/sync/close boundary, plus a deliberately torn append. It checks a boundary marker and signal, no additional model call, unchanged old cancelled journal and transcript prefix, no terminal/operation intent for the interrupted new Run, and preserved bytes on reopen/refusal. The initial macOS source run exercised 86 positions plus the torn append; final suites exercise the measured native path independently. Timeout is failure. |
+| Evidence failures and ownership | `context-evidence-io.test.ts` covers transcript/key/events open/stat/read/sync/close failures, directory open/sync/close failures, persistent failed-close refusal and retry, and original settled-append-failure release. Twelve controlled open/read/sync/close waits remain owned across cancellation; the bounded result is incomplete, no model is prepared, actual settlement and explicit reconciliation leave that original result intact. |
+| Replacement | Eighteen file/parent/storage-root replacement cases during sync/close all refuse, even for identical bytes. No real user storage is replaced. |
+| Migration with old records | The existing eight before/after fault matrices now seed a real BOM/CRLF Skill snapshot and a version-1 checkpoint before v2-to-v3 migration. They retain header-following bytes, entry positions, v2 backups and either resume exclusively or preserve/refuse an empty guard. These are injected filesystem exceptions, distinct from the projection's process-death test. |
+| Limits | Runtime accepts metadata below 1 MiB and refuses above it; a fixed revision record accepts exactly 4 MiB and rejects one extra byte. The source reader reads exactly 64 MiB and refuses a limit one byte smaller. Journal verification accounts for key plus all record bytes cumulatively. Existing 128/129 call checks remain. These are synthetic boundary checks, not optimal-size or model-quality measurements. |
+| Entry combinations | CLI executes through enabled v3; GUI/Service tests run both prior v2 and v3 approval/replay, with v3 approval cancellation followed by a new successful request and same-ID replay without another model call. The selection suite runs in both v2 and v3, including Service/Thread receipt and replay checks. Agent/Graph budgeting, compaction, provider-shape and Skill regression coverage remains. This does not claim every product of transport failure, candidate kind and interruption phase. |
+| Ink | The retained `managed-interactive.mjs --verified-context` fixture was exercised on a macOS terminal: edit, Ctrl+C at approval, continue, /exit. Result: two fixed model calls, v3, one projection, no created target file, old cancelled and new completed, both quiescent with file-sync acknowledged. It is a UI/core integration check, not a target-project test or real-provider assessment. |
+
+Final validation:
+
+- macOS arm64 / Node 26.5.0: `headers:check`, `build`, full `npm test`: **780 passed**.
+- Linux arm64 / Node 22.23.2: `headers:check`, native `build`, full `npm test`: **780 passed**, with fixed existing dependencies and external network disabled.
+- The previous suite had 693 cases; this change adds 87. Lint remains **0 errors / 64 warnings**. No dependency or lockfile change was made.
+- The actual Orbit checkout additionally passed headers/build and the **79-test** evidence/format/migration target. All 19 related files were compared byte-for-byte with the final macOS and Linux copies.
+- A preliminary full run on each OS had 773 passes and two timeouts after a cleanup edit accidentally retained a writer following a settled append failure. The final correction restores that existing behavior and adds a regression test; both final suites above passed. A concurrently run new disk-I/O target also exceeded its artificial 20 ms cleanup allowance. Its controlled pending I/O is now held across 250 ms; this changes only that test profile. Neither issue establishes the cause of the earlier historical maintenance-recovery timeout, which remains unconfirmed.
+
+Disposable logs and fingerprints are under `/private/tmp/orbit-context-followup/`;
+the Linux dependency copy is under `/private/tmp/orbit-interrupted-implementation/linux/`.
+Committed fixtures retain the reproducible checks. No book application, real
+provider settings, live MCP endpoint or user backup was used or changed.
+
+The local checks listed as missing in the earlier implementation record now
+have the targeted evidence above. **Implementation remains partial**: real
+provider acceptance/meaning preservation and representative application use
+still require an isolated target, provider/model configuration and agreed cases.
+Windows, production SLI/SLO and physical storage-failure trials remain explicitly
+author-deferred. Combinatorial surface/failure expansion can use the retained
+fixtures when an application configuration requires it. The eleven partial
+records, pending backup decision and historical maintenance-timeout uncertainty
+remain open. The chapter-19 admission stop is unchanged; applying this core
+behavior to that application requires a separate task.
 
 ### Proposal review — 2026-09-14
 
