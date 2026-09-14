@@ -8,6 +8,7 @@ import path from 'node:path'
 
 import type {SessionWriterLease} from '../session/writer-lease.js'
 
+import {EvidenceHandles, evidencePath} from '../session/evidence-io.js'
 import {consumeWriterLease} from '../session/writer-lease.js'
 import {validateGraphRecord} from './graph-journal.js'
 
@@ -51,6 +52,7 @@ export interface ExecutionJournal {
   readonly level: JournalLevel
   readonly mode: 'file' | 'memory'
   records(): JournalRecord[]
+  settleContextEvidence?(): Promise<void>
   verifyContextEvidence?(maxBytes: number): Promise<JournalRecord[]>
 }
 
@@ -195,6 +197,7 @@ export interface FileExecutionJournalOptions {
 export class FileExecutionJournal extends MemoryExecutionJournal {
   override readonly level: Exclude<JournalLevel, 'memory'>
   override readonly mode = 'file' as const
+  private readonly evidenceHandles = new EvidenceHandles()
   private fileClosePromise?: Promise<void>
   private readonly io: typeof fs
   private released = false
@@ -226,13 +229,22 @@ export class FileExecutionJournal extends MemoryExecutionJournal {
   }
 
   override close(): Promise<void> {
-    this.fileClosePromise ??= super.close().finally(() => {
-      if (!this.released) {
-        this.released = true
-        this.releaseWriter()
+    this.fileClosePromise ??= this.evidenceHandles.settle().then(async () => {
+      try {
+        await super.close()
+      } finally {
+        // A settled append failure still releases its writer, as before this feature.
+        if (!this.released) {
+          this.released = true
+          this.releaseWriter()
+        }
       }
     })
-    return this.fileClosePromise
+    const pending = this.fileClosePromise
+    pending.catch(() => {
+      if (this.fileClosePromise === pending) this.fileClosePromise = undefined
+    })
+    return pending
   }
 
   protected override async persist(record: JournalRecord): Promise<void> {
@@ -259,10 +271,19 @@ export class FileExecutionJournal extends MemoryExecutionJournal {
     if (this.level === 'file-and-directory-sync') await syncDirectory(directory, this.io)
   }
 
+  async settleContextEvidence(): Promise<void> {
+    await this.evidenceHandles.settle()
+  }
+
   override async verifyContextEvidence(maxBytes: number): Promise<JournalRecord[]> {
+    this.evidenceHandles.check()
     const expected = await super.verifyContextEvidence(maxBytes)
+    const identities = new Map<string, string>()
     let remaining = maxBytes
     const read = async (file: string): Promise<Buffer> => {
+      const identity = await evidencePath(file, this.io)
+      identities.set(file, identity)
+      let bytes: Buffer
       // O_NOFOLLOW prevents evidence from being replaced with a symbolic link.
       // eslint-disable-next-line no-bitwise
       const handle = await this.io.open(file, constants.O_RDWR | constants.O_NOFOLLOW)
@@ -293,10 +314,14 @@ export class FileExecutionJournal extends MemoryExecutionJournal {
         )
           throw new Error('Context evidence changed during read')
         await handle.sync()
-        return Buffer.concat(chunks)
+        bytes = Buffer.concat(chunks)
       } finally {
-        await handle.close()
+        await this.evidenceHandles.close(() => handle.close())
       }
+
+      if ((await evidencePath(file, this.io)) !== identity)
+        throw new Error('Context evidence changed during acknowledgement')
+      return bytes
     }
 
     const directory = path.join(this.root, this.sessionId)
@@ -322,14 +347,20 @@ export class FileExecutionJournal extends MemoryExecutionJournal {
       }
 
       // eslint-disable-next-line no-await-in-loop
-      if (this.level === 'file-and-directory-sync') await syncDirectory(dir, this.io)
+      if (this.level === 'file-and-directory-sync') await syncDirectory(dir, this.evidenceHandles.ownedIO(this.io))
     }
 
-    if (this.level === 'file-and-directory-sync') await syncDirectory(directory, this.io)
+    if (this.level === 'file-and-directory-sync') await syncDirectory(directory, this.evidenceHandles.ownedIO(this.io))
     const ordered = (value: JournalRecord[]) =>
       [...value].sort((a, b) => a.runId.localeCompare(b.runId) || a.sequence - b.sequence)
     if (canonicalJSON(ordered(records)) !== canonicalJSON(ordered(expected)))
       throw new Error('Context evidence diverged from journal')
+    for (const [file, identity] of identities) {
+      // Recheck earlier files after all later reads and directory acknowledgements.
+      // eslint-disable-next-line no-await-in-loop
+      if ((await evidencePath(file, this.io)) !== identity) throw new Error('Context evidence changed before use')
+    }
+
     return records
   }
 

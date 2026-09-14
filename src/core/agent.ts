@@ -1186,6 +1186,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           ...(message.payload === undefined ? {} : {payload: copyJSON(message.payload)}),
         }),
     )
+    let evidenceJournal: ExecutionJournal | undefined
     let manager: McpToolManager | undefined
     let skillReader = graph ? undefined : this.skillCatalog?.createReader()
     const policy = this.execution.policy ?? {
@@ -1216,7 +1217,12 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
 
     return this.supervisor.startRun<T>({
       async cleanup() {
-        const results = await Promise.allSettled([manager?.close(), skillReader?.settle()])
+        const results = await Promise.allSettled([
+          manager?.close(),
+          skillReader?.settle(),
+          session.settleContextEvidence(),
+          evidenceJournal?.settleContextEvidence?.(),
+        ])
         if (results.some((result) => result.status === 'rejected'))
           throw new Error('Managed resource cleanup remains unconfirmed')
       },
@@ -1233,6 +1239,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         sources: this.settings.mcp ?? {},
       },
       execute: async (run) => {
+        evidenceJournal = run.journal
         if (this.interruptionPolicy.mode === 'verified-not-dispatched' && !this.model.prepare)
           throw new Error('model-does-not-support-verified-context')
         await preflightInterruptedContext(session, run, this.interruptionPolicy)

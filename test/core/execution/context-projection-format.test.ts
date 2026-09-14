@@ -83,6 +83,15 @@ describe('context projection format (structural evidence only)', () => {
     expect(projection.calls.length).equal(129)
   })
 
+  it('retains the fixed 4 MiB revision ceiling independently of the 1 MiB producer limit', () => {
+    const {projection} = fixture()
+    const limit = 4 * 1024 * 1024
+    projection.id += 'x'.repeat(limit - Buffer.byteLength(JSON.stringify(projection)))
+    expect(Buffer.byteLength(JSON.stringify(projection))).equal(limit)
+    expect(parseContextProjection(projection).id).equal(projection.id)
+    expect(() => parseContextProjection({...projection, id: projection.id + 'x'})).to.throw()
+  })
+
   it('reads v3 without granting synchronous model access', () => {
     const {entries, header, projection} = fixture()
     const raw = [header, ...entries, projection].map((entry) => encodeSessionEntry(entry)).join('')

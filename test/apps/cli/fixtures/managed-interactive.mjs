@@ -25,6 +25,8 @@ repository.initializeStorage({
 })
 const store = new MemorySessionLogStore()
 const results = []
+const verified = process.argv.includes('--verified-context')
+let lastSession
 let calls = 0
 class FixtureAgent extends Agent {
   constructor(options = {}) {
@@ -44,10 +46,14 @@ class FixtureAgent extends Agent {
                 })
               : new Message(MessageType.Assistant, {content: 'Fixture response finished.'})
           },
+          prepare(messages, options) {
+            return {invoke: () => this.invoke(messages, options), request: {}}
+          },
         }),
       },
       logStore: store,
     })
+    lastSession = this.state.getSession()
   }
 
   async startRun(...args) {
@@ -65,12 +71,15 @@ try {
     journalLevel: 'file-sync',
     logger: new StoreSessionLoggerFactory(store).forApplication(),
     sessionRepository: repository,
+    settings: verified ? {interruptionPolicy: {mode: 'verified-not-dispatched', revision: 1}} : {},
   })
   console.log(
     'FIXTURE_RESULT ' +
       JSON.stringify({
         calls,
         content: await fs.readFile(path.join(root, 'answer.txt'), 'utf8').catch(() => null),
+        formatVersion: lastSession?.formatVersion,
+        projections: lastSession?.getEntries().filter((e) => e.type === 'context_projection').length,
         results: results.map(({outcome, quiescence, recording}) => ({outcome, quiescence, recording})),
       }),
   )

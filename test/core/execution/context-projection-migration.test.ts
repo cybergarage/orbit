@@ -15,6 +15,7 @@ import {
   SessionRepository,
 } from '../../../src/core/index.js'
 import {parseSessionFile} from '../../../src/core/session/codec.js'
+import {seedLegacyContext} from './legacy-context-fixture.js'
 
 const offline = {allWritersStopped: true, automaticRestartersDisabled: true, exclusiveStorageControl: true} as const
 
@@ -30,6 +31,8 @@ describe('v3 migration interrupted filesystem acknowledgement', () => {
           repo.initializeStorage(offline)
           const session = repo.create({formatVersion: 2})
           session.appendMessages([new Message(MessageType.User, {content: 'retained'})])
+          // eslint-disable-next-line no-await-in-loop
+          await seedLegacyContext(session, root)
           const file = session.getFile()!
           const scope = repo.scope(session.getId())
           // No test fault is injected during initial owner release.

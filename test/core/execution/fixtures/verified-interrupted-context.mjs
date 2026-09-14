@@ -1,9 +1,10 @@
 // Cases deliberately run serially and bind one start function to each isolated Agent.
-/* eslint-disable no-await-in-loop, unicorn/consistent-function-scoping */
+/* eslint-disable no-await-in-loop */
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 // Implementation integration fixture: isolated files and fixed model only.
 import assert from 'node:assert/strict'
+import syncFs from 'node:fs'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -53,8 +54,8 @@ const offline = {
   exclusiveStorageControl: true,
 }
 const results = []
-for (const family of ['agent', 'graph'])
-  for (const ending of ['approve', 'deny', 'cancel']) {
+for (const family of process.env.PROJECTION_FAULT ? ['agent'] : ['agent', 'graph'])
+  for (const ending of process.env.PROJECTION_FAULT ? ['cancel'] : ['approve', 'deny', 'cancel']) {
     const cwd = path.join(directory, family + '-' + ending)
     await fs.mkdir(cwd)
     await fs.writeFile(path.join(cwd, 'answer.txt'), 'original')
@@ -68,8 +69,8 @@ for (const family of ['agent', 'graph'])
     let calls = 0
     let prepares = 0
     let summaries = 0
-    let inThird = false;
-      let thirdRead = false
+    let inThird = false
+    let thirdRead = false
     let resolveSeen
     const seen = new Promise((r) => {
       resolveSeen = r
@@ -263,6 +264,78 @@ for (const family of ['agent', 'graph'])
       const entries = session.getEntries().length
       const invokedBefore = calls
       const preparedBefore = prepares
+      if (process.env.PROJECTION_FAULT) {
+        const boundary = Number(process.env.PROJECTION_FAULT)
+        const report = process.env.PROJECTION_REPORT
+        const oldJournal = path.join(repo.journalRoot, session.getId(), first.id, 'events.jsonl')
+        await fs.writeFile(
+          report,
+          JSON.stringify({
+            calls,
+            cwd,
+            directory,
+            file: session.getFile(),
+            journalRoot: repo.journalRoot,
+            oldBytes: (await fs.readFile(oldJournal)).toString('base64'),
+            oldJournal,
+            prefix: before.toString('base64'),
+            sessionId: session.getId(),
+            terminal,
+          }),
+        )
+        let step = 0
+        let saving = false
+        const tick = () => {
+          step++
+          if (step === boundary) {
+            syncFs.writeFileSync(report + '.boundary', JSON.stringify({calls, step}))
+            process.kill(process.pid, 'SIGKILL')
+          }
+        }
+
+        const append = fs.appendFile.bind(fs)
+        fs.appendFile = async (...args) => {
+          const projection =
+            String(args[0]) === session.getFile() && String(args[1]).includes('"type":"context_projection"')
+          if (!projection) return append(...args)
+          saving = true
+          tick()
+          if (boundary === -1) {
+            await append(args[0], String(args[1]).slice(0, 30))
+            syncFs.writeFileSync(report + '.boundary', JSON.stringify({calls, step: -1}))
+            process.kill(process.pid, 'SIGKILL')
+          }
+
+          await append(...args)
+          tick()
+        }
+
+        const open = fs.open.bind(fs)
+        fs.open = async (...args) => {
+          if (!saving) return open(...args)
+          tick()
+          const handle = await open(...args)
+          tick()
+          for (const method of ['sync', 'close']) {
+            const original = handle[method].bind(handle)
+            handle[method] = async () => {
+              tick()
+              await original()
+              tick()
+            }
+          }
+
+          return handle
+        }
+
+        const commit = session.commitProjection.bind(session)
+        session.commitProjection = async (...args) => {
+          await commit(...args)
+          saving = false
+          await fs.writeFile(report + '.steps', JSON.stringify({steps: step}))
+        }
+      }
+
       const second = await start('second', 'Explain what happened; do not execute the old call')
       const next = await second.finished
       const errors = session

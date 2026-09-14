@@ -321,6 +321,11 @@ export class Session {
     this.addEntry(entry)
   }
 
+  /** Retry retained evidence handles without granting a new Run. */
+  async settleContextEvidence(): Promise<void> {
+    await this.recorder?.settleContextEvidence()
+  }
+
   async synchronize(level: JournalLevel): Promise<number> {
     if (level === 'memory') await this.flush()
     else if (this.recorder) await this.recorder.synchronize(level)

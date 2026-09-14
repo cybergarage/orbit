@@ -59,6 +59,16 @@ view digest. Core synchronizes it before consuming that view. It rereads the
 bounded transcript, key and journal under the current writer ownership. Missing,
 changed, torn or unsynchronizable proof refuses use. Pending evidence/save I/O
 remains owned after cancellation; no failed-save fallback invokes a model.
+File and ancestor identities are compared again after sync/close, including a
+final journal-wide check after later file and directory acknowledgements. This
+detects replacements observed within verification; it does not identify a
+physical copy made before observation or prevent changes after the last check.
+Failed evidence closes remain attached to the Session or journal. Managed Run
+cleanup calls `Session.settleContextEvidence()` and, when supplied,
+`ExecutionJournal.settleContextEvidence()` to retry them. Unconfirmed cleanup
+keeps the Run incomplete and its owner retained. Custom journals that can retain
+failed handles must implement this cleanup hook too; a rejected close is not
+proof of release.
 
 `SessionContextBuilder.build` rejects projection-dependent history with
 `verified-context-required`. Disabling budgeting or the interruption policy does

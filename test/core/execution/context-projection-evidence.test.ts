@@ -7,7 +7,7 @@ import {MemoryExecutionJournal} from '../../../src/core/execution/journal.js'
 import {Agent, MemorySessionLogStore, Message, MessageType, Session, State} from '../../../src/core/index.js'
 import {persistedContextMessage, sourceDigest} from '../../../src/core/session/compaction.js'
 
-async function evidenceFixture(count = 1) {
+async function evidenceFixture(count = 1, name = 'write') {
   const session = new Session({formatVersion: 3})
   session.recordTurnContext({
     cwd: process.cwd(),
@@ -25,7 +25,7 @@ async function evidenceFixture(count = 1) {
           toolCalls: Array.from({length: count}, (_, i) => ({
             id: count === 1 ? 'missing' : 'missing-' + i,
             input: {},
-            name: 'write',
+            name,
           })),
         },
       }),
@@ -54,9 +54,14 @@ async function evidenceFixture(count = 1) {
 }
 
 describe('verified context evidence refusal and ownership', () => {
-  for (const count of [128, 129])
-    it('checks producer call boundary ' + count, async () => {
-      const {journal, session} = await evidenceFixture(count)
+  for (const [count, name, succeeds] of [
+    [128, 'write', true],
+    [129, 'write', false],
+    [1, 'x'.repeat(1024 * 1024 - 2048), true],
+    [1, 'x'.repeat(1024 * 1024), false],
+  ] as const)
+    it('checks producer boundary calls=' + count + ', name bytes=' + name.length, async () => {
+      const {journal, session} = await evidenceFixture(count, name)
       const store = new MemorySessionLogStore()
       let calls = 0
       const agent = new Agent({
@@ -88,8 +93,8 @@ describe('verified context evidence refusal and ownership', () => {
       })
       try {
         const result = await (await agent.startRun([new Message(MessageType.User, {content: 'continue'})])).finished
-        expect(result.outcome === 'completed').equal(count === 128)
-        expect(calls).equal(count === 128 ? 1 : 0)
+        expect(result.outcome === 'completed').equal(succeeds)
+        expect(calls).equal(succeeds ? 1 : 0)
       } finally {
         await agent.close()
         await store.close()

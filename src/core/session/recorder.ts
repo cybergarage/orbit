@@ -13,6 +13,7 @@ import type {SessionWriterLease} from './writer-lease.js'
 import {syncDirectories} from '../execution/journal.js'
 import {encodeSessionEntry, parseSessionFile} from './codec.js'
 import {canonicalStoragePath, inspectTranscript, isSessionLocked, sessionScope, WriterClaim} from './coordination.js'
+import {EvidenceHandles, evidencePath} from './evidence-io.js'
 import {sessionFilePath} from './paths.js'
 import {issueWriterLease} from './writer-lease.js'
 
@@ -20,6 +21,7 @@ export class SessionRecorder {
   public readonly file: string
   private closed = false
   private closePromise?: Promise<void>
+  private readonly evidenceHandles = new EvidenceHandles()
   private managedLease = false
   private queue: Promise<void> = Promise.resolve()
   private releaseWaiter?: () => void
@@ -128,6 +130,7 @@ export class SessionRecorder {
       try {
         await this.queue
       } finally {
+        await this.evidenceHandles.settle()
         this.claim.release()
       }
     })()
@@ -146,6 +149,10 @@ export class SessionRecorder {
     return this.managedLease
   }
 
+  async settleContextEvidence(): Promise<void> {
+    await this.evidenceHandles.settle()
+  }
+
   synchronize(level: JournalLevel): Promise<void> {
     if (this.closed) return Promise.reject(new Error('Session recorder is closed'))
     this.queue = this.queue.then(async () => {
@@ -153,10 +160,11 @@ export class SessionRecorder {
       try {
         await handle.sync()
       } finally {
-        await handle.close()
+        await this.evidenceHandles.close(() => handle.close())
       }
 
-      if (level === 'file-and-directory-sync') await syncDirectories(path.dirname(this.file), level)
+      if (level === 'file-and-directory-sync')
+        await syncDirectories(path.dirname(this.file), level, this.evidenceHandles.ownedIO())
     })
     this.queue.catch(() => {})
     return this.queue
@@ -165,7 +173,10 @@ export class SessionRecorder {
   /** Bounded reread under the current writer claim; never repairs or authorizes an old Run. */
   async verifyContextSource(maxBytes: number): Promise<string> {
     await this.queue
+    this.evidenceHandles.check()
     this.claim.assertLive()
+    const identity = await evidencePath(this.file)
+    let text: string
     // Reject aliases before opening; O_NOFOLLOW also closes the final-component race.
     if (canonicalStoragePath(this.file) !== this.file) throw new Error('Context source alias changed')
     // eslint-disable-next-line no-bitwise
@@ -202,11 +213,14 @@ export class SessionRecorder {
       this.claim.assertLive()
       if (canonicalStoragePath(this.file) !== this.file) throw new Error('Context source alias changed')
       const bytes = Buffer.concat(chunks)
-      const text = bytes.toString('utf8')
+      text = bytes.toString('utf8')
       if (!Buffer.from(text).equals(bytes) || !text.endsWith('\n')) throw new Error('Incomplete context source')
-      return text
     } finally {
-      await handle.close()
+      await this.evidenceHandles.close(() => handle.close())
     }
+
+    this.claim.assertLive()
+    if ((await evidencePath(this.file)) !== identity) throw new Error('Context source changed during acknowledgement')
+    return text
   }
 }

@@ -10,6 +10,47 @@ import {resolveAgentOptions, resolveWorkspaceAgentOptions} from '../../../src/co
 import {Agent, Message, MessageType, OperatorType, Role} from '../../../src/core/models/index.js'
 
 describe('runExecCommand', () => {
+  it('carries verified context settings into a v3 CLI Run and closes it', async () => {
+    let observedVersion: number | undefined
+    let preparations = 0
+    class VerifiedAgent extends Agent {
+      constructor(options: AgentOptions = {}) {
+        super({
+          ...options,
+          deps: {
+            createModel: () => ({
+              getModel: () => 'fixed',
+              getName: () => 'fixed',
+              getProvider: () => 'ollama',
+              async invoke() {
+                throw new Error('No legacy invocation')
+              },
+              prepare() {
+                preparations++
+                return {invoke: async () => new Message(MessageType.Assistant, {content: 'verified CLI'}), request: {}}
+              },
+            }),
+          },
+          toolProfile: 'none',
+        })
+        observedVersion = this.state.getSession().formatVersion
+      }
+    }
+    const response = await runExecCommand({prompt: 'hello'}, undefined, '/tmp/orbit-fixed-cli', {
+      agentClass: VerifiedAgent,
+      contextLoader: async () => [],
+      ollamaModelSelector: async () => 'fixed',
+      settingsLoader: async () => ({
+        interruptionPolicy: {mode: 'verified-not-dispatched', revision: 1},
+        model: 'fixed',
+        provider: 'ollama',
+      }),
+    })
+    expect(response).equal('verified CLI')
+    expect(observedVersion).equal(3)
+    expect(preparations).equal(1)
+  })
+
   it('builds a system and user message and passes them to model.invoke', async () => {
     const calls: {messages: Message[]; options?: AgentOptions}[] = []
 
@@ -125,16 +166,11 @@ describe('runExecCommand', () => {
       }
     }
 
-    await runExecCommand(
-      {prompt: 'hello'},
-      undefined,
-      '/tmp/workspace',
-      {
-        agentClass: TestAgent,
-        contextLoader: async () => [{content: '', source: {kind: 'none'} as const}],
-        settingsLoader: async () => ({model: 'claude-sonnet', provider: 'anthropic'}),
-      },
-    )
+    await runExecCommand({prompt: 'hello'}, undefined, '/tmp/workspace', {
+      agentClass: TestAgent,
+      contextLoader: async () => [{content: '', source: {kind: 'none'} as const}],
+      settingsLoader: async () => ({model: 'claude-sonnet', provider: 'anthropic'}),
+    })
 
     expect(calls.map((call) => ({options: formatAgentOptions(call.options)}))).to.deep.equal([
       {
@@ -157,10 +193,7 @@ describe('runExecCommand', () => {
 
   it('keeps CLI provider and model ahead of workspace settings', () => {
     expect(
-      resolveAgentOptions(
-        {model: 'cli-model', provider: 'openai'},
-        {model: 'workspace-model', provider: 'ollama'},
-      ),
+      resolveAgentOptions({model: 'cli-model', provider: 'openai'}, {model: 'workspace-model', provider: 'ollama'}),
     ).to.deep.equal({
       lang: undefined,
       model: 'cli-model',
