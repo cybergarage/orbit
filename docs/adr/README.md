@@ -290,7 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                        |
 | ---------- | ---------- | -------------- | ----------------------------------------------------------------------------------------------- |
-| 2026-09-14 | accepted   | not-started    | [Verified Context for Interrupted Tool Groups](2026-09-14-verified-interrupted-tool-context.md) |
+| 2026-09-14 | accepted   | partial        | [Verified Context for Interrupted Tool Groups](2026-09-14-verified-interrupted-tool-context.md) |
 | 2026-09-13 | accepted   | partial        | [Application-owned Workflow Selection](2026-09-13-application-owned-workflow-selection.md)      |
 | 2026-09-12 | accepted   | partial        | [Evidence-based Workflow Evaluation](2026-09-12-evidence-based-workflow-evaluation.md)          |
 | 2026-09-12 | accepted   | partial        | [Managed Processor Graph](2026-09-12-managed-processor-graph.md)                                |
@@ -409,3 +409,5 @@ The [candidate-selection implementation evidence](2026-09-13-application-owned-w
 The [interrupted-context proposal review](2026-09-14-verified-interrupted-tool-context.md#proposal-review--2026-09-14) clarifies intent evidence, policy/synchronous-entry refusal, early history preflight, explicit v3 compatibility and byte-preserving v2 migration. The proposal remains proposed / not-started; the ten accepted/partial ADRs and book application admission stop are unchanged.
 
 The author [accepted verified interrupted-tool context](2026-09-14-verified-interrupted-tool-context.md#author-acceptance--2026-09-14) on 2026-09-14, including the review corrections, evidence/compatibility costs and separate v2-to-v3 migration. It is accepted / not-started, with no completion date or implementation commits. The earlier proposed/review states are historical. Its limited supersession is linked from budgeted compaction, whose accepted / partial state and original rationale remain intact. The other nine partial records, book admission stop and deferred work are unchanged.
+
+The [interrupted-context implementation evidence](2026-09-14-verified-interrupted-tool-context.md#implementation-evidence--2026-09-14) records commit `b2489fa512010d5c90555f8b32e96cbbc77bf7e8`, explicit policy/v3 migration and 693 passing tests on each of macOS and Linux. The decision is now accepted / partial; the adoption-only states above are historical. Remaining fault/integration/limit trials and author-deferred environments keep completion unset. The ten other partial records, backup-retention condition and book application admission stop remain unchanged.

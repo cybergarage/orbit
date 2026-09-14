@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-09-14
 decision-date: 2026-09-14
-implementation-status: not-started
+implementation-status: partial
 implementation-completed-date: null
-implementation-commits: []
+implementation-commits:
+  - b2489fa512010d5c90555f8b32e96cbbc77bf7e8
 superseded-by: []
 ---
 
@@ -13,6 +14,8 @@ superseded-by: []
 ## Purpose
 
 Allow a new, explicitly requested conversation turn after a narrowly identifiable cancellation without falsifying the previous execution. Preserve raw transcript evidence and refuse continuation when nonexecution, storage or ownership cannot be established. This adoption record does not authorize implementation in the current task or change the chapter-19 application's existing admission stop.
+
+Current implementation state: **accepted / partial**, recorded below after the implementation commit. The adoption-only statements that follow describe the 2026-09-14 acceptance task and are retained as history. The completion date remains null.
 
 ## Decision
 
@@ -169,6 +172,40 @@ Reuse the distinction between canonical evidence and model input, deterministic 
 | Validation level       | Unix headers:check/build/test and targeted fault tests; distinguish core/application/target tests and real-model quality. Report unmeasured initial bounds and environment-dependent checks separately.                                                                |
 
 A separately requested implementation must update public APIs, current architecture/concepts/features and migration instructions. This acceptance changes none of those maintained implementation documents. Completion requires full implementation hashes and results in a later ADR record commit, not this adoption commit.
+
+### Implementation evidence — 2026-09-14
+
+Implementation commit: `b2489fa512010d5c90555f8b32e96cbbc77bf7e8` (`feat(context): verify interrupted tool history before new runs`). The implementation started from adoption commit `b18a27592d3a7005acbd643ba82d8d288fab6d27`; no intervening source/test change or new architectural decision was substituted for the acceptance. This later documentation commit records **partial**, not completed. The ten other partial ADRs and their reasons are byte-for-byte unchanged.
+
+The opt-in policy is `interruptionPolicy: {mode: 'verified-not-dispatched', revision: 1}` on Agent or workspace/service settings. Default request encoding and the book application's admission stop remain unchanged. New enabled Sessions use v3; existing data requires explicit migration. The [maintained feature guide](../interrupted-context.md) owns API, limits and offline recovery instructions; architecture, concepts, settings, Session, Skill, Graph and compaction guides now describe the implemented paths.
+
+| Contract                               | Source and executed evidence                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Eligibility and raw truth              | `session/interrupted-context.ts` validates unique raw call correspondence, complete cancelled/acknowledged/quiescent evidence and Graph attribution; any missing call with an intent remains ineligible, including known success or cancelled-before-start. `interrupted-context.test.ts` checks ambiguity, denied responses and terminal failures. Original messages and outcome remain unchanged.                                                            |
+| Owned verification and refusal         | `verified-context.ts`, Recorder and journal perform bounded synchronized evidence reads under current ownership, before effectful preparation and before consumption/checkpoint saving. `context-projection-evidence.test.ts` verifies missing/torn/unknown evidence, lost output, source mutation, disabled-policy refusal, replay before recheck and cancelled pending I/O with retained ownership and unchanged terminal.                                   |
+| Durable views and repeated preparation | `context_projection` records bind current raw head/digest, checkpoint ancestry, proof position and deterministic view. A new raw head or checkpoint gets a new synchronized projection in the same Run. `context-projection-integration.test.ts` covers Agent/Graph approve/deny/cancel, budgets on/off, actual summary triggering, direct-tool-first Graphs, reopen, same-ID observation, another tool/model iteration and missing retained journals.         |
+| Providers                              | `context-projection-providers.test.ts` captures frozen OpenAI/Anthropic/Ollama requests with injected SDK doubles, including same-name calls, call IDs or Ollama names, explicit error notices and retained provider metadata. No provider connection or model-quality result is implied.                                                                                                                                                                      |
+| Format and migration                   | `context-projection-format.test.ts` checks explicit v3, old-format refusal, raw/derived/ancestry/order validation, incomplete versus complete unknown JSON and byte-identical data after the changed header. V1 backups remain intact. `context-projection-migration.test.ts` injects before/after failures at every synchronous write, sync, rename and unlink reached by this migration, then verifies resume or the required preserved empty-guard refusal. |
+| Bounds                                 | The current 128-call limit admits 128 and refuses 129 in the runtime. A valid 129-call historical record still decodes under the separate fixed format limit. The 1 MiB metadata and cumulative 64 MiB evidence limits are enforced but were not characterized as optimal operating limits.                                                                                                                                                                    |
+| Skill and checkpoint combination       | A temporary variant of the committed integration fixture selected a BOM/CRLF Skill in the first two Runs, triggered summaries, reopened v3 and executed a later unselected Run. Both OS runs passed six controls: ordinary input contained the current Skill, summaries and the later unselected Run did not, and exact stored source remained intact. This is supplemental fixed-double evidence, not a general real-provider Skill trial.                    |
+
+Validation on macOS arm64 / Node 26.5.0 and Linux arm64 / Node 22.23.2:
+
+- `headers:check`, native `build`, and full `npm test`: **693 passed on each OS**; 651 existing tests plus 42 new tests. Lint: **0 errors / 64 warnings**, compared with 56 previously recorded warnings. The related research fixture received mechanical lint/format fixes only; its six default-policy controls still reproduce cancellation refusal.
+- Tests ran in isolated copies; all 39 related files were checked byte-for-byte against the installed implementation and against the Linux copy after formatting. The actual Orbit path then passed headers/build and the **42-test targeted suite**, and its default-policy research fixture passed all six controls. The package/lockfile did not change.
+- Linux dependencies were installed from the unchanged lockfile into an isolated copy with lifecycle scripts disabled; native build and tests then ran in a network-disabled container. No host settings, provider credentials, live MCP service or book example was used.
+- An initial sandbox run had three localhost `EPERM` failures. An intermediate unrestricted run observed two child-loader errors while source edits were still in progress; it is not the final source's verification. Stable final runs above passed. No final maintenance-recovery timeout occurred; the historical timeout's cause remains unconfirmed.
+
+Detailed local logs, tested copies, fingerprints and the supplemental Skill variant are under `/private/tmp/orbit-interrupted-implementation/`. This path is disposable evidence, not a permanent runtime dependency. The source tests and implementation commit provide reproducible retained coverage.
+
+Remaining confirmation before completion:
+
+- The new projection's full process-death matrix around append/sync, and per-open/read/close failure injection across every new evidence-I/O boundary, are not established by the migration exception tests or the generic pending-I/O test. Add isolated child-process fault fixtures; require explicit boundary exit and preserved evidence, not a timeout.
+- Combined v3 policy coverage at every CLI/Ink/GUI/selection receipt entry, hostile path/root replacement during proof reads, and older Skill/checkpoint migration fault combinations need expanded targeted integration evidence. Existing surface/storage/Skill regression tests passed, but are not substitutes for every new combination.
+- The producer metadata/raw-byte upper boundaries need dedicated load/failure trials; the call-count boundary and strict persisted-format checks do not establish suitable production sizes.
+- Real provider acceptance/meaning preservation, selected live MCP conditions and representative applications need isolated connection/target settings. Windows, representative usage, production SLI/SLO and physical storage-failure trials remain author-deferred. No initial limit is claimed optimal.
+
+These gaps keep this ADR **partial**. They do not authorize loosening eligibility, automatic recovery, backup removal, changing the chapter-19 application, or re-adopting existing decisions. Continue core verification before a separately requested application integration.
 
 ### Proposal review — 2026-09-14
 
