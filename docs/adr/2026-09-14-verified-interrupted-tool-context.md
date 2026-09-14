@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-14
-decision-date: null
+decision-date: 2026-09-14
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -12,11 +12,25 @@ superseded-by: []
 
 ## Purpose
 
-Allow a new, explicitly requested conversation turn after a narrowly identifiable cancellation without falsifying the previous execution. Preserve raw transcript evidence and refuse continuation when nonexecution, storage or ownership cannot be established. This proposal does not authorize implementation or change the chapter-19 application's existing admission stop.
+Allow a new, explicitly requested conversation turn after a narrowly identifiable cancellation without falsifying the previous execution. Preserve raw transcript evidence and refuse continuation when nonexecution, storage or ownership cannot be established. This adoption record does not authorize implementation in the current task or change the chapter-19 application's existing admission stop.
 
 ## Decision
 
-**Proposed, not accepted:** retain strict refusal by default and introduce an explicit, versioned `verified-not-dispatched` context policy. The name is provisional. Core would derive provider-facing error-form tool responses only for eligible missing results, preserve canonical messages, and synchronize separate provenance before using the view. This is a new conversation request, never resumption of an interrupted tool or Graph node.
+**Accepted on 2026-09-14; implementation not started:** retain strict refusal by default and introduce an explicit, versioned `verified-not-dispatched` context policy. The name is provisional. Core will derive provider-facing error-form tool responses only for eligible missing results, preserve canonical messages, and synchronize separate provenance before using the view. This is a new conversation request, never resumption of an interrupted tool or Graph node.
+
+### Author acceptance — 2026-09-14
+
+The author explicitly accepted the recommendation including the 2026-09-14 review corrections. The pre-adoption HEAD is `c293fe6bc8741f9bb07e0182489206aa0943522e`; no source, test or proposal changes occurred after that review. Current code still equals implementation baseline `16e4a49c1e0632870e02380f958492430ea393b5`. No new material contradiction with the accepted scope was found. Public main was independently checked at `1cb6f4f2abe3e89e27c1bdb32f1049183ef0e960` and is not substituted for the local baseline.
+
+The adopted scope is opt-in context-only projection for uniquely proven nondispatch in a cancelled Run, with original messages/outcomes intact and synchronized, retained evidence. Missing calls with any intent, dispatched calls with lost output, ambiguous IDs, unknown outcomes, failed recording and unsettled resources remain excluded. Intent presence is not redefined as actual execution.
+
+The author accepts verification that cannot be bypassed for projection-dependent input, separate read-only observation, replay comparison before history preflight, and preflight before effectful work. The author accepts transcript v3 and coordinated readers, retained Skill/checkpoint validation, unchanged historical Graph high-water positions, the separate byte-preserving v2-to-v3 migration and retention of old artifacts. Latest-turn protection, mandatory notices in budgeting, no Skill in summaries or historical Skill reactivation, Graph sharing and same-ID no-repreparation remain required.
+
+Initial producer/format bounds are adopted as unmeasured starting points; implementation trials must verify them without presenting them as optimal. Existing input-budget delegation and other adoptions were not used as authority for this decision. The original proposal and review wording below are historical, not outstanding requests for re-adoption.
+
+This task records acceptance only. `implementation-status` remains `not-started`, completion is null and implementation commits are empty. The ten earlier accepted/partial decisions and their adoption reasons, prior maintenance-timeout uncertainty, real-model connection conditions, unanswered backup deletion and author-deferred trials remain unchanged. Acceptance includes **no permission to delete backups**, change the book example, implement, publish or operate autonomously.
+
+Acceptance validation reran `headers:check`, `build` and all 651 existing tests on an isolated macOS Node 26.5.0 copy of the unchanged implementation. Lint retained 56 existing warnings and no errors. No runtime or fixture changes occurred. This is regression evidence for the baseline, not implementation evidence for projection or v3 migration. Earlier maintenance-timeout uncertainty and deferred environmental trials remain open.
 
 ### Eligible history and evidence
 
@@ -54,7 +68,7 @@ Serialize using the existing OpenAI tool ID, Anthropic error `tool_result`, and 
 
 ### Provenance, transcript compatibility and compaction
 
-Propose **transcript v3**, with a strict `context_projection` revision-1 record and a compaction `projectionVersion: 2` referring to that provenance. This cost requires author acceptance. Current transcript v2 does not permit the new provenance record. It can retain an unresolved raw group when no checkpoint validation covers it, as the reproduction demonstrates; that fact alone does not make the file structurally corrupt. Budgeted preparation and version-1 checkpoint validation reject such groups. Adding provenance or projection-aware checkpoint semantics silently to those existing formats would violate old-reader contracts.
+Use **transcript v3**, with a strict `context_projection` revision-1 record and a compaction `projectionVersion: 2` referring to that provenance. The author accepted this compatibility cost on 2026-09-14. Current transcript v2 does not permit the new provenance record. It can retain an unresolved raw group when no checkpoint validation covers it, as the reproduction demonstrates; that fact alone does not make the file structurally corrupt. Budgeted preparation and version-1 checkpoint validation reject such groups. Adding provenance or projection-aware checkpoint semantics silently to those existing formats would violate old-reader contracts.
 
 The new provenance record contains the owning new Run, original source head/digest and checkpoint ancestry, scoped source call identities, source Run/terminal identities, bounded journal high-water/digest references, projection algorithm revision and derived payload digest. It contains neither journal keys nor fabricated ordinary message entries. Structural decoding validates finite JSON, bounds, references and derivation; it does not execute filesystem reads. Runtime reuse additionally verifies the referenced evidence under ownership. A host-supplied JSON assertion alone is insufficient. Valid structure with unavailable external proof remains readable for observation, labeled unverified/unavailable; it refuses model use. Malformed structure still fails decoding. Observation must not run a model, invoke an adapter, repair storage or delete evidence. Same-ID outcome observation is not a request to requalify a projection.
 
@@ -84,9 +98,9 @@ Include the selected projection policy and algorithm revision in exact submitted
 
 ### Bounds and author judgment
 
-Provisional producer limits are 128 inserted notices per prepared view, 1 MiB projection metadata and 64 MiB cumulative raw evidence inspected per preparation. Exceeding a runtime budget means refusal, not partial verification. Propose a fixed revision-1 JSON record maximum of 4 MiB, separate from adjustable producer limits. Lowering product limits must not render earlier valid stored records structurally invalid; reading and execution eligibility are separate. These are unmeasured starting values, not optimal limits.
+Provisional producer limits are 128 inserted notices per prepared view, 1 MiB projection metadata and 64 MiB cumulative raw evidence inspected per preparation. Exceeding a runtime budget means refusal, not partial verification. Use a fixed revision-1 JSON record maximum of 4 MiB, separate from adjustable producer limits. Lowering product limits must not render earlier valid stored records structurally invalid; reading and execution eligibility are separate. These are unmeasured starting values, not optimal limits.
 
-Author choices still required:
+Author choices recorded at proposal time (resolved by the explicit acceptance above):
 
 - Whether to add this opt-in scope rather than retain refusal or offer only explicit new-conversation migration.
 - Whether to limit initial eligibility to uniquely proven nondispatch in a cancelled Run, leaving dispatched/missing and unknown cases blocked.
@@ -102,7 +116,7 @@ A narrowly verifiable cancellation can become usable context without fabricating
 
 Costs include an owned asynchronous evidence read, retained journals, a persistent format migration, projection-aware compaction, provider-specific verification, additional budget consumption and a new configuration identity. Call-ID ambiguity in old journals deliberately reduces eligible cases. No broad automatic repair, new execution runner, new journal version, permanent backend or autonomous retry is introduced.
 
-If accepted, this would refine the complete-group admission/compaction clause of [budgeted Session compaction](2026-09-08-budgeted-session-compaction.md). Its original reasons and history remain intact. The ten existing accepted/partial ADRs retain their current status and adoption rationale; no supersession metadata changes while this is proposed. Managed lifecycle, authorization, required journal, recovery/storage guards, Skill, Graph, evaluation and selection continue to own their existing contracts.
+This decision partially supersedes the strict complete-group admission/compaction clause of [budgeted Session compaction](2026-09-08-budgeted-session-compaction.md). Its original reasons and history remain intact. The ten existing accepted/partial ADRs retain their current status and adoption rationale; the compaction record links this limited supersession without changing its accepted / partial status or original reasons. The exception applies only to the new verified policy and format; current runtime refusal remains until separately implemented. Managed lifecycle, authorization, required journal, recovery/storage guards, Skill, Graph, evaluation and selection continue to own their existing contracts.
 
 ## Context and Problem Statement
 
@@ -154,7 +168,7 @@ Reuse the distinction between canonical evidence and model input, deterministic 
 | Retention/bounds       | Deletion/maintenance coordinate with active views; missing retained evidence refuses later use; metadata/raw limits separated; lower producer limit preserves valid historical decode.                                                                                 |
 | Validation level       | Unix headers:check/build/test and targeted fault tests; distinguish core/application/target tests and real-model quality. Report unmeasured initial bounds and environment-dependent checks separately.                                                                |
 
-Implementation would update public APIs, current architecture/concepts/features and migration instructions only after acceptance. Completion requires full implementation hashes and results in a later ADR record commit, not this research commit.
+A separately requested implementation must update public APIs, current architecture/concepts/features and migration instructions. This acceptance changes none of those maintained implementation documents. Completion requires full implementation hashes and results in a later ADR record commit, not this adoption commit.
 
 ### Proposal review — 2026-09-14
 
@@ -174,7 +188,7 @@ Additional implementation confirmation is required for: policy-off and synchrono
 
 ## Follow-up Work
 
-Review the narrow proof, format/compaction consistency, author choices and confirmation matrix before adoption. If accepted later, implement core first and verify it before separately changing the completed example's refusal policy or manuscript. Broader recovery, new-conversation UX and model-quality trials need separate scope.
+The reviewed decision is now accepted. In a separately requested implementation, implement core first and verify the confirmation matrix before separately changing the completed example's refusal policy or manuscript. Broader recovery, new-conversation UX and model-quality trials need separate scope.
 
 Keep ten accepted/partial ADRs, the earlier maintenance-timeout cause, model connection conditions, pending backup deletion and author-deferred Windows, representative, operational and physical-fault trials open. This proposal closes none of them.
 

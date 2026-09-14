@@ -7,7 +7,8 @@ implementation-completed-date: null
 implementation-commits:
   - 2a33ed20e27a5a526d1923cad20890cc46185135
   - 8fbfee61243b27d5d243aeaf0d127d019af32261
-superseded-by: []
+superseded-by:
+  - docs/adr/2026-09-14-verified-interrupted-tool-context.md
 ---
 
 # Budgeted Session Compaction
@@ -355,3 +356,9 @@ model catalog remain outside this proposal.
 - [Required execution journal](2026-09-07-required-execution-journal.md).
 - [Writer recovery](2026-09-08-session-writer-recovery-guard.md).
 - [Storage registration](2026-09-08-session-storage-registration-guard.md).
+
+## Limited decision update — 2026-09-14
+
+The author accepted [Verified Context for Interrupted Tool Groups](2026-09-14-verified-interrupted-tool-context.md), including its review corrections. It partially supersedes this decision's strict complete-group admission/compaction condition only for its opt-in, proven-nondispatch cancellation scope and versioned provenance. Its transcript v3 and projection-aware checkpoint rules retain raw source hashes, existing checkpoint/Skill validation, latest-turn protection, shared budgets and required recording.
+
+This record remains accepted / partial. Original rationale, decision date, implementation hashes and outstanding confirmation are preserved. The new decision is accepted / not-started; current runtime still refuses the reproduced input. This cross-reference is neither a repair of stored history nor evidence that the new policy or migration has been implemented. Unknown outcomes, missing proof, unsettled ownership and backup-deletion restrictions remain unchanged.

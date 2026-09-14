@@ -290,7 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                        |
 | ---------- | ---------- | -------------- | ----------------------------------------------------------------------------------------------- |
-| 2026-09-14 | proposed   | not-started    | [Verified Context for Interrupted Tool Groups](2026-09-14-verified-interrupted-tool-context.md) |
+| 2026-09-14 | accepted   | not-started    | [Verified Context for Interrupted Tool Groups](2026-09-14-verified-interrupted-tool-context.md) |
 | 2026-09-13 | accepted   | partial        | [Application-owned Workflow Selection](2026-09-13-application-owned-workflow-selection.md)      |
 | 2026-09-12 | accepted   | partial        | [Evidence-based Workflow Evaluation](2026-09-12-evidence-based-workflow-evaluation.md)          |
 | 2026-09-12 | accepted   | partial        | [Managed Processor Graph](2026-09-12-managed-processor-graph.md)                                |
@@ -407,3 +407,5 @@ The [candidate-selection implementation evidence](2026-09-13-application-owned-w
 [Verified interrupted-tool context](2026-09-14-verified-interrupted-tool-context.md) proposes an opt-in nondispatch proof, immutable raw transcript, separate projection provenance and v3 migration. It is proposed / not-started and would refine the older compaction admission rule only after acceptance. The ten accepted/partial decisions, application admission stop and deferred work are unchanged.
 
 The [interrupted-context proposal review](2026-09-14-verified-interrupted-tool-context.md#proposal-review--2026-09-14) clarifies intent evidence, policy/synchronous-entry refusal, early history preflight, explicit v3 compatibility and byte-preserving v2 migration. The proposal remains proposed / not-started; the ten accepted/partial ADRs and book application admission stop are unchanged.
+
+The author [accepted verified interrupted-tool context](2026-09-14-verified-interrupted-tool-context.md#author-acceptance--2026-09-14) on 2026-09-14, including the review corrections, evidence/compatibility costs and separate v2-to-v3 migration. It is accepted / not-started, with no completion date or implementation commits. The earlier proposed/review states are historical. Its limited supersession is linked from budgeted compaction, whose accepted / partial state and original rationale remain intact. The other nine partial records, book admission stop and deferred work are unchanged.
