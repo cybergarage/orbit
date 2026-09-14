@@ -117,6 +117,7 @@ at pinned revisions by default. If either is not relevant, record why.
 
 | Investigated | Status     | Topic                                                                                                                                   |
 | ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-14   | current    | [Cancelled Tool Calls and Subsequent Model Context](2026-09-14-cancelled-tool-history-and-context.md)                                   |
 | 2026-09-13   | current    | [Human-selected Workflow Candidates](2026-09-13-human-selected-workflow-candidates.md)                                                  |
 | 2026-09-12   | current    | [Workflow Evaluation Evidence and Comparable Trials](2026-09-12-workflow-evaluation-evidence.md)                                        |
 | 2026-09-12   | current    | [Bounded Processor Graph Execution](2026-09-12-bounded-processor-graph-execution.md)                                                    |
@@ -155,3 +156,5 @@ The [candidate-selection investigation](2026-09-13-human-selected-workflow-candi
 The [candidate-selection proposal review](../adr/2026-09-13-application-owned-workflow-selection.md#proposal-review--2026-09-13) clarifies one-use dispatch ownership, exact submitted-input encoding, scoped authority/availability transactions and read-only journal binding verification. Actual catalog checks follow managed MCP startup, so startup effects remain observable. The proposal stays proposed / not-started; the nine accepted/partial ADRs are unchanged.
 
 The author [accepted candidate selection](../adr/2026-09-13-application-owned-workflow-selection.md#author-acceptance---2026-09-13) on 2026-09-13, including the review corrections and host storage/capture/reconciliation costs. The ADR is accepted / not-started. Research and earlier review-state descriptions remain historical; no implementation, prior partial status or deferred verification was changed.
+
+The [cancelled-tool history investigation](2026-09-14-cancelled-tool-history-and-context.md) reproduces subsequent budgeted-input refusal in Agent and Graph and compares continued refusal, explicit conversation migration and verified model-input projection. Its [ADR](../adr/2026-09-14-verified-interrupted-tool-context.md) is proposed / not-started. Current runtime and the chapter-19 application remain unchanged.
