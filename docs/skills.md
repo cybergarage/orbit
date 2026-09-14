@@ -143,7 +143,7 @@ bodies or tools. The next Run and a resumed Session have no active selection by
 default. Past model answers may still reflect earlier instructions; this does
 not promise semantic forgetting.
 
-Persistent selections require transcript v2. Agent appends turn context, start
+Persistent selections require transcript v2 or v3. Agent appends turn context, start
 and user input, resolves all choices, saves one `skill_context` revision 1 and
 synchronizes it before journal readiness and the first model call. The record
 contains ordered exact UTF-8 sources, digests, metadata, derived bodies and
@@ -176,3 +176,7 @@ This feature does not authorize deletion of `.v1-backup` files.
 
 See [Managed Execution](execution.md), [Sessions](session.md) and the
 [accepted decision](adr/2026-09-09-run-scoped-skill-selection.md).
+
+### Use with verified interrupted context
+
+Transcript v3 also accepts the existing revision-1 Skill records with unchanged identity, content, bounds and ordering checks. [Verified interrupted context](interrupted-context.md) never reselects historical snapshots and never inserts current Skills into summary-only requests. Upgrade all readers together before the separate v3 migration.

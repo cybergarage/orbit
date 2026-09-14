@@ -6,11 +6,13 @@ import type {ProviderName} from '../models/provider.js'
 import type {Role} from '../models/role.js'
 import type {SessionSkillEntry} from '../skills/record.js'
 import type {SessionCompactionEntry} from './compaction.js'
+import type {ContextProjectionEntry} from './interrupted-context.js'
 
 export const SESSION_FORMAT_VERSION = 1
 
 export const SessionEntryType = {
   Compaction: 'compaction',
+  ContextProjection: 'context_projection',
   Message: 'message',
   Session: 'session',
   SkillContext: 'skill_context',
@@ -49,7 +51,7 @@ export interface SessionHeaderEntry {
   systemPrompt?: string
   timestamp: string
   type: typeof SessionEntryType.Session
-  version: 1 | 2
+  version: 1 | 2 | 3
 }
 
 export interface SessionMessageEntry {
@@ -85,6 +87,7 @@ export interface SessionTurnEventEntry {
 }
 
 export type SessionEntry =
+  | ContextProjectionEntry
   | SessionCompactionEntry
   | SessionHeaderEntry
   | SessionMessageEntry

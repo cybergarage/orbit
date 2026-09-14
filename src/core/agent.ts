@@ -27,7 +27,8 @@ import type {CompiledProcessorGraph, GraphJSON} from './processor/graph-definiti
 import type {GraphInvocation, GraphSnapshot, GraphValue} from './processor/graph-execution.js'
 import type {Operator, OperatorOptions} from './processor/index.js'
 import type {ContextPolicy} from './session/context-policy.js'
-import type {Session, SessionContextBuilder as SessionContextBuilderType, SessionError} from './session/index.js'
+import type {SessionContextBuilder as SessionContextBuilderType, SessionError} from './session/index.js'
+import type {InterruptionPolicy} from './session/verified-context.js'
 import type {WorkspaceSettings} from './settings.js'
 import type {SkillCatalog, SkillSelection, SkillSnapshot} from './skills/index.js'
 import type {
@@ -64,7 +65,13 @@ import {
 } from './processor/graph-execution.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
 import {prepareSessionContext} from './session/context-policy.js'
-import {SessionContextBuilder, TurnPhase} from './session/index.js'
+import {Session, SessionContextBuilder, TurnPhase} from './session/index.js'
+import {
+  parseInterruptionPolicy,
+  preflightInterruptedContext,
+  prepareInterruptedContext,
+  reverifyInterruptedContext,
+} from './session/verified-context.js'
 import {loadWorkspaceSettingsSync, mergeWorkspaceSettings} from './settings.js'
 import {normalizeSkillSelections} from './skills/index.js'
 import {skillPrefix} from './skills/record.js'
@@ -116,8 +123,8 @@ export interface AgentOptions {
     createModel?: typeof getModel
     sessionContextBuilder?: SessionContextBuilderType
   }
-
   diagnostics?: DiagnosticEventBus
+
   execution?: {
     allowLegacyTools?: boolean
     journalFactory?: (session: Session) => Promise<ExecutionJournal>
@@ -128,6 +135,7 @@ export interface AgentOptions {
     policy?: ExecutionPolicy
     responderScope?: string
   }
+  interruptionPolicy?: InterruptionPolicy
   logger?: Logger
   logStore?: SessionLogStore
   messages?: Message[]
@@ -146,6 +154,7 @@ export interface AgentOptions {
 
 export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   public readonly contextPolicy: ContextPolicy
+  public readonly interruptionPolicy: InterruptionPolicy
   public readonly logger: Logger
   public readonly messages: Message[]
   public readonly settings: WorkspaceSettings
@@ -174,6 +183,9 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     const createModel = options.deps?.createModel ?? getModel
     this.skillCatalog = options.skillCatalog
     this.settings = mergeWorkspaceSettings(loadWorkspaceSettingsSync(options.cwd), options.settings)
+    this.interruptionPolicy = Object.freeze(
+      parseInterruptionPolicy(options.interruptionPolicy ?? this.settings.interruptionPolicy ?? {mode: 'disabled'}),
+    )
     this.contextPolicy = options.contextPolicy ?? this.settings.contextPolicy ?? {mode: 'disabled'}
     this.cwd = path.resolve(options.cwd ?? process.cwd())
     this.model = createModel(
@@ -184,7 +196,11 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     this.sessionContextBuilder = options.deps?.sessionContextBuilder ?? new SessionContextBuilder()
     this.diagnostics = options.diagnostics
     this.messages = [...(options.messages ?? [])]
-    this.state = options.state ?? new State()
+    this.state =
+      options.state ??
+      new State(
+        this.interruptionPolicy.mode === 'verified-not-dispatched' ? new Session({formatVersion: 3}) : undefined,
+      )
     if (options.logger === undefined) {
       const store = options.logStore ?? new FileSessionLogStore()
       if (options.logStore === undefined) this.ownedLogStore = store
@@ -344,7 +360,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     session = this.getSession(),
   ): Promise<RunHandle<GraphValue>> {
     graphBinding(graph, graph.descriptor.entry)
-    if (session.formatVersion !== 2) throw new Error('Graph requires explicit transcript v2 migration')
+    if (![2, 3].includes(session.formatVersion)) throw new Error('Graph requires explicit transcript v2 migration')
     input = boundedGraphJSON(input, graph.profile.valueBytes)
     const invocation: GraphInvocation = {
       graph,
@@ -529,7 +545,8 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       session.recordTurnEvent({phase: TurnPhase.Started, turnId})
       session.appendMessages(messages, {turnId})
       if (options?.skills?.length) {
-        if (session.formatVersion !== 2) throw new Error('Skill selection requires explicit transcript v2 migration')
+        if (![2, 3].includes(session.formatVersion))
+          throw new Error('Skill selection requires explicit transcript v2 migration')
         const activeSkills = await options.executionContext!.wait(
           'skill-resolution',
           options.skillReader!.resolve(options.skills, options.signal),
@@ -583,7 +600,11 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       }
 
       throwIfAborted(options?.signal)
-      const sessionMessageCount = this.sessionContextBuilder.build(session).messages.length
+      // Diagnostic counts do not acquire model-input authority.
+      const sessionMessageCount =
+        this.interruptionPolicy.mode === 'verified-not-dispatched'
+          ? session.getConversationMessages().length
+          : this.sessionContextBuilder.build(session).messages.length
       this.logger.debug(
         {
           initialMessageCount: this.messages.length,
@@ -670,7 +691,15 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                   ...modelOptions,
                   diagnosticContext: {...modelOptions.diagnosticContext, iteration},
                 }
-          const context = this.sessionContextBuilder.build(session)
+          // Verification is sequential and precedes every ordinary provider preparation.
+
+          const verifiedContext =
+            this.interruptionPolicy.mode === 'verified-not-dispatched'
+              ? // Sequential evidence verification precedes this iteration's preparation.
+                // eslint-disable-next-line no-await-in-loop
+                await prepareInterruptedContext(session, run, this.interruptionPolicy)
+              : undefined
+          const context = verifiedContext ?? this.sessionContextBuilder.build(session)
           const modelStartedAt = performance.now()
           if (diagnostics === undefined) {
             this.logger.info(
@@ -696,6 +725,8 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                 ? // Context preparation is sequential because it uses this iteration history.
                   // eslint-disable-next-line no-await-in-loop
                   await prepareSessionContext({
+                    verifiedContext,
+                    ...(verifiedContext ? {reverify: () => reverifyInterruptedContext(session, run)} : {}),
                     model: this.model,
                     modelOptions: iterationOptions,
                     onEvent: (event) =>
@@ -710,7 +741,21 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                     run,
                     session,
                   })
-                : undefined
+                : verifiedContext
+                  ? this.model.prepare!(
+                      [
+                        ...this.messages,
+                        ...skillPrefix(options?.activeSkills ?? []).map(
+                          (content) => new Message(MessageType.User, {content}),
+                        ),
+                        ...verifiedContext.messages,
+                      ],
+                      iterationOptions,
+                    )
+                  : undefined
+            // Recheck retained proof after summaries and immediately before ordinary dispatch.
+            // eslint-disable-next-line no-await-in-loop
+            if (verifiedContext) await reverifyInterruptedContext(session, run)
             run.consume('modelCalls')
             // The next model iteration depends on these results.
             // eslint-disable-next-line no-await-in-loop
@@ -992,6 +1037,9 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           }
         : {}),
       ...(skills.length > 0 ? {skillCatalog: this.skillCatalog?.configuration, skills} : {}),
+      ...(this.interruptionPolicy.mode === 'verified-not-dispatched'
+        ? {interruptionPolicy: this.interruptionPolicy}
+        : {}),
       limits: options.limits ?? {},
       maxToolIterations: options.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS,
       messages: serialized,
@@ -1174,6 +1222,9 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       },
       configuration: {
         contextPolicy: contextConfiguration,
+        ...(this.interruptionPolicy.mode === 'verified-not-dispatched'
+          ? {interruptionPolicy: this.interruptionPolicy}
+          : {}),
         cwd: this.cwd,
         model: this.model.getModel(),
         policy: {generation: policy.generation, profile: policy.profile, roots: [...policy.roots]},
@@ -1182,6 +1233,10 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         sources: this.settings.mcp ?? {},
       },
       execute: async (run) => {
+        if (this.interruptionPolicy.mode === 'verified-not-dispatched' && !this.model.prepare)
+          throw new Error('model-does-not-support-verified-context')
+        await preflightInterruptedContext(session, run, this.interruptionPolicy)
+        run.check()
         if (options.selection) {
           const e = options.selection.expectation
           if (
@@ -1262,6 +1317,9 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       provider: this.model.getProvider(),
       settings: {
         ...this.settings,
+        ...(this.interruptionPolicy.mode === 'verified-not-dispatched'
+          ? {interruptionPolicy: this.interruptionPolicy}
+          : {}),
         contextPolicy:
           this.contextPolicy.mode === 'budgeted'
             ? {mode: 'budgeted', profile: this.contextPolicy.profile}

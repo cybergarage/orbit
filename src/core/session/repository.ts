@@ -38,7 +38,7 @@ import {Session} from './session.js'
 export interface CreateSessionOptions {
   createdAt?: string
   cwd?: string
-  formatVersion?: 1 | 2
+  formatVersion?: 1 | 2 | 3
   id?: string
   model?: string
   originator?: string

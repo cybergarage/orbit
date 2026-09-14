@@ -13,6 +13,8 @@ export interface SessionModelContext {
 /** Projects canonical session history into provider-neutral model input. */
 export class SessionContextBuilder {
   build(session: Session): SessionModelContext {
+    if (session.getEntries().some((entry) => entry.type === 'context_projection'))
+      throw new Error('verified-context-required')
     const checkpoint = session.getCompaction()
     const all = session.getConversationMessages()
     const selected = checkpoint ? all.slice(all.findIndex((message) => message.id === checkpoint.firstRetainedId)) : all

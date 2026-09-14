@@ -540,3 +540,7 @@ Transcript v2 supports versioned `skill_context` records for exact one-Run
 instruction snapshots. They are validated and inspectable but are not
 conversation messages or resumed instructions. See [Skills](skills.md) for
 reader deployment, synchronization and record-size compatibility.
+
+### Transcript v3 and interrupted context
+
+[Verified interrupted context](interrupted-context.md) adds synchronized `context_projection` records and projection-aware checkpoints. Raw access remains observational; the synchronous model-context builder refuses dependent histories. Valid v1/v2 records retain their checks in v3. The separate v2-to-v3 migration preserves every data-entry byte and old Graph position; torn v3 tails refuse writer admission pending offline inspection. Backups and unresolved migration artifacts are retained.

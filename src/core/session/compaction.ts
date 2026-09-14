@@ -7,6 +7,7 @@ import type {PersistedMessage, SessionEntry} from './entries.js'
 
 import {Message} from '../message/index.js'
 import {getToolCalls, getToolResult} from '../models/adapters/tools.js'
+import {projectInterruptedMessages} from './interrupted-context.js'
 
 export interface SummaryFact {
   sourceIds: string[]
@@ -37,7 +38,8 @@ export interface SessionCompactionEntry {
   prefixEndId: string
   previousId: null | string
   profileRevision: string
-  projectionVersion: 1
+  projectionIds?: string[]
+  projectionVersion: 1 | 2
   provider: string
   sessionId: string
   sourceDigest: string
@@ -105,11 +107,21 @@ export function parseCompaction(value: unknown): SessionCompactionEntry {
     string(entry[key])
   if (
     entry.type !== 'compaction' ||
-    entry.projectionVersion !== 1 ||
+    ![1, 2].includes(Number(entry.projectionVersion)) ||
     entry.digestVersion !== 'sha256-json-v1' ||
     (entry.previousId !== null && typeof entry.previousId !== 'string')
   )
     throw new Error('Invalid compaction format')
+  if (entry.projectionVersion === 1 && entry.projectionIds !== undefined)
+    throw new Error('Unexpected checkpoint projection references')
+  if (
+    entry.projectionVersion === 2 &&
+    (!Array.isArray(entry.projectionIds) ||
+      entry.projectionIds.length === 0 ||
+      entry.projectionIds.some((id) => typeof id !== 'string') ||
+      new Set(entry.projectionIds).size !== entry.projectionIds.length)
+  )
+    throw new Error('Missing checkpoint projection references')
   if (!/^[a-f0-9]{64}$/.test(entry.sourceDigest as string) || !Number.isFinite(Date.parse(entry.timestamp as string)))
     throw new Error('Invalid compaction digest or time')
   for (const key of ['beforeTokens', 'afterTokens'])
@@ -203,7 +215,7 @@ export function validateCompactionEntries(
     const cut = messages.findIndex((message) => message.id === entry.firstRetainedId)
     const oldCut = previous ? messages.findIndex((message) => message.id === previous?.firstRetainedId) : 0
     if (
-      version !== 2 ||
+      ![2, 3].includes(version) ||
       entry.sessionId !== sessionId ||
       ids.has(entry.id) ||
       entry.previousId !== (previous?.id ?? null) ||
@@ -217,7 +229,21 @@ export function validateCompactionEntries(
       throw new Error('Checkpoint requires linear source history')
     const prefix = messages.slice(0, cut)
     if (entry.sourceDigest !== sourceDigest(prefix)) throw new Error('Checkpoint source digest mismatch')
-    validateToolGroups(messages.map((message) => new Message(message.type, message)))
+    if (entry.projectionVersion === 1) validateToolGroups(messages.map((message) => new Message(message.type, message)))
+    else {
+      if (version !== 3) throw new Error('Projection-aware checkpoint requires v3')
+      const position = entries.indexOf(entry)
+      const prefixEntries = entries.slice(0, position)
+      const projections = prefixEntries.filter(
+        (e) => e.type === 'context_projection' && entry.projectionIds!.includes(e.id),
+      )
+      if (projections.length !== entry.projectionIds!.length)
+        throw new Error('Missing checkpoint projection provenance')
+      const projection = projections.at(-1)!
+      if (projection.type !== 'context_projection') throw new Error('Invalid projection')
+      projectInterruptedMessages(prefixEntries, projection.calls)
+    }
+
     validateSummary(entry.summary, new Set(prefix.map((message) => message.id)))
     ids.add(entry.id)
     previous = entry

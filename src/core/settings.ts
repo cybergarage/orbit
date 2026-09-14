@@ -1,15 +1,16 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
-
 import fsSync from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 
 import type {ContextPolicy, ContextProfile} from './session/context-policy.js'
+import type {InterruptionPolicy} from './session/verified-context.js'
 
 import {DOT_APP_DIR_NAME, SETTINGS_FILE_NAME} from './app.js'
 import {getProvider, isProvider, type ProviderName} from './models/provider.js'
+import {parseInterruptionPolicy} from './session/verified-context.js'
 import {type BuiltinToolSelection, isBuiltinToolName, isToolProfile} from './tools/index.js'
 import {LocalWorkspaceLocator} from './workspace.js'
 
@@ -35,6 +36,7 @@ export type ToolSettings = BuiltinToolSelection
 
 export interface WorkspaceSettings {
   contextPolicy?: ContextPolicy
+  interruptionPolicy?: InterruptionPolicy
   mcp?: McpSettings
   model?: string
   provider?: ProviderName
@@ -177,7 +179,7 @@ function validateWorkspaceSettings(parsed: unknown, file: string): WorkspaceSett
     throw new Error(`Invalid workspace settings in ${file}: settings must be an object.`)
   }
 
-  const {contextPolicy, mcp, model, provider, providers, tools} = parsed
+  const {contextPolicy, interruptionPolicy, mcp, model, provider, providers, tools} = parsed
   const providerOptions = getProvider().join(', ')
 
   if (provider !== undefined && !isProvider(provider)) {
@@ -189,6 +191,7 @@ function validateWorkspaceSettings(parsed: unknown, file: string): WorkspaceSett
   }
 
   return {
+    ...(interruptionPolicy === undefined ? {} : {interruptionPolicy: parseInterruptionPolicy(interruptionPolicy)}),
     ...(contextPolicy === undefined ? {} : {contextPolicy: parseContextPolicy(contextPolicy)}),
     ...(typeof model === 'string' ? {model} : {}),
     ...(isProvider(provider) ? {provider} : {}),
@@ -314,6 +317,9 @@ function validateBuiltinToolNames(value: unknown, file: string, field: 'exclude'
 
 function mergeWorkspaceSettingsInto(target: WorkspaceSettings, source: WorkspaceSettings): void {
   Object.assign(target, {
+    ...(source.interruptionPolicy === undefined
+      ? {}
+      : {interruptionPolicy: parseInterruptionPolicy(source.interruptionPolicy)}),
     ...(source.contextPolicy === undefined
       ? {}
       : {

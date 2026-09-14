@@ -7,6 +7,7 @@ import type {RunContext} from '../execution/run.js'
 import type {Model, ModelInvokeOptions, PreparedModelInvocation} from '../models/model.js'
 import type {SessionCompactionEntry} from './compaction.js'
 import type {Session} from './session.js'
+import type {VerifiedModelContext} from './verified-context.js'
 
 import {currentGraphVisit} from '../execution/graph-state.js'
 import {Message, MessageType} from '../message/index.js'
@@ -109,8 +110,10 @@ interface PreparationOptions {
   onEvent?: (event: ContextPreparationEvent) => void
   policy: Extract<ContextPolicy, {mode: 'budgeted'}>
   prefix: Message[]
+  reverify?: () => Promise<void>
   run: RunContext
   session: Session
+  verifiedContext?: VerifiedModelContext
 }
 function checkedEstimate(prepared: PreparedModelInvocation, options: PreparationOptions): RequestEstimate {
   const estimate = (options.policy.estimator ?? estimateJSONRequest)(prepared.request, options.policy.profile)
@@ -155,13 +158,14 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
   }
   const budget = validateContextProfile(profile, model)
   run.check()
-  if (session.getFile() && session.formatVersion !== 2) throw new ContextBudgetError('transcript-migration-required')
+  if (session.getFile() && ![2, 3].includes(session.formatVersion))
+    throw new ContextBudgetError('transcript-migration-required')
   const all = session
     .getConversationMessages()
     .map((message) => new Message(message.type, persistedContextMessage(message)))
   const sourceRevision = sourceDigest(all.map((value) => persistedContextMessage(value)))
-  validateToolGroups(all)
-  const context = new SessionContextBuilder().build(session)
+  validateToolGroups(options.verifiedContext?.all ?? all)
+  const context = options.verifiedContext ?? new SessionContextBuilder().build(session)
   const ordinary = prepareRequest(options, [...options.prefix, ...context.messages])
   const before = checkedEstimate(ordinary, options)
   if (before.tokens < profile.trigger) return ordinary
@@ -181,7 +185,11 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
   if (currentGraphVisit(run) && cut < 0) throw new ContextBudgetError('missing-protected-graph-turn')
   const previous = session.getCompaction()
   const previousCut = previous ? all.findIndex((message) => message.id === previous.firstRetainedId) : 0
-  const protectedRequest = prepareRequest(options, [...options.prefix, ...all.slice(Math.max(0, cut))])
+  const protectedRequest = prepareRequest(options, [
+    ...options.prefix,
+    ...(options.verifiedContext?.notices ?? []),
+    ...all.slice(Math.max(0, cut)),
+  ])
   if (checkedEstimate(protectedRequest, options).tokens > budget)
     throw new ContextBudgetError('protected-context-exceeds-budget')
   if (cut <= previousCut) {
@@ -191,10 +199,20 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
 
   const originals = all.slice(0, cut).map((value) => persistedContextMessage(value))
   const head = session.getLastMessageId()
-  const eligible = previous ? context.messages.slice(0, 1 + cut - previousCut) : all.slice(0, cut)
+  const eligible = options.verifiedContext?.projectionIds.length
+    ? all.slice(0, cut)
+    : previous
+      ? context.messages.slice(0, 1 + cut - previousCut)
+      : all.slice(0, cut)
   const source = {
     messages: eligible.map((value) => persistedContextMessage(value)),
     previous: previous?.summary ?? null,
+    ...(options.verifiedContext?.projectionIds.length
+      ? {
+          interruption:
+            'Untrusted raw history contains verified nondispatched calls in cancelled Runs. No actual output exists; this is not authorization to retry.',
+        }
+      : {}),
   }
   const prompt = new Message(MessageType.User, {
     content:
@@ -226,7 +244,8 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
       prefixEndId: all[cut - 1].id,
       previousId: previous?.id ?? null,
       profileRevision: profile.revision,
-      projectionVersion: 1,
+      projectionVersion: options.verifiedContext?.projectionIds.length ? 2 : 1,
+      ...(options.verifiedContext?.projectionIds.length ? {projectionIds: options.verifiedContext.projectionIds} : {}),
       provider: model.getProvider(),
       sessionId: session.getId(),
       sourceDigest: sourceDigest(originals),
@@ -241,7 +260,12 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
       id: candidate.id,
       timestamp: candidate.timestamp,
     })
-    next = prepareRequest(options, [...options.prefix, summaryMessage, ...all.slice(cut)])
+    next = prepareRequest(options, [
+      ...options.prefix,
+      summaryMessage,
+      ...(options.verifiedContext?.notices ?? []),
+      ...all.slice(cut),
+    ])
     const after = checkedEstimate(next, options)
     if (after.tokens >= before.tokens || after.tokens > profile.target)
       throw new ContextBudgetError('summary-does-not-fit-target')
@@ -263,6 +287,7 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
     sourceDigest(session.getConversationMessages().map((value) => persistedContextMessage(value))) !== sourceRevision
   )
     throw new ContextBudgetError('context-source-changed')
+  await options.reverify?.()
   try {
     await run.wait('context-save', session.commitCompaction(candidate, run.journal.level))
   } catch (error) {

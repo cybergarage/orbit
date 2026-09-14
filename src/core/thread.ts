@@ -22,6 +22,7 @@ import {RunExecutionError} from './execution/run.js'
 import {Message as CoreMessage, MessageType as CoreMessageType} from './message/index.js'
 import {boundedGraphJSON, graphBinding} from './processor/graph-definition.js'
 import {Session, type SessionRepository} from './session/index.js'
+import {loadWorkspaceSettingsSync} from './settings.js'
 import {normalizeSkillSelections} from './skills/catalog.js'
 import {State} from './state.js'
 
@@ -185,7 +186,7 @@ export interface ThreadManagerOptions {
 
 export interface CreateThreadOptions {
   agent?: AgentOptions
-  formatVersion?: 1 | 2
+  formatVersion?: 1 | 2 | 3
   id?: string
 }
 
@@ -302,18 +303,29 @@ export class ThreadManager {
       throw new InvalidInputError(`Thread already exists: ${id}`)
     }
 
+    const interruptionEnabled =
+      (
+        options.agent?.interruptionPolicy ??
+        options.agent?.settings?.interruptionPolicy ??
+        loadWorkspaceSettingsSync(options.agent?.cwd).interruptionPolicy
+      )?.mode === 'verified-not-dispatched'
     const session =
       options.agent?.state?.getSession() ??
       (this.sessionRepository === undefined
-        ? new Session({formatVersion: options.formatVersion, metadata: {cwd: options.agent?.cwd, id}})
+        ? new Session({
+            formatVersion: options.formatVersion ?? (interruptionEnabled ? 3 : undefined),
+            metadata: {cwd: options.agent?.cwd, id},
+          })
         : this.sessionRepository.create({
             cwd: options.agent?.cwd,
             formatVersion:
               options.formatVersion ??
-              (options.agent?.skillCatalog ||
-              (options.agent?.contextPolicy ?? options.agent?.settings?.contextPolicy)?.mode === 'budgeted'
-                ? 2
-                : 1),
+              (interruptionEnabled
+                ? 3
+                : options.agent?.skillCatalog ||
+                    (options.agent?.contextPolicy ?? options.agent?.settings?.contextPolicy)?.mode === 'budgeted'
+                  ? 2
+                  : 1),
             id,
             model: options.agent?.model?.name,
             originator: 'orbit-thread-manager',

@@ -62,7 +62,7 @@ Identical request IDs compare the full submitted graph identity, configuration, 
 
 ## Migration and interrupted operation
 
-Before the first Graph in a saved pair, stop old writers/readers and automatic restart sources, preserve evidence/backups and migrate the transcript explicitly to v2. Update every process using that Session/journal pair. Old v1 journal readers reject v2 records. A newline-terminated unknown/malformed journal record is invalid evidence; an unterminated journal suffix is preserved with an issue. Transcript decoding separately rejects syntactically complete unknown records even without a newline and only recovers an incomplete final JSON parse.
+Before the first Graph in a saved pair, stop old writers/readers and automatic restart sources, preserve evidence/backups and migrate the transcript explicitly to v2, or v3 when enabling verified interrupted context. Update every process using that Session/journal pair. Old v1 journal readers reject v2 records. A newline-terminated unknown/malformed journal record is invalid evidence; an unterminated journal suffix is preserved with an issue. Transcript decoding separately rejects syntactically complete unknown records even without a newline and only recovers an incomplete final JSON parse.
 
 Storage registration, stable Session scopes, guard/owner cleanup and offline maintenance remain unchanged. No Graph-only store exists: deletion removes its journal through SessionDeletionService and keeps the existing minimal tombstone. On interruption, inspect transcript/journal and externally reconcile uncertain effects under the existing execution protocol; do not replay a selected node to obtain missing evidence. Keep external admission/restarters stopped whenever prior migration/maintenance success is unknown. This feature never authorizes deleting backups.
 
@@ -71,3 +71,7 @@ See [Managed execution](execution.md), [input budgets](context-compaction.md), [
 ## Human-selected candidates
 
 Applications can register finite Graph candidates with trusted evaluation using [Workflow selection](workflow-selection.md). The coordinator retains the complete request and selection expectation, then uses this same managed Graph path. Selected calls check the fixed declaration and actual catalog/Skill snapshot before ready. Existing explicit Graph calls keep their behavior outside selection-managed product scopes; changing human selection never replaces a captured or running Graph.
+
+### Verified context after cancellation
+
+The [opt-in interrupted-context policy](interrupted-context.md) requires transcript v3 and preflights history before binding/preparing a new Graph. Agent stages share owned projection and compaction; direct tool nodes retain real operations. V3 migration preserves all data-entry positions used by old journal-v2 observations. The inspector accepts explicit transcript versions 2 and 3; journal versions do not change and interrupted visits are not restarted.

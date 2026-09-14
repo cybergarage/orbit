@@ -95,3 +95,5 @@ links. Proposed specifications belong in research or a proposed ADR until the
 repository adopts a dedicated specification lifecycle.
 
 - [Session storage registration, recovery and migration](session-storage.md): offline initialization, scoped writer/journal APIs, retained guards and deletion migration.
+
+- [Verified interrupted context](interrupted-context.md): opt-in cancelled nondispatch evidence, derived input and exclusive transcript-v3 migration.

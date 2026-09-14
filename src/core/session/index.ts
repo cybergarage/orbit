@@ -48,14 +48,21 @@ export {SessionHeader} from './header.js'
 export type {SessionHeaderOptions} from './header.js'
 export {createSessionInformation, formatSessionInformation} from './information.js'
 export type {SessionInformation, SessionInformationOverrides, SessionStatus} from './information.js'
+export type {ContextProjectionEntry, InterruptedCall, ProjectionEvidence} from './interrupted-context.js'
+export {
+  CONTEXT_PROJECTION_RECORD_BYTES,
+  CONTEXT_PROJECTION_REVISION,
+  VerifiedContextError,
+} from './interrupted-context.js'
 export {createMessage} from './message-factory.js'
+
 export type {CreateMessageOptions} from './message-factory.js'
-export {inspectTranscriptMigration, migrateSessionTranscript} from './migration.js'
-
+export {inspectTranscriptMigration, migrateSessionTranscript, migrateSessionTranscriptV3} from './migration.js'
 export type {TranscriptMigrationInspection} from './migration.js'
-export {sessionFilePath} from './paths.js'
-export {SessionRecorder} from './recorder.js'
 
+export {sessionFilePath} from './paths.js'
+
+export {SessionRecorder} from './recorder.js'
 export {SessionRepository} from './repository.js'
 
 export type {
@@ -67,8 +74,10 @@ export type {
   SessionRepositoryOptions,
   SessionSummary,
 } from './repository.js'
+
 export {Session} from './session.js'
 
 export type {AppendMessageOptions, RecordTurnContextOptions, RecordTurnEventOptions, SessionOptions} from './session.js'
-
+export type {InterruptionPolicy} from './verified-context.js'
+export {DEFAULT_PROJECTION_LIMITS, parseInterruptionPolicy} from './verified-context.js'
 export type {SessionWriterLease} from './writer-lease.js'

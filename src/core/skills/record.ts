@@ -97,7 +97,7 @@ export function validateSkillEntries(entries: SessionEntry[], sessionId: string,
     else if (entry.type === 'skill_context') {
       parseSkillEntry(entry)
       if (
-        version !== 2 ||
+        ![2, 3].includes(version) ||
         entry.sessionId !== sessionId ||
         !contexts.has(entry.turnId) ||
         !started.has(entry.turnId) ||

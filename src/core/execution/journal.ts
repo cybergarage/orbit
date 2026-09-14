@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {createHmac, randomBytes, randomUUID} from 'node:crypto'
+import {constants} from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
@@ -50,6 +51,7 @@ export interface ExecutionJournal {
   readonly level: JournalLevel
   readonly mode: 'file' | 'memory'
   records(): JournalRecord[]
+  verifyContextEvidence?(maxBytes: number): Promise<JournalRecord[]>
 }
 
 /** Reject lossy JSON before binding an operation or accepting a replay key. */
@@ -165,6 +167,21 @@ export class MemoryExecutionJournal implements ExecutionJournal {
   records(): JournalRecord[] {
     return copyJSON(this.entries)
   }
+
+  async verifyContextEvidence(maxBytes: number): Promise<JournalRecord[]> {
+    if (this.closed) throw new Error('Context evidence journal is closed')
+    await this.queue
+    if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0 || Buffer.byteLength(canonicalJSON(this.entries)) > maxBytes)
+      throw new Error('Context evidence exceeds the read limit')
+    const records = this.records()
+    const checked: JournalRecord[] = []
+    for (const record of records) {
+      validateNext(checked, record)
+      checked.push(record)
+    }
+
+    return records
+  }
 }
 
 export interface FileExecutionJournalOptions {
@@ -240,6 +257,80 @@ export class FileExecutionJournal extends MemoryExecutionJournal {
     }
 
     if (this.level === 'file-and-directory-sync') await syncDirectory(directory, this.io)
+  }
+
+  override async verifyContextEvidence(maxBytes: number): Promise<JournalRecord[]> {
+    const expected = await super.verifyContextEvidence(maxBytes)
+    let remaining = maxBytes
+    const read = async (file: string): Promise<Buffer> => {
+      // O_NOFOLLOW prevents evidence from being replaced with a symbolic link.
+      // eslint-disable-next-line no-bitwise
+      const handle = await this.io.open(file, constants.O_RDWR | constants.O_NOFOLLOW)
+      try {
+        const before = await handle.stat()
+        if (!before.isFile() || before.nlink !== 1 || before.size > remaining)
+          throw new Error('Invalid bounded context evidence file')
+        const chunks: Buffer[] = []
+        for (;;) {
+          const buffer = Buffer.alloc(Math.min(65_536, remaining + 1))
+          // Ordered bounded reads belong to one owned evidence operation.
+          // eslint-disable-next-line no-await-in-loop
+          const {bytesRead} = await handle.read(buffer, 0, buffer.length, null)
+          if (!bytesRead) break
+          remaining -= bytesRead
+          if (remaining < 0) throw new Error('Context evidence exceeds the read limit')
+          chunks.push(buffer.subarray(0, bytesRead))
+        }
+
+        const after = await handle.stat()
+        const named = await this.io.lstat(file)
+        if (
+          named.isSymbolicLink() ||
+          named.dev !== before.dev ||
+          named.ino !== before.ino ||
+          after.size !== before.size ||
+          after.mtimeMs !== before.mtimeMs
+        )
+          throw new Error('Context evidence changed during read')
+        await handle.sync()
+        return Buffer.concat(chunks)
+      } finally {
+        await handle.close()
+      }
+    }
+
+    const directory = path.join(this.root, this.sessionId)
+    const key = await read(path.join(directory, 'key'))
+    if (!key.equals(this.key)) throw new Error('Context evidence key changed')
+    const records: JournalRecord[] = []
+    for (const child of await this.io.readdir(directory, {withFileTypes: true})) {
+      if (child.name === 'key') continue
+      if (!child.isDirectory()) throw new Error('Ambiguous context evidence directory')
+      safeIdentity(child.name)
+      const dir = path.join(directory, child.name)
+      // Each file and directory acknowledgement precedes evidence use.
+      // eslint-disable-next-line no-await-in-loop
+      const bytes = await read(path.join(dir, 'events.jsonl'))
+      const contents = new TextDecoder('utf8', {fatal: true}).decode(bytes)
+      if (!contents.endsWith('\n')) throw new Error('Torn context evidence')
+      for (const line of contents.trimEnd().split('\n')) {
+        const record = JSON.parse(line) as JournalRecord
+        if (record.sessionId !== this.sessionId || record.runId !== child.name)
+          throw new Error('Context evidence identity mismatch')
+        validateNext(records, record)
+        records.push(record)
+      }
+
+      // eslint-disable-next-line no-await-in-loop
+      if (this.level === 'file-and-directory-sync') await syncDirectory(dir, this.io)
+    }
+
+    if (this.level === 'file-and-directory-sync') await syncDirectory(directory, this.io)
+    const ordered = (value: JournalRecord[]) =>
+      [...value].sort((a, b) => a.runId.localeCompare(b.runId) || a.sequence - b.sequence)
+    if (canonicalJSON(ordered(records)) !== canonicalJSON(ordered(expected)))
+      throw new Error('Context evidence diverged from journal')
+    return records
   }
 
   private async load(): Promise<void> {

@@ -10,7 +10,7 @@ import {validateNext} from '../execution/journal.js'
 export interface GraphTranscriptEvidence {
   /** Session data entries, excluding the JSONL header, matching Session.synchronize. */
   entries: readonly SessionEntry[]
-  formatVersion: 1 | 2
+  formatVersion: 1 | 2 | 3
   sessionId: string
 }
 export interface GraphInspection {
@@ -45,7 +45,7 @@ export function inspectGraphRun(records: JournalRecord[], transcript?: GraphTran
     }
     if (!transcript) return result
     result.transcript = 'mismatch'
-    if (transcript.formatVersion !== 2 || transcript.sessionId !== first.sessionId)
+    if (![2, 3].includes(transcript.formatVersion) || transcript.sessionId !== first.sessionId)
       throw new Error('Graph transcript identity/version mismatch')
     for (const record of records) {
       const high = record.data.transcriptHighWater

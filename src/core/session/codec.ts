@@ -20,6 +20,11 @@ import {SKILL_RECORD_BYTES} from '../skills/parser.js'
 import {hasSkillRecordType, parseSkillEntry, validateSkillEntries} from '../skills/record.js'
 import {parseCompaction, validateCompactionEntries} from './compaction.js'
 import {SESSION_FORMAT_VERSION, SessionEntryType, TurnPhase} from './entries.js'
+import {
+  CONTEXT_PROJECTION_RECORD_BYTES,
+  parseContextProjection,
+  validateContextProjectionEntries,
+} from './interrupted-context.js'
 
 export interface ParsedSessionFile {
   entries: SessionEntry[]
@@ -29,6 +34,7 @@ export interface ParsedSessionFile {
 
 export function encodeSessionEntry(entry: SessionEntry): string {
   assertJsonValue(entry, '$')
+  if (entry.type === 'context_projection') parseContextProjection(entry)
   if (entry.type === 'skill_context') parseSkillEntry(entry)
   return `${JSON.stringify(entry)}\n`
 }
@@ -58,6 +64,14 @@ export function parseSessionFile(raw: string, file: string): ParsedSessionFile {
       throw sessionFileError(file, index + 1, error instanceof Error ? error.message : 'Invalid JSON')
     }
 
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'type' in parsed &&
+      parsed.type === 'context_projection' &&
+      Buffer.byteLength(line) > CONTEXT_PROJECTION_RECORD_BYTES
+    )
+      throw sessionFileError(file, index + 1, 'Context projection record exceeds 4 MiB')
     entries.push(parseEntry(parsed, file, index + 1))
   }
 
@@ -68,6 +82,7 @@ export function parseSessionFile(raw: string, file: string): ParsedSessionFile {
 
   validateEntrySequence(entries, file)
   validateSkillEntries(entries, header.id, header.version)
+  validateContextProjectionEntries(entries, header.id, header.version)
   validateCompactionEntries(entries, header.id, header.version)
   return {entries, header, recovered}
 }
@@ -77,6 +92,10 @@ function parseEntry(value: unknown, file: string, line: number): SessionEntry {
   switch (entry.type) {
     case SessionEntryType.Compaction: {
       return parseCompaction(entry)
+    }
+
+    case SessionEntryType.ContextProjection: {
+      return parseContextProjection(entry)
     }
 
     case SessionEntryType.Message: {
@@ -107,7 +126,7 @@ function parseEntry(value: unknown, file: string, line: number): SessionEntry {
 
 function parseHeaderEntry(entry: Record<string, unknown>, file: string, line: number): SessionHeaderEntry {
   const version = requireNumber(entry.version, file, line, 'version')
-  if (version !== SESSION_FORMAT_VERSION && version !== 2) {
+  if (version !== SESSION_FORMAT_VERSION && version !== 2 && version !== 3) {
     throw sessionFileError(file, line, `Unsupported session format version: ${version}`)
   }
 

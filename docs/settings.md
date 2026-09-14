@@ -218,3 +218,7 @@ profile. A nearer setting replaces this policy rather than merging individual
 counts. Model identity, window, reserves and estimator assumptions are explicit;
 see [Input budgets and compaction](context-compaction.md). CLI, GUI and Service
 use this same setting. Programmatic Agent/Service options can override it.
+
+### Interrupted tool context
+
+`interruptionPolicy` accepts exactly `{"mode":"disabled"}` (default) or `{"mode":"verified-not-dispatched","revision":1}`. It is independent of `contextPolicy`, included in enabled request/selection identity, and inherited by Agent, Thread, CLI/Ink and GUI service preparation. Saved data is never implicitly migrated. See [the feature guide](interrupted-context.md) before enabling it on a shared Session/journal pair.

@@ -656,7 +656,7 @@ export async function runInteractiveSession(options: InteractiveSessionOptions):
     options.session ??
     repository.create({
       cwd: options.cwd,
-      formatVersion: options.skillCatalog || options.settings?.contextPolicy?.mode === 'budgeted' ? 2 : 1,
+      formatVersion: options.settings?.interruptionPolicy?.mode === 'verified-not-dispatched' ? 3 : options.skillCatalog || options.settings?.contextPolicy?.mode === 'budgeted' ? 2 : 1,
       model: options.initialModel,
       originator: 'orbit-interactive',
       provider: options.initialProvider,

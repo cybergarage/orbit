@@ -11,6 +11,7 @@ import {encodeSessionEntry, parseSessionFile} from './codec.js'
 import {
   beginTranscriptMaintenance,
   canonicalStoragePath,
+  coordinationPaths,
   inspectTranscript,
   migrationIntentPath,
 } from './coordination.js'
@@ -156,7 +157,13 @@ export function inspectTranscriptMigration(scope: SessionScope): TranscriptMigra
   const file = migrationIntentPath(scope)
   if (!fs.existsSync(file)) return {state: 'none'}
   try {
-    const value = JSON.parse(read(file)) as MigrationIntent
+    const value = JSON.parse(read(file)) as MigrationIntent | ProjectionMigrationIntent
+    if (value.version === 2) {
+      validateProjectionIntent(value, scope, value.file)
+      if (!value.file.startsWith(scope.sessionRoot + path.sep)) throw new Error('Invalid migration destination')
+      return {file: value.file, state: 'pending'}
+    }
+
     if (
       value.version !== 1 ||
       value.sessionId !== scope.sessionId ||
@@ -170,4 +177,125 @@ export function inspectTranscriptMigration(scope: SessionScope): TranscriptMigra
   } catch {
     return {reason: 'Migration artifacts require exclusive review', state: 'invalid'}
   }
+}
+
+interface ProjectionMigrationIntent {
+  file: string
+  sessionId: string
+  sourceDigest: string
+  sourceVersion: 2
+  targetDigest: string
+  targetVersion: 3
+  token: string
+  version: 2
+}
+function projectionMigrationTarget(source: string, file: string): string {
+  const parsed = parseSessionFile(source, file)
+  if (parsed.header.version !== 2 || parsed.recovered) throw new Error('Projection migration requires complete v2')
+  const end = source.indexOf('\n')
+  if (end === -1) throw new Error('Projection migration requires a complete header line')
+  // Only replace the header. CRLF, whitespace and every data entry byte remain unchanged.
+  return encodeSessionEntry({...parsed.header, version: 3}) + source.slice(end + 1)
+}
+
+function validateProjectionIntent(value: ProjectionMigrationIntent, scope: SessionScope, file: string): void {
+  if (
+    !value ||
+    Object.keys(value).sort().join(',') !==
+      'file,sessionId,sourceDigest,sourceVersion,targetDigest,targetVersion,token,version' ||
+    value.version !== 2 ||
+    value.sourceVersion !== 2 ||
+    value.targetVersion !== 3 ||
+    value.file !== file ||
+    value.sessionId !== scope.sessionId ||
+    !/^[a-f0-9-]{36}$/.test(value.token) ||
+    !/^[a-f0-9]{64}$/.test(value.sourceDigest) ||
+    !/^[a-f0-9]{64}$/.test(value.targetDigest)
+  )
+    throw new Error('Invalid v2-to-v3 migration intent; retain exclusion')
+}
+
+/** Exclusive v2-to-v3 conversion; never deletes backups or resumes an older migration intent. */
+export function migrateSessionTranscriptV3(
+  scope: SessionScope,
+  file: string,
+  conditions: OfflineStorageConditions,
+  resume = false,
+): 'already-migrated' | 'migrated' {
+  file = path.resolve(file)
+  const intentFile = migrationIntentPath(scope)
+  const existing = fs.existsSync(intentFile) ? (JSON.parse(read(intentFile)) as ProjectionMigrationIntent) : undefined
+  if (existing) {
+    validateProjectionIntent(existing, scope, file)
+    if (!resume) throw new Error('Pending v3 migration requires explicit resume')
+  }
+
+  if (!resume && !existing) {
+    inspectTranscript(scope, file)
+    const parsed = parseSessionFile(read(file), file)
+    if (parsed.recovered || ![2, 3].includes(parsed.header.version))
+      throw new Error('Migration requires a complete version-2 or version-3 transcript')
+  }
+
+  const resumeGuard = resume && (Boolean(existing) || fs.existsSync(coordinationPaths(scope).guard))
+  const guard = beginTranscriptMaintenance(scope, conditions, resumeGuard, existing?.token)
+  inspectTranscript(scope, file)
+  let source = read(file)
+  if (!Buffer.from(source).equals(fs.readFileSync(file))) throw new Error('Transcript is not lossless UTF-8')
+  let intent = existing
+  if (!intent) {
+    const parsed = parseSessionFile(source, file)
+    if (parsed.recovered) throw new Error('Incomplete transcript cannot be migrated')
+    if (parsed.header.version === 3) {
+      sync(file)
+      sync(path.dirname(file))
+      guard.release()
+      return 'already-migrated'
+    }
+
+    const target = projectionMigrationTarget(source, file)
+    intent = {
+      file,
+      sessionId: scope.sessionId,
+      sourceDigest: digest(source),
+      sourceVersion: 2,
+      targetDigest: digest(target),
+      targetVersion: 3,
+      token: guard.token,
+      version: 2,
+    }
+    write(intentFile, JSON.stringify(intent) + '\n')
+  }
+
+  if (intent.token !== guard.token) throw new Error('Migration guard token mismatch')
+  const backup = file + '.v2-backup'
+  const pending = file + '.v3-pending'
+  if (digest(source) === intent.sourceDigest) {
+    if (fs.existsSync(backup)) {
+      if (digest(read(backup)) !== intent.sourceDigest) throw new Error('Conflicting v2 backup')
+      sync(backup)
+    } else write(backup, source)
+    const target = projectionMigrationTarget(source, file)
+    if (digest(target) !== intent.targetDigest) throw new Error('Migration target mismatch')
+    if (fs.existsSync(pending)) {
+      if (digest(read(pending)) !== intent.targetDigest)
+        throw new Error('Incomplete v3 replacement requires offline review')
+      sync(pending)
+    } else write(pending, target)
+    fs.renameSync(pending, file)
+    source = read(file)
+  }
+
+  if (digest(source) !== intent.targetDigest || digest(read(backup)) !== intent.sourceDigest)
+    throw new Error('V3 migration evidence mismatch')
+  const parsed = parseSessionFile(source, file)
+  if (parsed.header.version !== 3 || parsed.recovered) throw new Error('Invalid migrated v3 transcript')
+  sync(backup)
+  sync(file)
+  sync(path.dirname(file))
+  inspectTranscript(scope, file)
+  guard.release()
+  fs.unlinkSync(intentFile)
+  sync(path.dirname(intentFile))
+  return 'migrated'
 }

@@ -250,7 +250,14 @@ export type {
   SummaryFact,
   SummaryTest,
 } from './session/index.js'
-export {inspectTranscriptMigration} from './session/index.js'
+export {
+  DEFAULT_PROJECTION_LIMITS,
+  inspectTranscriptMigration,
+  migrateSessionTranscriptV3,
+  parseInterruptionPolicy,
+  VerifiedContextError,
+} from './session/index.js'
+export type {ContextProjectionEntry, InterruptionPolicy} from './session/index.js'
 export type {TranscriptMigrationInspection} from './session/index.js'
 
 export {

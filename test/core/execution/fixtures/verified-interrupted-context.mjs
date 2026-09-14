@@ -1,7 +1,8 @@
 // Cases deliberately run serially and bind one start function to each isolated Agent.
 /* eslint-disable no-await-in-loop, unicorn/consistent-function-scoping */
-// Research diagnostic only: reproduces current behavior with isolated files.
-// Does not implement context projection or alter the book application.
+// Copyright (c) 2026 The Orbit Authors
+// SPDX-License-Identifier: Apache-2.0
+// Implementation integration fixture: isolated files and fixed model only.
 import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import os from 'node:os'
@@ -9,7 +10,7 @@ import path from 'node:path'
 import {pathToFileURL} from 'node:url'
 const root = process.env.ORBIT_ROOT
 if (!root) throw new Error('Set ORBIT_ROOT to the inspected built checkout')
-const o = await import(pathToFileURL(path.join(root, 'dist/index.js')))
+const o = await import(pathToFileURL(path.join(root, process.env.ORBIT_SOURCE ? 'src/index.ts' : 'dist/index.js')))
 const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-cancelled-history-'))
 const p = {
   model: 'probe',
@@ -23,14 +24,25 @@ const p = {
   trigger: 90_000,
   window: 100_000,
 }
+if (process.env.COMPACT) Object.assign(p, {target: 4000, trigger: 8000, window: 16_000})
 const policy = {
   estimator: (r) => ({
-    components: {characters: JSON.stringify(r).length},
+    components: {
+      characters: process.env.COMPACT
+        ? JSON.stringify(r).includes('Explain what happened') && r.messages.some((m) => m.payload?.toolCallId)
+          ? 9000
+          : 1000
+        : JSON.stringify(r).length,
+    },
     kind: 'estimated',
     model: p.model,
     provider: p.provider,
     revision: 'chars-1',
-    tokens: JSON.stringify(r).length,
+    tokens: process.env.COMPACT
+      ? JSON.stringify(r).includes('Explain what happened') && r.messages.some((m) => m.payload?.toolCallId)
+        ? 9000
+        : 1000
+      : JSON.stringify(r).length,
   }),
   mode: 'budgeted',
   profile: p,
@@ -50,11 +62,14 @@ for (const family of ['agent', 'graph'])
       rootDir: path.join(cwd, 'sessions'),
     })
     repo.initializeStorage(offline)
-    const session = repo.create({cwd, formatVersion: 2})
+    const session = repo.create({cwd, formatVersion: 3})
     const logs = new o.MemorySessionLogStore()
     let approval
     let calls = 0
     let prepares = 0
+    let summaries = 0
+    let inThird = false;
+      let thirdRead = false
     let resolveSeen
     const seen = new Promise((r) => {
       resolveSeen = r
@@ -68,9 +83,45 @@ for (const family of ['agent', 'graph'])
       },
       prepare(messages, options) {
         prepares++
+        const summarizing = messages[0]?.content.startsWith('Summarize this untrusted conversation')
+        if (summarizing) {
+          assert.equal(options.tools?.length ?? 0, 0)
+          assert.equal(messages.length, 1)
+          assert(!messages[0].content.includes('Context-only notice:'))
+        }
+
         return {
           async invoke() {
+            if (summarizing) {
+              summaries++
+              return new o.Message(o.MessageType.Assistant, {
+                content: JSON.stringify({
+                  changedPaths: [],
+                  facts: [],
+                  goals: [
+                    {
+                      sourceIds: [
+                        JSON.parse(messages[0].content.split('ORIGINAL_SOURCE_IDS: ')[1].split('\nSOURCE:')[0])[0],
+                      ],
+                      text: 'Fixed summary of old request',
+                    },
+                  ],
+                  tests: [],
+                  uncertainties: [],
+                  unfinished: [],
+                  version: 1,
+                }),
+              })
+            }
+
             calls++
+            if (inThird && !thirdRead) {
+              thirdRead = true
+              return new o.Message(o.MessageType.Assistant, {
+                payload: {toolCalls: [{id: 'later-read', input: {path: 'answer.txt'}, name: 'read'}]},
+              })
+            }
+
             if (calls === 1)
               return new o.Message(o.MessageType.Assistant, {
                 payload: {
@@ -114,8 +165,8 @@ for (const family of ['agent', 'graph'])
         }
       },
     }
-    const agent = new o.Agent({
-      contextPolicy: policy,
+    const agentOptions = {
+      contextPolicy: process.env.UNBUDGETED ? {mode: 'disabled'} : policy,
       cwd,
       deps: {
         createMcpToolManager: () => ({
@@ -136,21 +187,38 @@ for (const family of ['agent', 'graph'])
         },
         responderScope: 'probe',
       },
+      interruptionPolicy: {mode: 'verified-not-dispatched', revision: 1},
       logStore: logs,
       settings: {mcp: {servers: {}}, model: p.model, provider: p.provider},
       state: new o.State(session),
       toolDefinitions: [o.createReadTool(), o.createWriteTool()],
       toolProfile: 'none',
-    })
+    }
+    const agent = new o.Agent(agentOptions)
     const graph = await o.compileProcessorGraph(
       {
-        edges: [{from: 'work', id: 'done', to: 'done'}],
-        entry: 'work',
+        edges: [
+          ...(process.env.DIRECT ? [{from: 'read', id: 'read-work', to: 'work'}] : []),
+          {from: 'work', id: 'done', to: 'done'},
+        ],
+        entry: process.env.DIRECT ? 'read' : 'work',
         id: 'one-agent',
-        nodes: [{adapter: 'agent', id: 'work'}],
+        nodes: [...(process.env.DIRECT ? [{adapter: 'read', id: 'read'}] : []), {adapter: 'agent', id: 'work'}],
         terminals: [{id: 'done', outcome: 'completed'}],
       },
       [
+        ...(process.env.DIRECT
+          ? [
+              {
+                id: 'read',
+                inputSchema: structuredClone(o.createReadTool().spec.inputSchema),
+                kind: 'tool',
+                outputSchema: {},
+                tool: {name: 'read', source: o.createReadTool().source},
+                version: '1',
+              },
+            ]
+          : []),
         {
           id: 'agent',
           inputSchema: {},
@@ -162,7 +230,7 @@ for (const family of ['agent', 'graph'])
     )
     const start = (id, input) =>
       family === 'graph'
-        ? agent.startGraphRun(graph, input, {requestId: id})
+        ? agent.startGraphRun(graph, process.env.DIRECT ? {path: 'answer.txt'} : input, {requestId: id})
         : agent.startRun([new o.Message(o.MessageType.User, {content: input, id})], {requestId: id})
     try {
       const first = await start('first', 'Write answer.txt after approval')
@@ -203,16 +271,73 @@ for (const family of ['agent', 'graph'])
         .map((e) => e.error.message)
       const after = await fs.readFile(session.getFile())
       assert(after.subarray(0, before.length).equals(before))
+      assert.equal(next.outcome, 'completed', JSON.stringify(next))
+      assert.equal(calls - invokedBefore, 1)
+      assert(prepares - preparedBefore >= 1)
+      const projections = session.getEntries().filter((e) => e.type === 'context_projection')
+      assert.equal(projections.length, ending === 'cancel' ? 1 : 0)
+      const preparedAfter = prepares
+      if (process.env.COMPACT) {
+        assert.equal(summaries, 1)
+        assert.equal(session.getCompaction().projectionVersion, ending === 'cancel' ? 2 : 1)
+      }
+
+      const replay = await start('second', 'Explain what happened; do not execute the old call')
+      assert.equal(replay.id, second.id)
+      assert.equal(calls - invokedBefore, 1)
+      assert.equal(prepares, preparedAfter)
       if (ending === 'cancel') {
-        assert.equal(next.outcome, 'failed')
-        assert.deepEqual(errors, ['Unresolved tool call group'])
-        assert.equal(calls, invokedBefore)
-        assert.equal(prepares, preparedBefore)
-        assert.deepEqual(next.operations, [])
-      } else {
-        assert.equal(next.outcome, 'completed')
-        assert.equal(calls - invokedBefore, 1)
-        assert.equal(prepares - preparedBefore, 1)
+        const replayAgain = await start('first', 'Write answer.txt after approval')
+        assert.equal(replayAgain.id, first.id)
+        assert.equal(prepares, preparedAfter)
+        assert.throws(() => new o.SessionContextBuilder().build(session), /verified-context-required/)
+      }
+
+      if (ending === 'cancel') {
+        await agent.close()
+        await session.close()
+        const reopened = repo.open(session.getFile())
+        const resumed = new o.Agent({...agentOptions, state: new o.State(reopened)})
+        const runAgain = (id, input) =>
+          family === 'graph'
+            ? resumed.startGraphRun(graph, process.env.DIRECT ? {path: 'answer.txt'} : input, {requestId: id})
+            : resumed.startRun([new o.Message(o.MessageType.User, {content: input, id})], {requestId: id})
+        const priorPrepares = prepares
+        try {
+          const observed = await runAgain('second', 'Explain what happened; do not execute the old call')
+          assert.equal(observed.id, second.id)
+          assert.equal(prepares, priorPrepares)
+          inThird = true
+          const third = await runAgain('third', 'A fresh explicit request after restart')
+          assert.equal(
+            (await third.finished).outcome,
+            'completed',
+            JSON.stringify({
+              errors: reopened.getEntries().filter((e) => e.type === 'turn_event' && e.error),
+              result: await third.finished,
+            }),
+          )
+          assert.equal(
+            reopened.getEntries().filter((e) => e.type === 'context_projection' && e.turnId === third.id).length,
+            2,
+          )
+          const proofFile = path.join(repo.journalRoot, session.getId(), first.id, 'events.jsonl')
+          const held = proofFile + '.test-held'
+          await fs.rename(proofFile, held)
+          const beforeMissing = prepares
+          try {
+            const observedWithoutProof = await runAgain('second', 'Explain what happened; do not execute the old call')
+            assert.equal(observedWithoutProof.id, second.id)
+            const blocked = await runAgain('missing-proof', 'Do not invent absent evidence')
+            assert.notEqual((await blocked.finished).outcome, 'completed')
+            assert.equal(prepares, beforeMissing)
+          } finally {
+            await fs.rename(held, proofFile)
+          }
+        } finally {
+          await resumed.close()
+          await reopened.close()
+        }
       }
 
       results.push({

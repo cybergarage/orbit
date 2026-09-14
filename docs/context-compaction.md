@@ -127,7 +127,7 @@ replays an existing valid checkpoint and only disables automatic preparation.
 
 ## Migrate existing transcripts
 
-New budgeted persistent Sessions use transcript v2. `SessionRepository.create`
+New budgeted persistent Sessions use transcript v2 unless verified interrupted context selects v3. `SessionRepository.create`
 accepts `formatVersion: 2`; the default remains v1 for compatibility. Enabling
 budgeting for a persistent v1 Session reports `transcript-migration-required`.
 Old readers cannot open v2. Stop old binaries and their automatic restart sources
@@ -171,3 +171,7 @@ Selected Skill instructions are protected ordinary-request prefixes in both
 budget modes. The dedicated summarizer receives no active Skill bodies; frozen
 bodies return in the subsequent answering request. Historical snapshots remain
 separate from canonical conversation-message digests. See [Skills](skills.md).
+
+### Opt-in verified interruption
+
+With [verified interrupted context](interrupted-context.md), new persistent Sessions use v3 and old ones need the separate byte-preserving migration. Only uniquely proven cancelled nondispatch can supply error-form input. Projection-aware checkpoints use projection version 2, retain raw source digests and reference synchronized provenance. Ordinary version-1 checkpoints keep their strict validation. Summary requests serialize raw evidence as untrusted data and receive no tools or Skills. Mandatory cancellation notices remain outside the summary, count toward the ordinary budget, and never release latest-turn protection. Policy-off and budget-off paths cannot bypass verification of dependent history.

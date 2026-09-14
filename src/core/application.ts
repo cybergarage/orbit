@@ -255,7 +255,7 @@ export class OrbitApplicationService {
     return this.closePromise
   }
 
-  createThread(options: {formatVersion?: 1 | 2} = {}): ThreadSnapshot {
+  createThread(options: {formatVersion?: 1 | 2 | 3} = {}): ThreadSnapshot {
     const systemMessages =
       this.systemPrompt === undefined || this.systemPrompt.length === 0
         ? undefined

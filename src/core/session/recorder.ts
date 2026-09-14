@@ -65,9 +65,16 @@ export class SessionRecorder {
     const claim = WriterClaim.acquire(scope, () => {
       inspectTranscript(scope, resolved)
       const parsed = parseSessionFile(fsSync.readFileSync(resolved, 'utf8'), resolved)
+      if (parsed.header.version === 3 && parsed.recovered)
+        throw new Error('Incomplete v3 transcript requires offline inspection')
       if (parsed.recovered)
         fsSync.writeFileSync(resolved, parsed.entries.map((entry) => encodeSessionEntry(entry)).join(''), {mode: 0o600})
-      if (parsed.entries.some((entry) => entry.type === 'compaction' || entry.type === 'skill_context')) {
+      if (
+        parsed.entries.some(
+          (entry) =>
+            entry.type === 'compaction' || entry.type === 'skill_context' || entry.type === 'context_projection',
+        )
+      ) {
         const descriptor = fsSync.openSync(resolved, 'r+')
         try {
           fsSync.fsyncSync(descriptor)
@@ -153,5 +160,53 @@ export class SessionRecorder {
     })
     this.queue.catch(() => {})
     return this.queue
+  }
+
+  /** Bounded reread under the current writer claim; never repairs or authorizes an old Run. */
+  async verifyContextSource(maxBytes: number): Promise<string> {
+    await this.queue
+    this.claim.assertLive()
+    // Reject aliases before opening; O_NOFOLLOW also closes the final-component race.
+    if (canonicalStoragePath(this.file) !== this.file) throw new Error('Context source alias changed')
+    // eslint-disable-next-line no-bitwise
+    const handle = await fs.open(this.file, fsSync.constants.O_RDWR | fsSync.constants.O_NOFOLLOW)
+    try {
+      const before = await handle.stat()
+      if (!before.isFile() || before.nlink !== 1 || before.size > maxBytes)
+        throw new Error('Context source limit or identity')
+      const chunks: Buffer[] = []
+      let total = 0
+      while (true) {
+        const buffer = Buffer.alloc(Math.min(65_536, maxBytes - total + 1))
+        // Ordered bounded reads remain owned until close settles.
+        // eslint-disable-next-line no-await-in-loop
+        const {bytesRead} = await handle.read(buffer, 0, buffer.length, null)
+        if (!bytesRead) break
+        total += bytesRead
+        if (total > maxBytes) throw new Error('Context source limit')
+        chunks.push(buffer.subarray(0, bytesRead))
+      }
+
+      const after = await handle.stat()
+      const named = await fs.lstat(this.file)
+      if (
+        named.isSymbolicLink() ||
+        named.dev !== before.dev ||
+        named.ino !== before.ino ||
+        after.size !== before.size ||
+        after.mtimeMs !== before.mtimeMs ||
+        named.nlink !== 1
+      )
+        throw new Error('Context source changed during read')
+      await handle.sync()
+      this.claim.assertLive()
+      if (canonicalStoragePath(this.file) !== this.file) throw new Error('Context source alias changed')
+      const bytes = Buffer.concat(chunks)
+      const text = bytes.toString('utf8')
+      if (!Buffer.from(text).equals(bytes) || !text.endsWith('\n')) throw new Error('Incomplete context source')
+      return text
+    } finally {
+      await handle.close()
+    }
   }
 }

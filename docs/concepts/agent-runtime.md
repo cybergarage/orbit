@@ -97,3 +97,7 @@ callbacks or let arbitrary nodes bypass persistence and cancellation.
 - [Session Persistence Design](../adr/2026-08-22-session-persistence.md)
 - [Session History and Model Context Assembly](../adr/2026-08-23-session-context-assembly.md)
 - [Session-scoped Logging Architecture](../adr/2026-08-25-session-scoped-logging.md)
+
+## Context after a cancelled call
+
+Current Orbit implementation offers an explicit verified-nondispatch input policy. A new user turn can use a derived error-form response only when required evidence uniquely establishes that a missing call was not dispatched in a cancelled, settled Run. Canonical transcript, actual operations and cancellation remain unchanged. Input derivation is not operation permission, external reconciliation or Graph continuation. Synchronized provenance and retained evidence are required at model use, independently of budgeting. See [the feature guide](../interrupted-context.md).

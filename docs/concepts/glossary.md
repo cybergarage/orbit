@@ -176,3 +176,7 @@ a runner or proof of real-model quality. See [Workflow evaluation](../workflow-e
 ### Workflow candidate and selection scope
 
 A workflow candidate is an immutable, versioned Graph manifest tied to a fixed context and separately trusted evaluation. A selection scope owns human decision generations and request captures. Capture fixes the candidate for that request; later selection cannot rewrite it. A one-use live dispatch entitlement is not Run resource ownership and cannot transfer after restart. See [Workflow selection](../workflow-selection.md).
+
+### Verified interrupted context
+
+An opt-in model-input view supported by retained proof of nondispatch in a cancelled Run. Its synthetic tool response is an error-form notice, not actual tool output. A context projection record proves derivation structure; only owned runtime verification can qualify the view for use. See [the feature guide](../interrupted-context.md).

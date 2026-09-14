@@ -19,14 +19,17 @@ import type {
   SessionTurnEventEntry,
   TurnPhase,
 } from './entries.js'
+import type {ContextProjectionEntry} from './interrupted-context.js'
 import type {SessionRecorder} from './recorder.js'
 import type {SessionWriterLease} from './writer-lease.js'
 
 import {Message as CoreMessage} from '../message/index.js'
 import {parseSkillEntry, validateSkillEntries} from '../skills/record.js'
+import {parseSessionFile} from './codec.js'
 import {validateCompactionEntries} from './compaction.js'
 import {SessionEntryType} from './entries.js'
 import {SessionHeader} from './header.js'
+import {validateContextProjectionEntries} from './interrupted-context.js'
 
 export interface AppendMessageOptions {
   iteration?: number
@@ -49,7 +52,7 @@ export interface RecordTurnEventOptions {
 
 export interface SessionOptions {
   entries?: SessionEntry[]
-  formatVersion?: 1 | 2
+  formatVersion?: 1 | 2 | 3
   journalRoot?: string
   messages?: Message[]
   metadata?: Partial<SessionMetadata>
@@ -57,7 +60,7 @@ export interface SessionOptions {
 }
 
 export class Session {
-  readonly formatVersion: 1 | 2
+  readonly formatVersion: 1 | 2 | 3
   readonly journalRoot?: string
   private activeCompaction?: SessionCompactionEntry
   private closePromise?: Promise<void>
@@ -99,6 +102,7 @@ export class Session {
     this.journalRoot = options.journalRoot
     this.entries = structuredClone(options.entries ?? [])
     this.formatVersion = options.formatVersion ?? (this.recorder ? 1 : 2)
+    validateContextProjectionEntries(this.entries, id, this.formatVersion)
     validateSkillEntries(this.entries, id, this.formatVersion)
     this.activeCompaction = validateCompactionEntries(this.entries, id, this.formatVersion)
 
@@ -209,6 +213,21 @@ export class Session {
     }
   }
 
+  async commitProjection(entry: ContextProjectionEntry, level: JournalLevel): Promise<void> {
+    if (!this.hasManagedLease() || this.compactionSaving || this.closing)
+      throw new Error('Projection requires exclusive Session ownership')
+    if (this.getFile() && level === 'memory') throw new Error('Persistent projection requires synchronization')
+    const candidate = structuredClone(entry)
+    validateContextProjectionEntries([...this.entries, candidate], this.getId(), this.formatVersion)
+    this.compactionSaving = true
+    try {
+      this.addEntry(candidate)
+      await this.synchronize(level)
+    } finally {
+      this.compactionSaving = false
+    }
+  }
+
   async commitSkills(entry: SessionSkillEntry, level: JournalLevel): Promise<void> {
     if (!this.hasManagedLease() || this.closing) throw new Error('Skill snapshot requires managed ownership')
     if (this.getFile() && level === 'memory') throw new Error('Persistent Skill snapshots require synchronization')
@@ -307,6 +326,22 @@ export class Session {
     else if (this.recorder) await this.recorder.synchronize(level)
     else throw new Error('Session has no durable synchronization capability')
     return this.entries.length
+  }
+
+  /** Read-only evidence inspection, requiring the current managed lease. */
+  async verifyContextSource(maxBytes: number): Promise<number> {
+    if (!this.hasManagedLease()) throw new Error('Context source ownership required')
+    if (!this.recorder) return Buffer.byteLength(JSON.stringify(this.entries))
+    const text = await this.recorder.verifyContextSource(maxBytes)
+    const parsed = parseSessionFile(text, this.recorder.file)
+    if (
+      parsed.recovered ||
+      parsed.header.id !== this.getId() ||
+      parsed.header.version !== this.formatVersion ||
+      JSON.stringify(parsed.entries.slice(1)) !== JSON.stringify(this.entries)
+    )
+      throw new Error('Context transcript differs from owned entries')
+    return Buffer.byteLength(text)
   }
 
   private addEntry(entry: SessionEntry): void {
