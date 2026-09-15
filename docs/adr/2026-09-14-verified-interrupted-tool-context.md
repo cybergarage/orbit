@@ -5,6 +5,7 @@ decision-date: 2026-09-14
 implementation-status: partial
 implementation-completed-date: null
 implementation-commits:
+  - 300fb3acc0a7925f05c2b807b18a0acaa2d84ea5
   - fc0d72a36f23db45d9003794dce58c33db63861a
   - b2489fa512010d5c90555f8b32e96cbbc77bf7e8
 superseded-by: []
@@ -265,6 +266,58 @@ fixtures when an application configuration requires it. The eleven partial
 records, pending backup decision and historical maintenance-timeout uncertainty
 remain open. The chapter-19 admission stop is unchanged; applying this core
 behavior to that application requires a separate task.
+
+### Graph-aware offline migration verification — 2026-09-15
+
+Local correction: `300fb3acc0a7925f05c2b807b18a0acaa2d84ea5`. Baseline: `149de91370b8e7e6051c6fcf606e50a791c2b807`.
+The chapter-19 application reproduced rejection of a valid v2 transcript with
+old Skill/checkpoint records and Graph journal v2. Coordination had accepted
+only journal v1. The former application test passed by expecting rejection;
+that was not migration success.
+
+The correction reuses `validateNext` for complete per-Run v1/v2 records and
+`inspectGraphRun` for synchronized transcript positions and message references.
+It checks original terminal identity, storage level/mode acknowledgement,
+quiescence, cleanup and operations, including v1 orphan execution results.
+Ready Graph Runs require a matching terminal transcript phase in the recorded
+prefix. A known cancellation/failure/budget stop stays unchanged. Missing or
+unknown outcomes, failed storage, unsettled resources, invalid/torn records,
+missing keys and aliases refuse automatic recovery/migration. Later settlement
+does not upgrade the original terminal. A missing Graph transcript during
+partial deletion can require offline manual review; no journal is hidden or
+removed to permit conversion. This implements the accepted maintenance/Graph/v3
+conditions without a new format, public API, dependency or acceptance decision.
+
+| Confirmation | Evidence |
+| --- | --- |
+| Final Unix regressions | macOS arm64 / Node 26.5.0 and Linux arm64 / Node 22.23.2: headers check, native build and **814 passing tests each**. ESLint: 0 errors, 66 warnings. Source/test copies matched after formatting. |
+| Focused correction | 42 macOS tests: 34 new Graph maintenance cases plus 8 expanded migration fault matrices; all also pass in both full suites. |
+| Per-Run coexistence | Actual managed v1/v2/v1 Runs, retained old Skill BOM/CRLF and checkpoint, preserved journals and post-header bytes; explicit v3 conversion and already-migrated resync. |
+| Original outcomes | Known cancelled/failed/budget-exceeded terminals retained; unknown, unsettled, failed recording, missing dispatch/result, sequence/identity/version conflicts and invalid Graph positions refused. |
+| Interruptions | Every write/sync/rename/unlink boundary before and after an injected exception; 40 subprocess SIGKILL boundaries with the exact stop reported, original bytes/results retained and exclusive resume or manual-refusal verified. Timeout is failure. Existing v1 backup and new v2 backup are retained. |
+
+Intermediate failures remain distinct from final evidence. Initial suites had
+808 passes/3 failures on macOS and 809 passes/2 failures on Linux: two new
+synthetic failed-turn fixtures lacked the codec-required error. The fixtures
+were corrected without relaxing decoding. The other macOS failure was the
+existing 60-second owner-removal recovery timeout. A focused Graph/recovery
+run then passed 56 tests. Its historical/intermittent cause remains unknown,
+including after later successful full suites.
+
+A subsequent macOS run had 810 passes/1 failure because a concurrent build
+removed `dist/core/index.js` during the Skill subprocess test. That was an
+orchestration error, not product success or a newly diagnosed runtime defect;
+final builds completed before suites ran. The intermediate Linux run passed
+811 tests before the additional three v1-orphan cases. Only the final fixed
+814-test runs above qualify the committed correction.
+
+This ADR and the ten earlier records remain accepted / partial. No existing
+reason or adoption is replaced. Windows/other systems, real operational
+exclusion, physical storage failures, representative product trials, real-model
+connection/quality and backup deletion retain their prior deferrals or pending
+conditions. Product limits remain unmeasured starting values. The operator must
+keep external admission, old readers/writers and automatic restarters stopped
+through interruption and response-unknown inspection/resynchronization.
 
 ### Proposal review — 2026-09-14
 

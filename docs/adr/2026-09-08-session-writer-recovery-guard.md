@@ -5,6 +5,7 @@ decision-date: 2026-09-08
 implementation-status: partial
 implementation-completed-date: null
 implementation-commits:
+  - 300fb3acc0a7925f05c2b807b18a0acaa2d84ea5
   - da42d7194daf2fc84cced6100bc4e15a98722068
   - abac54535177c3d721e94567d25057a8b6f20441
   - 49c61e58adecc18c806b94701240a5753eed547c
@@ -818,3 +819,15 @@ acknowledgement and child termination. The bounded schema follow-up above is
 resolved for the requested scope; broader server functionality is not inferred.
 This record's accepted / partial state and deferred environment, deployment and
 representative-application evidence remain unchanged.
+
+### Graph-aware maintenance integration — 2026-09-15
+
+Local correction `300fb3acc0a7925f05c2b807b18a0acaa2d84ea5` validates per-Run journal v1/v2 structure,
+original settled/acknowledged terminals and Graph transcript positions before
+offline recovery/migration. It preserves original outcomes and all migration
+artifacts, refusing unknown or incomplete evidence rather than discarding it.
+The [v3 implementation evidence](2026-09-14-verified-interrupted-tool-context.md#graph-aware-offline-migration-verification--2026-09-15)
+records the 814-test macOS/Linux suites, 40 SIGKILL boundaries, byte/Skill/checkpoint
+retention and intermediate failures separately. Acceptance reasons and partial
+status are unchanged. Prior maintenance-timeout uncertainty, deferred platform,
+operational/physical/representative trials and pending backup deletion remain.
