@@ -64,6 +64,7 @@ export class OllamaAgent implements Model {
       {
         messages: messages.map((message) => toOllamaMessage(message)),
         model: this.model,
+        stream: false as const,
         // Provider wire field.
         // eslint-disable-next-line camelcase
         ...(options?.maxOutputTokens === undefined ? {} : {options: {num_predict: options.maxOutputTokens}}),
@@ -87,7 +88,9 @@ export class OllamaAgent implements Model {
         const startedAt = performance.now()
         let response
         try {
-          response = await this.client.chat(request)
+          // The SDK assigns stream and normalizes message fields in place.
+          // Keep the counted projection immutable and give each invocation its own wire copy.
+          response = await this.client.chat(structuredClone(request))
         } catch (error) {
           emitModelFailure(
             options,

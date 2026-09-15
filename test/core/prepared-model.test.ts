@@ -3,6 +3,7 @@
 
 /* eslint-disable camelcase -- Provider fixtures use exact SDK wire fields. */
 import {expect} from 'chai'
+import {Ollama} from 'ollama'
 
 import type {Model} from '../../src/core/models/model.js'
 
@@ -82,11 +83,64 @@ describe('prepared provider requests', () => {
       expect(Object.isFrozen(prepared.request)).to.equal(true)
       expect(counted).to.include('original').and.include('Read fixture').and.include('path')
       await prepared.invoke()
-      expect(sent).to.equal(prepared.request)
+      if (provider === 'ollama') expect(sent).not.to.equal(prepared.request)
+      else expect(sent).to.equal(prepared.request)
       expect(JSON.stringify(sent)).to.equal(counted)
       if (provider === 'openai') expect(prepared.request.max_completion_tokens).to.equal(123)
       if (provider === 'anthropic') expect(prepared.request.max_tokens).to.equal(123)
       if (provider === 'ollama') expect(prepared.request.options).to.deep.equal({num_predict: 123})
       expect(() => model.prepare!([], {maxOutputTokens: 0})).to.throw('output cap')
     })
+
+  it('uses the real Ollama SDK without mutating the counted request across invocations', async () => {
+    const bodies: string[] = []
+    const client = new Ollama({
+      async fetch(_input, init) {
+        bodies.push(String(init?.body))
+        // eslint-disable-next-line n/no-unsupported-features/node-builtins -- Fetch Response exists on supported Node 20.19.
+        return new Response(JSON.stringify({
+          done: true, eval_count: 1, message: {content: 'ok', role: 'assistant'},
+          model: 'fixture', prompt_eval_count: 2,
+        }), {headers: {'content-type': 'application/json'}})
+      },
+      host: 'http://ollama.invalid',
+    })
+    const model = new OllamaAgent('fixture', createProvider('ollama'), {client})
+    const prepared = model.prepare([new Message(MessageType.User, {content: 'original'})], {maxOutputTokens: 12})
+    const counted = JSON.stringify(prepared.request)
+    expect((await prepared.invoke()).content).to.equal('ok')
+    expect((await prepared.invoke()).content).to.equal('ok')
+    expect(bodies).to.deep.equal([counted, counted])
+    expect(JSON.stringify(prepared.request)).to.equal(counted)
+    expect(Object.isFrozen(prepared.request)).to.equal(true)
+    expect(Object.isFrozen(prepared.request.messages)).to.equal(true)
+    expect(prepared.request.stream).to.equal(false)
+  })
+
+  it('isolates nested SDK mutations even when an Ollama invocation fails', async () => {
+    const sent: string[] = []
+    const client = {
+      abort() {},
+      async chat(request: {messages: {content: string}[]; options: {num_predict: number}}) {
+        sent.push(JSON.stringify(request))
+        request.messages[0].content = 'SDK mutation'
+        request.options.num_predict = 1
+        if (sent.length === 1) throw new Error('SDK failure')
+        return {done: true, message: {content: 'ok', role: 'assistant'}, model: 'fixture'}
+      },
+    } as unknown as NonNullable<ConstructorParameters<typeof OllamaAgent>[2]>['client']
+    const prepared = new OllamaAgent('fixture', createProvider('ollama'), {client}).prepare(
+      [new Message(MessageType.User, {content: 'original'})], {maxOutputTokens: 12},
+    )
+    const counted = JSON.stringify(prepared.request)
+    try {
+      await prepared.invoke()
+      expect.fail('Expected SDK failure')
+    } catch (error) {expect((error as Error).message).to.equal('SDK failure')}
+
+    expect((await prepared.invoke()).content).to.equal('ok')
+    expect(sent).to.deep.equal([counted, counted])
+    expect(JSON.stringify(prepared.request)).to.equal(counted)
+  })
+
 })

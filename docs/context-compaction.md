@@ -56,7 +56,11 @@ An injected `RequestEstimator` must return a revision, kind, total and component
 counts whose sum equals that total. Unknown counts never mean zero.
 
 Built-in adapters implement `Model.prepare(messages, options)`, returning a
-`PreparedModelInvocation` whose frozen `request` is also sent by `invoke()`.
+`PreparedModelInvocation` whose frozen `request` describes the JSON sent by
+`invoke()`. The Ollama adapter includes `stream: false` in that projection and
+passes a fresh deep copy to each SDK invocation: the SDK assigns request fields
+in place, while the counted projection must remain unchanged, including after
+an SDK failure.
 `maxOutputTokens` maps to OpenAI Chat Completions `max_completion_tokens`,
 Anthropic `max_tokens`, and Ollama `options.num_predict`. A custom Model must
 implement this prepared-request and cap contract before budgeted use; an adapter
