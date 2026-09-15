@@ -107,6 +107,20 @@ present, adds `.v2-backup`, writes a separate version-2 migration intent and
 `.v3-pending`, synchronizes the replacement, renames and resynchronizes before
 releasing exclusion. Journal versions remain 1 and 2 per Run.
 
+Maintenance validates each complete journal with the runtime ordering/schema
+validator, including mixed v1/v2 Runs in one Session (never mixed versions
+inside a Run). It requires an acknowledged, quiescent original terminal with
+no unresolved operations or cleanup errors. Later settlement cannot upgrade an
+unknown or failed-storage terminal for automatic maintenance. Known cancelled,
+failed and budget-exceeded outcomes remain those outcomes; migration is not a
+successful retry. Unknown complete records, torn tails, absent results, missing
+keys and aliased journal artifacts require offline review without mutation.
+For bound Graph Runs, the read-only Graph inspector checks the preserved
+transcript prefix, message references and synchronized positions; a ready Run
+also requires its original terminal phase within its terminal high-water mark.
+Old Skill/checkpoint validation still runs on the complete source and target.
+The converter neither omits the Graph journal nor creates replacement evidence.
+
 After an interruption, use `inspectTranscriptMigration(scope)`, the registered
 scope's lock inspection, and external process checks. With a valid retained
 guard/intent, call the new converter with `resume: true` under the same offline

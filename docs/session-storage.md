@@ -213,6 +213,15 @@ protocol alone would allow admission; the external operator exclusion must still
 hold until verification finishes. The test harness exercises this sequence in
 isolated roots but cannot validate a production service manager's restart policy.
 
+Graph maintenance uses the same complete journal validation as execution, with
+versions 1 and 2 allowed per Run. It refuses unacknowledged or unsettled original
+terminals and checks bound Graph transcript positions before removing a guard.
+A later settlement is separate evidence and does not rewrite that terminal.
+Missing Graph transcripts or partial deletion evidence can therefore require
+manual offline review; automatic recovery never discards a journal to proceed.
+See [v3 migration](interrupted-context.md#exclusive-v2-to-v3-migration) for the
+byte-preserving conversion and response-unknown restart conditions.
+
 ## Supported assumptions and remaining verification
 
 The current verification focus is Linux/macOS. Windows and other environments

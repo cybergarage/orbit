@@ -16,6 +16,7 @@ import {
 } from '../../../src/core/index.js'
 import {parseSessionFile} from '../../../src/core/session/codec.js'
 import {seedLegacyContext} from './legacy-context-fixture.js'
+import {seedMaintenanceGraph} from './maintenance-graph-fixture.js'
 
 const offline = {allWritersStopped: true, automaticRestartersDisabled: true, exclusiveStorageControl: true} as const
 
@@ -33,12 +34,20 @@ describe('v3 migration interrupted filesystem acknowledgement', () => {
           session.appendMessages([new Message(MessageType.User, {content: 'retained'})])
           // eslint-disable-next-line no-await-in-loop
           await seedLegacyContext(session, root)
+          // eslint-disable-next-line no-await-in-loop
+          await seedMaintenanceGraph(session, root)
           const file = session.getFile()!
           const scope = repo.scope(session.getId())
           // No test fault is injected during initial owner release.
           // eslint-disable-next-line no-await-in-loop
           await session.close()
           const source = fs.readFileSync(file)
+          const journalDirectory = path.join(repo.journalRoot, session.getId())
+          const journals = fs.readdirSync(journalDirectory).filter((name) => name !== 'key').map((name) => {
+            const file = path.join(journalDirectory, name, 'events.jsonl')
+            return {bytes: fs.readFileSync(file), file}
+          })
+          fs.writeFileSync(file + '.v1-backup', 'retained older backup')
           let count = 0
           let hit = false
           const original = fs[operation].bind(fs) as (...args: unknown[]) => unknown
@@ -84,6 +93,8 @@ describe('v3 migration interrupted filesystem acknowledgement', () => {
               throw new Error(operation + ' ' + phase + ' ' + boundary + ': ' + String(error))
             }
 
+            for (const journal of journals) expect(fs.readFileSync(journal.file).equals(journal.bytes)).equal(true)
+            expect(fs.readFileSync(file + '.v1-backup', 'utf8')).equal('retained older backup')
             expect(parseSessionFile(fs.readFileSync(file, 'utf8'), file).header.version).equal(3)
             expect(fs.readFileSync(file + '.v2-backup').equals(source)).equal(true)
             const target = fs.readFileSync(file)

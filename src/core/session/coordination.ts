@@ -8,6 +8,8 @@ import process from 'node:process'
 
 import type {OfflineStorageConditions, RegistrationResumeOptions} from './storage-registration.js'
 
+import {type JournalRecord, validateNext} from '../execution/journal.js'
+import {inspectGraphRun} from '../processor/graph-inspection.js'
 import {parseSessionFile} from './codec.js'
 import {sessionFilePath} from './paths.js'
 import {
@@ -412,6 +414,10 @@ function inspectRecoveryEvidence(scope: SessionScope): void {
 
   const directory = path.join(scope.journalRoot, scope.sessionId)
   if (!exists(directory)) return
+  if (!fs.lstatSync(directory).isDirectory() || canonicalStoragePath(directory) !== directory)
+    throw new Error('Ambiguous journal directory; review offline')
+  const records: JournalRecord[] = []
+  const runs: JournalRecord[][] = []
   for (const item of fs.readdirSync(directory, {withFileTypes: true})) {
     const file = path.join(directory, item.name)
     if (item.name === 'key' && item.isFile() && fs.statSync(file).nlink === 1 && fs.statSync(file).size === 32) continue
@@ -419,14 +425,127 @@ function inspectRecoveryEvidence(scope: SessionScope): void {
     validateSessionId(item.name)
     const files = fs.readdirSync(file)
     if (files.length !== 1 || files[0] !== 'events.jsonl') throw new Error('Unknown journal evidence; review offline')
-    const source = fs.readFileSync(path.join(file, 'events.jsonl'), 'utf8')
+    const events = path.join(file, 'events.jsonl')
+    const stat = fs.lstatSync(events)
+    if (!stat.isFile() || stat.nlink !== 1 || canonicalStoragePath(events) !== events)
+      throw new Error('Ambiguous journal evidence; review offline')
+    const source = new TextDecoder('utf8', {fatal: true}).decode(fs.readFileSync(events))
+    const run: JournalRecord[] = []
     if (!source.endsWith('\n')) throw new Error('Torn journal evidence; review offline')
     for (const line of source.trimEnd().split('\n')) {
       const record = JSON.parse(line)
-      if (record.version !== 1 || record.sessionId !== scope.sessionId || record.runId !== item.name)
+      if (record.sessionId !== scope.sessionId || record.runId !== item.name)
         throw new Error('Conflicting journal evidence; review offline')
+      validateNext(records, record)
+      records.push(record)
+      run.push(record)
+    }
+
+    inspectStoppedRun(run)
+    runs.push(run)
+  }
+
+  if (runs.length === 0) return
+  const keyFile = path.join(directory, 'key')
+  const keyStat = fs.lstatSync(keyFile)
+  if (!keyStat.isFile() || keyStat.nlink !== 1 || keyStat.size !== 32)
+    throw new Error('Missing or ambiguous journal key; review offline')
+  const graphs = runs.filter((run) => run[0].version === 2 && run.some((r) => r.kind === 'graph-bound'))
+  if (graphs.length === 0) return
+  const candidates: string[] = []
+  const scan = (dir: string): void => {
+    for (const item of fs.readdirSync(dir, {withFileTypes: true})) {
+      const file = path.join(dir, item.name)
+      if (item.isDirectory() && file !== scope.journalRoot && !item.name.startsWith('.')) scan(file)
+      if (item.name.endsWith('-' + scope.sessionId + '.jsonl')) candidates.push(file)
     }
   }
+
+  scan(scope.sessionRoot)
+  if (candidates.length !== 1) throw new Error('Missing or ambiguous Graph transcript; review offline')
+  const file = candidates[0]
+  inspectTranscript(scope, file)
+  const parsed = parseSessionFile(new TextDecoder('utf8', {fatal: true}).decode(fs.readFileSync(file)), file)
+  if (parsed.recovered) throw new Error('Torn Graph transcript; review offline')
+  for (const run of graphs) {
+    const checked = inspectGraphRun(run, {
+      entries: parsed.entries.slice(1),
+      formatVersion: parsed.header.version,
+      sessionId: scope.sessionId,
+    })
+    if (checked.issue || checked.transcript !== 'verified')
+      throw new Error('Unverified Graph transcript; review offline: ' + (checked.issue ?? checked.transcript))
+    if (run.some((r) => r.kind === 'run-ready')) {
+      const terminal = run.find((r) => r.kind === 'run-terminal')!
+      const high = terminal.data.transcriptHighWater
+      if (!Number.isSafeInteger(high) || Number(high) < 0 || Number(high) > parsed.entries.length - 1)
+        throw new Error('Missing Graph terminal transcript position; review offline')
+      const phase =
+        terminal.data.outcome === 'completed'
+          ? 'completed'
+          : terminal.data.outcome === 'cancelled'
+            ? 'cancelled'
+            : 'failed'
+      const ends = parsed.entries
+        .slice(1, Number(high) + 1)
+        .filter((e) => e.type === 'turn_event' && e.turnId === run[0].runId && e.phase !== 'started')
+      if (ends.length !== 1 || ends[0].type !== 'turn_event' || ends[0].phase !== phase)
+        throw new Error('Conflicting Graph terminal transcript; review offline')
+    }
+  }
+}
+
+/** Original terminals are authoritative; later settlement never upgrades them for maintenance. */
+function inspectStoppedRun(run: JournalRecord[]): void {
+  const terminal = run.find((record) => record.kind === 'run-terminal')
+  const data = terminal?.data
+  const recording = data?.recording as undefined | {level?: string; mode?: string; status?: string}
+  if (
+    !data ||
+    data.runId !== run[0].runId ||
+    data.sessionId !== run[0].sessionId ||
+    !['budget-exceeded', 'cancelled', 'completed', 'failed'].includes(String(data.outcome)) ||
+    data.quiescence !== true ||
+    recording?.mode !== 'file' ||
+    recording.status !== 'acknowledged' ||
+    recording.level !== run[0].data.level ||
+    recording.mode !== run[0].data.mode ||
+    !['file-and-directory-sync', 'file-sync'].includes(String(recording.level)) ||
+    !Array.isArray(data.cleanupErrors) ||
+    data.cleanupErrors.length > 0 ||
+    !Array.isArray(data.unresolved) ||
+    data.unresolved.length > 0 ||
+    !Array.isArray(data.operations)
+  )
+    throw new Error('Unsettled or unacknowledged original Run; review offline')
+  const results = run.filter((record) => record.kind === 'operation-result')
+  const known = new Set(['cancelled-before-start', 'denied', 'failed', 'invalid', 'succeeded'])
+  if (
+    results.some(
+      (record) =>
+        typeof record.data.operationId !== 'string' ||
+        !known.has(String(record.data.status)) ||
+        (['failed', 'succeeded'].includes(String(record.data.status)) &&
+          !run.some(
+            (intent) => intent.kind === 'operation-intent' && intent.data.operationId === record.data.operationId,
+          )),
+    ) ||
+    run.some(
+      (record) =>
+        record.kind === 'operation-intent' &&
+        !results.some((result) => result.data.operationId === record.data.operationId),
+    ) ||
+    data.operations.length !== results.length ||
+    data.operations.some(
+      (operation: {id?: unknown; status?: unknown}) =>
+        !operation ||
+        !known.has(String(operation.status)) ||
+        results.filter((result) => result.data.operationId === operation.id && result.data.status === operation.status)
+          .length !== 1,
+    ) ||
+    new Set(data.operations.map((operation: {id: string}) => operation.id)).size !== data.operations.length
+  )
+    throw new Error('Unknown or conflicting operation evidence; review offline')
 }
 
 export {canonicalStoragePath, inspectSessionStorage} from './storage-registration.js'

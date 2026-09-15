@@ -59,6 +59,12 @@ The first implementation reuses the existing bounded model/tool loop as a coarse
 - Graph composition preserves Processor policy and observability boundaries.
 - Invalid or incompatible graphs cannot enter normal execution.
 
+Offline maintenance observes the original Graph terminal and its synchronized
+transcript positions before clearing coordination artifacts. A format upgrade
+keeps those positions and outcomes intact; it is not execution recovery.
+Unsettled effects, unacknowledged storage or unavailable evidence require offline
+review under continuing external exclusion. See [storage maintenance](../session-storage.md).
+
 ## Non-goals
 
 - Letting an LLM emit an arbitrary node name and execute it immediately
