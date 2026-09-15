@@ -51,8 +51,8 @@ try {
   }
 
   const consumer = path.join(temporary, 'consumer')
-  await cp(path.join(root, 'examples/assistant'), consumer, {
-    filter: (source) => !['.assistant', 'dist', 'node_modules', 'workspace'].includes(path.basename(source)),
+  await cp(path.join(root, 'examples/agent'), consumer, {
+    filter: (source) => !['.agent', 'dist', 'node_modules', 'workspace'].includes(path.basename(source)),
     recursive: true,
   })
   const manifestPath = path.join(consumer, 'package.json')

@@ -15,7 +15,7 @@ doc-touch: $(csvs)
 
 .PHONY: oclif-docs
 oclif-docs:
-	npx oclif readme
+	npm run docs:commands
 
 doc: doc-touch oclif-docs $(docs)
 

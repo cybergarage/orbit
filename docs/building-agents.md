@@ -1,11 +1,11 @@
-# Building an assistant with Orbit
+# Building an agent application with Orbit
 
 This guide is for an application developer using `@cybergarage/orbit` as the
-runtime beneath a personal assistant, desktop application or messaging bot.
+agent framework for a desktop agent, messaging agent or automated workflow.
 Orbit 0.6 provides reusable execution machinery. You provide the product's
 identity, transport, scheduling, memory policy and delivery behavior.
 
-Start with the [runnable assistant example](../examples/assistant/README.md).
+Start with the [runnable agent example](../examples/agent/README.md).
 It uses only the installed package and includes a model-free development mode.
 After that works, replace the terminal with one channel or UI at a time.
 
@@ -13,7 +13,7 @@ After that works, replace the terminal with one channel or UI at a time.
 
 | API | Use when | You own |
 | --- | --- | --- |
-| `OrbitApplicationService` | Building a complete local assistant or GUI | Workspace/storage setup, transport, authentication, input queue, approvals and delivery |
+| `OrbitApplicationService` | Building a complete local agent or GUI | Workspace/storage setup, transport, authentication, input queue, approvals and delivery |
 | `ThreadManager` | Building a host with its own settings and application services | Agent construction, settings, optional SessionRepository, logs and client transport |
 | `Agent` | Embedding a single managed model/tool loop | Messages/Session, run handles, policies, approval responder and lifetime |
 | Model/tool/MCP primitives | Implementing adapters or lower-level infrastructure | All execution management; direct calls are outside the managed Agent contract |
@@ -55,7 +55,7 @@ Give the application explicit Session and journal roots using
 `SessionRepository({rootDir, journalRoot})`. Use a separate
 `FileSessionLogStore({rootDir})` for its logs. Initialize persistent storage
 once under offline exclusive control before admitting users. The
-[example setup](../examples/assistant/src/setup.ts) demonstrates the call;
+[example setup](../examples/agent/src/setup.ts) demonstrates the call;
 [Session Storage](session-storage.md) owns the complete maintenance contract.
 
 Associate each external conversation with a Session ID in your own database.
@@ -109,7 +109,7 @@ object. See [Managed Execution](execution.md).
 Subscribe to `subscribeRunSnapshots()` before dispatch, and call `queryRun()`
 after admission and whenever your transport reconnects or misses an event.
 Compare `sequence` per Run; do not replace newer state with older events.
-Use `getThread()` to refresh conversation messages. Assistant
+Use `getThread()` to refresh conversation messages. Model response
 text currently arrives as completed messages, not token-by-token deltas.
 
 Show pending `snapshot.approvals` to the authorized operator, including the
@@ -167,7 +167,7 @@ automatically a managed prepared tool. Legacy handlers require explicit
 unrestricted configuration and are not the recommended application default.
 
 Register a custom model with `registerModelProvider()` before loading settings
-that select it. The [demo adapter](../examples/assistant/src/demo-model.ts)
+that select it. The [demo adapter](../examples/agent/src/demo-model.ts)
 shows the minimum interface; a real adapter must also preserve tool calls,
 response metadata, cancellation and provider continuation state. The built-in
 adapters cover OpenAI, Anthropic and Ollama; see [Current Architecture](architecture.md).

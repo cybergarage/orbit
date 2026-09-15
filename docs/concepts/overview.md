@@ -2,10 +2,9 @@
 
 ## Purpose
 
-Orbit is a learning-oriented agent platform for making modern agent runtime
-mechanisms visible, composable, and testable. Its practical ambition is to
-remain useful beyond demonstrations by giving execution, state transitions,
-tool use, and control decisions explicit boundaries.
+Orbit is a TypeScript agent framework for building agent applications. It makes
+execution, state transitions, tool use, and control decisions explicit so that
+application developers can compose, observe, and test agent behavior.
 
 Orbit's central directional idea is that every executable step is represented
 as a Processor. Model calls, tool calls, routing, validation, state reduction,

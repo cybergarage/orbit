@@ -12,7 +12,7 @@ English is the canonical and required language for this project.
 
 ## Project Overview
 
-Orbit is an agentic CLI and reusable TypeScript library for content workflows. It supports OpenAI, Anthropic, and Ollama models, MCP tools, interactive sessions, workspace settings, and a thread lifecycle API for GUI integrations.
+Orbit is a TypeScript agent framework for building agent applications. It supports OpenAI, Anthropic, and Ollama models, MCP tools, interactive sessions, workspace settings, and a thread lifecycle API for GUI integrations.
 
 - `src/index.ts` is the package entry point.
 - `src/apps/cli/` contains oclif commands; `src/apps/cli-flags.ts` contains shared flag handling.
@@ -98,7 +98,7 @@ Orbit is an agentic CLI and reusable TypeScript library for content workflows. I
 - Keep accepted decision rationale intact. Record implementation completion and full commit hashes in a later documentation commit; use a new linked ADR when a decision is materially replaced.
 - After implementing an accepted architectural change, update the current architecture, relevant concepts, glossary, and feature guides in the same change when their maintained claims are affected.
 - Do not store routine progress reports, chat transcripts, temporary plans, or local implementation details in `docs/adr/`, and do not treat ADRs as a substitute for maintained user documentation.
-- Treat `README.md` command sections and `oclif.manifest.json` as oclif-generated content. Use `npm run docs:commands` after building when command metadata changes, then review generated differences.
+- Treat `docs/cli.md` Usage and Commands sections and `oclif.manifest.json` as oclif-generated content. Use `npm run docs:commands` after building when command metadata changes, then review generated differences.
 - Update `docs/data/interactive.csv` or `docs/interactive.adoc` when changing the interactive command reference, and regenerate `docs/interactive.md` from those sources.
 - Do not run `make doc` unless an automatic documentation commit is explicitly intended: the current Makefile can invoke `git commit` while regenerating AsciiDoc-derived Markdown. Prefer running the individual generation command and reviewing changes before committing.
 - Never include real API keys, credentials, private paths, or secret environment values in code, tests, documentation, logs, or commits. Use clearly fake placeholders in examples.

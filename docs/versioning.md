@@ -8,7 +8,7 @@ runtime is in its 0.x development series.
 
 | Version | Intended milestone |
 | --- | --- |
-| `0.6.0` | First scoped npm release with a documented application entry point, runnable consumer example and package validation |
+| `0.6.x` | Initial public releases with a documented application entry point, runnable consumer example and package validation |
 | `0.8.0` | Book publication milestone, with the book and examples identifying their matching Orbit release |
 | `1.0.0` | A complete OpenClaw/Hermes-style application built on Orbit, accompanied by an explicit stable API and compatibility contract |
 
@@ -16,6 +16,10 @@ The later milestones are plans, not available functionality or promised dates.
 Application completion should provide evidence for 1.0 readiness: representative
 workflows, operator recovery, deployment behavior and API usage. The version
 number alone is not evidence that these properties were tested.
+
+The GitHub `0.6.0` source release precedes npm publication. The first npm
+package is `0.6.1`, which includes the revised framework introduction and CLI
+reference. Published tags retain their original contents.
 
 ## 0.x policy
 
@@ -31,7 +35,7 @@ the exact version makes upgrades a deliberate application decision.
 
 Public exports include low-level trusted extension machinery. Their presence
 does not mean an arbitrary direct invocation receives the guarantees of a
-managed Agent Run. Prefer the boundaries in [Building an assistant](building-assistants.md).
+managed Agent Run. Prefer the boundaries in [Building an agent](building-agents.md).
 
 Storage formats have their own versions; package `0.6.0` does not imply Session
 format 6. Upgrading or downgrading software never authorizes mixed-version

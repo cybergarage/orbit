@@ -8,9 +8,9 @@ rationale for significant choices belongs in
 
 ## System overview
 
-Orbit is an oclif-based CLI and reusable TypeScript library with a loopback-only
-local GUI. All application surfaces use components from the reusable runtime
-under `src/core/`. The runtime connects workspace configuration and context, a
+Orbit is a TypeScript agent framework with an oclif-based CLI and a loopback-only
+local GUI as application surfaces. All application surfaces use components from
+the reusable runtime under `src/core/`. The runtime connects workspace configuration and context, a
 provider-neutral model interface, tool registries, persisted sessions,
 structured logs, and thread lifecycle events.
 

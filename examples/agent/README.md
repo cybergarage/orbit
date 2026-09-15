@@ -1,17 +1,17 @@
-# Persistent assistant example
+# Persistent agent example
 
 A small Node.js host for `@cybergarage/orbit`: persistent conversations, model
 execution, operation approval, cancellation, logs and restart/resume. The terminal
 is one replaceable application surface. This is a starting point for your own
-assistant, not a messaging gateway or a complete autonomous product.
+agent, not a messaging gateway or a complete autonomous product.
 
 ## Install and build
 
 Use Node.js 20.19 or newer and npm. From a checkout of the release:
 
 ```sh
-git clone --branch v0.6.0 https://github.com/cybergarage/orbit.git
-cd orbit/examples/assistant
+git clone --branch v0.6.1 https://github.com/cybergarage/orbit.git
+cd orbit/examples/agent
 npm install
 npm run build
 ```
@@ -22,9 +22,9 @@ in your application repository and use `npm ci` thereafter.
 
 ## Initialize storage once, while offline
 
-The defaults are `./workspace` for tool access and `./.assistant` for sessions,
+The defaults are `./workspace` for tool access and `./.agent` for sessions,
 execution journals and logs, relative to the directory where you run the app.
-Set `ASSISTANT_WORKSPACE` and `ASSISTANT_DATA_DIR` to use other paths. Use the
+Set `AGENT_WORKSPACE` and `AGENT_DATA_DIR` to use other paths. Use the
 same values for setup, start and resume. Exclude both directories from Git.
 
 For a fresh installation, before starting any host:
@@ -97,6 +97,6 @@ temporary storage. Automatic approvals occur only in this isolated test.
 The example supports one local user and serial input. It has no delivery queue,
 remote authentication, multi-tenant storage, long-term memory retrieval, or
 scheduler. Add those at the host boundary described in
-[Building an assistant](../../docs/building-assistants.md). Do not expose the
+[Building an agent](../../docs/building-agents.md). Do not expose the
 terminal's approval callback directly to untrusted clients. This test does not
 validate live provider behavior, production recovery, or power-loss durability.

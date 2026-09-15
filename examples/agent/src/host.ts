@@ -18,8 +18,8 @@ import {registerDemoModel} from './demo-model.js'
 
 export function examplePaths() {
   return {
-    dataDir: path.resolve(process.env.ASSISTANT_DATA_DIR ?? '.assistant'),
-    workspace: path.resolve(process.env.ASSISTANT_WORKSPACE ?? 'workspace'),
+    dataDir: path.resolve(process.env.AGENT_DATA_DIR ?? '.agent'),
+    workspace: path.resolve(process.env.AGENT_WORKSPACE ?? 'workspace'),
   }
 }
 

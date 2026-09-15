@@ -50,7 +50,7 @@ try {
     })
     activeRun = undefined
     const message = host.service.getThread(thread.id)?.messages.at(-1)
-    if (message) console.log(`Assistant: ${message.content}`)
+    if (message) console.log(`Agent: ${message.content}`)
     console.log(`Run: ${result.outcome}`)
     if (result.outcome !== 'completed') console.log(JSON.stringify(result, null, 2))
     if (result.outcome === 'incomplete') break

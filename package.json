@@ -1,7 +1,7 @@
 {
   "name": "@cybergarage/orbit",
-  "description": "A TypeScript agent runtime, CLI, and local GUI for building assistant applications.",
-  "version": "0.6.0",
+  "description": "A TypeScript agent framework for building agent applications.",
+  "version": "0.6.1",
   "author": "Satoshi Konno",
   "bin": {
     "orbit": "./bin/run.js"
@@ -62,10 +62,10 @@
     "dist",
     "oclif.manifest.json",
     "docs/*.md",
-    "examples/assistant/src",
-    "examples/assistant/package.json",
-    "examples/assistant/tsconfig.json",
-    "examples/assistant/README.md"
+    "examples/agent/src",
+    "examples/agent/package.json",
+    "examples/agent/tsconfig.json",
+    "examples/agent/README.md"
   ],
   "homepage": "https://github.com/cybergarage/orbit",
   "keywords": [
@@ -73,7 +73,7 @@
     "agent",
     "typescript",
     "mcp",
-    "assistant",
+    "agent-framework",
     "cli"
   ],
   "license": "Apache-2.0",
@@ -98,16 +98,16 @@
   "repository": "cybergarage/orbit",
   "scripts": {
     "build": "shx rm -rf dist && tsc -b && node ./bin/build-gui.mjs",
-    "headers:apply": "node ./bin/headers.js --base src,test,examples/assistant/src --write",
-    "headers:check": "node ./bin/headers.js --base src,test,examples/assistant/src",
+    "headers:apply": "node ./bin/headers.js --base src,test,examples/agent/src --write",
+    "headers:check": "node ./bin/headers.js --base src,test,examples/agent/src",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint --fix",
     "postpack": "shx rm -f oclif.manifest.json",
     "prepack": "npm run build && oclif manifest",
     "pretest": "npm run format && npm run lint",
     "test": "TS_NODE_PROJECT=tsconfig.test.json mocha --forbid-only \"test/**/*.test.ts\"",
-    "version": "oclif readme && git add README.md",
-    "docs:commands": "oclif manifest && oclif readme",
+    "version": "npm run docs:commands && git add docs/cli.md",
+    "docs:commands": "oclif manifest && oclif readme --readme-path docs/cli.md",
     "test:package": "node bin/test-package.mjs"
   },
   "types": "dist/index.d.ts",

@@ -22,7 +22,7 @@ and delegates thread runs.
 
 Persistent examples require [offline storage initialization](session-storage.md)
 before creating the first Thread. For a complete runnable host, use the
-[assistant example](../examples/assistant/README.md). The snippets below show
+[agent example](../examples/agent/README.md). The snippets below show
 individual integration points; `workspacePath`, renderer delivery and owner
 identity are supplied by the host.
 

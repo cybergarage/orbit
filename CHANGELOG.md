@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.6.1 — 2026-09-15
+
+First npm publication; the GitHub 0.6.0 source release remains unchanged.
+
+- Describe Orbit as an agent framework for building agent applications.
+- Move generated CLI usage and commands to `docs/cli.md`; keep the root README
+  focused on framework installation, application development and guide links.
+- Route `docs:commands`, the version hook and Makefile through the same oclif
+  generator with an explicit documentation path.
+- Rename the application guide to `docs/building-agents.md` and the example to
+  `examples/agent`. The example now uses `AGENT_WORKSPACE`, `AGENT_DATA_DIR`
+  and `.agent` as its default data directory. Existing example data can be
+  retained by setting `AGENT_DATA_DIR` to the previous `.assistant` path.
+- Preserve model message roles and the public API.
+
 ## 0.6.0 — 2026-09-15
 
 First public release as `@cybergarage/orbit`. The command remains `orbit`.
