@@ -88,7 +88,7 @@ remain in use for that Run even if files change later.
 ## Library and application APIs
 
 ```ts
-import {Agent, Message, MessageType, SkillCatalog} from 'orbit'
+import {Agent, Message, MessageType, SkillCatalog} from '@cybergarage/orbit'
 
 const catalog = new SkillCatalog([{id: 'project', directory: '/workspace/.orbit/skills'}])
 const listing = await catalog.list(abortSignal)

@@ -8,7 +8,7 @@ that a target project's tests passed or that an application accepted the patch.
 ## Public library API
 
 ```ts
-import {Agent, Message, MessageType, ToolProfile} from 'orbit'
+import {Agent, Message, MessageType, ToolProfile} from '@cybergarage/orbit'
 
 const agent = new Agent({cwd: workspacePath, toolProfile: ToolProfile.Coding,
   execution: {

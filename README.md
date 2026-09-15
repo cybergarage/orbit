@@ -1,37 +1,118 @@
-![](https://img.shields.io/badge/status-Work%20In%20Progress-8A2BE2)
+# Orbit
 
-# orbit
+Orbit is a TypeScript agent runtime for building assistant applications. It also
+includes an `orbit` command-line interface and a local web GUI. Use it for the
+model/tool execution, persistent conversations and run lifecycle beneath your
+own desktop assistant, messaging bot or content workflow.
 
-Orbit is an experimental project for exploring and understanding how AI agents
-work.
+**0.6 is an early application-development release.** Orbit supplies the runtime;
+your application supplies channel integrations, scheduling, memory policy,
+authentication and notification delivery. See [capabilities and boundaries](docs/building-assistants.md).
+
+## Install
+
+Requires Node.js **20.19 or newer** and npm. The library uses native ESM and runs
+in a trusted Node.js process, not a browser renderer.
+
+As an application dependency:
+
+```sh
+npm install --save-exact @cybergarage/orbit@0.6.0
+```
+
+Or as a command-line application:
+
+```sh
+npm install --global @cybergarage/orbit@0.6.0
+orbit --help
+```
+
+## Build your first assistant
+
+Start with the [persistent assistant example](examples/assistant/README.md).
+It runs against the npm package, includes an API-key-free demo, and demonstrates:
+
+- creating, saving and resuming conversations;
+- starting a Run and waiting for its actual result;
+- presenting operation previews and replying to approvals;
+- requesting cancellation and closing owned resources;
+- switching from a deterministic demo adapter to a real model.
+
+For an existing application, use `OrbitApplicationService` as the main
+integration boundary and import it from `@cybergarage/orbit`. Follow the
+example's setup and lifetime handling: persistent storage must be initialized,
+Run admission is not completion, and the host must handle approvals and close
+its resources after execution settles.
+
+Use the [application guide](docs/building-assistants.md) for conversation routing,
+request deduplication, reconnects, background triggers and extension points.
+Use [GUI Integration](docs/gui-integration.md) for the service and event APIs.
+
+## Try the CLI and local GUI
+
+Configure a tool-capable model through [workspace settings](docs/settings.md),
+or select your provider/model explicitly. For example, set `OPENAI_API_KEY`
+through your environment, then replace `YOUR_MODEL` with an available model:
+
+```sh
+orbit exec --provider openai --model YOUR_MODEL --openai-api-key-env OPENAI_API_KEY "Describe this workspace"
+```
+
+`exec` uses an ephemeral Session. Persistent interactive and GUI sessions first
+need storage initialization. On a fresh installation, with all Orbit writers
+stopped, restarters disabled and exclusive control of the storage:
+
+```sh
+orbit storage initialize --writers-stopped --restarters-disabled --exclusive-storage-control
+orbit gui --provider openai --model YOUR_MODEL --openai-api-key-env OPENAI_API_KEY
+```
+
+Open the exact loopback URL printed by `orbit gui`; it includes a startup token.
+For existing or interrupted storage, follow [Session Storage](docs/session-storage.md)
+instead of assuming a new installation. Writes, commands and MCP operations
+normally require approval. Noninteractive `exec` cannot answer those prompts.
+See [Managed Execution](docs/execution.md) before changing execution policy.
 
 ## Documentation
 
-* [Documentation Map](docs/README.md)
-* [Concepts](docs/concepts/README.md)
-* [Current Architecture](docs/architecture.md)
-* [Development](docs/development.md)
-* [Architecture Decisions](docs/adr/README.md)
-* [Engineering Research](docs/research/README.md)
-* [Settings](docs/settings.md)
-* [Coding Tools](docs/tools.md)
-* [Sessions](docs/session.md)
-* [Session logs](docs/logging.md)
-* [Interactive Commands](docs/interactive.md)
-* [Local GUI](docs/gui.md)
-* [GUI Integration](docs/gui-integration.md)
+| I want to… | Start here |
+| --- | --- |
+| Build an application from scratch | [Assistant guide](docs/building-assistants.md) and [runnable example](examples/assistant/README.md) |
+| Integrate a desktop/web frontend | [GUI Integration](docs/gui-integration.md) |
+| Configure models, tools and MCP | [Settings](docs/settings.md) and [Tools](docs/tools.md) |
+| Understand approval, budgets and failures | [Managed Execution](docs/execution.md) |
+| Operate persistent data | [Sessions](docs/session.md), [Storage](docs/session-storage.md) and [Logs](docs/logging.md) |
+| Add explicit Skills or context budgets | [Skills](docs/skills.md) and [Compaction](docs/context-compaction.md) |
+| Understand versions and planned milestones | [Versioning](docs/versioning.md) |
+| Contribute or publish a release | [Development](docs/development.md) |
+| Explore implementation and design evidence | [Documentation map](docs/README.md) and [Architecture](docs/architecture.md) |
 
-<!-- toc -->
-* [orbit](#orbit)
-<!-- tocstop -->
+## Development and license
+
+```sh
+npm ci
+npm run headers:check
+npm run build
+npm test
+npm run test:package
+```
+
+The package check builds a tarball, installs it into an independent example
+application, type-checks that consumer, and tests its lifecycle without provider
+credentials. Live providers and deployment-specific recovery require additional
+validation. Persistent storage verification currently focuses on Linux/macOS;
+Windows storage support remains subject to the limitations in the storage guide.
+
+Orbit is licensed under [Apache-2.0](LICENSE).
+
 ## Usage
 <!-- usage -->
 ```sh-session
-$ npm install -g orbit
+$ npm install -g @cybergarage/orbit
 $ orbit COMMAND
 running command...
 $ orbit (--version)
-orbit/0.0.0 darwin-arm64 node-v26.5.0
+@cybergarage/orbit/0.6.0 darwin-arm64 node-v26.5.0
 $ orbit --help [COMMAND]
 USAGE
   $ orbit COMMAND
@@ -74,7 +155,7 @@ EXAMPLES
   $ orbit delete <SESSION_ID> --force
 ```
 
-_See code: [src/cli/delete.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/delete.ts)_
+_See code: [src/cli/delete.ts](https://github.com/cybergarage/orbit/blob/v0.6.0/src/apps/cli/delete.ts)_
 
 ## `orbit exec [PROMPT]`
 
@@ -116,7 +197,7 @@ EXAMPLES
   echo "Write a haiku about TypeScript" | orbit exec
 ```
 
-_See code: [src/cli/exec.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/exec.ts)_
+_See code: [src/cli/exec.ts](https://github.com/cybergarage/orbit/blob/v0.6.0/src/apps/cli/exec.ts)_
 
 ## `orbit gui`
 
@@ -150,7 +231,7 @@ DESCRIPTION
   Start the local Orbit graphical interface
 ```
 
-_See code: [src/cli/gui.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/gui.ts)_
+_See code: [src/cli/gui.ts](https://github.com/cybergarage/orbit/blob/v0.6.0/src/apps/cli/gui.ts)_
 
 ## `orbit help [COMMAND]`
 
@@ -215,7 +296,7 @@ EXAMPLES
   $ orbit resume --last --all
 ```
 
-_See code: [src/cli/resume.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/resume.ts)_
+_See code: [src/cli/resume.ts](https://github.com/cybergarage/orbit/blob/v0.6.0/src/apps/cli/resume.ts)_
 
 ## `orbit session [SESSION]`
 
@@ -247,7 +328,7 @@ EXAMPLES
   $ orbit session <SESSION_ID> --json
 ```
 
-_See code: [src/cli/session.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/session.ts)_
+_See code: [src/cli/session.ts](https://github.com/cybergarage/orbit/blob/v0.6.0/src/apps/cli/session.ts)_
 
 ## `orbit skills`
 
@@ -265,7 +346,7 @@ DESCRIPTION
   List bounded Skill metadata and source digests without running a model
 ```
 
-_See code: [src/cli/skills.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/skills.ts)_
+_See code: [src/cli/skills.ts](https://github.com/cybergarage/orbit/blob/v0.6.0/src/apps/cli/skills.ts)_
 
 ## `orbit storage ACTION [SESSION]`
 
@@ -292,5 +373,5 @@ DESCRIPTION
   Inspect storage or initialize, resume and recover it under external offline exclusion
 ```
 
-_See code: [src/cli/storage.ts](https://github.com/cybergarage/orbit/blob/v0.0.0/src/cli/storage.ts)_
+_See code: [src/cli/storage.ts](https://github.com/cybergarage/orbit/blob/v0.6.0/src/apps/cli/storage.ts)_
 <!-- commandsstop -->

@@ -7,6 +7,10 @@ as a product contract.
 
 ## Start here
 
+- Build your first application with [Building an assistant](building-assistants.md)
+  and the [runnable consumer example](../examples/assistant/README.md).
+- Read [Versioning](versioning.md) for 0.x compatibility and release milestones.
+
 - Read [Concept Overview](concepts/overview.md) for Orbit's purpose and design
   principles.
 - Read [Current Architecture](architecture.md) for the structure implemented in

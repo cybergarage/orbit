@@ -5,7 +5,7 @@ A compiled Graph composes serial Agent, managed tool, transform and router stage
 ## Compile and submit
 
 ```typescript
-import {Agent, compileProcessorGraph, Session, State} from 'orbit'
+import {Agent, compileProcessorGraph, Session, State} from '@cybergarage/orbit'
 
 const graph = await compileProcessorGraph({
   id: 'inspect', entry: 'answer',

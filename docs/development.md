@@ -149,7 +149,7 @@ a factory switch. A provider registration supplies its name, model constructor,
 and an optional default model:
 
 ```ts
-import {registerModelProvider} from 'orbit'
+import {registerModelProvider} from '@cybergarage/orbit'
 
 registerModelProvider({
   name: 'custom',
@@ -220,27 +220,49 @@ It synchronizes two child processes after both read the dead owner's lock,
 then lets them reclaim it in order. It kills only its own children and removes
 its temporary directory. Keep this evidence distinct from `npm test` results.
 
-## Releases and npm publication
+## Releases and npm packages
 
-Pushes to `main` do not create releases or publish packages. Both operations
-require an explicit manual workflow dispatch so that an ordinary documentation
-or maintenance commit cannot start a publication chain.
+See [Versioning](versioning.md) for milestone and compatibility policy.
+The npm package is `@cybergarage/orbit`; the executable stays `orbit`.
+Pushes do not create releases or publish packages automatically; both publication
+workflows require an explicit manual dispatch.
 
-To prepare a release:
+1. Update `package.json` and the root metadata in `package-lock.json` together.
+   Update the example's exact dependency and the relevant release documentation.
+2. Run `npm run headers:check`, `npm run build`, `npm test` and
+   `npm run test:package`. The latter packs a real tarball and installs it into
+   an independent TypeScript consumer with no source-path aliases. It checks
+   imports, CLI help, durable sessions, run retries, approval/denial, cancellation,
+   logs and restart/resume without provider credentials. It needs registry access
+   to install dependencies. It does not test live models or production storage.
+3. Run `npm run docs:commands` after building to regenerate the README's oclif
+   sections. Review all generated changes and run `git diff --check`.
+4. Commit the reviewed change and create/push `v<package-version>` for that
+   commit. Run the `Create GitHub release` workflow with that existing tag.
+5. Run `Publish npm package` with the same released tag and the exact confirmation
+   `publish`. Configure the repository's `NPM_TOKEN` with current npm publishing
+   permissions. The workflow checks the version, tag, release, test suite and
+   independent package consumer before publishing.
 
-1. Replace the placeholder `0.0.0` version in `package.json`, update
-   `package-lock.json`, and commit the version change.
-2. Create and push a `v<package-version>` tag for that commit.
-3. Run the `Create GitHub release` workflow with the existing tag. The workflow
-   validates the version and tag, runs the complete validation set, and creates
-   release notes only after those checks pass.
-4. If npm publication is intended, run the separate `Publish npm package`
-   workflow with the same released tag and enter `publish` as the confirmation.
+`prepack` always builds the runtime and GUI and generates the CLI manifest.
+It does not regenerate tracked documentation. `files` limits the tarball to
+runtime outputs, launchers, maintained Markdown guides and example source.
+`publishConfig` specifies public access and the npm registry.
 
-The npm workflow requires the repository `NPM_TOKEN` secret. It rejects the
-placeholder version, a tag/version mismatch, a missing GitHub release, or a
-confirmation value other than the exact word `publish`. It runs the complete
-validation set again immediately before `npm publish`.
+For a maintainer publishing locally after the same release checks:
+
+```sh
+ORBIT_RELEASE_DIR=/path/to/release-artifacts npm run test:package
+npm publish /path/to/release-artifacts/cybergarage-orbit-VERSION.tgz --access public
+```
+
+Inspect the packed file list before publishing; verify the registry version and
+GitHub tag afterward. A version that has been published must not be reused.
+`ORBIT_RELEASE_DIR` retains the exact tested tarball; without it the temporary
+consumer and tarball are removed. On Windows, set that environment variable
+using your shell's syntax before running the check.
+The package's first publication may require interactive npm authentication/2FA.
+Never put credentials in repository files or release logs.
 
 Add or update deterministic, isolated tests for every behavioral change. Stub
 model providers, MCP services, and other external boundaries instead of making
@@ -342,5 +364,5 @@ when the change is architecturally significant; keep dated investigation
 evidence in `docs/research/`.
 
 Command metadata changes may require regenerating oclif documentation with
-`npm run prepack` or `make oclif-docs`. Review all generated differences before
+`npm run docs:commands` or `make oclif-docs`. Review all generated differences before
 committing them.

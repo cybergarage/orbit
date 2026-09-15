@@ -38,7 +38,7 @@ authoritative.
 Applications and tests can use another root:
 
 ```ts
-import {SessionRepository} from 'orbit'
+import {SessionRepository} from '@cybergarage/orbit'
 
 const repository = new SessionRepository({rootDir: '/tmp/orbit-sessions'})
 ```
@@ -197,7 +197,7 @@ metadata, but applications must still treat the files as sensitive local data.
 session with an ordered asynchronous recorder:
 
 ```ts
-import {Message, MessageType, SessionRepository} from 'orbit'
+import {Message, MessageType, SessionRepository} from '@cybergarage/orbit'
 
 const repository = new SessionRepository()
 const session = repository.create({
@@ -370,7 +370,7 @@ non-interactive environments.
 threads:
 
 ```ts
-import {SessionRepository, ThreadManager} from 'orbit'
+import {SessionRepository, ThreadManager} from '@cybergarage/orbit'
 
 const repository = new SessionRepository()
 const manager = new ThreadManager({sessionRepository: repository})
@@ -402,7 +402,7 @@ Delete a closed persisted session through the explicit deletion service, supplyi
 the same log store used by the application:
 
 ```ts
-import {SessionDeletionService} from 'orbit'
+import {SessionDeletionService} from '@cybergarage/orbit'
 const deleted = await new SessionDeletionService(repository, logStore).delete(snapshot.id)
 ```
 
@@ -441,7 +441,7 @@ integrations can derive the same fields from an active `Session` and format the
 same human-readable output used by the CLI:
 
 ```ts
-import {createSessionInformation, formatSessionInformation} from 'orbit'
+import {createSessionInformation, formatSessionInformation} from '@cybergarage/orbit'
 
 const information = createSessionInformation(session, {
   model: currentModel,

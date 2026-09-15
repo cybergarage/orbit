@@ -50,6 +50,7 @@ jobs:
       - run: npm run headers:check
       - run: npm run build
       - run: npm test
+      - run: npm run test:package
       - name: Verify validation did not modify tracked files
         run: git diff --exit-code
   release:

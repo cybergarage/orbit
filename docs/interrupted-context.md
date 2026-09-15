@@ -15,7 +15,7 @@ refused before managed MCP preparation. GUI uses the same Thread/service setting
 without adding a new control or automatically migrating saved data.
 
 ```ts
-import {Agent, MemorySessionLogStore} from 'orbit'
+import {Agent, MemorySessionLogStore} from '@cybergarage/orbit'
 
 const logs = new MemorySessionLogStore()
 const agent = new Agent({

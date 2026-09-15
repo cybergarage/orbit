@@ -27,7 +27,7 @@ real paths; arbitrary lowercasing is not used to simulate Windows identity.
 The same procedure is available to an embedding application:
 
 ```ts
-import {SessionRepository} from 'orbit'
+import {SessionRepository} from '@cybergarage/orbit'
 
 const repository = new SessionRepository({rootDir: '/srv/orbit/sessions', journalRoot: '/srv/orbit/runs'})
 // Only after establishing offline exclusive control, never per request:

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The browser bundle is a development-time artifact produced before packaging.
-// eslint-disable-next-line n/no-unpublished-import
 import {build} from 'esbuild'
 
 await build({

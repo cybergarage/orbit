@@ -13,3 +13,9 @@ pnpm-lock.yaml
 
 .scribemuse
 PROMPT.md
+
+/examples/assistant/node_modules
+/examples/assistant/dist
+/examples/assistant/.assistant
+/examples/assistant/workspace
+*.tgz

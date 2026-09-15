@@ -128,7 +128,7 @@ available for retry.
 subscriptions, flushing, health, and deletion use `SessionLogStore`:
 
 ```ts
-import {LogCategory, LogEventType, LogOutcome, MemorySessionLogStore, StoreSessionLoggerFactory} from 'orbit'
+import {LogCategory, LogEventType, LogOutcome, MemorySessionLogStore, StoreSessionLoggerFactory} from '@cybergarage/orbit'
 
 const logs = new MemorySessionLogStore({maxRecordsPerSession: 1000})
 const loggers = new StoreSessionLoggerFactory(logs)

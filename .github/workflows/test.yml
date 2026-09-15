@@ -4,6 +4,19 @@ on:
   workflow_dispatch:
 
 jobs:
+  package-consumer:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node_version: ['20.19.0', '24']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache: npm
+          node-version: ${{ matrix.node_version }}
+      - run: npm ci
+      - run: npm run test:package
   unit-tests:
     strategy:
       matrix:

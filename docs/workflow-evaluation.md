@@ -7,7 +7,7 @@ execution, isolation, independent grading and report storage.
 
 ## Public API
 
-All functions below are exported from `orbit`. Inputs are primitive JSON text
+All functions below are exported from `@cybergarage/orbit`. Inputs are primitive JSON text
 strings, not caller objects. Invalid format, plan or identity conflicts throw;
 valid reports with missing or invalid evidence produce explicit findings and
 indeterminate rows. Functions are synchronous and never open a supplied path,
@@ -20,7 +20,7 @@ import {
   inspectEvaluationEvidence,
   sealEvaluationReport,
   validateEvaluationPlan,
-} from 'orbit'
+} from '@cybergarage/orbit'
 
 // These strings are obtained by the authorized host, outside the pure API.
 const {digest: planDigest} = validateEvaluationPlan(trustedPlanText)

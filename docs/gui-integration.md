@@ -20,34 +20,59 @@ resolves settings and context sources, manages durable sessions and their log
 partitions, returns runtime inspection data, owns the diagnostic event buffer,
 and delegates thread runs.
 
+Persistent examples require [offline storage initialization](session-storage.md)
+before creating the first Thread. For a complete runnable host, use the
+[assistant example](../examples/assistant/README.md). The snippets below show
+individual integration points; `workspacePath`, renderer delivery and owner
+identity are supplied by the host.
+
+Create one service for the host and subscribe before starting work:
+
 ```ts
-import {OrbitApplicationService} from 'orbit'
+import {OrbitApplicationService} from '@cybergarage/orbit'
 
 const application = await OrbitApplicationService.create({cwd: workspacePath})
-const thread = application.createThread()
-const run = await application.startRun(thread.id, 'Inspect the failing test.', crypto.randomUUID())
-
-const unsubscribe = application.subscribeRunSnapshots((snapshot) => {
+const unsubscribe = application.subscribeRunSnapshots(snapshot => {
   sendToRenderer(snapshot)
 })
-const unsubscribeLogs = application.subscribeLogs((record) => {
+const unsubscribeLogs = application.subscribeLogs(record => {
   sendLogToRenderer(record)
 })
-
-const backfill = await application.getSessionLogs(thread.id, {limit: 200})
-const toolFailures = await application.getSessionLogs(thread.id, {
-  categories: ['tool'],
-  outcomes: ['failed'],
-})
-const logHealth = application.getLogHealth()
-
-// Use run.runId for immediate cancellation.
-if (run.kind === 'run') application.cancelRun(run.runId)
-
-unsubscribe()
-unsubscribeLogs()
-await application.close()
+const thread = application.createThread()
+const started = await application.startRun(thread.id, 'Inspect the failing test.', requestId)
+if (started.kind === 'run') {
+  // Backfill authoritative state even if events arrived before this response.
+  sendToRenderer(await application.queryRun(started.runId))
+} else {
+  sendCommandResponseToRenderer(started.response)
+}
 ```
+
+Keep the service and subscriptions alive while the UI is open. Render pending
+approvals from Run snapshots. After authenticating and authorizing the operator,
+reply to the exact request:
+
+```ts
+await application.replyApproval(runId, {
+  requestId: approval.id,
+  digest: approval.digest,
+  approve: ownerDecision,
+})
+```
+
+The `local-gui` scope is assigned by the service; it is not a user authentication
+mechanism. A GUI transport must validate the client's ownership of the Session.
+A request can expire or be cancelled before the reply arrives; refetch on stale
+replies rather than manufacturing a new approval.
+
+Use `application.cancelRun(runId)` when the owner requests stop. Continue
+observing the Run until its terminal result. During host shutdown, stop new
+admissions, unsubscribe, and await `application.close()`. Handle close failures
+as described in [Managed Execution](execution.md). A supplied log store remains
+host-owned and must be closed after the service has settled.
+
+Use `getSessionLogs(thread.id, {limit: 200})` for log backfill,
+`getLogHealth()` for sink health and `getThread(thread.id)` to refresh messages.
 
 The service returns after required admission, before model completion. Its
 result is discriminated by `kind`: `run` contains a run ID; `command` does not.
@@ -70,7 +95,7 @@ counters.
 ## Thread lifecycle
 
 ```ts
-import {SessionRepository, ThreadManager} from 'orbit'
+import {SessionRepository, ThreadManager} from '@cybergarage/orbit'
 
 const repository = new SessionRepository()
 const manager = new ThreadManager({
@@ -83,7 +108,7 @@ const manager = new ThreadManager({
 const thread = manager.createThread({
   agent: {
     cwd: projectPath,
-    model: {name: 'gpt-5.6', provider: 'openai'},
+    model: {name: modelName, provider: 'openai'},
   },
 })
 

@@ -1,7 +1,7 @@
 {
-  "name": "orbit",
-  "description": "An agentic CLI for crafting and publishing content workflows.",
-  "version": "0.0.0",
+  "name": "@cybergarage/orbit",
+  "description": "A TypeScript agent runtime, CLI, and local GUI for building assistant applications.",
+  "version": "0.6.0",
   "author": "Satoshi Konno",
   "bin": {
     "orbit": "./bin/run.js"
@@ -55,13 +55,26 @@
     "node": ">=20.19.0"
   },
   "files": [
-    "./bin",
-    "./dist",
-    "./oclif.manifest.json"
+    "CHANGELOG.md",
+    "bin/run.js",
+    "bin/run.cmd",
+    "bin/args.js",
+    "dist",
+    "oclif.manifest.json",
+    "docs/*.md",
+    "examples/assistant/src",
+    "examples/assistant/package.json",
+    "examples/assistant/tsconfig.json",
+    "examples/assistant/README.md"
   ],
   "homepage": "https://github.com/cybergarage/orbit",
   "keywords": [
-    "oclif"
+    "ai",
+    "agent",
+    "typescript",
+    "mcp",
+    "assistant",
+    "cli"
   ],
   "license": "Apache-2.0",
   "main": "dist/index.js",
@@ -73,7 +86,8 @@
     "plugins": [
       "@oclif/plugin-help"
     ],
-    "topicSeparator": " "
+    "topicSeparator": " ",
+    "repositoryPrefix": "<%- repo %>/blob/v<%- version %>/src/apps/cli/<%- c.id %>.ts"
   },
   "overrides": {
     "mocha": {
@@ -84,16 +98,22 @@
   "repository": "cybergarage/orbit",
   "scripts": {
     "build": "shx rm -rf dist && tsc -b && node ./bin/build-gui.mjs",
-    "headers:apply": "node ./bin/headers.js --write",
-    "headers:check": "node ./bin/headers.js",
+    "headers:apply": "node ./bin/headers.js --base src,test,examples/assistant/src --write",
+    "headers:check": "node ./bin/headers.js --base src,test,examples/assistant/src",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint --fix",
     "postpack": "shx rm -f oclif.manifest.json",
-    "prepack": "oclif manifest && oclif readme",
+    "prepack": "npm run build && oclif manifest",
     "pretest": "npm run format && npm run lint",
     "test": "TS_NODE_PROJECT=tsconfig.test.json mocha --forbid-only \"test/**/*.test.ts\"",
-    "version": "oclif readme && git add README.md"
+    "version": "oclif readme && git add README.md",
+    "docs:commands": "oclif manifest && oclif readme",
+    "test:package": "node bin/test-package.mjs"
   },
   "types": "dist/index.d.ts",
-  "prettier": "@oclif/prettier-config"
+  "prettier": "@oclif/prettier-config",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  }
 }

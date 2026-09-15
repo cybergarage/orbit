@@ -26,7 +26,7 @@ The reusable `Agent` class preserves its previous library default and does not
 enable built-ins unless a profile is selected:
 
 ```ts
-import {Agent, ToolProfile} from 'orbit'
+import {Agent, ToolProfile} from '@cybergarage/orbit'
 
 const agent = new Agent({
   cwd: '/workspace/project',
