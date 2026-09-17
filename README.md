@@ -1,3 +1,6 @@
+![](https://img.shields.io/badge/status-Work%20In%20Progress-8A2BE2)
+![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/cybergarage/orbit)
+
 # Orbit
 
 Orbit is a TypeScript agent framework for building agent applications. It
