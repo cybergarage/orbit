@@ -19,6 +19,12 @@ oclif-docs:
 
 doc: doc-touch oclif-docs $(docs)
 
+.PHONY: link
+link:
+	npm ci
+	npm run build
+	npm link
+
 .PHONY: run
 run:
 	npm run build
