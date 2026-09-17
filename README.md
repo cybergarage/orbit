@@ -1,5 +1,6 @@
 ![](https://img.shields.io/badge/status-Work%20In%20Progress-8A2BE2)
 ![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/cybergarage/orbit)
+[![npm package](https://img.shields.io/npm/v/@cybergarage/orbit?logo=npm)](https://www.npmjs.com/package/@cybergarage/orbit)
 
 # Orbit
 
