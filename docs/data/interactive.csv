@@ -1,4 +1,6 @@
 command,arguments,description,effect
+"/tools","[--connect]",List tool metadata,Lists registered tools and optionally discovers MCP tools under the execution policy
+"/mcp","[--connect]",List MCP servers,Lists configured servers and optionally discovers their tool counts
 "/help","",Show slash commands,Prints the available slash commands
 "/exit","",Exit interactive mode,Ends the interactive session
 "/session","",Show the current session information,Prints the full session ID and diagnostic summary

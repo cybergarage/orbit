@@ -41,6 +41,12 @@ CLI exec / interactive       Local GUI
 - `src/core/thread.ts` manages in-memory thread lifecycles, active runs,
   cancellation, event translation, and session ownership.
 
+CLI `tools` / `mcp list` and interactive `/tools` / `/mcp` share metadata
+inspection in `src/core/tools/inventory.ts`. Local inspection reads configured
+catalogs without an Agent. Optional MCP discovery reuses `RunSupervisor` and
+managed MCP startup in a transient, memory-journaled Run. It does not invoke a
+model or append to a conversation. See [Tool inventory](tools.md#inspecting-tools-and-mcp-servers).
+
 ## Agent turn lifecycle
 
 `Agent` in `src/core/agent.ts` is the current orchestration boundary. One

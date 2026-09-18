@@ -19,6 +19,13 @@ Persistent recording defaults to file-and-directory-sync; --journal-level
 file-sync explicitly selects weaker acknowledgement when needed.
 See link:execution.md[Managed Execution] for ownership and migration details.
 
+== Tool and MCP inspection
+
+Use /tools and /mcp to inspect registered tools and configured MCP servers.
+Add --connect to discover MCP tools under the current execution policy.
+Discovery uses Y/N approval and Ctrl+C cancellation without calling a model.
+See link:tools.md[Tool inventory] for unknown counts, transient recording and failure behavior.
+
 == Selected instructions
 
 Use /skills to inspect explicit sources and /skill ID@DIGEST to select the next Run's instructions.

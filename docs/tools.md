@@ -1,5 +1,56 @@
 # Coding Tools
 
+## Inspecting tools and MCP servers
+
+Use these commands without configuring a model or provider credentials:
+
+```sh
+orbit tools
+orbit tools --json
+orbit mcp list
+orbit mcp list --json
+```
+
+`tools` lists tool names, descriptions, sources and registration status. It uses
+the same workspace tool profile, include and exclude settings as the CLI (the
+default profile is `coding`). CLI commands have no application-supplied custom
+tools; custom tools remain owned by the application that registers them.
+`registered` describes catalog membership, not permission to execute a call.
+Execution policy, input validation and runtime conditions still apply.
+
+By default, neither command starts MCP processes. Configured servers appear as
+`not-connected` with a `null` tool count (`unknown` in text). The JSON `complete`
+field is false when MCP tool discovery has not completed; an unknown count is
+not zero. Process commands, arguments and environment values are omitted from
+the listing.
+
+Add `--connect` to start configured servers and discover their tool metadata:
+
+```sh
+orbit tools --connect --json
+orbit mcp list --connect
+```
+
+Discovery uses the existing managed execution policy, startup limits,
+cancellation and cleanup. The default `workspace-confirm` policy asks before
+starting a server; without a terminal responder it denies startup. An explicit
+`--execution-policy unrestricted` skips prompts while retaining limits and
+recording. No model request or MCP tool invocation occurs. Discovery stops on
+the first failure, preserves earlier results, and exits with status 1 if the
+requested discovery is incomplete. `discovered` means the server was contacted
+during this inspection; connections close afterward. Later agent Runs discover
+their own catalogs and can observe different tools.
+
+Inspection is transient: its separate Run uses an in-memory execution journal,
+reported in JSON as `inspection.recording`, and does not append to a conversation
+or create a saved Session. A cleanup failure is reported rather than claiming
+successful discovery. It does not provide persistent audit evidence.
+
+In interactive mode, use `/tools` or `/mcp`, optionally followed by `--connect`.
+These commands preserve pending Skill selections and conversation context.
+Connected inspection uses the session's execution policy, Y/N approval UI and
+Ctrl+C cancellation. Unconfirmed cleanup blocks further submissions.
+
 Orbit provides a built-in coding tool profile for repository exploration,
 editing, command execution, builds, and tests.
 

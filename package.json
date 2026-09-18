@@ -87,7 +87,7 @@
       "@oclif/plugin-help"
     ],
     "topicSeparator": " ",
-    "repositoryPrefix": "<%- repo %>/blob/v<%- version %>/src/apps/cli/<%- c.id %>.ts"
+    "repositoryPrefix": "<%- repo %>/blob/v<%- version %>/src/apps/cli/<%- c.id.split(':').join('/') %>.ts"
   },
   "overrides": {
     "mocha": {

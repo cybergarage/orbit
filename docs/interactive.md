@@ -17,6 +17,18 @@
 </thead>
 <tbody>
 <tr>
+<td style="text-align: left;"><p>/tools</p></td>
+<td style="text-align: left;"><p>[--connect]</p></td>
+<td style="text-align: left;"><p>List tool metadata</p></td>
+<td style="text-align: left;"><p>Lists registered tools and optionally discovers MCP tools under the execution policy</p></td>
+</tr>
+<tr>
+<td style="text-align: left;"><p>/mcp</p></td>
+<td style="text-align: left;"><p>[--connect]</p></td>
+<td style="text-align: left;"><p>List MCP servers</p></td>
+<td style="text-align: left;"><p>Lists configured servers and optionally discovers their tool counts</p></td>
+</tr>
+<tr>
 <td style="text-align: left;"><p>/help</p></td>
 <td style="text-align: left;"></td>
 <td style="text-align: left;"><p>Show slash commands</p></td>
@@ -88,6 +100,10 @@
 ## Managed operations
 
 The default workspace-confirm policy allows reads inside the workspace and asks before edits, commands and MCP operations. Use Y or N for the displayed single-operation request. Ctrl+C during a run requests stop; an incomplete result means cleanup or effects remain unconfirmed. The interface reports the run result and required recording failure. An application owner can select --execution-policy unrestricted explicitly; limits and required recording still apply. Persistent recording defaults to file-and-directory-sync; --journal-level file-sync explicitly selects weaker acknowledgement when needed. See [Managed Execution](execution.md) for ownership and migration details.
+
+## Tool and MCP inspection
+
+Use /tools and /mcp to inspect registered tools and configured MCP servers. Add --connect to discover MCP tools under the current execution policy. Discovery uses Y/N approval and Ctrl+C cancellation without calling a model. See [Tool inventory](tools.md) for unknown counts, transient recording and failure behavior.
 
 ## Selected instructions
 

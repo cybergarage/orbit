@@ -10,6 +10,7 @@ import type {AgentOptions, Model} from '../../src/core/models/index.js'
 
 import {
   createInitialInteractiveState,
+  handleInventoryCommand,
   handleModelCommand,
   handleSlashCommand,
   slashCommandHelpMessage,
@@ -72,6 +73,39 @@ class MockAgent extends Agent {
 }
 
 describe('interactive helpers', () => {
+  it('lists inventory locally without consuming pending skills or creating an agent', async () => {
+    class NoAgent extends Agent {
+      constructor() {
+        super({
+          deps: {
+            createModel() {
+              throw new Error('Inventory must not create an agent')
+            },
+          },
+        })
+      }
+    }
+    const state = {
+      ...createInitialInteractiveState({
+        model: 'fixture',
+        provider: 'ollama',
+        settings: {
+          mcp: {servers: {fixture: {command: 'never-start'}}},
+          tools: {include: ['read'], profile: 'none'},
+        },
+      }),
+      pendingSkills: [{digest: 'unchanged', id: 'workspace:review'}],
+    }
+    const result = await submitInteractiveInput(NoAgent, state, '/tools')
+    expect(result.messages.at(-1)?.content).include('"read" [builtin] registered')
+    expect(result.conversationMessages).deep.equal([])
+    expect(result.pendingSkills).deep.equal(state.pendingSkills)
+    const servers = await submitInteractiveInput(NoAgent, state, '/mcp')
+    expect(servers.messages.at(-1)?.content).include('"fixture" not-connected tools=unknown')
+    expect((await handleInventoryCommand(state, '/tools extra'))?.message).include('Invalid inventory command')
+    expect(await handleInventoryCommand(state, '/other')).equal(undefined)
+  })
+
   it('starts with an empty session state', () => {
     expect(createInitialInteractiveState({model: 'llama3.1', provider: 'ollama'})).to.deep.equal({
       conversationMessages: [],
@@ -265,6 +299,8 @@ describe('interactive helpers', () => {
     expect(slashCommandHelpMessage).to.equal(
       [
         'Slash commands:',
+        '/tools [--connect] - List tool metadata; optionally discover MCP tools',
+        '/mcp [--connect] - List MCP servers; optionally connect to count tools',
         '/skills - List Skill IDs and digests',
         '/skill ID@DIGEST - Select for the next Run; /skill clear removes pending selections',
         '/help - Show slash commands',

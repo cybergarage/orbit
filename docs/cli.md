@@ -27,10 +27,12 @@ USAGE
 * [`orbit exec [PROMPT]`](#orbit-exec-prompt)
 * [`orbit gui`](#orbit-gui)
 * [`orbit help [COMMAND]`](#orbit-help-command)
+* [`orbit mcp list`](#orbit-mcp-list)
 * [`orbit resume [SESSION]`](#orbit-resume-session)
 * [`orbit session [SESSION]`](#orbit-session-session)
 * [`orbit skills`](#orbit-skills)
 * [`orbit storage ACTION [SESSION]`](#orbit-storage-action-session)
+* [`orbit tools`](#orbit-tools)
 
 ## `orbit delete SESSION`
 
@@ -155,6 +157,31 @@ DESCRIPTION
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.37/src/commands/help.ts)_
 
+## `orbit mcp list`
+
+List configured MCP servers and optionally discover their tools
+
+```
+USAGE
+  $ orbit mcp list [--connect] [--execution-policy workspace-confirm|unrestricted] [--json]
+
+FLAGS
+  --connect                    Start configured MCP servers to discover tools, subject to execution policy
+  --execution-policy=<option>  [default: workspace-confirm] MCP startup policy
+                               <options: workspace-confirm|unrestricted>
+  --json                       Print JSON metadata
+
+DESCRIPTION
+  List configured MCP servers and optionally discover their tools
+
+EXAMPLES
+  $ orbit mcp list --json
+
+  $ orbit mcp list --connect
+```
+
+_See code: [src/cli/mcp/list.ts](https://github.com/cybergarage/orbit/blob/v0.6.1/src/apps/cli/mcp/list.ts)_
+
 ## `orbit resume [SESSION]`
 
 Resume a saved interactive session
@@ -276,4 +303,29 @@ DESCRIPTION
 ```
 
 _See code: [src/cli/storage.ts](https://github.com/cybergarage/orbit/blob/v0.6.1/src/apps/cli/storage.ts)_
+
+## `orbit tools`
+
+List registered tool metadata without running a model
+
+```
+USAGE
+  $ orbit tools [--connect] [--execution-policy workspace-confirm|unrestricted] [--json]
+
+FLAGS
+  --connect                    Start configured MCP servers to discover tools, subject to execution policy
+  --execution-policy=<option>  [default: workspace-confirm] MCP startup policy
+                               <options: workspace-confirm|unrestricted>
+  --json                       Print JSON metadata
+
+DESCRIPTION
+  List registered tool metadata without running a model
+
+EXAMPLES
+  $ orbit tools --json
+
+  $ orbit tools --connect
+```
+
+_See code: [src/cli/tools.ts](https://github.com/cybergarage/orbit/blob/v0.6.1/src/apps/cli/tools.ts)_
 <!-- commandsstop -->

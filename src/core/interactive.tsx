@@ -23,6 +23,7 @@ import {
 import {parseSkillSelection} from './skills/index.js'
 import {State} from './state.js'
 import {ToolProfile} from './tools/index.js'
+import {formatToolInventory, inspectTools, type ToolInventoryOptions} from './tools/inventory.js'
 
 export interface InteractiveSessionOptions {
   agentClass: InteractiveAgentClass
@@ -71,6 +72,8 @@ export interface ModelCommandResult {
 export type SlashCommandResult = ModelCommandResult
 
 const slashCommandHelpItems = [
+  {command: '/tools [--connect]', description: 'List tool metadata; optionally discover MCP tools'},
+  {command: '/mcp [--connect]', description: 'List MCP servers; optionally connect to count tools'},
   {command: '/skills', description: 'List Skill IDs and digests'},
   {command: '/skill ID@DIGEST', description: 'Select for the next Run; /skill clear removes pending selections'},
   {command: '/help', description: 'Show slash commands'},
@@ -147,6 +150,25 @@ export async function handleSkillCommand(
   }
 }
 
+export async function handleInventoryCommand(
+  state: InteractiveState,
+  input: string,
+  options: Pick<ToolInventoryOptions, 'approve' | 'signal'> = {},
+): Promise<SlashCommandResult | undefined> {
+  const [command, ...args] = input.split(/\s+/u)
+  if (command !== '/tools' && command !== '/mcp') return
+  if (args.length > 1 || (args.length === 1 && args[0] !== '--connect'))
+    return {message: `Invalid inventory command. Use ${command} [--connect]`, nextState: state}
+  const inventory = await inspectTools({
+    ...options,
+    connect: args[0] === '--connect',
+    cwd: state.cwd,
+    executionPolicy: state.executionPolicy,
+    settings: state.settings,
+  })
+  return {message: formatToolInventory(inventory, command === '/tools' ? 'tools' : 'mcp'), nextState: state}
+}
+
 export async function submitInteractiveInput(
   AgentClass: InteractiveAgentClass,
   state: InteractiveState,
@@ -160,7 +182,10 @@ export async function submitInteractiveInput(
   if (input.startsWith('/')) state.logger?.info({command: input}, 'interactive command submitted')
   if (input === '/exit') return state
 
-  const commandResult = (await handleSkillCommand(state, input)) ?? handleSlashCommand(state, input)
+  const commandResult =
+    (await handleInventoryCommand(state, input)) ??
+    (await handleSkillCommand(state, input)) ??
+    handleSlashCommand(state, input)
   if (commandResult) {
     return {
       ...commandResult.nextState,
@@ -382,6 +407,7 @@ function InteractiveApp({
   const {exit} = useApp()
   const active = useRef<undefined | {agent: Agent; controller: AbortController}>(undefined)
   const listing = useRef<AbortController | undefined>(undefined)
+  const listingApproval = useRef<((approved: boolean) => void) | undefined>(undefined)
   useEffect(
     () => () => {
       listing.current?.abort()
@@ -410,6 +436,8 @@ function InteractiveApp({
     if (key.ctrl && value === 'c') {
       if (listing.current) {
         listing.current.abort()
+        listingApproval.current?.(false)
+        setApproval(undefined)
         return
       }
 
@@ -424,6 +452,11 @@ function InteractiveApp({
       if (value.toLowerCase() === 'y' || value.toLowerCase() === 'n') {
         const request = approval
         setApproval(undefined)
+        if (listingApproval.current) {
+          listingApproval.current(value.toLowerCase() === 'y')
+          return
+        }
+
         active.current?.agent
           .replyApproval(request.runId, {
             approve: value.toLowerCase() === 'y',
@@ -451,11 +484,36 @@ function InteractiveApp({
         return
       }
 
-      if (nextInput === '/skills' || nextInput.startsWith('/skill ')) {
+      if (nextInput === '/skills' || nextInput.startsWith('/skill ') || /^\/(?:tools|mcp)(?:\s|$)/u.test(nextInput)) {
         const controller = new AbortController()
         listing.current = controller
         setState({...state, input: '', isLoading: true})
-        handleSkillCommand(state, nextInput, controller.signal)
+        const inspect = async () =>
+          (await handleInventoryCommand(state, nextInput, {
+            approve: (request) =>
+              new Promise<boolean>((resolve) => {
+                const finish = (approved: boolean) => {
+                  clearTimeout(timer)
+                  controller.signal.removeEventListener('abort', cancel)
+                  listingApproval.current = undefined
+                  setApproval(undefined)
+                  resolve(approved)
+                }
+
+                const cancel = () => finish(false)
+                const timer = setTimeout(cancel, Math.max(0, request.expiresAt - Date.now()))
+                if (controller.signal.aborted) {
+                  finish(false)
+                  return
+                }
+
+                controller.signal.addEventListener('abort', cancel, {once: true})
+                listingApproval.current = finish
+                setApproval(request)
+              }),
+            signal: controller.signal,
+          })) ?? handleSkillCommand(state, nextInput, controller.signal)
+        inspect()
           .then((result) => {
             if (result)
               setState({
@@ -465,14 +523,15 @@ function InteractiveApp({
                 messages: [...state.messages, new Message(MessageType.Assistant, {content: result.message})],
               })
           })
-          .catch((error) =>
+          .catch((error) => {
+            if (error instanceof RunExecutionError && !error.result.quiescence) setBlocked(true)
             setState({
               ...state,
               input: '',
               isLoading: false,
               messages: [...state.messages, new Message(MessageType.Assistant, {content: String(error)})],
-            }),
-          )
+            })
+          })
           .finally(() => {
             listing.current = undefined
           })
