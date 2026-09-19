@@ -4,7 +4,6 @@
 import fs from 'node:fs/promises'
 import process from 'node:process'
 
-import {APP_NAME} from './app.js'
 import {LocalWorkspaceLocator} from './workspace.js'
 
 export type ContextSource =
@@ -20,24 +19,8 @@ export interface Context {
 
 const AGENTS_FILE_NAME = 'AGENTS.md'
 
-function agentFiles(): string[] {
-  return [`${APP_NAME.toUpperCase()}.md`, AGENTS_FILE_NAME]
-}
-
-function escapeRegExp(value: string): string {
-  return value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
-}
-
-function agentFilePattern(): RegExp {
-  return new RegExp(
-    `^(?:${agentFiles()
-      .map((fileName) => escapeRegExp(fileName))
-      .join('|')})$`,
-  )
-}
-
 export async function loadSystemContexts(startDir = process.cwd()): Promise<Context[]> {
-  const files = await new LocalWorkspaceLocator({start: startDir}).files(agentFilePattern())
+  const files = await new LocalWorkspaceLocator({start: startDir}).files(AGENTS_FILE_NAME)
   const matches: Context[] = []
 
   for (const file of files) {

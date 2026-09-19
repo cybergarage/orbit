@@ -46,7 +46,7 @@ export async function createHost(options: {dataDir: string; demo: boolean; works
     const service = await OrbitApplicationService.create({
       contextPolicy: {mode: 'disabled'},
       // This example uses explicit instructions. Omit contexts to discover
-      // ORBIT.md / AGENTS.md in trusted workspaces instead.
+      // AGENTS.md in trusted workspaces instead.
       contexts: [],
       cwd: options.workspace,
       logStore: logs,

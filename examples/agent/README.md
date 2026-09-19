@@ -73,7 +73,7 @@ Live mode enables the coding tool profile. Filesystem writes and commands need
 approval. Agent settings can still inherit from ancestor `.orbit` workspaces,
 including MCP configuration. Review those sources before opening a workspace.
 The host uses explicit empty system contexts; see `host.ts` to enable trusted
-`ORBIT.md` / `AGENTS.md` loading. Resume a demo session in demo mode; create a
+`AGENTS.md` loading. Resume a demo session in demo mode; create a
 new session when switching to the real model.
 
 For Anthropic or Ollama, adapt the explicit settings in `host.ts` using the

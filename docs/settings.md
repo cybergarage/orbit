@@ -2,6 +2,19 @@
 
 Orbit loads workspace settings from `settings.json`.
 
+## Workspace instructions
+
+Orbit loads system instructions only from `AGENTS.md` in discovered workspaces,
+ordered from the shallowest ancestor to the deepest workspace. The same workspace
+marker requirement described below applies; an `AGENTS.md` file alone does not
+make a directory a workspace. Empty instruction files are skipped.
+
+Rename an existing `ORBIT.md` to `AGENTS.md`, or merge its instructions into an
+existing `AGENTS.md`. `ORBIT.md` and other app-specific instruction filenames
+(such as `ACME.md` for a renamed application) are no longer loaded. Configuring a
+custom app name still changes the workspace marker, but the instruction filename
+always remains `AGENTS.md`.
+
 ## File locations
 
 Orbit checks workspace directories from the shallowest parent to the current workspace. In each workspace, it prefers:
