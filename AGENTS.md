@@ -53,7 +53,7 @@ Orbit is a TypeScript agent framework for building agent applications. It suppor
 - Preserve normalized `ModelOutputPart` values when adapting assistant responses so provider state needed by later requests is not flattened away. Store provider-only response data under JSON-serializable `ModelResponseMetadata.providerMetadata`.
 - Register model providers through `ModelRegistry` or `registerModelProvider()` rather than adding provider-selection switches. Register external providers before loading settings that select them.
 - The OpenAI adapter currently uses Chat Completions. A future Responses API adapter must preserve ordered output items and continuation state instead of flattening a response into one text message.
-- Workspace discovery only considers ancestors that contain an `.orbit` directory. System context loading reads only `AGENTS.md` from those workspaces, ordered from shallowest to deepest; keep this contract aligned with settings discovery.
+- Workspace discovery only considers ancestors that contain an `.orbit` directory. System context loading reads both `ORBIT.md` and `AGENTS.md` from those workspaces, ordered from shallowest to deepest; keep this contract aligned with settings discovery.
 - Preserve the GUI security boundary: bind only to loopback, require the startup capability token for HTML, JavaScript, REST, and event-stream requests, and retain origin checks, request limits, and schema validation.
 - Prefer explicit TypeScript types at module boundaries. Use `import type` and `export type` for type-only dependencies.
 - Follow the repository's dependency-injection pattern for code that talks to models, MCP clients, settings loaders, or other external boundaries so it remains unit-testable.

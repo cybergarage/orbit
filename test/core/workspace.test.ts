@@ -90,20 +90,20 @@ describe('LocalWorkspaceLocator', () => {
   it('matches workspace files by exact string names', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-workspace-'))
     await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
-    await fs.writeFile(path.join(root, 'AGENTS.md'), 'agents')
-    await fs.writeFile(path.join(root, 'AGENTS.local.md'), 'local')
+    await fs.writeFile(path.join(root, 'ORBIT.md'), 'orbit')
+    await fs.writeFile(path.join(root, 'ORBIT.local.md'), 'local')
 
-    expect(await new LocalWorkspaceLocator({start: root}).files('AGENTS.md')).to.deep.equal([path.join(root, 'AGENTS.md')])
+    expect(await new LocalWorkspaceLocator({start: root}).files('ORBIT.md')).to.deep.equal([path.join(root, 'ORBIT.md')])
   })
 
   it('does not treat string workspace file patterns as partial matches', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-workspace-'))
     await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
-    await fs.writeFile(path.join(root, 'AGENTS.md'), 'agents')
+    await fs.writeFile(path.join(root, 'ORBIT.md'), 'orbit')
 
     const locator = new LocalWorkspaceLocator({start: root})
 
-    expect(await locator.files('AGENTS')).to.deep.equal([])
+    expect(await locator.files('ORBIT')).to.deep.equal([])
     expect(await locator.files('.md')).to.deep.equal([])
   })
 
@@ -129,7 +129,7 @@ describe('LocalWorkspaceLocator', () => {
     await fs.mkdir(path.join(root, '.orbit'), {recursive: true})
     const locator: WorkspaceLocator = new LocalWorkspaceLocator({start: root})
 
-    expect(await locator.files('AGENTS.md')).to.deep.equal([])
+    expect(await locator.files('ORBIT.md')).to.deep.equal([])
     expect(await locator.files(/\.md$/)).to.deep.equal([])
   })
 })

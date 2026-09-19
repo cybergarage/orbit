@@ -126,7 +126,7 @@ The initial event stream and runtime endpoint expose:
 - the Orbit version, process working directory, provider, and model;
 - the session storage directory;
 - each loaded settings file and the provider/MCP names it contributed;
-- each loaded `AGENTS.md` context source and its size;
+- each loaded `ORBIT.md` or `AGENTS.md` context source and its size;
 - model requests, normalized response metadata, token usage, stop reason, and
   wall-clock duration;
 - tool and MCP lifecycle details, including input/output when Full capture is

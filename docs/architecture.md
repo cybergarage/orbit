@@ -158,10 +158,9 @@ use the same registered roots; see [storage migration](session-storage.md).
 ## Configuration and context
 
 Workspace settings are merged from discovered `.orbit/settings.json` files and
-explicit options. System context is loaded only from `AGENTS.md` in qualifying
-ancestor workspaces; see [workspace instructions](settings.md#workspace-instructions).
-Provider credentials and connection settings remain configuration inputs rather
-than persisted session content.
+explicit options. System context is loaded from `ORBIT.md` and `AGENTS.md` in
+qualifying ancestor workspaces. Provider credentials and connection settings
+remain configuration inputs rather than persisted session content.
 
 ## Observability and control
 
