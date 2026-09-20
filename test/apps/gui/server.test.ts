@@ -9,12 +9,23 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {startGuiServer} from '../../../src/apps/gui/server.js'
-import {guiSlashCommandHelpMessage, MemorySessionLogStore, OrbitApplicationService} from '../../../src/core/index.js'
+import {
+  guiSlashCommandHelpMessage,
+  MemorySessionLogStore,
+  OrbitApplicationService,
+  SkillCatalog,
+} from '../../../src/core/index.js'
 import {SessionRepository} from '../../session-storage-fixture.js'
 
 describe('GUI server', () => {
   it('protects and validates the local application API', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-gui-server-'))
+    const skillRoot = await fs.realpath(root)
+    await fs.mkdir(path.join(skillRoot, 'review'))
+    await fs.writeFile(
+      path.join(skillRoot, 'review', 'SKILL.md'),
+      '---\nname: review\ndescription: Inspect tests\nlicense: MIT\ncompatibility: Requires Node.js\n---\nInspect the test.',
+    )
     const service = new OrbitApplicationService({
       contexts: [],
       createAgent: () => ({
@@ -29,6 +40,7 @@ describe('GUI server', () => {
       provider: 'ollama',
       repository: new SessionRepository({rootDir: path.join(root, 'sessions')}),
       settingsSources: [],
+      skillCatalog: new SkillCatalog([{directory: skillRoot, id: 'test'}]),
       version: 'test-version',
     })
     const server = await startGuiServer({service, token: 'test-capability-token'})
@@ -38,6 +50,11 @@ describe('GUI server', () => {
     try {
       const unauthorized = await fetch(`${baseUrl}/api/runtime`)
       expect(unauthorized.status).to.equal(403)
+
+      const skills = await fetch(`${baseUrl}/api/skills`, {headers})
+      expect(skills.status).to.equal(200)
+      const listing = (await skills.json()) as {candidates: Array<{compatibility?: string; license?: string;}>}
+      expect(listing.candidates[0]).to.include({compatibility: 'Requires Node.js', license: 'MIT'})
 
       const runtime = await fetch(`${baseUrl}/api/runtime`, {headers})
       expect(runtime.status).to.equal(200)

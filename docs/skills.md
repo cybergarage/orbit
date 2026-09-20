@@ -13,6 +13,8 @@ Place a file at `.orbit/skills/test-review/SKILL.md` in a marked workspace:
 ---
 name: test-review
 description: Review the target test and distinguish observed results from guesses.
+license: MIT
+compatibility: Requires git and Node.js.
 ---
 Identify the target test, inspect its assertions and explain what a passing result
 would establish. Use ordinary tools and obtain required operation confirmation.
@@ -52,9 +54,17 @@ symlinks and hard links are rejected. Canonical-root aliases conflict even if
 they have different configured IDs. Same-name Skills in different roots remain
 distinct; their names do not establish precedence.
 
-Frontmatter uses pinned `yaml` 2.9.1. Require exactly string `name` and
-`description`, a matching directory name and nonempty instructions. Names use
-lowercase ASCII letters/digits with single internal hyphens (1–64 characters).
+Frontmatter uses pinned `yaml` 2.9.1. Require string `name` and
+`description`, a matching directory name and nonempty instructions. Optional
+`license` and `compatibility` must be nonblank strings. Compatibility permits
+at most 500 Unicode code points; license has no additional field length limit
+beyond the existing file and record byte limits. Values are preserved in
+listings and saved snapshots and shown in CLI, Ink and GUI candidate lists.
+They describe licensing and environment requirements; Orbit does not evaluate
+license approval, install dependencies or grant permissions from these fields.
+Other optional Agent Skills fields, including `allowed-tools`, remain rejected.
+
+Names use lowercase ASCII letters/digits with single internal hyphens (1–64 characters).
 Descriptions allow up to 1,024 Unicode code points. Quoted and block scalars,
 BOM and CRLF are supported. Duplicate keys, anchors, aliases, explicit tags,
 unknown keys, nested metadata and invalid UTF-8 are rejected. The closing `---`
@@ -147,8 +157,12 @@ Persistent selections require transcript v2 or v3. Agent appends turn context, s
 and user input, resolves all choices, saves one `skill_context` revision 1 and
 synchronizes it before journal readiness and the first model call. The record
 contains ordered exact UTF-8 sources, digests, metadata, derived bodies and
-projection revision `yaml-2.9.1-body-v1`. Reopen validates derivation, identity,
-ordering and the immutable revision. A snapshot is evidence of resolved input,
+projection revision `yaml-2.9.1-body-v1` for sources without descriptive fields,
+or `yaml-2.9.1-body-v2` when license or compatibility is present. Both revisions
+remain readable. Reopen compares optional metadata against the source and
+rejects removed, changed or injected values, including new fields on a v1
+projection. Reopen validates derivation, identity, ordering and the immutable
+revision. A snapshot is evidence of resolved input,
 not of successful execution or model compliance. Transcript and journal are
 separate acknowledgements; a saved snapshot alone never authorizes model use.
 
@@ -163,6 +177,15 @@ Session deletion removes these records with the transcript under the existing
 minimal deletion-journal contract.
 
 ## Reader deployment and migration
+
+Before selecting Skills with license or compatibility, upgrade every reader
+and writer of those Sessions. Older readers reject their v2 projection; they
+can still read v1 projections created by the new writer for two-field Skills.
+The catalog configuration identity also changes with this parser revision;
+an old request ID with Skill selections may fail replay binding after upgrade.
+Inspect its recorded outcome before submitting a new request.
+Existing saved v1 projections need no conversion. Removing fields from a saved
+snapshot is not a downgrade mechanism because its source and digest are bound.
 
 Stop old writers/readers and automatic restart sources before enabling Skill
 selection. Migrate v1 through the existing [exclusive migration](context-compaction.md)

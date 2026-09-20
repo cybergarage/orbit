@@ -552,6 +552,8 @@ function App() {
                   type="checkbox"
                 />
                 {candidate.name} — {candidate.file} — {candidate.description}
+                {candidate.license !== undefined && <span> · License: {candidate.license}</span>}
+                {candidate.compatibility !== undefined && <span> · Compatibility: {candidate.compatibility}</span>}
               </label>
             ))}
             {skillList.issues.map((issue, index) => (

@@ -29,7 +29,7 @@ export default class Skills extends Command {
           : [
               ...result.candidates.map(
                 (c) =>
-                  `${c.id}@${c.digest} ${JSON.stringify(c.name)} ${JSON.stringify(c.file)} ${JSON.stringify(c.description)}`,
+                  `${c.id}@${c.digest} ${JSON.stringify(c.name)} ${JSON.stringify(c.file)} ${JSON.stringify(c.description)}${c.license === undefined ? '' : ` license=${JSON.stringify(c.license)}`}${c.compatibility === undefined ? '' : ` compatibility=${JSON.stringify(c.compatibility)}`}`,
               ),
               ...result.issues.map((issue) => JSON.stringify(issue)),
             ].join('\n'),

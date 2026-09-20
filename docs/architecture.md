@@ -207,6 +207,10 @@ requests. Session v2 records retain exact sources without projecting old bodies
 as new instructions. Journal admission/readiness records contain metadata only.
 ThreadManager compares selections before replay; CLI, Ink and GUI share that
 contract. Product root discovery lives in `src/apps/skill-catalog.ts`.
+Skill catalog metadata includes optional license and compatibility descriptions.
+They are displayed and source-validated in saved snapshots without granting
+permissions or altering model input. Projection v1 remains for two-field sources;
+v2 covers descriptive fields.
 See [Explicit Skill selection](skills.md) for APIs, limits and reader migration.
 
 ## Read-only workflow evaluation

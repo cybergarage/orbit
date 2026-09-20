@@ -8,7 +8,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import {canonicalJSON, copyJSON} from '../execution/journal.js'
-import {parseSkillSource, SKILL_PROJECTION_REVISION, skillDigest} from './parser.js'
+import {parseSkillSource, SKILL_METADATA_PROJECTION_REVISION, skillDigest, skillProjectionRevision} from './parser.js'
 
 export interface SkillRoot {
   directory: string
@@ -37,8 +37,10 @@ export const DEFAULT_SKILL_LIMITS: Readonly<SkillLimits> = Object.freeze({
 export interface SkillCandidate extends SkillSelection {
   baseDirectory: string
   bytes: number
+  compatibility?: string
   description: string
   file: string
+  license?: string
   name: string
   rootDirectory: string
   rootId: string
@@ -123,7 +125,7 @@ export class SkillCatalog {
       canonicalJSON({
         canonicalRoots: this.canonicalRoots,
         limits: this.limits,
-        revision: SKILL_PROJECTION_REVISION,
+        revision: SKILL_METADATA_PROJECTION_REVISION,
         roots: this.roots,
       }),
     )
@@ -255,6 +257,8 @@ export class SkillCatalog {
             const parsed = parseSkillSource(source)
             if (parsed.name !== entry.name) throw new Error('Skill name must match its directory')
             const candidate: SkillCandidate = {
+              ...(parsed.license === undefined ? {} : {license: parsed.license}),
+              ...(parsed.compatibility === undefined ? {} : {compatibility: parsed.compatibility}),
               baseDirectory: base,
               bytes: read.bytes.length,
               description: parsed.description,
@@ -389,8 +393,14 @@ export class SkillCatalog {
         throw new Error('Skill source changed; refresh listing')
       const source = new TextDecoder('utf8', {fatal: true, ignoreBOM: true}).decode(read.bytes)
       const parsed = parseSkillSource(source)
-      if (parsed.name !== c.name || parsed.description !== c.description) throw new Error('Skill metadata changed')
-      result.push({...c, ...parsed, projectionRevision: SKILL_PROJECTION_REVISION, source})
+      if (
+        parsed.name !== c.name ||
+        parsed.description !== c.description ||
+        parsed.license !== c.license ||
+        parsed.compatibility !== c.compatibility
+      )
+        throw new Error('Skill metadata changed')
+      result.push({...c, ...parsed, projectionRevision: skillProjectionRevision(parsed), source})
     }
 
     check(signal)

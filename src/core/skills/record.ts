@@ -10,10 +10,10 @@ import {canonicalJSON, copyJSON} from '../execution/journal.js'
 import {normalizeSkillSelections, skillId} from './catalog.js'
 import {
   parseSkillSource,
-  SKILL_PROJECTION_REVISION,
   SKILL_RECORD_BYTES,
   SKILL_RECORD_SNAPSHOTS,
   skillDigest,
+  skillProjectionRevision,
 } from './parser.js'
 
 export interface SessionSkillEntry {
@@ -54,13 +54,20 @@ export function parseSkillEntry(value: unknown): SessionSkillEntry {
     ] as const)
       if (typeof skill[key] !== 'string' || !skill[key]) throw new Error('Invalid Skill snapshot')
     if (!/^[A-Za-z0-9_-]{1,128}$/u.test(skill.rootId)) throw new Error('Invalid Skill root ID')
-    if (skill.projectionRevision !== SKILL_PROJECTION_REVISION) throw new Error('Unsupported Skill projection revision')
     if (skill.bytes !== Buffer.byteLength(skill.source, 'utf8') || skill.digest !== skillDigest(skill.source))
       throw new Error('Skill snapshot digest mismatch')
     const decoded = new TextDecoder('utf8', {fatal: true, ignoreBOM: true}).decode(Buffer.from(skill.source))
     if (decoded !== skill.source) throw new Error('Skill source is not lossless UTF-8')
     const parsed = parseSkillSource(skill.source)
-    if (parsed.body !== skill.body || parsed.name !== skill.name || parsed.description !== skill.description)
+    if (skill.projectionRevision !== skillProjectionRevision(parsed))
+      throw new Error('Unsupported Skill projection revision')
+    if (
+      parsed.body !== skill.body ||
+      parsed.name !== skill.name ||
+      parsed.description !== skill.description ||
+      parsed.license !== skill.license ||
+      parsed.compatibility !== skill.compatibility
+    )
       throw new Error('Skill snapshot derivation mismatch')
     if (
       !path.isAbsolute(skill.rootDirectory) ||

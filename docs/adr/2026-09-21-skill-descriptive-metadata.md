@@ -34,7 +34,9 @@ Keep revision v1 for sources without either field. Readers validate both
 revisions, require v1 to omit the new metadata, and compare every derived value
 against the exact source. This retains old records and lets older readers
 continue reading unchanged Skills, while rejecting new metadata snapshots.
-The record envelope and transcript versions do not change.
+The record envelope and transcript versions do not change. The catalog
+configuration identity uses v2 because its accepted input domain changes;
+existing request replay can reject a changed catalog binding.
 
 This narrowly replaces the two-field restriction in the 2026-09-09 Skill ADR;
 its selection, execution, storage and deferred verification decisions remain.

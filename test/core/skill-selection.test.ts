@@ -47,6 +47,9 @@ function deferred<T>() {
   return {promise, resolve}
 }
 
+const parse = (extra: string) =>
+  parseSkillSource(`---\nname: review\ndescription: Inspect tests\n${extra}\n---\nbody`)
+
 describe('explicit run-scoped Skill selection', () => {
   let root: string
 
@@ -103,6 +106,47 @@ describe('explicit run-scoped Skill selection', () => {
     ).to.have.length(2048)
     expect(() => parseSkillSource(`---\nname: review\ndescription: ${'😀'.repeat(1025)}\n---\nbody`)).to.throw()
     expect(() => parseSkillSource(source('review', ' '))).to.throw()
+  })
+
+  it('validates optional descriptive metadata without granting tool permissions', () => {
+    expect(parse('license: MIT').license).to.equal('MIT')
+    expect(parse(`compatibility: ${'😀'.repeat(500)}`).compatibility).to.have.length(1000)
+    for (const extra of [
+      'license: 1',
+      'license: null',
+      'license: " "',
+      'license: [MIT]',
+      'compatibility: false',
+      'compatibility: ""',
+      `compatibility: ${'😀'.repeat(501)}`,
+      'license: MIT\nlicense: Apache-2.0',
+      'license: &x MIT',
+      'compatibility: !!str node',
+      'allowed-tools: Bash',
+    ])
+      expect(() => parse(extra)).to.throw()
+    expect(parse('license: |\n  See LICENSE\ncompatibility: Node.js').license).to.equal('See LICENSE\n')
+  })
+
+  it('preserves descriptive metadata through selection and rejects stale selection', async () => {
+    const raw = source().replace(
+      '---\nSKILL_SENTINEL',
+      'license: MIT\ncompatibility: Requires Node.js\n---\nSKILL_SENTINEL',
+    )
+    const file = await write(root, 'review', raw)
+    const catalog = new SkillCatalog([{directory: root, id: 'local'}])
+    const list = await catalog.list()
+    expect(list.complete).to.equal(true)
+    expect(list.candidates[0]).to.include({compatibility: 'Requires Node.js', license: 'MIT'})
+    expect(list.candidates[0]).not.to.have.property('body')
+    const [snapshot] = await catalog.resolve(list.candidates)
+    expect(snapshot).to.include({
+      compatibility: 'Requires Node.js',
+      license: 'MIT',
+      projectionRevision: 'yaml-2.9.1-body-v2',
+    })
+    await fs.writeFile(file, raw.replace('MIT', 'Apache-2.0'))
+    await assert.rejects(catalog.resolve(list.candidates))
   })
 
   it('keeps same-name roots distinct and rejects canonical aliases as a whole', async () => {
@@ -264,8 +308,14 @@ describe('explicit run-scoped Skill selection', () => {
     expect((await catalog.list()).candidates).to.have.length(1)
   })
 
-  async function fixture() {
-    await write(root)
+  async function fixture(optionalMetadata = false) {
+    await write(
+      root,
+      'review',
+      optionalMetadata
+        ? source().replace('---\nSKILL_SENTINEL', 'license: MIT\ncompatibility: Requires Node.js\n---\nSKILL_SENTINEL')
+        : source(),
+    )
     await write(root, 'second')
     let reads = 0
     const io: SkillIO = {
@@ -328,6 +378,49 @@ describe('explicit run-scoped Skill selection', () => {
           metadata: f.session.getMetadata(),
         }).getSkillContexts(),
       ).to.have.length(1)
+    } finally {
+      await f.agent.close()
+      await f.logs.close()
+    }
+  })
+
+  it('reopens legacy and descriptive projections and detects metadata tampering', async () => {
+    const f = await fixture(true)
+    try {
+      await (
+        await f.agent.startRun([new Message(MessageType.User, {content: 'Inspect'})], {skills: f.candidates})
+      ).finished
+      const record = f.session.getSkillContexts()[0]
+      const current = record.skills.findIndex((s) => s.license === 'MIT')
+      expect(current).to.be.greaterThan(-1)
+      expect(record.skills.map((s) => s.projectionRevision)).to.include.members([
+        'yaml-2.9.1-body-v1',
+        'yaml-2.9.1-body-v2',
+      ])
+      const reopened = new Session({
+        entries: f.session.getEntries(),
+        formatVersion: 2,
+        metadata: f.session.getMetadata(),
+      })
+      expect(reopened.getSkillContexts()[0].skills[current]).to.include({
+        compatibility: 'Requires Node.js',
+        license: 'MIT',
+      })
+      for (const field of ['license', 'compatibility'] as const) {
+        const altered = structuredClone(record)
+        altered.skills[current][field] = 'changed'
+        expect(() => parseSkillEntry(altered)).to.throw('derivation')
+        delete altered.skills[current][field]
+        expect(() => parseSkillEntry(altered)).to.throw('derivation')
+        const legacy = structuredClone(record)
+        legacy.skills[1 - current][field] = 'injected'
+        expect(() => parseSkillEntry(legacy)).to.throw('derivation')
+      }
+
+      const wrongRevision = structuredClone(record)
+      wrongRevision.skills[current].projectionRevision = 'yaml-2.9.1-body-v1'
+      expect(() => parseSkillEntry(wrongRevision)).to.throw('projection')
+      expect(f.requests[0].some((s) => s.includes('Requires Node.js'))).to.equal(false)
     } finally {
       await f.agent.close()
       await f.logs.close()

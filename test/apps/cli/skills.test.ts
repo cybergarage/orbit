@@ -14,6 +14,7 @@ import type {SkillListing} from '../../../src/core/index.js'
 import {runExecCommand} from '../../../src/apps/cli/exec.js'
 import {productSkillCatalog} from '../../../src/apps/skill-catalog.js'
 import {Agent, MemorySessionLogStore, Message, MessageType} from '../../../src/core/index.js'
+import {createInitialInteractiveState, handleSkillCommand} from '../../../src/core/interactive.js'
 
 describe('Skill CLI entry points', () => {
   it('lists JSON metadata and passes an explicit selection through exec', async () => {
@@ -24,7 +25,7 @@ describe('Skill CLI entry points', () => {
       await fs.mkdir(directory, {recursive: true})
       await fs.writeFile(
         path.join(directory, 'SKILL.md'),
-        '---\nname: review\ndescription: Isolated CLI fixture\n---\nCLI_SKILL_SENTINEL\n',
+        '---\nname: review\ndescription: Isolated CLI fixture\nlicense: MIT\ncompatibility: Requires Node.js\n---\nCLI_SKILL_SENTINEL\n',
       )
       const launcher = fileURLToPath(new URL('../../../bin/run.js', import.meta.url))
       const {stdout} = await promisify(execFile)(process.execPath, [launcher, 'skills', '--json'], {cwd: root})
@@ -32,8 +33,14 @@ describe('Skill CLI entry points', () => {
       expect(list.candidates).to.have.length(1)
       expect(list.candidates[0].rootId).to.equal('workspace')
       expect(stdout).not.to.include('CLI_SKILL_SENTINEL')
+      expect(list.candidates[0]).to.include({compatibility: 'Requires Node.js', license: 'MIT'})
+      const text = await promisify(execFile)(process.execPath, [launcher, 'skills'], {cwd: root})
+      expect(text.stdout).to.include('license="MIT"').and.include('compatibility="Requires Node.js"')
       const custom = await productSkillCatalog(root, ['chosen=.orbit/skills'])
       expect((await custom!.list()).candidates[0].rootId).to.equal('chosen')
+      const state = createInitialInteractiveState({model: 'fixture', provider: 'ollama', skillCatalog: custom})
+      const ink = await handleSkillCommand(state, '/skills')
+      expect(ink?.message).to.include('license="MIT"').and.include('compatibility="Requires Node.js"')
       class FixtureAgent extends Agent {
         constructor(options: ConstructorParameters<typeof Agent>[0]) {
           super({
