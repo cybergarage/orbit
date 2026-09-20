@@ -422,4 +422,5 @@ maintenance timeout are retained. The eleven decisions remain accepted / partial
 
 The accepted [descriptive Skill metadata decision](2026-09-21-skill-descriptive-metadata.md)
 extends catalog metadata with license and compatibility, preserving old
-projections and operation permissions. Implementation is not yet started.
+projections and operation permissions. Implementation completed on 2026-09-21
+in c17fc5a3170f6a5dbe800da6522e38870b513e1a with 832 passing tests.

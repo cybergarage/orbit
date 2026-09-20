@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-09-21
 decision-date: 2026-09-21
-implementation-status: not-started
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-09-21
+implementation-commits:
+  - c17fc5a3170f6a5dbe800da6522e38870b513e1a
 superseded-by: []
 ---
 
@@ -103,3 +104,22 @@ Windows and physical-storage trials in the parent ADR.
 - [Existing Skill decision](2026-09-09-run-scoped-skill-selection.md)
 - [Skill guide](../skills.md)
 - [Agent Skills specification](https://agentskills.io/specification)
+
+## Implementation evidence — 2026-09-21
+
+Implemented in c17fc5a3170f6a5dbe800da6522e38870b513e1a. Parser, listings,
+CLI/Ink/GUI presentation and persisted derivation checks now support the two
+fields. The feature guide and architecture describe the bounds and deployment
+contract. No other optional fields or permissions were enabled.
+
+Final headers:check and build passed. The final npm test run passed 832 tests,
+including CLI text/JSON, Ink and authenticated GUI catalog metadata, Unicode
+boundaries, stale selections, legacy/new projection coexistence and tamper
+rejection. Existing lint warnings remain; there are no lint errors.
+An initial run failed lint for a test helper's placement; that was corrected.
+A sandboxed suite passed 826 and failed six: five loopback listen EPERM errors
+and one subprocess fixture ENOENT. The clean sequential final run with loopback
+allowed passed all 832. Incidental baseline formatting changes were removed
+before the implementation commit; those restorations changed no behavior.
+GUI markup was compiled and its data API tested; no manual visual review or
+real-model trial was performed. Parent ADR deferrals remain unchanged.
