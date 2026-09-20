@@ -419,3 +419,7 @@ records the local correction for old Graph journal v2 maintenance, preserving
 per-Run v1/v2 coexistence, original outcomes, transcript positions and backups.
 Both Unix suites pass 814 tests; intermediate failures and the unresolved prior
 maintenance timeout are retained. The eleven decisions remain accepted / partial.
+
+The accepted [descriptive Skill metadata decision](2026-09-21-skill-descriptive-metadata.md)
+extends catalog metadata with license and compatibility, preserving old
+projections and operation permissions. Implementation is not yet started.

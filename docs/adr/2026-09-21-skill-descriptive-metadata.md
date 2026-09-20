@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-21
-decision-date: null
+decision-date: 2026-09-21
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -16,6 +16,10 @@ Accept standard Skills containing license and environment descriptions without
 requiring users to remove those descriptions from a distribution.
 
 ## Decision
+
+Accepted on 2026-09-21 under the author's explicit request to implement the
+previously explained accept, validate, retain and display policy in Orbit and
+the book. Review confirms no permission expansion and preserves legacy records.
 
 Extend the strict catalog with optional string `license` and `compatibility`.
 Preserve their exact scalar values in listings and snapshots and show them in

@@ -7,7 +7,8 @@ implementation-completed-date: null
 implementation-commits:
   - a77919e501a118418b31be445983d47f34b2d568
   - 09b93b01152c5635beb58cb05552effe7561f617
-superseded-by: []
+superseded-by:
+  - 2026-09-21-skill-descriptive-metadata.md
 ---
 
 # Run-scoped Skill Selection
@@ -534,3 +535,9 @@ is not implied or reopened.
 - [Required Execution Journal](2026-09-07-required-execution-journal.md).
 - [Session Writer Recovery Guard](2026-09-08-session-writer-recovery-guard.md).
 - [Session Storage Registration Guard](2026-09-08-session-storage-registration-guard.md).
+
+## Descriptive metadata amendment — 2026-09-21
+
+The [descriptive metadata decision](2026-09-21-skill-descriptive-metadata.md)
+replaces only the name/description-only restriction and extends projection
+validation. All other decisions and deferred verification remain unchanged.
