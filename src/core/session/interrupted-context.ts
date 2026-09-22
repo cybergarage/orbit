@@ -256,7 +256,7 @@ export function verifyInterruptedCorrespondence(options: InterruptedHistoryEvide
     for (const call of calls.filter((c) => c.turnId === turnId))
       if (!rawCalls.some((c) => c.call.id === call.callId && c.messageId === call.assistantId))
         fail('call-outside-terminal-boundary')
-    const graph = run[0]?.version === 2
+    const graph = run[0]?.version === 2 || run.some((record) => record.kind === 'graph-bound')
     const descriptor = run.find((r) => r.kind === 'graph-bound')?.data.descriptor as
       | undefined
       | {nodes: {id: string; kind: string; tool?: {source: unknown}}[]}
@@ -279,7 +279,7 @@ export function verifyInterruptedCorrespondence(options: InterruptedHistoryEvide
         fail('unresolved-operation-intent')
       if (intent.data.variant === 'mcp-startup') continue
       if (intent.data.variant !== 'tool-call') fail('unexplained-operation-intent')
-      if (intent.version === 2) {
+      if (graph) {
         // Direct nodes have a descriptor and visit; they cannot explain an Agent call.
         const start = starts.find((r) => r.data.visitId === intent.data.visitId)
         const node = descriptor?.nodes.find((n) => n.id === start?.data.nodeId)

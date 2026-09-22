@@ -23,7 +23,7 @@ export function inspectGraphRun(records: JournalRecord[], transcript?: GraphTran
   const result: GraphInspection = {transcript: 'unavailable'}
   try {
     const first = records[0]
-    if (!first || first.version !== 2) return result
+    if (!first || ![2, 3].includes(first.version)) return result
     for (const [index, record] of records.entries()) {
       if (record.runId !== first.runId || record.sessionId !== first.sessionId)
         throw new Error('Inspection requires one Run')

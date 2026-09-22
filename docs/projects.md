@@ -2,11 +2,11 @@
 
 ## Implementation status
 
-Project catalog storage, registered session coordination and GUI navigation are
-implemented. Curated memory rows are available in the store, but memory editing
-and Run injection are not enabled yet. The accepted
-[memory decision](adr/2026-09-22-project-memory-context.md) describes that
-remaining scope.
+Project catalog storage, registered session coordination, curated memory and GUI
+controls are implemented in core and the local GUI. CLI conversation workflows
+remain projectless. See the [catalog decision](adr/2026-09-22-project-catalog-and-session-membership.md)
+and [memory decision](adr/2026-09-22-project-memory-context.md) for rationale and
+qualification limits.
 
 ## GUI workflow
 
@@ -119,5 +119,80 @@ Memory rows preserve immutable source references and retirement state. Writes
 are limited to 128 active entries, 8 KiB per body and 1 MiB of active bodies per
 Project. Catalog capture validates the membership revision and memory generation
 transactionally. It records only the supplied snapshot digest; exact Run context
-evidence still requires the planned journal integration. Storage tests establish
-transaction behavior, not recall quality or end-to-end memory availability.
+evidence resides in the execution journal. Storage and deterministic adapter
+tests establish mechanics; they do not evaluate semantic recall quality.
+
+## Curated memory workflow
+
+Open a Project conversation and expand **Project memory**. Add a human-authored
+note, or choose a source message and enter an exact excerpt. An optional edited
+note preserves the original message reference and digest. Titles are limited to
+256 characters; bodies to 8 KiB. The server resolves registered sessions itself
+and rejects invented excerpts and browser-supplied paths.
+
+Project conversations default to **Curated memory** in the GUI. Select notes to
+prioritize them, then use **Preview next run** to inspect the exact rendered
+context and exclusions. Selection is whole-entry: explicit selections first,
+then most recently updated entries with ID tie-breaking, at most 16 entries and
+2,048 tokenizer tokens. Explicit selections that cannot fit fail visibly;
+automatic exclusions carry reasons. The configured model input policy still
+validates the actual prepared request, including other context and tools.
+A preview binds the memory generation; if notes change before admission, preview
+again. Without a preview, a run captures the current eligible generation.
+
+**Edit** changes future runs. **Stop using** retires a note; **Restore** checks
+its linked sources again. Moving or unlinking a source conversation retires
+its derived notes. Missing, changed or unavailable sources are excluded. Corrupt
+or ambiguous source files cause a preparation error. Source reads are bounded
+and coordinated with writer ownership; an active source can require a retry
+or **Off**. Idle source threads may be closed during inspection and are reopened
+when their next application run starts.
+
+**Off** omits fresh memory for the next run. It cannot remove quotations already
+in conversation history. **Show recorded snapshots** displays the exact context
+recorded for previous runs, including notes later edited or retired. A recorded
+snapshot alone does not prove the provider received it. Secure erasure is not
+provided by retirement, deletion of a source, or turning memory off.
+
+## Run context and integration
+
+`service.projectMemory` provides `create`, `saveExcerpt`, `edit` and `prepare`.
+Writes require a UUID operation ID; edits also require the observed entry
+revision. Preserve operation IDs on network retries and use a new ID for changed
+input. Source references are immutable. `service.previewProjectMemory` performs
+non-capturing preparation; `service.projectContextHistory` reads recorded context.
+
+Pass `memory: {mode: 'curated', selectedIds?, expectedGeneration?}` to
+`service.startRun`, `startGraphRun`, or a managed Agent configured with the
+coordinating memory service. Library callers default to off unless they opt in.
+Low-level callers must retain ownership of the destination Session during
+capture. A bare legacy `invoke` host cannot execute curated memory.
+
+Capture revalidates membership and memory generation in one catalog transaction.
+The execution journal then acknowledges `run-admitted` and `project-context`
+before managed effects. Such runs use journal **v3**; ordinary runs continue to
+use v1, and Graph runs without memory use v2. A journal may contain runs of all
+three versions. Transcript versions are independent and are not upgraded merely
+to use memory. Graph execution retains its explicit transcript migration rules.
+Readers predating journal v3 cannot consume these runs and must not be used for
+maintenance of affected journals.
+
+The context record is bounded to 256 KiB and contains exact entries, revisions,
+provenance, exclusions, rendered text and a digest. Admission stores a digest of
+configuration that includes the context digest, never raw provider/MCP settings.
+An interrupted admission without acknowledged context is reported as interrupted
+preparation; recovery observes it rather than automatically dispatching it.
+A repeated admitted request returns its prior run without capturing newer notes.
+
+Each model request in the run receives one fixed user-role memory prefix. The
+prefix is untrusted historical data, separate from system instructions, canonical
+messages and compaction source history. Tool iterations and Agent Graph stages
+reuse it; edits are visible only to later runs. Existing verified-interruption
+preflight and prepared-request checks remain in force.
+
+GUI REST endpoints include `/api/projects/:id/memory`, `/memory/excerpts`,
+`/memory/:entryId`, `/api/threads/:id/memory/preview` and
+`/api/sessions/:id/project-context`. The same capability, origin, payload and
+schema checks protect them. `project.memory.changed` carries entry revision and
+Project generation metadata. **Refresh notes** reloads authoritative entries;
+a stale revision never silently overwrites another edit.

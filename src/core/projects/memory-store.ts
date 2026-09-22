@@ -28,6 +28,7 @@ export class MemoryProjectStore implements ProjectStore {
             (row) =>
               (!filter.after || id(row) > filter.after) &&
               (filter.archived === undefined || ('archived' in row && row.archived === filter.archived)) &&
+              (filter.retired === undefined || ('retired' in row && row.retired === filter.retired)) &&
               (filter.projectId === undefined || ('projectId' in row && row.projectId === filter.projectId)) &&
               (filter.pairId === undefined || ('pairId' in row && row.pairId === filter.pairId)),
           )

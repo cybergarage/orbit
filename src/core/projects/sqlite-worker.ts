@@ -102,6 +102,11 @@ function initialize(): CatalogEngine {
         params.push(filter.after)
       }
 
+      if (filter.retired !== undefined) {
+        clauses.push("json_extract(payload, '$.retired') = ?")
+        params.push(Number(filter.retired))
+      }
+
       if (filter.archived !== undefined) {
         clauses.push('archived = ?')
         params.push(Number(filter.archived))

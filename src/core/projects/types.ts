@@ -97,17 +97,19 @@ export interface ProjectOperation {
 export type ProjectQuery =
   | {after?: string; archived?: boolean; kind: 'projects'; limit: number}
   | {after?: string; kind: 'memberships'; limit: number; pairId: string; projectId: null | string}
+  | {after?: string; kind: 'memories'; limit?: number; projectId: string; retired?: boolean}
+  | {id: string; kind: 'memory'}
   | {id: string; kind: 'operation'}
   | {id: string; kind: 'project'}
   | {id: string; kind: 'reservation'}
   | {kind: 'membership'; pairId: string; sessionId: string}
-  | {kind: 'memories'; projectId: string}
   | {kind: 'snapshot'; pairId: string; projectId: string; sessionId: string}
 
 export interface ProjectQueryResults {
   membership: null | ProjectMembership
   memberships: ProjectMembership[]
   memories: ProjectMemoryEntry[]
+  memory: null | ProjectMemoryEntry
   operation: null | ProjectOperation
   project: null | Project
   projects: Project[]

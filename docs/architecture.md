@@ -21,8 +21,11 @@ reservations, curated memory rows and idempotent operation results separately
 from transcripts. `ProjectService` coordinates registered session writers with
 those transactions; `OrbitApplicationService.createProjectThread` resolves a
 separate workspace runtime before publishing a committed thread. GUI routes and
-sidebar controls use that service. Memory input augmentation is not connected
-yet; see [Projects](projects.md) for the current boundary.
+sidebar controls use that service. `ProjectMemoryService` validates registered sources and captures bounded context.
+Managed Agent/Graph runs acknowledge a journal-v3 `project-context` record before
+effects and add its fixed user-role prefix to prepared requests, separately from
+canonical history and compaction. GUI memory controls expose edits, selection,
+preview and historical snapshots. See [Projects](projects.md).
 
 ```text
 CLI exec / interactive       Local GUI
@@ -248,4 +251,4 @@ Application Service binds selected Threads and routes through the existing Threa
 
 ## Verified interrupted context
 
-`session/interrupted-context.ts` validates narrow nondispatch correspondence and deterministic derivation. `verified-context.ts` runs owned asynchronous preflight and rechecks in the common Agent/Graph preparation path. The recorder verifies current storage ownership and bounded source bytes; `session/evidence-io.ts` compares detectable path identities through acknowledgement and retains failed closes for managed cleanup; the journal synchronizes and rereads the retained key and complete records. Transcript v3 stores provenance; compaction keeps raw-source hashes and separate projected-group validation. The synchronous builder refuses dependent histories. A separate v2-to-v3 migration retains data bytes, high-water positions and backups. Session coordination reuses journal ordering/schema validation and read-only Graph inspection before maintenance, requiring settled original outcomes and matching transcript positions across per-Run v1/v2 records. See [verified interrupted context](interrupted-context.md) for public policy, limits and recovery conditions.
+`session/interrupted-context.ts` validates narrow nondispatch correspondence and deterministic derivation. `verified-context.ts` runs owned asynchronous preflight and rechecks in the common Agent/Graph preparation path. The recorder verifies current storage ownership and bounded source bytes; `session/evidence-io.ts` compares detectable path identities through acknowledgement and retains failed closes for managed cleanup; the journal synchronizes and rereads the retained key and complete records. Transcript v3 stores provenance; compaction keeps raw-source hashes and separate projected-group validation. The synchronous builder refuses dependent histories. A separate v2-to-v3 migration retains data bytes, high-water positions and backups. Session coordination reuses journal ordering/schema validation and read-only Graph inspection before maintenance, requiring settled original outcomes and matching transcript positions across per-Run v1/v2/v3 records. See [verified interrupted context](interrupted-context.md) for public policy, limits and recovery conditions.

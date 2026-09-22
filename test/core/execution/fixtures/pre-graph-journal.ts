@@ -6,7 +6,7 @@ import type {JournalKind as CurrentKind, JournalRecord as CurrentRecord} from '.
 // Unchanged pre-Graph journal validator from f2f55dba9446773fe0d5bbe4a0ee558b36cc4036.
 // Shared canonical JSON and identity utilities did not change with Graph.
 import {canonicalJSON, safeIdentity} from '../../../../src/core/execution/journal.js'
-type JournalKind = Exclude<CurrentKind, 'graph-bound' | 'graph-node-completed' | 'graph-node-started' | 'graph-transition'>
+type JournalKind = Exclude<CurrentKind, 'graph-bound' | 'graph-node-completed' | 'graph-node-started' | 'graph-transition' | 'project-context'>
 type JournalRecord = Omit<CurrentRecord,'kind' | 'version'> & {kind:JournalKind;version:1}
 
 export function validateNext(entries: JournalRecord[], record: JournalRecord): void {

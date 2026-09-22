@@ -11,7 +11,9 @@ import type {DiagnosticEvent, LogRecord, OrbitApplicationService} from '../../co
 
 import {ExecutionRequestError} from '../../core/execution/run.js'
 import {DiagnosticCapture, InvalidInputError} from '../../core/index.js'
+import {parseMemorySelection} from '../../core/projects/memory-context.js'
 import {ProjectStoreError} from '../../core/projects/types.js'
+import {memoryRoutes} from './memory-routes.js'
 import {projectRoutes} from './project-routes.js'
 
 export interface GuiServerOptions {
@@ -31,7 +33,12 @@ export interface GuiServer {
 }
 
 const messageSchema = z
-  .object({content: z.string().trim().min(1), requestId: z.unknown().optional(), skills: z.unknown().optional()})
+  .object({
+    content: z.string().trim().min(1),
+    memory: z.unknown().optional(),
+    requestId: z.unknown().optional(),
+    skills: z.unknown().optional(),
+  })
   .strict()
 const logQuerySchema = z.object({
   after: z.string().min(1).max(1024).optional(),
@@ -72,6 +79,7 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
 
   app.use('/api', requireToken(token))
   app.use('/api', projectRoutes(options.service))
+  app.use('/api', memoryRoutes(options.service))
   app.get('/api/runtime', (_request, response) => response.json(options.service.runtime))
   app.get('/api/logs/health', (_request, response) => response.json(options.service.getLogHealth()))
   app.get('/api/preferences', (_request, response) => response.json(options.service.getPreferences()))
@@ -139,6 +147,7 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
           .parse(request.body.requestId)
     response.status(202).json(
       await options.service.startRun(request.params.threadId, content, {
+        memory: request.body.memory === undefined ? undefined : parseMemorySelection(request.body.memory),
         requestId,
         skills: z
           .array(
@@ -349,6 +358,15 @@ button { color:inherit; cursor:pointer; }
 .project-controls details label { margin-top:9px; }
 .project-move { padding:8px; font-size:12px; color:#aeb7c6; }
 .project-move p { line-height:1.5; }
+.project-memory { margin:8px 18px; padding:10px; border:1px solid #414958; border-radius:8px; max-height:45vh; overflow:auto; font-size:12px; }
+.project-memory fieldset { border:0; padding:0; min-width:0; }
+.project-memory article { border-top:1px solid #414958; padding:8px 0; }
+.project-memory label { display:block; margin:6px 0; }
+.project-memory input:not([type=checkbox]), .project-memory textarea, .project-memory select { width:100%; color:inherit; background:#20242d; border:1px solid #414958; border-radius:5px; padding:6px; }
+.project-memory textarea { min-height:70px; }
+.project-memory button { margin:4px; padding:5px 8px; background:#252a34; border:1px solid #414958; border-radius:5px; }
+.project-memory pre, .project-memory p { white-space:pre-wrap; overflow-wrap:anywhere; }
+.project-memory summary { cursor:pointer; }
 button:disabled { opacity:.5; cursor:default; }
 .brand { display:flex; align-items:center; gap:10px; padding:4px 8px 15px; font-weight:700; letter-spacing:.04em; }
 .brand-mark { display:grid; place-items:center; width:28px; height:28px; border-radius:9px; background:linear-gradient(145deg,#87d7ff,#7c6cff); color:#071018; }

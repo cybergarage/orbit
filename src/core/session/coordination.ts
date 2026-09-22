@@ -450,7 +450,7 @@ function inspectRecoveryEvidence(scope: SessionScope): void {
   const keyStat = fs.lstatSync(keyFile)
   if (!keyStat.isFile() || keyStat.nlink !== 1 || keyStat.size !== 32)
     throw new Error('Missing or ambiguous journal key; review offline')
-  const graphs = runs.filter((run) => run[0].version === 2 && run.some((r) => r.kind === 'graph-bound'))
+  const graphs = runs.filter((run) => [2, 3].includes(run[0].version) && run.some((r) => r.kind === 'graph-bound'))
   if (graphs.length === 0) return
   const candidates: string[] = []
   const scan = (dir: string): void => {

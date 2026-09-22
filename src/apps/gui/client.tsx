@@ -15,6 +15,7 @@ import type {
   LogRecord,
   Project,
   ProjectMembership,
+  ProjectMemorySelection,
   RuntimeSnapshot,
   SessionListResult,
   SessionSummary,
@@ -25,6 +26,7 @@ import type {
   ThreadSnapshot,
 } from '../../core/index.js'
 
+import {ProjectMemoryPanel} from './project-memory-panel.js'
 import {
   acceptGuiRun,
   activeGuiRunId,
@@ -62,6 +64,8 @@ function App() {
   const [pendingProjectSessions, setPendingProjectSessions] = useState<string[]>([])
   const [pendingProjectIds, setPendingProjectIds] = useState<Record<string, string>>({})
   const [membership, setMembership] = useState<null | ProjectMembership>(null)
+  const [membershipThread, setMembershipThread] = useState<string>()
+  const [memorySelections, setMemorySelections] = useState<Record<string, ProjectMemorySelection>>({})
   const [moveDestination, setMoveDestination] = useState('')
   const catalogOperations = useRef(new Map<string, string>())
   const operationId = (key: string) => {
@@ -253,7 +257,10 @@ function App() {
       .catch(showError(setError))
     api<{membership: null | ProjectMembership}>(`/api/sessions/${encodeURIComponent(threadId)}/membership`)
       .then((result) => {
-        if (selectedThreadId.current === threadId) setMembership(result.membership)
+        if (selectedThreadId.current === threadId) {
+          setMembership(result.membership)
+          setMembershipThread(threadId)
+        }
       })
       .catch(showError(setError))
     api<LogPage>(`/api/sessions/${encodeURIComponent(threadId)}/logs?limit=200`)
@@ -438,13 +445,17 @@ function App() {
     undefined | {content: string; requestId: string; selectionKey: string; threadId: string}
   >(undefined)
   const submit = async () => {
-    if (thread === undefined || prompt.trim().length === 0) return
+    if (thread === undefined || prompt.trim().length === 0 || (projectsEnabled && membershipThread !== thread.id))
+      return
     const threadId = thread.id
     const presentation = runPresentations[threadId] ?? reconcileGuiRunWithThread(undefined, thread.status)
     if (isGuiRunActive(presentation) || pendingSubmissions.current.has(threadId)) return
     const content = prompt
     const skills = content.startsWith('/') ? [] : (pendingSkills[threadId] ?? [])
-    const selectionKey = JSON.stringify(skills)
+    const memory = membership?.projectId
+      ? (memorySelections[threadId] ?? {mode: 'curated' as const})
+      : {mode: 'off' as const}
+    const selectionKey = JSON.stringify({memory, skills})
     pendingSubmissions.current.add(threadId)
     try {
       setError(undefined)
@@ -453,6 +464,7 @@ function App() {
       const result = await api<StartApplicationRunResult>(`/api/threads/${encodeURIComponent(threadId)}/messages`, {
         body: JSON.stringify({
           content,
+          memory,
           requestId: (() => {
             const prior = retrySubmission.current
             if (
@@ -789,6 +801,12 @@ function App() {
             <button onClick={() => replyApproval(approval.id, approval.digest, true)}>Approve once</button>
           </section>
         ))}
+        {thread?.run?.projectContext && (
+          <div role="status">
+            Recorded memory: {thread.run.projectContext.entryIds.length} notes · {thread.run.projectContext.tokens}{' '}
+            tokens · {thread.run.projectContext.digest.slice(0, 12)}
+          </div>
+        )}
         {thread?.run?.result ? (
           <div role="status">
             Run: {thread.run.result.outcome}. Recording: {thread.run.result.recording.status}.{' '}
@@ -796,6 +814,27 @@ function App() {
           </div>
         ) : null}
 
+        {thread && membershipThread === thread.id && membership?.projectId && (
+          <ProjectMemoryPanel
+            api={api}
+            disabled={runActive}
+            key={`${thread.id}/${membership.projectId}`}
+            messages={thread.messages}
+            onChange={(selection) => setMemorySelections((current) => ({...current, [thread.id]: selection}))}
+            onError={showError(setError)}
+            onSource={async (sessionId) => {
+              const resumed = await api<ThreadSnapshot>(
+                `/api/projects/${membership.projectId}/sessions/${sessionId}/resume`,
+                {method: 'POST'},
+              )
+              selectedThreadId.current = resumed.id
+              setThread(resumed)
+            }}
+            projectId={membership.projectId}
+            selection={memorySelections[thread.id] ?? {mode: 'curated'}}
+            threadId={thread.id}
+          />
+        )}
         <div aria-busy={runActive} className="messages">
           {thread === undefined || (thread.messages.length === 0 && runStatus === undefined) ? (
             <div className="empty">
@@ -924,7 +963,11 @@ function App() {
                 <button
                   aria-label="Send message"
                   className="send"
-                  disabled={thread === undefined || prompt.trim().length === 0}
+                  disabled={
+                    thread === undefined ||
+                    prompt.trim().length === 0 ||
+                    (projectsEnabled && membershipThread !== thread.id)
+                  }
                   onClick={submit}
                   title="Send message"
                 >

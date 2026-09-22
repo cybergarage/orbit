@@ -170,3 +170,14 @@ The composer retains a request ID across uncertain HTTP replies and refreshes
 snapshots on reconnect. Run banners distinguish completed, cancelled, failed,
 budget-exceeded and incomplete results, including recording failure. Stop asks
 core to stop; it does not announce that external work has terminated.
+
+## Project memory
+
+The core Project service groups independent conversations; the GUI exposes
+curated notes, source excerpts, selection and preview. Memory is captured once
+per managed Run as journal-v3 evidence and inserted as a fixed user-role prefix.
+It is not appended to canonical history or included in compaction source text.
+The prepared-request budget still includes it. Library callers opt in explicitly;
+GUI Project conversations default to curated mode and offer Off. CLI workflows
+remain single-session. See [Projects and curated memory](projects.md) for API,
+source validation, compatibility and retained-history behavior.

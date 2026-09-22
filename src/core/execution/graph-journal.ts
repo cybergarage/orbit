@@ -5,14 +5,26 @@ import type {GraphDescriptor, GraphProfile} from '../processor/graph-definition.
 import type {JournalRecord} from './journal.js'
 
 import {graphIdentity, graphProfile, validateGraphDescriptor} from '../processor/graph-definition.js'
+import {hasProjectGraphContext} from '../projects/memory-journal.js'
 
 const digest = (value: unknown) => typeof value === 'string' && /^[a-f0-9]{64}$/u.test(value)
 const integer = (value: unknown) => Number.isSafeInteger(value) && Number(value) >= 0
 const graphKinds = new Set(['graph-bound', 'graph-node-completed', 'graph-node-started', 'graph-transition'])
 export function validateGraphRecord(entries: JournalRecord[], record: JournalRecord): void {
   const run = entries.filter((item) => item.runId === record.runId)
-  if (record.version === 1) {
-    if (graphKinds.has(record.kind) || record.data.visitId !== undefined || record.data.graph !== undefined)
+  if (record.version === 3 && record.kind === 'run-admitted') {
+    if (!digest(record.data.requestDigest)) throw new Error('Project admission requires a submitted request digest')
+    return
+  }
+
+  if (record.version === 3 && record.kind === 'project-context') return
+  if (record.version === 1 || (record.version === 3 && !hasProjectGraphContext(run))) {
+    if (
+      graphKinds.has(record.kind) ||
+      record.data.visitId !== undefined ||
+      record.data.graph !== undefined ||
+      (record.kind === 'run-ready' && record.data.transcriptHighWater !== undefined)
+    )
       throw new Error('Graph evidence requires journal v2')
     return
   }

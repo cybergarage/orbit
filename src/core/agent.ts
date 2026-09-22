@@ -80,8 +80,15 @@ import {adaptInvokableTool, createBuiltinTools, ToolProfile, ToolRegistry, ToolR
 
 const DEFAULT_MAX_TOOL_ITERATIONS = 5
 
+import type {ProjectMemoryService} from './projects/memory-service.js'
 import type {WorkflowContextProjector, WorkflowExpectation, WorkflowSubmission} from './selection/binding.js'
 
+import {
+  parseMemorySelection,
+  parseProjectContext,
+  type ProjectContextSnapshot,
+  type ProjectMemorySelection,
+} from './projects/memory-context.js'
 import {encodeWorkflowSubmission, parseWorkflowSubmission} from './selection/binding.js'
 import {immutable, selectionDigest} from './selection/validation.js'
 
@@ -92,6 +99,7 @@ export interface AgentInvokeOptions extends OperatorOptions {
   diagnostics?: DiagnosticEventBus
   limits?: Partial<RunLimits>
   maxToolIterations?: number
+  memory?: ProjectMemorySelection
 
   onEvent?: AgentEventHandler
   onRunAdmitted?: () => void
@@ -111,6 +119,7 @@ interface ManagedInvokeOptions extends AgentInvokeOptions {
   executionPolicy?: ExecutionPolicy
   graph?: GraphInvocation
   mcp?: McpToolManager
+  projectContext?: ProjectContextSnapshot
   skillReader?: SkillCatalog
 }
 
@@ -124,7 +133,6 @@ export interface AgentOptions {
     sessionContextBuilder?: SessionContextBuilderType
   }
   diagnostics?: DiagnosticEventBus
-
   execution?: {
     allowLegacyTools?: boolean
     journalFactory?: (session: Session) => Promise<ExecutionJournal>
@@ -135,6 +143,7 @@ export interface AgentOptions {
     policy?: ExecutionPolicy
     responderScope?: string
   }
+
   interruptionPolicy?: InterruptionPolicy
   logger?: Logger
   logStore?: SessionLogStore
@@ -143,6 +152,7 @@ export interface AgentOptions {
     name?: string
     provider?: ProviderName
   }
+  projectMemory?: ProjectMemoryService
   selectionProjector?: WorkflowContextProjector
   settings?: WorkspaceSettings
   skillCatalog?: SkillCatalog
@@ -173,6 +183,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   private readonly model: Model
   private observerFailures = 0
   private readonly ownedLogStore?: SessionLogStore
+  private readonly projectMemory?: ProjectMemoryService
   private readonly selectionProjector?: WorkflowContextProjector
   private readonly sessionContextBuilder: SessionContextBuilderType
   private readonly toolDefinitions: ToolDefinition[]
@@ -182,6 +193,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   constructor(options: AgentOptions = {}) {
     const createModel = options.deps?.createModel ?? getModel
     this.skillCatalog = options.skillCatalog
+    this.projectMemory = options.projectMemory
     this.settings = mergeWorkspaceSettings(loadWorkspaceSettingsSync(options.cwd), options.settings)
     this.interruptionPolicy = Object.freeze(
       parseInterruptionPolicy(options.interruptionPolicy ?? this.settings.interruptionPolicy ?? {mode: 'disabled'}),
@@ -734,6 +746,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                     policy: options.contextPolicy,
                     prefix: [
                       ...this.messages,
+                      ...projectContextPrefix(options?.projectContext),
                       ...skillPrefix(options?.activeSkills ?? []).map(
                         (content) => new Message(MessageType.User, {content}),
                       ),
@@ -745,6 +758,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                   ? this.model.prepare!(
                       [
                         ...this.messages,
+                        ...projectContextPrefix(options?.projectContext),
                         ...skillPrefix(options?.activeSkills ?? []).map(
                           (content) => new Message(MessageType.User, {content}),
                         ),
@@ -766,6 +780,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                 : this.model.invoke(
                     [
                       ...this.messages,
+                      ...projectContextPrefix(options?.projectContext),
                       ...skillPrefix(options?.activeSkills ?? []).map(
                         (content) => new Message(MessageType.User, {content}),
                       ),
@@ -1037,6 +1052,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           }
         : {}),
       ...(skills.length > 0 ? {skillCatalog: this.skillCatalog?.configuration, skills} : {}),
+      ...(options.memory ? {memory: parseMemorySelection(options.memory)} : {}),
       ...(this.interruptionPolicy.mode === 'verified-not-dispatched'
         ? {interruptionPolicy: this.interruptionPolicy}
         : {}),
@@ -1186,6 +1202,9 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           ...(message.payload === undefined ? {} : {payload: copyJSON(message.payload)}),
         }),
     )
+    const memory = options.memory ? parseMemorySelection(options.memory) : undefined
+    if (memory?.mode === 'curated' && !this.projectMemory) throw new Error('Project memory service is not configured')
+    const requestId = options.requestId ?? options.turnId ?? uuidv7()
     let evidenceJournal: ExecutionJournal | undefined
     let manager: McpToolManager | undefined
     let skillReader = graph ? undefined : this.skillCatalog?.createReader()
@@ -1243,6 +1262,13 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         if (this.interruptionPolicy.mode === 'verified-not-dispatched' && !this.model.prepare)
           throw new Error('model-does-not-support-verified-context')
         await preflightInterruptedContext(session, run, this.interruptionPolicy)
+        const projectContext =
+          memory?.mode === 'curated'
+            ? parseProjectContext(
+                run.journal.records().find((record) => record.runId === run.id && record.kind === 'project-context')
+                  ?.data.snapshot,
+              )
+            : undefined
         run.check()
         if (options.selection) {
           const e = options.selection.expectation
@@ -1282,6 +1308,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
               executionContext: run,
               executionPolicy: frozenPolicy,
               mcp: manager,
+              projectContext,
               signal: run.signal,
               skillReader,
             }) as Promise<T>,
@@ -1294,7 +1321,17 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       onApproval: this.execution.onApproval,
       onSnapshot: options.onRunSnapshot,
       requestedSkills: skills,
-      requestId: options.requestId ?? options.turnId ?? uuidv7(),
+      ...(memory?.mode === 'curated'
+        ? {
+            prepareProjectContext: (signal: AbortSignal) =>
+              this.projectMemory!.prepare(session.getId(), requestId, memory, {
+                contextPolicy,
+                execution: graph ? 'graph' : 'agent',
+                signal,
+              }),
+          }
+        : {}),
+      requestId,
       responderScope: this.execution.responderScope,
       runId: options.turnId,
       sessionId: session.getId(),
@@ -1405,6 +1442,8 @@ function serializeSessionError(error: unknown): SessionError {
 
 function toModelInvokeOptions(options: Partial<AgentInvokeOptions> | undefined): Partial<ModelInvokeOptions> {
   const result: Record<string, unknown> = {...options}
+  delete result.memory
+  delete result.projectContext
   delete result.graph
   delete result.contextPolicy
   delete result.executionPolicy
@@ -1417,4 +1456,8 @@ function toModelInvokeOptions(options: Partial<AgentInvokeOptions> | undefined):
   delete result.tools
   delete result.turnId
   return result as Partial<ModelInvokeOptions>
+}
+
+function projectContextPrefix(snapshot: ProjectContextSnapshot | undefined): Message[] {
+  return snapshot ? [new Message(MessageType.User, {content: snapshot.rendered})] : []
 }

@@ -179,3 +179,14 @@ separate from canonical conversation-message digests. See [Skills](skills.md).
 ### Opt-in verified interruption
 
 With [verified interrupted context](interrupted-context.md), new persistent Sessions use v3 and old ones need the separate byte-preserving migration. Only uniquely proven cancelled nondispatch can supply error-form input. Projection-aware checkpoints use projection version 2, retain raw source digests and reference synchronized provenance. Ordinary version-1 checkpoints keep their strict validation. Summary requests serialize raw evidence as untrusted data and receive no tools or Skills. Mandatory cancellation notices remain outside the summary, count toward the ordinary budget, and never release latest-turn protection. Policy-off and budget-off paths cannot bypass verification of dependent history.
+
+## Project memory
+
+The core Project service groups independent conversations; the GUI exposes
+curated notes, source excerpts, selection and preview. Memory is captured once
+per managed Run as journal-v3 evidence and inserted as a fixed user-role prefix.
+It is not appended to canonical history or included in compaction source text.
+The prepared-request budget still includes it. Library callers opt in explicitly;
+GUI Project conversations default to curated mode and offer Off. CLI workflows
+remain single-session. See [Projects and curated memory](projects.md) for API,
+source validation, compatibility and retained-history behavior.

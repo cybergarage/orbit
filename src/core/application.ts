@@ -1,6 +1,7 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {randomUUID} from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
@@ -44,6 +45,8 @@ import {createCompositeLogger} from './logger/index.js'
 import {FileSessionLogStore, LogEventType, LogOutcome, StoreSessionLoggerFactory} from './logs/index.js'
 import {Message, MessageType, Role} from './models/index.js'
 import {inspectGraphRun} from './processor/graph-inspection.js'
+import {parseProjectContext, type ProjectMemorySelection} from './projects/memory-context.js'
+import {ProjectMemoryService} from './projects/memory-service.js'
 import {ProjectService} from './projects/service.js'
 import {ProjectStoreError} from './projects/types.js'
 import {WorkflowSelectionService} from './selection/service.js'
@@ -128,6 +131,7 @@ export type StartApplicationRunResult =
 export class OrbitApplicationService {
   readonly diagnostics: DiagnosticEventBus
   readonly logs: SessionLogStore
+  readonly projectMemory?: ProjectMemoryService
   readonly projects?: ProjectService
   readonly repository: SessionRepository
   readonly runtime: RuntimeSnapshot
@@ -210,6 +214,7 @@ export class OrbitApplicationService {
             defaultToolProfile: ToolProfile.Coding,
             diagnostics: this.diagnostics,
             execution: {...options.execution, ...agentOptions.execution, onApproval() {}, responderScope: 'local-gui'},
+            projectMemory: this.projectMemory,
             selectionProjector: options.selectionProjector,
             skillCatalog: agentOptions.skillCatalog,
           })),
@@ -257,20 +262,19 @@ export class OrbitApplicationService {
             : undefined,
         }
       })
-    if (options.projectStore)
-      this.projects = new ProjectService(
-        options.projectStore,
-        this.repository,
-        {
-          closeThread: async (id) => {
-            await this.threadManager.closeThread(id)
-            await this.threadRuntime.get(id)?.skillCatalog?.settle()
-            this.threadRuntime.delete(id)
-          },
-          getThread: (id) => this.threadManager.getThread(id),
+    if (options.projectStore) {
+      const host = {
+        closeThread: async (id: string) => {
+          await this.threadManager.closeThread(id)
+          await this.threadRuntime.get(id)?.skillCatalog?.settle()
+          this.threadRuntime.delete(id)
         },
-        options.cwd,
-      )
+        getThread: (id: string) => this.threadManager.getThread(id),
+      }
+      this.projects = new ProjectService(options.projectStore, this.repository, host, options.cwd)
+      this.projectMemory = new ProjectMemoryService(this.projects, host)
+    }
+
     this.deletionService = new SessionDeletionService(
       this.repository,
       this.logs,
@@ -305,6 +309,7 @@ export class OrbitApplicationService {
       await Promise.allSettled([...this.projectCreations.values()].map((item) => item.promise))
       await this.threadManager.close()
       await Promise.all([...this.threadRuntime.values()].map((runtime) => runtime.skillCatalog?.settle()))
+      await this.projectMemory?.close()
       await this.projects?.store.close()
       await this.skillCatalog?.settle()
       this.displayMessages.clear()
@@ -344,6 +349,7 @@ export class OrbitApplicationService {
         diagnostics: this.diagnostics,
         messages: systemMessages,
         model: {name: this.runtime.model, provider: this.runtime.provider},
+        projectMemory: this.projectMemory,
         settings: this.settings,
         skillCatalog: this.skillCatalog,
       },
@@ -470,6 +476,15 @@ export class OrbitApplicationService {
     return catalog ? catalog.list(signal) : {candidates: [], complete: true, issues: ['No Skill catalog configured']}
   }
 
+  async previewProjectMemory(threadId: string, selection: ProjectMemorySelection) {
+    if (!this.projectMemory) throw new ProjectStoreError('missing', 'Project memory is not configured')
+    const runtime = this.threadRuntime.get(threadId)
+    return this.projectMemory.prepare(threadId, randomUUID(), selection, {
+      capture: false,
+      contextPolicy: runtime?.contextPolicy ?? runtime?.settings?.contextPolicy ?? this.settings.contextPolicy,
+    })
+  }
+
   previewSelectedGraph(
     threadId: string,
     graph: CompiledProcessorGraph,
@@ -478,6 +493,24 @@ export class OrbitApplicationService {
     expectation: WorkflowExpectation,
   ): string {
     return this.threadManager.previewSelectedGraph(threadId, graph, input, options, expectation)
+  }
+
+  async projectContextHistory(sessionId: string) {
+    const summary = await this.repository.findById(sessionId)
+    if (!summary) throw new ProjectStoreError('missing', 'Session not found')
+    const inspection = await inspectExecutionJournal(this.repository.journalRoot, sessionId).catch((error: unknown) => {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return {runs: []}
+      throw error
+    })
+    return inspection.runs.map((run) => ({
+      issue: run.issue,
+      preparationInterrupted:
+        run.records[0]?.version === 3 && !run.records.some((record) => record.kind === 'project-context'),
+      runId: run.runId,
+      snapshots: run.records
+        .filter((record) => record.kind === 'project-context')
+        .map((record) => parseProjectContext(record.data.snapshot)),
+    }))
   }
 
   async queryGraphRun(id: string) {
@@ -556,7 +589,13 @@ export class OrbitApplicationService {
     let thread: ThreadSnapshot
     try {
       thread = this.threadManager.resumeThread(summary.file, {
-        agent: {...runtime, diagnostics: this.diagnostics, messages: undefined, model: undefined},
+        agent: {
+          ...runtime,
+          diagnostics: this.diagnostics,
+          messages: undefined,
+          model: undefined,
+          projectMemory: this.projectMemory,
+        },
       })
       if (this.projects) this.threadRuntime.set(thread.id, runtime)
     } catch (error) {
@@ -610,10 +649,12 @@ export class OrbitApplicationService {
   async startRun(
     threadId: string,
     content: string,
-    request?: string | {requestId?: string; skills?: SkillSelection[]},
+    request?: string | {memory?: ProjectMemorySelection; requestId?: string; skills?: SkillSelection[]},
   ): Promise<StartApplicationRunResult> {
     if (this.selectedScopes.has(threadId)) throw new Error('Thread requires its workflow selection coordinator')
-    const {requestId, skills} = typeof request === 'string' ? {requestId: request, skills: undefined} : (request ?? {})
+    const {memory, requestId, skills} =
+      typeof request === 'string' ? {memory: undefined, requestId: request, skills: undefined} : (request ?? {})
+    if (this.projects && !this.threadManager.getThread(threadId)) await this.resumeSession(threadId)
     if (content.startsWith('/')) {
       const thread = this.threadManager.getThread(threadId)
       if (thread === undefined) throw new Error(`Unknown thread: ${threadId}`)
@@ -650,6 +691,7 @@ export class OrbitApplicationService {
 
     await this.projects?.requireActive(threadId)
     const handle = this.threadManager.startRun(threadId, content, {
+      memory,
       requestId,
       skillCatalogRevision: this.catalogForThread(threadId)?.configuration,
       skills,
@@ -755,6 +797,7 @@ export class OrbitApplicationService {
         diagnostics: this.diagnostics,
         messages: undefined,
         model: {name: metadata.model, provider: metadata.provider},
+        projectMemory: this.projectMemory,
         state: new State(session),
       }
       const thread = this.threadManager.createThread({agent, id: session.getId()})

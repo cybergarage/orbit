@@ -4,9 +4,11 @@
 import {randomUUID} from 'node:crypto'
 import {performance} from 'node:perf_hooks'
 
+import type {ProjectContextSnapshot} from '../projects/memory-context.js'
 import type {SkillSelection} from '../skills/catalog.js'
 import type {ExecutionJournal, JournalKind, JournalLevel, JournalRecord} from './journal.js'
 
+import {parseProjectContext} from '../projects/memory-context.js'
 import {normalizeSkillSelections} from '../skills/catalog.js'
 import {currentGraphVisit, GraphDeclaredFailure} from './graph-state.js'
 import {canonicalJSON, copyJSON, safeIdentity} from './journal.js'
@@ -72,6 +74,7 @@ export interface RunSnapshot {
   approvals: ApprovalRequest[]
   budget: {modelCalls: number; toolRequests: number; toolRounds: number}
   phase: RunPhase
+  projectContext?: {digest: string; entryIds: string[]; projectId: string; tokens: number}
   quarantined: boolean
   result?: RunResult
   runId: string
@@ -107,10 +110,11 @@ export interface RunStartOptions<T> {
   execute(context: RunContext): Promise<T>
   input: unknown
   journal: () => Promise<ExecutionJournal>
-  journalVersion?: 1 | 2
+  journalVersion?: 1 | 2 | 3
   limits?: Partial<RunLimits>
   onApproval?: (request: ApprovalRequest) => Promise<void> | void
   onSnapshot?: (snapshot: RunSnapshot) => void
+  prepareProjectContext?: (signal: AbortSignal) => Promise<ProjectContextSnapshot>
   requestedSkills?: SkillSelection[]
   requestId: string
   responderScope?: string
@@ -413,6 +417,7 @@ export class RunContext {
       ...(this.options.requestedSkills?.length
         ? {skills: {requested: this.options.requestedSkills, ...this.skillResolution}}
         : {}),
+      ...projectContextSummary(this.journal.records(), this.id),
       budget: this.budget,
       phase: this.phase,
       quarantined: Boolean(this.result) && !this.released,
@@ -557,6 +562,8 @@ export class RunSupervisor {
     const limits = {...DEFAULT_RUN_LIMITS, ...options.limits}
     let journal: ExecutionJournal | undefined
     try {
+      if (options.journalVersion === 3 && !options.prepareProjectContext)
+        throw new Error('Journal v3 requires Project context preparation')
       for (const [name, value] of Object.entries(limits))
         if (!Number.isSafeInteger(value) || (name.endsWith('Ms') ? value <= 0 : value < 0))
           throw new Error(`Invalid run limit: ${name}`)
@@ -600,12 +607,40 @@ export class RunSupervisor {
       )
         throw new Error('Unresolved journal run requires reconciliation')
       const id = options.runId ?? randomUUID()
+      let projectContext: ProjectContextSnapshot | undefined
+      if (options.prepareProjectContext) {
+        const controller = new AbortController()
+        const abort = () => controller.abort(options.signal?.reason)
+        options.signal?.addEventListener('abort', abort, {once: true})
+        const timer = setTimeout(
+          () => controller.abort(new Error('Project context preparation exceeded the Run deadline')),
+          Math.max(0, startedAt + limits.elapsedMs - performance.now()),
+        )
+        try {
+          if (options.signal?.aborted) abort()
+          projectContext = parseProjectContext(await options.prepareProjectContext(controller.signal))
+          controller.signal.throwIfAborted()
+        } catch (error) {
+          if (error instanceof AggregateError) this.admissionFailed = true
+          throw error
+        } finally {
+          clearTimeout(timer)
+          options.signal?.removeEventListener('abort', abort)
+        }
+
+        if (projectContext.sessionId !== options.sessionId) throw new Error('Project context session mismatch')
+      }
+
+      const configuration = {
+        ...options.configuration,
+        ...(projectContext ? {projectContext: {digest: projectContext.digest, policy: projectContext.policy}} : {}),
+      }
       await until(
         journal.append(
           id,
           'run-admitted',
           {
-            configuration: journal.digest(options.configuration),
+            configuration: journal.digest(configuration),
             level: journal.level,
             limits,
             mode: journal.mode,
@@ -615,13 +650,21 @@ export class RunSupervisor {
           },
           performance.now() - startedAt,
           undefined,
-          options.journalVersion,
+          projectContext ? 3 : options.journalVersion,
         ),
         startedAt + limits.elapsedMs,
       ).catch((error) => {
         this.admissionFailed = true
         throw error
       })
+      if (projectContext)
+        await until(
+          journal.append(id, 'project-context', {snapshot: projectContext}, performance.now() - startedAt),
+          startedAt + limits.elapsedMs,
+        ).catch((error) => {
+          this.admissionFailed = true
+          throw error
+        })
       const context = new RunContext(id, options as RunStartOptions<unknown>, journal, startedAt, limits)
       let value: T | undefined
       const handle: RunHandle<T> = {
@@ -825,7 +868,10 @@ export function recoveredRunSnapshot(
         operations: [...outcomes.values()],
         outcome: 'incomplete',
         quiescence: false,
-        reason: 'interrupted',
+        reason:
+          run[0]?.version === 3 && !run.some((entry) => entry.kind === 'project-context')
+            ? 'interrupted-project-preparation'
+            : 'interrupted',
         recording: {level: recording.level, mode: recording.mode, status: 'recovered'},
         runId: id,
         sessionId,
@@ -850,6 +896,7 @@ export function recoveredRunSnapshot(
           },
         }
       : {}),
+    ...projectContextSummary(run, id),
     approvals: [],
     budget: {modelCalls: 0, toolRequests: 0, toolRounds: 0},
     phase: 'terminal',
@@ -871,5 +918,19 @@ function recoveredHandle<T>(id: string, sessionId: string, journal: ExecutionJou
     id,
     requestStop: () => 'already-terminal',
     value(): undefined {},
+  }
+}
+
+function projectContextSummary(records: JournalRecord[], runId: string): Pick<RunSnapshot, 'projectContext'> {
+  const record = records.find((entry) => entry.runId === runId && entry.kind === 'project-context')
+  if (!record) return {}
+  const snapshot = record.data.snapshot as unknown as ProjectContextSnapshot
+  return {
+    projectContext: {
+      digest: snapshot.digest,
+      entryIds: snapshot.entries.map((entry) => entry.id),
+      projectId: snapshot.projectId,
+      tokens: snapshot.tokens,
+    },
   }
 }

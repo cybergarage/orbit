@@ -137,7 +137,16 @@ const querySchema = z.discriminatedUnion('kind', [
   z.object({id: uuid, kind: z.literal('reservation')}).strict(),
   z.object({id: uuid, kind: z.literal('operation')}).strict(),
   z.object({kind: z.literal('snapshot'), pairId: uuid, projectId: uuid, sessionId}).strict(),
-  z.object({kind: z.literal('memories'), projectId: uuid}).strict(),
+  z
+    .object({
+      after: uuid.optional(),
+      kind: z.literal('memories'),
+      limit: limit.optional(),
+      projectId: uuid,
+      retired: z.boolean().optional(),
+    })
+    .strict(),
+  z.object({id: uuid, kind: z.literal('memory')}).strict(),
 ])
 
 export interface CatalogRows {
@@ -152,7 +161,14 @@ export interface CatalogBackend {
   get<T extends CatalogTable>(table: T, key: string): CatalogRows[T] | null
   list<T extends CatalogTable>(
     table: T,
-    filter?: {after?: string; archived?: boolean; limit?: number; pairId?: string; projectId?: null | string},
+    filter?: {
+      after?: string
+      archived?: boolean
+      limit?: number
+      pairId?: string
+      projectId?: null | string
+      retired?: boolean
+    },
   ): CatalogRows[T][]
   put<T extends CatalogTable>(table: T, key: string, row: CatalogRows[T]): void
   transaction<T>(work: () => T, write: boolean): T
@@ -248,7 +264,16 @@ export class CatalogEngine {
 
         case 'memories': {
           this.project(q.projectId)
-          return this.backend.list('memories', {projectId: q.projectId})
+          return this.backend.list('memories', {
+            after: q.after,
+            limit: q.limit ?? 200,
+            projectId: q.projectId,
+            retired: q.retired,
+          })
+        }
+
+        case 'memory': {
+          return this.backend.get('memories', q.id)
         }
 
         case 'operation': {
@@ -269,7 +294,7 @@ export class CatalogEngine {
 
         case 'snapshot': {
           return {
-            entries: this.backend.list('memories', {projectId: q.projectId}),
+            entries: this.backend.list('memories', {limit: 129, projectId: q.projectId, retired: false}),
             membership: this.backend.get('memberships', membershipKey(q.pairId, q.sessionId)),
             project: this.project(q.projectId),
           }
@@ -345,7 +370,7 @@ export class CatalogEngine {
           updatedAt: now,
         }
         const active = this.backend
-          .list('memories', {projectId: entry.projectId})
+          .list('memories', {projectId: entry.projectId, retired: false})
           .filter((item) => !item.retired && item.id !== entry.id)
         if (!entry.retired) active.push(entry)
         if (
@@ -404,7 +429,7 @@ export class CatalogEngine {
     if (prior?.projectId) {
       this.bumpMemory(prior.projectId)
       if (prior.projectId !== m.projectId || m.unavailable) {
-        for (const entry of this.backend.list('memories', {projectId: prior.projectId})) {
+        for (const entry of this.backend.list('memories', {projectId: prior.projectId, retired: false})) {
           if (
             !entry.retired &&
             entry.sources.some((source) => source.pairId === m.pairId && source.sessionId === m.sessionId)

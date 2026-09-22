@@ -191,3 +191,14 @@ Configure `skillCatalog` on the service for read-only listing and structured
 `startRun(threadId, content, {requestId, skills})`. Reconnect snapshots expose
 requested/resolved IDs and digests; only explicit `skillHistory(sessionId)`
 requests return full bodies. See [Skills](skills.md).
+
+## Project memory
+
+The core Project service groups independent conversations; the GUI exposes
+curated notes, source excerpts, selection and preview. Memory is captured once
+per managed Run as journal-v3 evidence and inserted as a fixed user-role prefix.
+It is not appended to canonical history or included in compaction source text.
+The prepared-request budget still includes it. Library callers opt in explicitly;
+GUI Project conversations default to curated mode and offer Off. CLI workflows
+remain single-session. See [Projects and curated memory](projects.md) for API,
+source validation, compatibility and retained-history behavior.

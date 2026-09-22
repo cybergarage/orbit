@@ -36,8 +36,9 @@ and the GUI provides Project navigation. See [Projects](../projects.md).
 
 Explicitly curated knowledge intended for reuse within one Project. It is
 historical context, not workspace instructions or permission. The current catalog
-stores revisioned entries and source references; recall and Run evidence are not
-yet connected. Retirement excludes future use while retaining historical data.
+stores revisioned entries and source references. Managed Runs capture bounded
+user-role context with exact journal-v3 evidence, independent of canonical history
+and compaction. Retirement excludes future use while retaining historical data.
 
 ### Control plane
 

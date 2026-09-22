@@ -21,6 +21,7 @@ import {canonicalJSON} from './execution/journal.js'
 import {RunExecutionError} from './execution/run.js'
 import {Message as CoreMessage, MessageType as CoreMessageType} from './message/index.js'
 import {boundedGraphJSON, graphBinding} from './processor/graph-definition.js'
+import {parseMemorySelection, type ProjectMemorySelection} from './projects/memory-context.js'
 import {Session, type SessionRepository} from './session/index.js'
 import {loadWorkspaceSettingsSync} from './settings.js'
 import {normalizeSkillSelections} from './skills/catalog.js'
@@ -195,6 +196,7 @@ import type {WorkflowExpectation, WorkflowSubmission} from './selection/binding.
 import {parseWorkflowSubmission} from './selection/binding.js'
 
 export interface ThreadRunOptions {
+  memory?: ProjectMemorySelection
   requestId?: string
   selection?: WorkflowSubmission
   signal?: AbortSignal
@@ -516,9 +518,12 @@ export class ThreadManager {
         selection: options.selection,
         signal: run.controller.signal,
         skills: options.skills,
+        ...(options.memory ? {memory: options.memory} : {}),
         turnId: run.id,
       }
       let response: Message
+      if (options.memory?.mode === 'curated' && !thread.agent.startRun)
+        throw new Error('Project memory requires managed Agent execution')
       if (options.graph && !thread.agent.startGraphRun) throw new Error('Agent does not support Graph execution')
       if (thread.agent.startRun || options.graph) {
         const handle = options.graph
@@ -717,6 +722,7 @@ export class ThreadManager {
       ...options,
       ...(options.selection ? {selection: parseWorkflowSubmission(options.selection)} : {}),
       skills: normalizeSkillSelections(options.skills),
+      ...(options.memory ? {memory: parseMemorySelection(options.memory)} : {}),
     }
     const submission = canonicalJSON({
       ...(options.graph
@@ -731,6 +737,7 @@ export class ThreadManager {
       ...(options.selection ? {selection: options.selection} : {}),
       skillCatalog: options.skillCatalogRevision ?? thread.agent.skillCatalog?.configuration ?? null,
       skills: options.skills,
+      ...(options.memory ? {memory: options.memory} : {}),
     })
     const requestKey = options.requestId ? `${threadId}:${options.requestId}` : undefined
     const prior = requestKey ? this.submissions.get(requestKey) : undefined
