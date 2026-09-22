@@ -53,7 +53,7 @@ Orbit is a TypeScript agent framework for building agent applications. It suppor
 - Preserve normalized `ModelOutputPart` values when adapting assistant responses so provider state needed by later requests is not flattened away. Store provider-only response data under JSON-serializable `ModelResponseMetadata.providerMetadata`.
 - Register model providers through `ModelRegistry` or `registerModelProvider()` rather than adding provider-selection switches. Register external providers before loading settings that select them.
 - The OpenAI adapter currently uses Chat Completions. A future Responses API adapter must preserve ordered output items and continuation state instead of flattening a response into one text message.
-- Workspace discovery only considers ancestors that contain an `.orbit` directory. System context loading reads both `ORBIT.md` and `AGENTS.md` from those workspaces, ordered from shallowest to deepest; keep this contract aligned with settings discovery.
+- Workspace discovery only considers ancestors that contain an `.orbit` directory. System context loading reads the configured uppercase app-name file (`ORBIT.md` by default, or e.g. `ACME.md`) and `AGENTS.md` from those workspaces, ordered from shallowest to deepest. Preserve this compatibility and the configured-name escaping covered by `test/core/context.test.ts`; keep this contract aligned with settings discovery.
 - Preserve the GUI security boundary: bind only to loopback, require the startup capability token for HTML, JavaScript, REST, and event-stream requests, and retain origin checks, request limits, and schema validation.
 - Prefer explicit TypeScript types at module boundaries. Use `import type` and `export type` for type-only dependencies.
 - Follow the repository's dependency-injection pattern for code that talks to models, MCP clients, settings loaders, or other external boundaries so it remains unit-testable.
@@ -81,6 +81,8 @@ Orbit is a TypeScript agent framework for building agent applications. It suppor
   npm test
   ```
 
+- Run build, tests, and package validation sequentially: the build removes `dist/`, so concurrent runs can fail with missing generated modules. GUI tests need permission to listen on loopback; report a sandbox `listen EPERM` as an environment limitation and rerun where permitted before claiming the full suite passed.
+- For release or packaging work, also run `npm run test:package` after the build and test suite; this validates the package in an independent consumer.
 - `npm test` runs `npm run format` and `npm run lint` first; both commands can rewrite files. Review the resulting diff after running it.
 - CI exercises the build and test suite on Ubuntu and Windows across multiple supported Node.js releases. Avoid platform-specific path, shell, and newline assumptions in runtime code and tests.
 
@@ -109,3 +111,12 @@ Orbit is a TypeScript agent framework for building agent applications. It suppor
 - Keep changes scoped to the request. Do not modify generated files, dependencies, or public APIs unless the change requires it.
 - Do not create commits, tags, releases, or push changes unless explicitly requested.
 - Review `git diff` after formatters, linters, generators, and tests have run. Report any validation that could not be completed.
+
+## Continuing Work on Another Machine
+
+- This file is the repository-wide agent instruction entry point. Keep maintained behavior in the existing feature docs and architectural rationale in the existing research and ADR records; do not copy old chat transcripts or test-count snapshots into this file.
+- Start with the current checkout and working-tree status, then consult `docs/README.md` and the relevant source and tests. Historical release versions and successful checks are evidence for their original revision, not validation of the current checkout or machine.
+- Use `make link` only when local CLI registration is wanted; it runs `npm ci`, `npm run build`, and `npm link`. Check which `orbit` executable is selected before assuming an installed command uses this checkout.
+- Local sessions, run journals, logs, provider credentials, and installed Ollama models are separate from the Git repository. Preserve required local data during migration and keep verification runs isolated from it. Do not copy credentials or session transcripts into repository instructions.
+- Preserve the tool inventory contract in `src/core/tools/inventory.ts`: ordinary inspection does not connect to MCP servers, and undiscovered tool counts are unknown (`null`), not zero. Opt-in `--connect` inspection uses a temporary run with an in-memory journal and cleanup; it must not modify the persistent conversation.
+- For a requested commit, stage only the related changes, use the English commit convention above, and report the commit hash and remaining working-tree changes. If a user requests a compatibility revert, preserve history with a dedicated revert commit rather than rewriting prior commits.
