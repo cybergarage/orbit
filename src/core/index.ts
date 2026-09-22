@@ -172,6 +172,7 @@ export type {
   ProcessorOutput,
   ProcessorType,
 } from './processor/index.js'
+export * from './projects/index.js'
 export * from './selection/index.js'
 export {
   createSessionInformation,

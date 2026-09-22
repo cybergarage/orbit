@@ -14,6 +14,13 @@ the reusable runtime under `src/core/`. The runtime connects workspace configura
 provider-neutral model interface, tool registries, persisted sessions,
 structured logs, and thread lifecycle events.
 
+`src/core/projects/` provides an explicitly opened Project catalog. Its shared
+transaction engine backs an in-memory test adapter and a worker-owned SQLite
+adapter. It stores Project metadata, membership revisions, pending creation
+reservations, curated memory rows and idempotent operation results separately
+from transcripts. Application/GUI coordination and model-input augmentation are
+not connected yet; see [Project catalog](projects.md) for the current boundary.
+
 ```text
 CLI exec / interactive       Local GUI
           |                      |

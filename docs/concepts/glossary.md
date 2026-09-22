@@ -25,6 +25,20 @@ conversation suffix for model input. It preserves original Session messages and
 does not replace execution journal evidence. Current budgeted preparation uses
 transcript v2; see [Input budgets and compaction](../context-compaction.md).
 
+### Project
+
+A durable identity organizing separate Sessions, independent of a directory.
+Membership groups conversations without concatenating their histories or granting
+tool permissions. The current implementation supplies the catalog storage layer;
+application and GUI coordination remain pending. See [Projects](../projects.md).
+
+### Project memory
+
+Explicitly curated knowledge intended for reuse within one Project. It is
+historical context, not workspace instructions or permission. The current catalog
+stores revisioned entries and source references; recall and Run evidence are not
+yet connected. Retirement excludes future use while retaining historical data.
+
 ### Control plane
 
 The mechanisms that validate, evaluate, select, promote, and roll back runtime

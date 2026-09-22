@@ -67,8 +67,26 @@ try {
 
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
   runNpm(['install', '--ignore-scripts', '--no-audit', '--no-fund'], consumer)
+  runNpm(['rebuild', 'better-sqlite3'], consumer)
   runNpm(['run', 'build'], consumer)
   runNpm(['test'], consumer)
+  const catalogProbe = path.join(consumer, 'catalog-probe.mjs')
+  await writeFile(
+    catalogProbe,
+    `
+import assert from 'node:assert/strict'
+import path from 'node:path'
+import {randomUUID} from 'node:crypto'
+import {SqliteProjectStore} from '@cybergarage/orbit'
+const store = await SqliteProjectStore.open({file: path.resolve('catalog/projects.sqlite')})
+try {
+  const id = randomUUID()
+  await store.mutate(randomUUID(), {kind: 'create', id, name: 'Package smoke test', directory: null, expectedRevision: 0})
+  assert.equal((await store.query({kind: 'project', id})).name, 'Package smoke test')
+} finally { await store.close() }
+`,
+  )
+  execFileSync(process.execPath, [catalogProbe], {cwd: consumer, stdio: 'inherit'})
   execFileSync(process.execPath, ['node_modules/@cybergarage/orbit/bin/run.js', '--help'], {
     cwd: consumer,
     stdio: 'inherit',

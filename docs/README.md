@@ -69,6 +69,8 @@ routing contract belongs in an ADR, and its implemented structure appears in
 
 ## Current feature documentation
 
+- [Project catalog](projects.md): explicit storage adapters and the remaining application integration scope.
+
 - [Workflow evaluation](workflow-evaluation.md): trusted plans, read-only evidence inspection, fixed denominators and missing-resource accounting.
 
 - [Managed Processor Graphs](processor-graphs.md): compilation, typed values, shared Run ownership and journal v2 migration.

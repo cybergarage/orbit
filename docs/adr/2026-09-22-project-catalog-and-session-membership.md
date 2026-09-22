@@ -2,7 +2,7 @@
 status: accepted
 proposed-date: 2026-09-22
 decision-date: 2026-09-22
-implementation-status: not-started
+implementation-status: in-progress
 implementation-completed-date: null
 implementation-commits: []
 superseded-by: []
