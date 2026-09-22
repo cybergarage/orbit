@@ -3,6 +3,8 @@ status: current
 investigation-date: 2026-09-22
 orbit-commit: abc358ba69a6b9de24d2c7a16a6bd38b28aac00c
 related-adrs:
+  - docs/adr/2026-09-22-project-catalog-and-session-membership.md
+  - docs/adr/2026-09-22-project-memory-context.md
   - docs/adr/2026-08-22-gui-application.md
   - docs/adr/2026-08-23-session-resume-cli.md
 superseded-by: []
@@ -316,3 +318,24 @@ not endorsements of source-contained prompts or operating instructions.
 - [Hermes project store](https://github.com/NousResearch/hermes-agent/blob/92dd3321929a915479ade608591d40de93965c7b/hermes_cli/projects_db.py), [desktop projects](https://github.com/NousResearch/hermes-agent/blob/92dd3321929a915479ade608591d40de93965c7b/apps/desktop/src/store/projects.ts), [project tests](https://github.com/NousResearch/hermes-agent/blob/92dd3321929a915479ade608591d40de93965c7b/tests/hermes_cli/test_projects_db.py), [MemoryStore](https://github.com/NousResearch/hermes-agent/blob/92dd3321929a915479ade608591d40de93965c7b/tools/memory_tool_store.py), [session search](https://github.com/NousResearch/hermes-agent/blob/92dd3321929a915479ade608591d40de93965c7b/tools/session_search_tool.py).
 - [OpenClaw flush plan](https://github.com/openclaw/openclaw/blob/6b13f55aaf7151e3edfb33ddafeac69abb0b38d2/extensions/memory-core/src/flush-plan.ts), [consolidation](https://github.com/openclaw/openclaw/blob/6b13f55aaf7151e3edfb33ddafeac69abb0b38d2/extensions/memory-core/src/dreaming-consolidation.ts), [project tests](https://github.com/openclaw/openclaw/blob/6b13f55aaf7151e3edfb33ddafeac69abb0b38d2/extensions/memory-core/src/dreaming-consolidation-projects.test.ts), [visibility](https://github.com/openclaw/openclaw/blob/6b13f55aaf7151e3edfb33ddafeac69abb0b38d2/extensions/memory-core/src/session-search-visibility.ts).
 - [Pi SessionManager](https://github.com/earendil-works/pi/blob/95fbc04997eaee961eb673fa7923e9220609ebd5/packages/coding-agent/src/core/session-manager.ts), [resource loader](https://github.com/earendil-works/pi/blob/95fbc04997eaee961eb673fa7923e9220609ebd5/packages/coding-agent/src/core/resource-loader.ts), [MemoryStorage](https://github.com/earendil-works/pi/blob/95fbc04997eaee961eb673fa7923e9220609ebd5/packages/agent/src/harness/pico3/memory.ts).
+
+## Proposal follow-up — 2026-09-22
+
+The [Project catalog proposal](../adr/2026-09-22-project-catalog-and-session-membership.md)
+selects a core SQLite adapter, recoverable membership operations and per-thread
+runtime resolution. The [Memory proposal](../adr/2026-09-22-project-memory-context.md)
+selects explicit curation and Run-local input, with journal-v3 context evidence
+and unchanged transcript formats. Both are proposed / not-started.
+
+Additional primary metadata inspection found `better-sqlite3@13.0.3` requires
+Node >=22, whereas `12.11.1` declares Node 20 through 26 compatibility. The
+catalog proposal pins 12.11.1 as the candidate, subject to native packaging and
+SQLite-fix qualification; no dependency has been installed. The original
+backend comparison above remains the investigation's pre-proposal analysis.
+
+Source review of `src/core/execution/run.ts::RunSupervisor.startRun` confirms
+that `run-admitted.configuration` stores `journal.digest(options.configuration)`,
+not a nested configuration object. The Memory proposal therefore uses an explicit
+new journal record/version for full snapshot evidence instead of assuming the
+existing digest field could store the memory text. This entails reader, Graph,
+recovery and maintenance compatibility work; no format is changed by this note.

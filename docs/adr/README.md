@@ -290,6 +290,8 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                        |
 | ---------- | ---------- | -------------- | ----------------------------------------------------------------------------------------------- |
+| 2026-09-22 | proposed   | not-started    | [Project Catalog and Session Membership](2026-09-22-project-catalog-and-session-membership.md)  |
+| 2026-09-22 | proposed   | not-started    | [Project Memory and Run Context](2026-09-22-project-memory-context.md)                          |
 | 2026-09-14 | accepted   | partial        | [Verified Context for Interrupted Tool Groups](2026-09-14-verified-interrupted-tool-context.md) |
 | 2026-09-13 | accepted   | partial        | [Application-owned Workflow Selection](2026-09-13-application-owned-workflow-selection.md)      |
 | 2026-09-12 | accepted   | partial        | [Evidence-based Workflow Evaluation](2026-09-12-evidence-based-workflow-evaluation.md)          |
