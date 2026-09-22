@@ -478,6 +478,7 @@ export class OrbitApplicationService {
 
   async previewProjectMemory(threadId: string, selection: ProjectMemorySelection) {
     if (!this.projectMemory) throw new ProjectStoreError('missing', 'Project memory is not configured')
+    if (!this.threadManager.getThread(threadId)) await this.resumeSession(threadId)
     const runtime = this.threadRuntime.get(threadId)
     return this.projectMemory.prepare(threadId, randomUUID(), selection, {
       capture: false,

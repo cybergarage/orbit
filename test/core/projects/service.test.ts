@@ -7,8 +7,12 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
+import {Message, MessageType} from '../../../src/core/index.js'
+import {MemorySessionLogStore} from '../../../src/core/logs/index.js'
+import {ProjectMemoryService} from '../../../src/core/projects/memory-service.js'
 import {MemoryProjectStore} from '../../../src/core/projects/memory-store.js'
 import {ProjectService} from '../../../src/core/projects/service.js'
+import {SessionDeletionService} from '../../../src/core/session/deletion-service.js'
 import {SessionRepository} from '../../session-storage-fixture.js'
 
 describe('Project session coordination', () => {
@@ -77,6 +81,48 @@ describe('Project session coordination', () => {
     expect(await store.query({id: operationId, kind: 'reservation'})).property('state', 'pending')
     expect(await service.membership(operationId)).equals(null)
     expect((await repository.listPage()).data).length(1)
+  })
+
+  it('reconciles completed CLI deletion and retires derived memory without requiring CLI catalog access', async () => {
+    const project = await service.create({name: 'Project', operationId: randomUUID()})
+    const session = await service.createSession(project.id, randomUUID(), async () => ({}))
+    const [message] = session.appendMessages([new Message(MessageType.Assistant, {content: 'Retain this fact.'})])
+    await session.synchronize('file-sync')
+    await session.close()
+    const memory = new ProjectMemoryService(service, {async closeThread() {}, getThread(): undefined {}})
+    const note = await memory.saveExcerpt(project.id, {
+      excerpt: 'Retain this fact.',
+      messageId: message.id,
+      operationId: randomUUID(),
+      sessionId: session.getId(),
+      title: 'Fact',
+    })
+    const logs = new MemorySessionLogStore()
+    try {
+      await new SessionDeletionService(repository, logs).delete(session.getId())
+      expect((await service.listSessions(project.id)).data).length(0)
+      expect(await service.membership(session.getId())).property('projectId', null)
+      expect(await store.query({id: note.id, kind: 'memory'})).property('retired', true)
+    } finally {
+      await memory.close()
+      await logs.close()
+    }
+  })
+
+  it('refuses corrupt deletion evidence rather than hiding the source as missing', async () => {
+    const project = await service.create({name: 'Project', operationId: randomUUID()})
+    const session = await service.createSession(project.id, randomUUID(), async () => ({}))
+    await session.close()
+    await fs.mkdir(path.join(repository.journalRoot, 'deletions'), {recursive: true})
+    await fs.writeFile(path.join(repository.journalRoot, 'deletions', session.getId() + '.json'), '{"version":99}')
+    try {
+      await service.listSessions(project.id)
+      throw new Error('Expected invalid evidence')
+    } catch (error) {
+      expect(String(error)).contains('Invalid Project source deletion marker')
+    }
+
+    expect(await service.membership(session.getId())).property('projectId', project.id)
   })
 
   it('moves only idle registered sessions while preserving their cwd and history', async () => {

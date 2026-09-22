@@ -12,7 +12,7 @@ import type {Project, ProjectMembership, ProjectMutation, ProjectReservation, Pr
 
 import {WriterClaim} from '../session/coordination.js'
 import {createSessionInformationFromSource} from '../session/information.js'
-import {readProjectSession} from './session-reader.js'
+import {readProjectDeletion, readProjectSession} from './session-reader.js'
 import {ProjectStoreError} from './types.js'
 
 export interface ProjectSessionHost {
@@ -147,6 +147,24 @@ export class ProjectService {
     const members = await this.store.query({after: options.after, kind: 'memberships', limit, pairId, projectId})
     const data = []
     for (const membership of members) {
+      // A CLI deletion never opens the catalog; reconcile its acknowledged marker here.
+      // eslint-disable-next-line no-await-in-loop
+      if ((await readProjectDeletion(this.repository, membership.sessionId)) === 'completed') {
+        this.assertIdle(membership.sessionId)
+        // eslint-disable-next-line no-await-in-loop
+        await this.host.closeThread(membership.sessionId)
+        const guard = WriterClaim.acquire(this.repository.scope(membership.sessionId), () => {}, true)
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          if ((await readProjectDeletion(this.repository, membership.sessionId)) === 'completed') {
+            // eslint-disable-next-line no-await-in-loop
+            await this.finishDeletion(membership.sessionId)
+            continue
+          }
+        } finally {
+          guard.release()
+        }
+      }
       // Bound aggregate source parsing to one transcript at a time.
 
       const source = membership.unavailable

@@ -407,6 +407,12 @@ describe('Curated Project memory', () => {
       await service.startRun(bt.id, 'Other project.', {memory: {mode: 'curated'}, requestId: randomUUID()})
       await bFinished
       expect(requests[1].join('\n')).not.contains('cobalt').not.contains('amber')
+      const source = service.getThread(at.id)!.messages.find((message) => message.content === 'Acknowledged.')!
+      await service.projectMemory!.saveExcerpt(a.id, {excerpt: 'Acknowledged.', messageId: source.id, operationId: randomUUID(), sessionId: at.id, title: 'Reply'})
+      expect(service.getThread(at.id)).to.be.undefined
+      await service.previewProjectMemory(at.id, {mode: 'curated'})
+      expect(service.getThread(at.id)).not.to.be.undefined
+
     } finally {
       release()
       await service.close()

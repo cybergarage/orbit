@@ -49,6 +49,9 @@ Membership mutations require both the source Project and expected revision.
 The host closes an idle writer and acquires the registered session claim before
 committing the catalog update. Project-aware deletion marks a source unavailable
 before the existing session deletion workflow and cleans membership afterward.
+Project listing also reconciles completed CLI deletion markers under writer
+ownership, unlinks the deleted source and retires derived notes. An unfinished
+deletion remains unavailable; corrupt deletion evidence raises an error.
 
 The optional `resolveProjectRuntime(cwd)` hook lets an embedding host resolve
 per-thread agent options. The default reads workspace settings and instructions;

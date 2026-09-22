@@ -17,13 +17,8 @@ export async function readProjectSession(
   id: string,
 ): Promise<null | {file: string; parsed: ParsedSessionFile}> {
   const scope = repository.scope(id)
-  const marker = path.join(scope.journalRoot, 'deletions', `${id}.json`)
-  try {
-    await fs.access(marker)
+  if (await readProjectDeletion(repository, id))
     throw new ProjectStoreError('missing', 'Source session is deleting or deleted')
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-  }
 
   let visited = 0
   let found: null | {file: string; parsed: ParsedSessionFile} = null
@@ -104,12 +99,51 @@ export async function readProjectSession(
   }
 
   await walk(scope.sessionRoot, 0)
-  try {
-    await fs.access(marker)
+  if (await readProjectDeletion(repository, id))
     throw new ProjectStoreError('missing', 'Source session is deleting or deleted')
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-  }
 
   return found
+}
+
+/** Reads bounded deletion evidence without treating corruption as absence. */
+export async function readProjectDeletion(
+  repository: SessionRepository,
+  id: string,
+): Promise<'completed' | 'deleting' | undefined> {
+  const scope = repository.scope(id)
+  const file = path.join(scope.journalRoot, 'deletions', `${id}.json`)
+  try {
+    const before = await fs.lstat(file)
+    if (!before.isFile() || before.nlink !== 1 || before.size > 4096 || (await fs.realpath(file)) !== file)
+      throw new ProjectStoreError('storage', 'Ambiguous Project source deletion marker')
+    const handle = await fs.open(file, 'r')
+    let bytes: Buffer
+    try {
+      const buffer = Buffer.alloc(4097)
+      const {bytesRead} = await handle.read(buffer, 0, buffer.length, 0)
+      const opened = await handle.stat()
+      const after = await fs.lstat(file)
+      if (
+        bytesRead !== before.size ||
+        opened.dev !== before.dev ||
+        opened.ino !== before.ino ||
+        after.ino !== before.ino ||
+        after.dev !== before.dev ||
+        after.size !== before.size ||
+        after.mtimeMs !== before.mtimeMs
+      )
+        throw new ProjectStoreError('storage', 'Project source deletion marker changed during inspection')
+      bytes = buffer.subarray(0, bytesRead)
+    } finally {
+      await handle.close()
+    }
+
+    const value = JSON.parse(new TextDecoder('utf8', {fatal: true}).decode(bytes))
+    if (value.version !== 1 || value.sessionId !== id || !['completed', 'deleting'].includes(value.state))
+      throw new ProjectStoreError('storage', 'Invalid Project source deletion marker')
+    return value.state
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw error
+  }
 }
