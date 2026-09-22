@@ -66,6 +66,7 @@ export type ProjectMutation =
       pairId: string
       projectId: null | string
       sessionId: string
+      sourceProjectId?: null | string
       unavailable: boolean
     }
   | {

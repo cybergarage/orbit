@@ -13,6 +13,8 @@ import type {
   GuiPreferences,
   LogPage,
   LogRecord,
+  Project,
+  ProjectMembership,
   RuntimeSnapshot,
   SessionListResult,
   SessionSummary,
@@ -47,6 +49,42 @@ function App() {
   const [runtime, setRuntime] = useState<RuntimeSnapshot>()
   const [contextNotices, setContextNotices] = useState<Record<string, string>>({})
   const [sessions, setSessions] = useState<SessionSummary[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [projectsEnabled, setProjectsEnabled] = useState(false)
+  const [selectedProject, setSelectedProject] = useState<null | string>(null)
+  const selectedProjectRef = useRef<null | string>(null)
+  const [archivedProjects, setArchivedProjects] = useState(false)
+  const [projectName, setProjectName] = useState('')
+  const [projectDirectory, setProjectDirectory] = useState('')
+  const [sessionCursor, setSessionCursor] = useState<string>()
+  const [projectCursor, setProjectCursor] = useState<string>()
+  const [unavailableSessions, setUnavailableSessions] = useState<string[]>([])
+  const [pendingProjectSessions, setPendingProjectSessions] = useState<string[]>([])
+  const [pendingProjectIds, setPendingProjectIds] = useState<Record<string, string>>({})
+  const [membership, setMembership] = useState<null | ProjectMembership>(null)
+  const [moveDestination, setMoveDestination] = useState('')
+  const catalogOperations = useRef(new Map<string, string>())
+  const operationId = (key: string) => {
+    if (!catalogOperations.current.has(key)) catalogOperations.current.set(key, crypto.randomUUID())
+    return catalogOperations.current.get(key)!
+  }
+
+  const currentProject = projects.find((item) => item.id === selectedProject)
+  const loadProjects = useCallback(
+    async (after?: string) => {
+      const result = await api<{data: Project[]; enabled: boolean; nextCursor?: string}>(
+        `/api/projects?archived=${archivedProjects}&limit=100${after ? `&after=${encodeURIComponent(after)}` : ''}`,
+      )
+      setProjectsEnabled(result.enabled)
+      setProjects((current) =>
+        after
+          ? [...current.filter((item) => !result.data.some((next) => next.id === item.id)), ...result.data]
+          : result.data,
+      )
+      setProjectCursor(result.nextCursor)
+    },
+    [archivedProjects],
+  )
   const [thread, setThread] = useState<ThreadSnapshot>()
   useEffect(() => setSkillHistory(''), [thread?.id])
   const [logs, setLogs] = useState<LogRecord[]>([])
@@ -73,10 +111,46 @@ function App() {
   const refreshVersions = useRef(new Map<string, number>())
   const selectedThreadId = useRef<string | undefined>(undefined)
 
-  const loadSessions = useCallback(async () => {
-    const result = await api<SessionListResult>('/api/sessions?limit=100')
-    setSessions(result.data)
-  }, [])
+  const loadSessions = useCallback(
+    async (cursor?: string) => {
+      const projectId = selectedProject
+      const suffix = cursor ? `&${projectId ? 'after' : 'cursor'}=${encodeURIComponent(cursor)}` : ''
+      let data: SessionSummary[]
+      let nextCursor: string | undefined
+      if (projectId && projectsEnabled) {
+        const result = await api<{
+          data: {membership: ProjectMembership; session: null | SessionSummary; unavailable: boolean}[]
+          nextCursor?: string
+        }>(`/api/projects/${encodeURIComponent(projectId)}/sessions?limit=100${suffix}`)
+        data = result.data.flatMap((item) => (item.session ? [item.session] : []))
+        setUnavailableSessions(result.data.filter((item) => item.unavailable).map((item) => item.membership.sessionId))
+        nextCursor = result.nextCursor
+        setPendingProjectSessions([])
+      } else {
+        const result = await api<
+          Omit<SessionListResult, 'data'> & {
+            data: (SessionSummary & {pendingProjectCreation?: boolean; pendingProjectId?: string})[]
+          }
+        >(`${projectsEnabled ? '/api/unassigned' : '/api/sessions'}?limit=100${suffix}`)
+        data = result.data
+        nextCursor = result.nextCursor
+        setPendingProjectSessions(result.data.filter((item) => item.pendingProjectCreation).map((item) => item.id))
+        setPendingProjectIds(
+          Object.fromEntries(
+            result.data.filter((item) => item.pendingProjectId).map((item) => [item.id, item.pendingProjectId!]),
+          ),
+        )
+        setUnavailableSessions([])
+      }
+
+      if (selectedProjectRef.current !== projectId) return
+      setSessions((current) =>
+        cursor ? [...current.filter((item) => !data.some((next) => next.id === item.id)), ...data] : data,
+      )
+      setSessionCursor(nextCursor)
+    },
+    [projectsEnabled, selectedProject],
+  )
 
   const refreshThread = useCallback(async (threadId: string) => {
     const revision = (refreshVersions.current.get(threadId) ?? 0) + 1
@@ -104,6 +178,7 @@ function App() {
       api<SkillListing>('/api/skills').then(setSkillList),
       api<GuiPreferences>('/api/preferences').then(setPreferences),
       loadSessions(),
+      loadProjects(),
     ]).catch(showError(setError))
 
     const source = new EventSource(`/api/events?token=${encodeURIComponent(token)}`)
@@ -137,7 +212,13 @@ function App() {
 
       if (event.threadId !== undefined && event.threadId === selectedThreadId.current)
         refreshThread(event.threadId).catch(() => {})
-      if (event.type === 'run.completed' || event.type === 'session.created' || event.type === 'session.resumed') {
+      if (event.type === 'project.changed') loadProjects().catch(showError(setError))
+      if (
+        event.type === 'project.changed' ||
+        event.type === 'run.completed' ||
+        event.type === 'session.created' ||
+        event.type === 'session.resumed'
+      ) {
         loadSessions().catch(() => {})
       }
     })
@@ -147,18 +228,34 @@ function App() {
       setLogs((current) => appendUniqueLog(current, record))
     })
     source.addEventListener('open', () => {
+      loadProjects().catch(showError(setError))
+      loadSessions().catch(showError(setError))
       setError((current) => (current === 'The event stream disconnected. Reconnecting…' ? undefined : current))
       if (selectedThreadId.current) refreshThread(selectedThreadId.current).catch(() => {})
     })
     source.addEventListener('error', () => setError('The event stream disconnected. Reconnecting…'))
     return () => source.close()
-  }, [loadSessions, refreshThread])
+  }, [loadSessions, loadProjects, refreshThread])
 
   useEffect(() => {
     selectedThreadId.current = thread?.id
     setLogs([])
-    if (thread === undefined) return
+    if (thread === undefined) {
+      setMembership(null)
+      return
+    }
+
     const threadId = thread.id
+    api<SkillListing>(`/api/skills?threadId=${encodeURIComponent(threadId)}`)
+      .then((listing) => {
+        if (selectedThreadId.current === threadId) setSkillList(listing)
+      })
+      .catch(showError(setError))
+    api<{membership: null | ProjectMembership}>(`/api/sessions/${encodeURIComponent(threadId)}/membership`)
+      .then((result) => {
+        if (selectedThreadId.current === threadId) setMembership(result.membership)
+      })
+      .catch(showError(setError))
     api<LogPage>(`/api/sessions/${encodeURIComponent(threadId)}/logs?limit=200`)
       .then((page) => {
         if (selectedThreadId.current === threadId) {
@@ -178,10 +275,95 @@ function App() {
     return () => globalThis.clearTimeout(timeout)
   }, [notice])
 
+  const selectProject = (projectId: null | string) => {
+    selectedProjectRef.current = projectId
+    setSelectedProject(projectId)
+    selectedThreadId.current = undefined
+    setThread(undefined)
+    setSessions([])
+    setLogs([])
+    setSessionCursor(undefined)
+    const project = projects.find((item) => item.id === projectId)
+    setProjectName(project?.name ?? '')
+    setProjectDirectory(project?.defaultDirectory ?? '')
+  }
+
+  const saveProject = async (create: boolean, archived = currentProject?.archived ?? false) => {
+    try {
+      const body = {
+        directory: projectDirectory.trim() || null,
+        name: projectName.trim(),
+        ...(create ? {} : {archived, expectedRevision: currentProject?.revision}),
+      }
+      const key = JSON.stringify({projectId: create ? null : selectedProject, ...body})
+      const project = await api<Project>(
+        create ? '/api/projects' : `/api/projects/${encodeURIComponent(selectedProject!)}`,
+        {
+          body: JSON.stringify({...body, operationId: operationId(key)}),
+          headers: {'Content-Type': 'application/json'},
+          method: create ? 'POST' : 'PATCH',
+        },
+      )
+      catalogOperations.current.delete(key)
+      setArchivedProjects(project.archived)
+      await loadProjects()
+      if (project.archived) selectProject(null)
+      else {
+        if (create) {
+          selectedThreadId.current = undefined
+          setThread(undefined)
+          setSessions([])
+          setLogs([])
+        }
+
+        setProjects((current) => [...current.filter((item) => item.id !== project.id), project])
+        selectedProjectRef.current = project.id
+        setSelectedProject(project.id)
+        setProjectName(project.name)
+        setProjectDirectory(project.defaultDirectory ?? '')
+        await loadSessions()
+      }
+    } catch (nextError) {
+      showError(setError)(nextError)
+    }
+  }
+
+  const moveSession = async () => {
+    if (!thread) return
+    try {
+      const body = {
+        expectedRevision: membership?.revision ?? 0,
+        projectId: moveDestination || null,
+        sourceProjectId: membership?.projectId ?? null,
+      }
+      const key = JSON.stringify({sessionId: thread.id, ...body})
+      await api(`/api/sessions/${encodeURIComponent(thread.id)}/membership`, {
+        body: JSON.stringify({...body, operationId: operationId(key)}),
+        headers: {'Content-Type': 'application/json'},
+        method: 'POST',
+      })
+      catalogOperations.current.delete(key)
+      setThread(undefined)
+      selectedThreadId.current = undefined
+      await loadSessions()
+      setNotice('Conversation moved. Its directory and history were retained.')
+    } catch (nextError) {
+      showError(setError)(nextError)
+    }
+  }
+
   const createThread = async () => {
     try {
       setError(undefined)
-      const created = await api<ThreadSnapshot>('/api/threads', {method: 'POST'})
+      const key = `thread:${selectedProject ?? 'unassigned'}`
+      const created = selectedProject
+        ? await api<ThreadSnapshot>(`/api/projects/${encodeURIComponent(selectedProject)}/threads`, {
+            body: JSON.stringify({operationId: operationId(key)}),
+            headers: {'Content-Type': 'application/json'},
+            method: 'POST',
+          })
+        : await api<ThreadSnapshot>('/api/threads', {method: 'POST'})
+      catalogOperations.current.delete(key)
       selectedThreadId.current = created.id
       setThread(created)
       setRunPresentations((current) => ({
@@ -199,9 +381,13 @@ function App() {
       setError(undefined)
       selectedThreadId.current = session.id
       setLogs([])
-      const resumed = await api<ThreadSnapshot>(`/api/sessions/${encodeURIComponent(session.id)}/resume`, {
-        method: 'POST',
-      })
+      const resumed = await api<ThreadSnapshot>(
+        `${selectedProject ? `/api/projects/${encodeURIComponent(selectedProject)}` : '/api'}/sessions/${encodeURIComponent(session.id)}/resume`,
+        {
+          method: 'POST',
+        },
+      )
+      if (selectedThreadId.current !== session.id) return
       setThread(resumed)
       setRunPresentations((current) => ({
         ...current,
@@ -397,10 +583,76 @@ function App() {
           <span className="brand-mark">O</span>
           <span>ORBIT</span>
         </div>
-        <button className="primary" onClick={createThread}>
+        {projectsEnabled && (
+          <div className="project-controls">
+            <label>
+              Project
+              <select
+                aria-label="Project"
+                onChange={(event) => selectProject(event.target.value || null)}
+                value={selectedProject ?? ''}
+              >
+                <option value="">Unassigned</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                    {project.archived ? ' (archived)' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <input
+                checked={archivedProjects}
+                onChange={(event) => {
+                  selectProject(null)
+                  setArchivedProjects(event.target.checked)
+                }}
+                type="checkbox"
+              />{' '}
+              Archived projects
+            </label>
+            {projectCursor && (
+              <button onClick={() => loadProjects(projectCursor).catch(showError(setError))}>More projects</button>
+            )}
+            <details>
+              <summary>Project settings</summary>
+              <label>
+                Name
+                <input
+                  aria-label="Project name"
+                  maxLength={256}
+                  onChange={(event) => setProjectName(event.target.value)}
+                  value={projectName}
+                />
+              </label>
+              <label>
+                Default directory
+                <input
+                  aria-label="Project directory"
+                  onChange={(event) => setProjectDirectory(event.target.value)}
+                  placeholder="Use startup directory"
+                  value={projectDirectory}
+                />
+              </label>
+              <button disabled={!projectName.trim()} onClick={() => saveProject(true)}>
+                Create project
+              </button>
+              <button disabled={!currentProject || !projectName.trim()} onClick={() => saveProject(false)}>
+                Save changes
+              </button>
+              {currentProject && (
+                <button onClick={() => saveProject(false, !currentProject.archived)}>
+                  {currentProject.archived ? 'Unarchive' : 'Archive'}
+                </button>
+              )}
+            </details>
+          </div>
+        )}
+        <button className="primary" disabled={currentProject?.archived} onClick={createThread}>
           ＋ New Chat
         </button>
-        <div className="section-title">Recent</div>
+        <div className="section-title">{projectsEnabled ? (currentProject?.name ?? 'Unassigned') : 'Recent'}</div>
         <div className="sessions">
           {sessions.map((session) => (
             <button
@@ -425,9 +677,62 @@ function App() {
                 {formatDate(session.updatedAt)} · {session.model ?? 'default model'}
               </span>
               <span className="session-meta">{session.cwd}</span>
+              {pendingProjectSessions.includes(session.id) && <span>Project creation incomplete</span>}
             </button>
           ))}
         </div>
+        {pendingProjectSessions.map((id) => (
+          <button
+            key={id}
+            onClick={async () => {
+              try {
+                await api(`/api/projects/${encodeURIComponent(pendingProjectIds[id])}/threads`, {
+                  body: JSON.stringify({operationId: id}),
+                  headers: {'Content-Type': 'application/json'},
+                  method: 'POST',
+                })
+                await loadSessions()
+                setNotice('Project conversation recovered.')
+              } catch (nextError) {
+                showError(setError)(nextError)
+              }
+            }}
+          >
+            Retry incomplete creation: {id.slice(0, 8)}
+          </button>
+        ))}
+        {unavailableSessions.map((id) => (
+          <p key={id}>Unavailable conversation: {id}</p>
+        ))}
+        {sessionCursor && (
+          <button onClick={() => loadSessions(sessionCursor).catch(showError(setError))}>More conversations</button>
+        )}
+        {projectsEnabled && thread && (
+          <details className="project-move">
+            <summary>Move conversation</summary>
+            <p>
+              Moving retains the recorded directory and all previous messages. Linked memories in the old Project stop
+              being used.
+            </p>
+            <select
+              aria-label="Destination project"
+              onChange={(event) => setMoveDestination(event.target.value)}
+              value={moveDestination}
+            >
+              <option value="">Unassigned</option>
+              {projects
+                .filter((project) => !project.archived)
+                .map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+            </select>
+            <button disabled={runActive} onClick={moveSession}>
+              Move conversation
+            </button>
+          </details>
+        )}
         <div className="sidebar-footer">
           <label className="toggle-row">
             <span>Logs</span>

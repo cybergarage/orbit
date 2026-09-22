@@ -2,11 +2,67 @@
 
 ## Implementation status
 
-The catalog storage layer is implemented. Application/session coordination,
-GUI navigation and Run memory injection are not enabled yet. The accepted
-[catalog](adr/2026-09-22-project-catalog-and-session-membership.md) and
-[memory](adr/2026-09-22-project-memory-context.md) decisions describe that
-remaining scope, not current application behavior.
+Project catalog storage, registered session coordination and GUI navigation are
+implemented. Curated memory rows are available in the store, but memory editing
+and Run injection are not enabled yet. The accepted
+[memory decision](adr/2026-09-22-project-memory-context.md) describes that
+remaining scope.
+
+## GUI workflow
+
+Start `orbit gui` after building. Choose **Unassigned** or a Project in the
+sidebar. Under **Project settings**, enter a name and an optional absolute
+working directory, then choose **Create project**. A blank directory uses the
+GUI's startup directory. Two Projects may use the same directory.
+
+**New Chat** in a Project creates a separate persisted conversation. Its cwd,
+workspace settings, context files and Skill catalog are resolved for that thread.
+Changing Project navigation leaves existing runs associated with their original
+threads. Resume retains the saved cwd and model. Changing a Project's default
+directory affects only future conversations.
+
+Use **Save changes** to rename or change the default directory. **Archive** hides
+the Project from the active list and blocks new Project work; existing runs finish.
+Select **Archived projects** to inspect or unarchive it. There is no hard Project
+deletion operation.
+
+Open an idle conversation and expand **Move conversation** to attach it, move it,
+or return it to Unassigned. Its historical messages and recorded cwd remain.
+Source-derived memory rows in the old Project are retired instead of copied.
+Active or quarantined conversations cannot be moved. Missing/deleted sources are
+shown as unavailable. A creation reservation interrupted before membership commit
+is labeled incomplete under Unassigned, and cannot start a run until reconciled.
+
+## Application integration
+
+Pass a `projectStore` to `OrbitApplicationService` to enable coordination. The
+application owns its shutdown. Existing synchronous `createThread()` stays
+projectless. Use `await createProjectThread(projectId, {operationId})` for a
+Project; retain the UUID operation ID across retries. Core reserves that ID,
+synchronizes the registered transcript, and commits membership before returning
+a Thread. An interrupted attempt retains its reservation and any unassigned
+transcript. Retry with the same Project and operation ID; a changed Project
+revision or conflicting header requires explicit inspection, not an overwrite.
+
+`service.projects` exposes metadata, membership and scoped listing operations.
+Membership mutations require both the source Project and expected revision.
+The host closes an idle writer and acquires the registered session claim before
+committing the catalog update. Project-aware deletion marks a source unavailable
+before the existing session deletion workflow and cleans membership afterward.
+
+The optional `resolveProjectRuntime(cwd)` hook lets an embedding host resolve
+per-thread agent options. The default reads workspace settings and instructions;
+an explicitly supplied execution policy retains its roots. The GUI host explicitly
+sets workspace-confirm roots to each thread's cwd. Project membership itself
+does not grant tool permission.
+
+REST routes use the existing loopback/token/origin boundary. `/api/projects`
+provides paginated metadata, `/api/projects/:id/sessions` lists scoped
+conversations, `/api/projects/:id/threads` creates them, and
+`/api/sessions/:id/membership` performs explicit moves. Scoped resume checks
+membership server-side. Mutation responses carry revisions; `project.changed`
+invalidates browser lists, and reconnect reloads authoritative lists. CLI
+`exec`, `resume` and interactive workflows do not open the catalog.
 
 ## Catalog adapters
 

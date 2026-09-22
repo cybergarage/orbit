@@ -18,8 +18,11 @@ structured logs, and thread lifecycle events.
 transaction engine backs an in-memory test adapter and a worker-owned SQLite
 adapter. It stores Project metadata, membership revisions, pending creation
 reservations, curated memory rows and idempotent operation results separately
-from transcripts. Application/GUI coordination and model-input augmentation are
-not connected yet; see [Project catalog](projects.md) for the current boundary.
+from transcripts. `ProjectService` coordinates registered session writers with
+those transactions; `OrbitApplicationService.createProjectThread` resolves a
+separate workspace runtime before publishing a committed thread. GUI routes and
+sidebar controls use that service. Memory input augmentation is not connected
+yet; see [Projects](projects.md) for the current boundary.
 
 ```text
 CLI exec / interactive       Local GUI

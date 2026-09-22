@@ -13,6 +13,10 @@ Do not import Orbit into an untrusted renderer. Orbit can read workspace files,
 load credentials, and start MCP processes, so direct renderer access would
 expand the impact of a renderer compromise.
 
+Project-enabled hosts group separate conversations through core catalog APIs.
+See [Projects](projects.md) for navigation, archive, movement, runtime resolution
+and the unchanged CLI scope.
+
 ## Application service
 
 `OrbitApplicationService` is the recommended boundary for a complete GUI. It

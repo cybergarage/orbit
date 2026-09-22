@@ -11,6 +11,8 @@ import type {DiagnosticEvent, LogRecord, OrbitApplicationService} from '../../co
 
 import {ExecutionRequestError} from '../../core/execution/run.js'
 import {DiagnosticCapture, InvalidInputError} from '../../core/index.js'
+import {ProjectStoreError} from '../../core/projects/types.js'
+import {projectRoutes} from './project-routes.js'
 
 export interface GuiServerOptions {
   clientBundle?: string
@@ -69,6 +71,7 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
   })
 
   app.use('/api', requireToken(token))
+  app.use('/api', projectRoutes(options.service))
   app.get('/api/runtime', (_request, response) => response.json(options.service.runtime))
   app.get('/api/logs/health', (_request, response) => response.json(options.service.getLogHealth()))
   app.get('/api/preferences', (_request, response) => response.json(options.service.getPreferences()))
@@ -108,7 +111,12 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
     const abort = () => controller.abort()
     response.once('close', abort)
     try {
-      response.json(await options.service.listSkills(controller.signal))
+      response.json(
+        await options.service.listSkills(
+          controller.signal,
+          z.string().max(160).optional().parse(request.query.threadId),
+        ),
+      )
     } finally {
       response.off('close', abort)
     }
@@ -173,9 +181,17 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
       .status(
         error instanceof z.ZodError
           ? 400
-          : error instanceof ExecutionRequestError || error instanceof InvalidInputError
-            ? 409
-            : 500,
+          : error instanceof ProjectStoreError
+            ? error.code === 'missing'
+              ? 404
+              : error.code === 'invalid'
+                ? 400
+                : ['archived', 'busy', 'conflict'].includes(error.code)
+                  ? 409
+                  : 500
+            : error instanceof ExecutionRequestError || error instanceof InvalidInputError
+              ? 409
+              : 500,
       )
       .json({error: message})
   }) satisfies ErrorRequestHandler)
@@ -319,12 +335,21 @@ const GUI_STYLES = `
 :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#0b0d10; color:#e8e9eb; }
 * { box-sizing:border-box; }
 body { margin:0; min-width:860px; min-height:100vh; overflow:hidden; }
-button, textarea, select { font:inherit; }
+button, textarea, select, input { font:inherit; }
 button { color:inherit; cursor:pointer; }
 .app { display:grid; grid-template-columns:260px minmax(420px,1fr) minmax(320px,38vw); height:100vh; background:#111419; }
 .app.debug-hidden { grid-template-columns:260px minmax(420px,1fr); }
 .pane { min-width:0; min-height:0; border-right:1px solid #292d35; }
-.sidebar { display:flex; flex-direction:column; background:#15181e; padding:14px 10px; }
+.sidebar { display:flex; flex-direction:column; background:#15181e; padding:14px 10px; overflow:auto; }
+.project-controls { display:grid; gap:8px; margin-bottom:12px; font-size:12px; }
+.project-controls label { display:block; color:#aeb7c6; }
+.project-controls input:not([type=checkbox]), .project-controls select, .project-move select { display:block; width:100%; margin-top:5px; border:1px solid #414958; border-radius:6px; background:#20242d; color:#e8e9eb; padding:7px; }
+.project-controls button, .project-move button { border:1px solid #414958; border-radius:6px; background:#252a34; padding:6px 8px; margin:7px 4px 0 0; }
+.project-controls details { border-top:1px solid #292d35; padding-top:8px; }
+.project-controls details label { margin-top:9px; }
+.project-move { padding:8px; font-size:12px; color:#aeb7c6; }
+.project-move p { line-height:1.5; }
+button:disabled { opacity:.5; cursor:default; }
 .brand { display:flex; align-items:center; gap:10px; padding:4px 8px 15px; font-weight:700; letter-spacing:.04em; }
 .brand-mark { display:grid; place-items:center; width:28px; height:28px; border-radius:9px; background:linear-gradient(145deg,#87d7ff,#7c6cff); color:#071018; }
 .primary { border:1px solid #414958; border-radius:9px; background:#252a34; padding:10px 12px; text-align:left; }

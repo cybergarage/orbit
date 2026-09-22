@@ -93,6 +93,7 @@ const mutationSchema = z.discriminatedUnion('kind', [
       pairId: uuid,
       projectId: uuid.nullable(),
       sessionId,
+      sourceProjectId: uuid.nullable().optional(),
       unavailable: z.boolean(),
     })
     .strict(),
@@ -121,7 +122,9 @@ const limit = z.number().int().min(1).max(200)
 const querySchema = z.discriminatedUnion('kind', [
   z.object({id: uuid, kind: z.literal('project')}).strict(),
   z.object({after: uuid.optional(), archived: z.boolean().optional(), kind: z.literal('projects'), limit}).strict(),
-  z.object({kind: z.literal('membership'), pairId: uuid, sessionId}).strict(),
+  z
+    .object({kind: z.literal('membership'), pairId: uuid, sessionId, sourceProjectId: uuid.nullable().optional()})
+    .strict(),
   z
     .object({
       after: sessionId.optional(),
@@ -390,10 +393,14 @@ export class CatalogEngine {
   }
 
   private membership(m: Omit<Extract<ProjectMutation, {kind: 'membership'}>, 'kind'>, now: string): ProjectMembership {
-    if (m.projectId) this.project(m.projectId, true)
+    if (m.projectId) this.project(m.projectId, !m.unavailable)
     const key = membershipKey(m.pairId, m.sessionId)
     const prior = this.backend.get('memberships', key)
-    if ((prior?.revision ?? 0) !== m.expectedRevision) conflict()
+    if (
+      (prior?.revision ?? 0) !== m.expectedRevision ||
+      (m.sourceProjectId !== undefined && (prior?.projectId ?? null) !== m.sourceProjectId)
+    )
+      conflict()
     if (prior?.projectId) {
       this.bumpMemory(prior.projectId)
       if (prior.projectId !== m.projectId || m.unavailable) {

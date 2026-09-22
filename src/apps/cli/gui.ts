@@ -2,10 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {Command, Flags} from '@oclif/core'
+import path from 'node:path'
 import process from 'node:process'
 
-import {type AgentOptions, resolveWorkspaceAgentOptions} from '../../core/chat.js'
-import {OrbitApplicationService} from '../../core/index.js'
+import {type AgentOptions, resolveAgentOptions, resolveWorkspaceAgentOptions} from '../../core/chat.js'
+import {loadSystemContexts} from '../../core/context.js'
+import {
+  loadWorkspaceSettingsWithSources,
+  Message,
+  MessageType,
+  OrbitApplicationService,
+  Role,
+  sessionsDir,
+  SqliteProjectStore,
+} from '../../core/index.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
 import {startGuiServer} from '../gui/server.js'
 import {productSkillCatalog} from '../skill-catalog.js'
@@ -13,6 +23,7 @@ import {productSkillCatalog} from '../skill-catalog.js'
 export async function runGuiCommand(options: AgentOptions & {port?: number; version?: string}): Promise<void> {
   const cwd = process.cwd()
   const resolved = await resolveWorkspaceAgentOptions(options, cwd)
+  const projectStore = await SqliteProjectStore.open({file: path.join(path.dirname(sessionsDir()), 'projects.sqlite')})
   const service = await OrbitApplicationService.create({
     cwd,
     execution: {
@@ -21,10 +32,46 @@ export async function runGuiCommand(options: AgentOptions & {port?: number; vers
     },
     logLevel: resolved.debug ? 'debug' : 'info',
     model: resolved.model,
+    projectStore,
     provider: resolved.provider,
+    async resolveProjectRuntime(directory) {
+      const loaded = await loadWorkspaceSettingsWithSources(directory)
+      const projectResolved = resolveAgentOptions(
+        {
+          ...options,
+          model:
+            options.model ??
+            loaded.settings.model ??
+            (loaded.settings.provider && loaded.settings.provider !== resolved.provider ? undefined : resolved.model),
+          provider: options.provider ?? loaded.settings.provider ?? resolved.provider,
+        },
+        loaded.settings,
+      )
+      const contexts = await loadSystemContexts(directory)
+      const content = contexts.map((item) => item.content).join('\n\n')
+      return {
+        contextPolicy: projectResolved.settings.contextPolicy,
+        cwd: directory,
+        execution: {
+          journalLevel: projectResolved.journalLevel,
+          policy: {
+            generation: 'product-v1',
+            profile: projectResolved.executionPolicy ?? 'workspace-confirm',
+            roots: [directory],
+          },
+        },
+        messages: content ? [new Message(MessageType.Session, {content, role: Role.System})] : [],
+        model: {name: projectResolved.model, provider: projectResolved.provider},
+        settings: projectResolved.settings,
+        skillCatalog: await productSkillCatalog(directory, options.skillRoots),
+      }
+    },
     settings: resolved.settings,
     skillCatalog: await productSkillCatalog(cwd, options.skillRoots),
     version: options.version,
+  }).catch(async (error: unknown) => {
+    await projectStore.close()
+    throw error
   })
   const server = await startGuiServer({port: options.port, service}).catch(async (error: unknown) => {
     await service.close()

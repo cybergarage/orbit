@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 export {MemoryProjectStore} from './memory-store.js'
+export {ProjectService} from './service.js'
+export type {ProjectSessionHost} from './service.js'
 export {SqliteProjectStore} from './sqlite-store.js'
 export {ProjectStoreError} from './types.js'
 export type {

@@ -29,8 +29,8 @@ transcript v2; see [Input budgets and compaction](../context-compaction.md).
 
 A durable identity organizing separate Sessions, independent of a directory.
 Membership groups conversations without concatenating their histories or granting
-tool permissions. The current implementation supplies the catalog storage layer;
-application and GUI coordination remain pending. See [Projects](../projects.md).
+tool permissions. Core coordinates the catalog with registered session ownership,
+and the GUI provides Project navigation. See [Projects](../projects.md).
 
 ### Project memory
 

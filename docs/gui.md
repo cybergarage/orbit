@@ -9,6 +9,10 @@ focuses on three areas:
   cancellation;
 - an optional log pane scoped to the selected session.
 
+Project-enabled hosts group separate conversations through core catalog APIs.
+See [Projects](projects.md) for navigation, archive, movement, runtime resolution
+and the unchanged CLI scope.
+
 ## Start the GUI
 
 Build Orbit and start the compiled command:

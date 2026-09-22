@@ -13,6 +13,7 @@ import type {Logger, LogLevel} from './logger/index.js'
 import type {LogPage, LogQuery, LogRecord, LogStoreHealth, SessionLoggerFactory, SessionLogStore} from './logs/index.js'
 import type {ProviderName} from './models/index.js'
 import type {CompiledProcessorGraph, GraphJSON, GraphValue} from './processor/index.js'
+import type {ProjectStore} from './projects/types.js'
 import type {WorkflowExpectation} from './selection/binding.js'
 import type {WorkflowAuthority} from './selection/service.js'
 import type {WorkflowStore} from './selection/store.js'
@@ -43,13 +44,17 @@ import {createCompositeLogger} from './logger/index.js'
 import {FileSessionLogStore, LogEventType, LogOutcome, StoreSessionLoggerFactory} from './logs/index.js'
 import {Message, MessageType, Role} from './models/index.js'
 import {inspectGraphRun} from './processor/graph-inspection.js'
+import {ProjectService} from './projects/service.js'
+import {ProjectStoreError} from './projects/types.js'
 import {WorkflowSelectionService} from './selection/service.js'
 import {parseSessionFile} from './session/codec.js'
 import {SessionRepository as Repository, SessionDeletionService} from './session/index.js'
 import {loadWorkspaceSettingsWithSources} from './settings.js'
 import {SkillCatalog} from './skills/index.js'
+import {State} from './state.js'
 import {serializeMessage, ThreadEventType, ThreadManager} from './thread.js'
 import {ToolProfile} from './tools/index.js'
+import {LocalWorkspaceLocator} from './workspace.js'
 
 const guiSlashCommandHelpItems = [
   {command: '/help', description: 'Show GUI slash commands'},
@@ -105,8 +110,10 @@ export interface OrbitApplicationServiceOptions {
   logLevel?: LogLevel
   logStore?: SessionLogStore
   model?: string
+  projectStore?: ProjectStore
   provider?: ProviderName
   repository?: SessionRepository
+  resolveProjectRuntime?: (cwd: string) => Promise<CoreAgentOptions>
   selectionProjector?: CoreAgentOptions['selectionProjector']
   settings?: WorkspaceSettings
   settingsSources?: WorkspaceSettingsSource[]
@@ -121,6 +128,7 @@ export type StartApplicationRunResult =
 export class OrbitApplicationService {
   readonly diagnostics: DiagnosticEventBus
   readonly logs: SessionLogStore
+  readonly projects?: ProjectService
   readonly repository: SessionRepository
   readonly runtime: RuntimeSnapshot
   readonly skillCatalog?: SkillCatalog
@@ -132,11 +140,14 @@ export class OrbitApplicationService {
   private readonly loggerFactory: SessionLoggerFactory
   private readonly ownsLogs: boolean
   private preferences: GuiPreferences
+  private readonly projectCreations = new Map<string, {projectId: string; promise: Promise<ThreadSnapshot>}>()
+  private readonly resolveProjectRuntime: (cwd: string) => Promise<CoreAgentOptions>
   private readonly runListeners = new Set<(snapshot: RunSnapshot) => void>()
   private readonly selectedScopes = new Map<string, string>()
   private readonly settings: WorkspaceSettings
   private readonly systemPrompt?: string
   private readonly threadManager: ThreadManager
+  private readonly threadRuntime = new Map<string, CoreAgentOptions>()
 
   constructor(
     options: OrbitApplicationServiceOptions &
@@ -195,12 +206,12 @@ export class OrbitApplicationService {
         ((agentOptions) =>
           new Agent({
             ...agentOptions,
-            contextPolicy,
+            contextPolicy: agentOptions.contextPolicy ?? agentOptions.settings?.contextPolicy ?? {mode: 'disabled'},
             defaultToolProfile: ToolProfile.Coding,
             diagnostics: this.diagnostics,
-            execution: {...options.execution, onApproval() {}, responderScope: 'local-gui'},
+            execution: {...options.execution, ...agentOptions.execution, onApproval() {}, responderScope: 'local-gui'},
             selectionProjector: options.selectionProjector,
-            skillCatalog: this.skillCatalog,
+            skillCatalog: agentOptions.skillCatalog,
           })),
       loggerFactory: this.loggerFactory,
       onEvent: (event) => this.handleThreadEvent(event),
@@ -215,6 +226,51 @@ export class OrbitApplicationService {
       },
       sessionRepository: this.repository,
     })
+    this.resolveProjectRuntime =
+      options.resolveProjectRuntime ??
+      (async (cwd) => {
+        const loaded = await loadWorkspaceSettingsWithSources(cwd)
+        const contexts = await loadSystemContexts(cwd)
+        const resolved = resolveAgentOptions(
+          {
+            model:
+              loaded.settings.model ??
+              (loaded.settings.provider && loaded.settings.provider !== this.runtime.provider
+                ? undefined
+                : this.runtime.model),
+            provider: loaded.settings.provider ?? this.runtime.provider,
+          },
+          loaded.settings,
+        )
+        const workspace = (await new LocalWorkspaceLocator({start: cwd}).directories()).at(-1)
+        const content = contexts.map((item) => item.content).join('\n\n')
+        return {
+          contextPolicy: resolved.settings.contextPolicy,
+          cwd,
+          diagnostics: this.diagnostics,
+          execution: options.execution,
+          messages: content ? [new Message(MessageType.Session, {content, role: Role.System})] : [],
+          model: {name: resolved.model, provider: resolved.provider},
+          settings: resolved.settings,
+          skillCatalog: workspace
+            ? new SkillCatalog([{directory: path.join(workspace, '.orbit', 'skills'), id: 'workspace'}])
+            : undefined,
+        }
+      })
+    if (options.projectStore)
+      this.projects = new ProjectService(
+        options.projectStore,
+        this.repository,
+        {
+          closeThread: async (id) => {
+            await this.threadManager.closeThread(id)
+            await this.threadRuntime.get(id)?.skillCatalog?.settle()
+            this.threadRuntime.delete(id)
+          },
+          getThread: (id) => this.threadManager.getThread(id),
+        },
+        options.cwd,
+      )
     this.deletionService = new SessionDeletionService(
       this.repository,
       this.logs,
@@ -246,13 +302,34 @@ export class OrbitApplicationService {
 
   close(): Promise<void> {
     this.closePromise ??= (async () => {
+      await Promise.allSettled([...this.projectCreations.values()].map((item) => item.promise))
       await this.threadManager.close()
+      await Promise.all([...this.threadRuntime.values()].map((runtime) => runtime.skillCatalog?.settle()))
+      await this.projects?.store.close()
       await this.skillCatalog?.settle()
       this.displayMessages.clear()
       this.detachDiagnosticLogger()
       if (this.ownsLogs) await this.logs.close()
     })()
     return this.closePromise
+  }
+
+  async createProjectThread(projectId: string, options: {operationId: string}): Promise<ThreadSnapshot> {
+    if (this.closePromise) throw new Error('Application is closing')
+    if (!this.projects) throw new ProjectStoreError('missing', 'Project catalog is not configured')
+    const pending = this.projectCreations.get(options.operationId)
+    if (pending) {
+      if (pending.projectId !== projectId) throw new ProjectStoreError('conflict', 'Project creation operation changed')
+      return pending.promise
+    }
+
+    const promise = this.createOwnedProjectThread(projectId, options.operationId)
+    this.projectCreations.set(options.operationId, {projectId, promise})
+    try {
+      return await promise
+    } finally {
+      this.projectCreations.delete(options.operationId)
+    }
   }
 
   createThread(options: {formatVersion?: 1 | 2 | 3} = {}): ThreadSnapshot {
@@ -339,7 +416,9 @@ export class OrbitApplicationService {
   }
 
   async deleteSession(sessionId: string): Promise<boolean> {
+    await this.projects?.markDeleting(sessionId)
     const deleted = await this.deletionService.delete(sessionId)
+    await this.projects?.finishDeletion(sessionId)
     if (deleted === undefined) return false
 
     this.displayMessages.delete(sessionId)
@@ -386,10 +465,9 @@ export class OrbitApplicationService {
     return this.repository.listPage(options)
   }
 
-  async listSkills(signal?: AbortSignal) {
-    return this.skillCatalog
-      ? this.skillCatalog.list(signal)
-      : {candidates: [], complete: true, issues: ['No Skill catalog configured']}
+  async listSkills(signal?: AbortSignal, threadId?: string) {
+    const catalog = threadId ? this.catalogForThread(threadId) : this.skillCatalog
+    return catalog ? catalog.list(signal) : {candidates: [], complete: true, issues: ['No Skill catalog configured']}
   }
 
   previewSelectedGraph(
@@ -472,13 +550,20 @@ export class OrbitApplicationService {
 
     const summary = await this.findSession(sessionId)
     if (summary === undefined) throw new Error(`Unknown session: ${sessionId}`)
-    const thread = this.threadManager.resumeThread(summary.file, {
-      agent: {
-        diagnostics: this.diagnostics,
-        settings: this.settings,
-        skillCatalog: this.skillCatalog,
-      },
-    })
+    const runtime = this.projects
+      ? await this.resolveProjectRuntime(summary.cwd)
+      : {settings: this.settings, skillCatalog: this.skillCatalog}
+    let thread: ThreadSnapshot
+    try {
+      thread = this.threadManager.resumeThread(summary.file, {
+        agent: {...runtime, diagnostics: this.diagnostics, messages: undefined, model: undefined},
+      })
+      if (this.projects) this.threadRuntime.set(thread.id, runtime)
+    } catch (error) {
+      if (this.projects) await runtime.skillCatalog?.settle()
+      throw error
+    }
+
     const event = this.diagnostics.emit({
       data: {cwd: summary.cwd, model: summary.model, provider: summary.provider},
       level: 'info',
@@ -563,9 +648,10 @@ export class OrbitApplicationService {
       return {kind: 'command', response, threadId}
     }
 
+    await this.projects?.requireActive(threadId)
     const handle = this.threadManager.startRun(threadId, content, {
       requestId,
-      skillCatalogRevision: this.skillCatalog?.configuration,
+      skillCatalogRevision: this.catalogForThread(threadId)?.configuration,
       skills,
     })
     handle.completion.catch(() => {})
@@ -629,15 +715,69 @@ export class OrbitApplicationService {
     ])
   }
 
+  private catalogForThread(threadId: string): SkillCatalog | undefined {
+    return this.threadRuntime.has(threadId) ? this.threadRuntime.get(threadId)?.skillCatalog : this.skillCatalog
+  }
+
+  private async createOwnedProjectThread(projectId: string, operationId: string): Promise<ThreadSnapshot> {
+    const loaded = this.getThread(operationId)
+    if (loaded) {
+      const reservation = await this.projects!.store.query({id: operationId, kind: 'reservation'})
+      if (reservation?.projectId !== projectId || reservation.state !== 'committed')
+        throw new ProjectStoreError('conflict', 'Project creation operation changed')
+      return loaded
+    }
+
+    let runtime: CoreAgentOptions | undefined
+    const session = await this.projects!.createSession(projectId, operationId, async (cwd) => {
+      runtime = await this.resolveProjectRuntime(cwd)
+      return {
+        formatVersion:
+          (runtime.interruptionPolicy ?? runtime.settings?.interruptionPolicy)?.mode === 'verified-not-dispatched'
+            ? 3
+            : runtime.skillCatalog || runtime.contextPolicy?.mode === 'budgeted'
+              ? 2
+              : 1,
+        model: runtime.model?.name,
+        originator: 'orbit-project',
+        provider: runtime.model?.provider,
+        systemPrompt: runtime.messages?.map((message) => message.content).join('\n\n'),
+      }
+    }).catch(async (error: unknown) => {
+      await runtime?.skillCatalog?.settle()
+      throw error
+    })
+    try {
+      const metadata = session.getMetadata()
+      const agent = {
+        ...runtime!,
+        cwd: metadata.cwd,
+        diagnostics: this.diagnostics,
+        messages: undefined,
+        model: {name: metadata.model, provider: metadata.provider},
+        state: new State(session),
+      }
+      const thread = this.threadManager.createThread({agent, id: session.getId()})
+      this.threadRuntime.set(thread.id, agent)
+      this.diagnostics.emit({data: {projectId, revision: 1}, sessionId: thread.id, type: 'project.changed'})
+      return thread
+    } catch (error) {
+      await session.close()
+      await runtime?.skillCatalog?.settle()
+      throw error
+    }
+  }
+
   private async dispatchSelectedGraph(
     threadId: string,
     graph: CompiledProcessorGraph,
     input: GraphJSON,
     options: ThreadRunOptions,
   ) {
+    await this.projects?.requireActive(threadId)
     const handle = this.threadManager.startGraphRun(threadId, graph, input, {
       ...options,
-      skillCatalogRevision: this.skillCatalog?.configuration,
+      skillCatalogRevision: this.catalogForThread(threadId)?.configuration,
     })
     await handle.admitted
     return handle
