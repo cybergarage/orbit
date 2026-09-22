@@ -2,9 +2,11 @@
 status: accepted
 proposed-date: 2026-09-22
 decision-date: 2026-09-22
-implementation-status: in-progress
+implementation-status: partial
 implementation-completed-date: null
-implementation-commits: []
+implementation-commits:
+  - 649283b8f618cf3200ea3b943729b5f69242f8d3
+  - 4070b5c70a7db96f1baa08152b24ca6e9b50f3c0
 superseded-by: []
 ---
 
@@ -18,12 +20,12 @@ memory inspectable, editable, bounded and attributable through core APIs and GUI
 
 ## Decision
 
-Propose explicitly curated, Project-local memory, dependent on the
+Adopt explicitly curated, Project-local memory, dependent on the
 [Project catalog](2026-09-22-project-catalog-and-session-membership.md).
 Core stores entries and prepares a fixed memory snapshot for one managed Run.
 GUI users select/save/edit/retire entries. No automatic extraction, embeddings,
 background consolidation, global user memory or CLI memory management is included.
-This is a proposal, not authority to implement or an accepted memory policy.
+The author accepted this policy on 2026-09-22; qualification status is recorded below.
 
 ### Entries and authority
 
@@ -46,7 +48,7 @@ initial GUI does not add a competing project-system-prompt editor. Model output
 alone cannot create a memory entry; the initial core write surface belongs to
 the host user interaction, not a model-visible write tool.
 
-Proposed limits are 128 active entries per Project, 8 KiB UTF-8 per body, 256
+Adopted limits are 128 active entries per Project, 8 KiB UTF-8 per body, 256
 characters per title, and 1 MiB total active bodies per Project. These are bounded
 product defaults, not measured optimal values. Reject excess writes without
 partial mutation. Snapshot budgets below are separate model-input constraints.
@@ -233,7 +235,7 @@ Inspected on 2026-09-22; source links and test-reading limits are in the researc
 
 ## Considered Options
 
-1. **Selected proposal: curated entries and Run snapshots.** Small explicit
+1. **Selected option: curated entries and Run snapshots.** Small explicit
    scope with deterministic mechanics and observable selection.
 2. **Append memory as ordinary history on every turn.** Simpler insertion but
    duplicates stale notes and conflates evidence with conversational events.
@@ -259,6 +261,60 @@ completion evidence will follow actual implementation commits. The original
 proposal wording below records the design adopted by this decision.
 
 ### Implementation evidence
+
+### Implemented and verified — 2026-09-22
+
+The commits in metadata implement worker-owned SQLite storage, transactional
+catalog mutations, Project/session creation coordination, per-thread workspace
+resolution, GUI navigation and curated memory. `ProjectMemoryService` validates
+registered sources and freezes bounded user-role input; journal v3 records the
+exact context before managed effects. GUI exposes human notes, linked excerpts,
+edits, retirement, selection, preview and recorded snapshots. CLI workflows do
+not opt into catalog access or memory preparation. Maintained behavior is in
+[Projects](../projects.md), GUI/integration, architecture and context-compaction
+guides and the glossary.
+
+On macOS arm64 / Node 26.9, final validation passed: headers, build, all 867 tests,
+and `test:package` in an independent consumer including the native SQLite probe.
+Focused tests cover deterministic whole-entry selection, explicit overflow,
+source change/deletion, immutable provenance, mid-Run edits, no A-to-B leakage,
+exact replay, mixed journal versions, missing/duplicate/tampered context,
+acknowledgement failure without dispatch, tool iteration, two Agent Graph stages,
+transcript v1/v2/v3 paths and compaction excluding memory source text. Existing
+verified-interruption tests remain passing. REST checks include capability,
+origin, revisions, Project scope, excerpt path rejection and stale previews.
+
+The follow-up fix reconciles completed CLI deletion under writer ownership,
+refuses corrupt bounded deletion evidence and restores per-thread settings when
+previewing after source inspection closed an idle thread. Regression tests cover
+those paths.
+
+An isolated GUI with temporary storage and a deterministic model was operated
+through Project creation, memory creation/preview/run, excerpt saving, retirement,
+historical snapshot inspection and conversation reopening. These checks establish
+mechanics, not model recall quality. No production credentials or conversations
+were used.
+
+### Remaining qualification
+
+Implementation status remains **partial**, with no completion date. Native
+installation/package consumption has not been qualified across the full supported
+Node/OS matrix. The acceptance-time requirement to qualify that matrix before
+adding the dependency was not completed; this record does not retroactively
+claim it passed or raise the Node engine floor. The tested host successfully
+loaded the pinned binding and SQLite 3.53.2. Windows directory durability and
+physical power-loss behavior remain unqualified.
+
+The complete creation/deletion interruption matrix, separate-process stress,
+and combined Project-memory plus interrupted-context fault injection remain
+follow-up qualification. Project listing reconciles completed CLI deletion markers
+under writer ownership and retires derived memory; unfinished deletion remains
+unavailable and corrupt evidence is refused. External removal without an
+acknowledged deletion marker remains visible as unavailable rather than being
+silently removed. These qualification limits prevent marking the complete accepted scope
+finished even though core/GUI feature paths are available.
+
+### Acceptance-time implementation checklist (historical)
 
 Not started at acceptance; both linked ADRs were accepted together. Implement and verify the complete journal-v3 reader/writer compatibility
 matrix and prepared-input binding before enabling memory. Required tests:

@@ -69,7 +69,7 @@ routing contract belongs in an ADR, and its implemented structure appears in
 
 ## Current feature documentation
 
-- [Projects](projects.md): explicit catalogs, registered session membership and GUI navigation.
+- [Projects](projects.md): explicit catalogs, registered session membership, curated memory and GUI navigation.
 
 - [Workflow evaluation](workflow-evaluation.md): trusted plans, read-only evidence inspection, fixed denominators and missing-resource accounting.
 

@@ -2,9 +2,13 @@
 status: accepted
 proposed-date: 2026-09-22
 decision-date: 2026-09-22
-implementation-status: in-progress
+implementation-status: partial
 implementation-completed-date: null
-implementation-commits: []
+implementation-commits:
+  - 105147dab7608a16b38a4cdd84499c1d0d690bd9
+  - 73ffdc5be019f60c1e4ecba225c1dcf241ff2aa4
+  - 649283b8f618cf3200ea3b943729b5f69242f8d3
+  - 4070b5c70a7db96f1baa08152b24ca6e9b50f3c0
 superseded-by: []
 ---
 
@@ -18,10 +22,10 @@ Preserve the CLI's existing single-session workflow and persisted transcripts.
 
 ## Decision
 
-Propose a core-owned Project catalog with explicit session membership and a
+Adopt a core-owned Project catalog with explicit session membership and a
 production SQLite store. The GUI calls the core application service. Project
 selection is application state; it does not change filesystem authorization or
-concatenate conversations. This proposal extends the GUI ADR's original scope;
+concatenate conversations. This decision extends the GUI ADR's original scope;
 it does not supersede that ADR's loopback security or service architecture.
 
 ### Identity and operations
@@ -50,7 +54,7 @@ it does not supersede that ADR's loopback security or service architecture.
   runs finish; new project-owned work is refused until unarchive. Opening past
   transcripts remains possible. Hard project deletion is outside this scope.
 
-Proposed public modules are `src/core/projects/` with `ProjectStore`,
+Public modules are `src/core/projects/` with `ProjectStore`,
 `ProjectService`, and deliberately exported types. Add async
 `createProjectThread(projectId, options)` instead of changing the return type of
 existing synchronous `createThread()`. Keep `createThread()` projectless.
@@ -59,7 +63,7 @@ existing synchronous `createThread()`. Keep `createThread()` projectless.
 
 Use a separate local `projects.sqlite` under the configured Orbit data home,
 with an injectable path for tests/embedders. Schema version 1 contains Projects,
-Memberships and recoverable Operations; the linked Memory proposal adds its own
+Memberships and recoverable Operations; the linked Memory decision adds its own
 versioned tables. Use SQL constraints for UUID identity, unique membership and
 foreign keys. Do not store transcript copies or provider credentials here.
 
@@ -200,7 +204,7 @@ not native binary execution or upstream support commitments.
 
 ## Considered Options
 
-1. **Selected proposal: SQLite behind a core adapter.** Transactions cover
+1. **Selected option: SQLite behind a core adapter.** Transactions cover
    membership and related metadata; explicit native packaging cost.
 2. **Single JSON catalog.** Avoids native dependencies but requires a new
    cross-process lock/recovery implementation and increasingly large rewrites.
@@ -222,6 +226,60 @@ completion evidence will follow actual implementation commits. The original
 proposal wording below records the design adopted by this decision.
 
 ### Implementation evidence
+
+### Implemented and verified — 2026-09-22
+
+The commits in metadata implement worker-owned SQLite storage, transactional
+catalog mutations, Project/session creation coordination, per-thread workspace
+resolution, GUI navigation and curated memory. `ProjectMemoryService` validates
+registered sources and freezes bounded user-role input; journal v3 records the
+exact context before managed effects. GUI exposes human notes, linked excerpts,
+edits, retirement, selection, preview and recorded snapshots. CLI workflows do
+not opt into catalog access or memory preparation. Maintained behavior is in
+[Projects](../projects.md), GUI/integration, architecture and context-compaction
+guides and the glossary.
+
+On macOS arm64 / Node 26.9, final validation passed: headers, build, all 867 tests,
+and `test:package` in an independent consumer including the native SQLite probe.
+Focused tests cover deterministic whole-entry selection, explicit overflow,
+source change/deletion, immutable provenance, mid-Run edits, no A-to-B leakage,
+exact replay, mixed journal versions, missing/duplicate/tampered context,
+acknowledgement failure without dispatch, tool iteration, two Agent Graph stages,
+transcript v1/v2/v3 paths and compaction excluding memory source text. Existing
+verified-interruption tests remain passing. REST checks include capability,
+origin, revisions, Project scope, excerpt path rejection and stale previews.
+
+The follow-up fix reconciles completed CLI deletion under writer ownership,
+refuses corrupt bounded deletion evidence and restores per-thread settings when
+previewing after source inspection closed an idle thread. Regression tests cover
+those paths.
+
+An isolated GUI with temporary storage and a deterministic model was operated
+through Project creation, memory creation/preview/run, excerpt saving, retirement,
+historical snapshot inspection and conversation reopening. These checks establish
+mechanics, not model recall quality. No production credentials or conversations
+were used.
+
+### Remaining qualification
+
+Implementation status remains **partial**, with no completion date. Native
+installation/package consumption has not been qualified across the full supported
+Node/OS matrix. The acceptance-time requirement to qualify that matrix before
+adding the dependency was not completed; this record does not retroactively
+claim it passed or raise the Node engine floor. The tested host successfully
+loaded the pinned binding and SQLite 3.53.2. Windows directory durability and
+physical power-loss behavior remain unqualified.
+
+The complete creation/deletion interruption matrix, separate-process stress,
+and combined Project-memory plus interrupted-context fault injection remain
+follow-up qualification. Project listing reconciles completed CLI deletion markers
+under writer ownership and retires derived memory; unfinished deletion remains
+unavailable and corrupt evidence is refused. External removal without an
+acknowledged deletion marker remains visible as unavailable rather than being
+silently removed. These qualification limits prevent marking the complete accepted scope
+finished even though core/GUI feature paths are available.
+
+### Acceptance-time implementation checklist (historical)
 
 Not started at acceptance. Implement the accepted scope. Before adding the dependency,
 qualify 12.11.1 installation and package consumption on the supported Node/OS
