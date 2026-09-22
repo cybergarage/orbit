@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-22
-decision-date: null
+decision-date: 2026-09-22
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -211,7 +211,19 @@ not native binary execution or upstream support commitments.
 
 ## Implementation and Confirmation
 
-Not started. Implement only after acceptance. Before adding the dependency,
+### Author acceptance — 2026-09-22
+
+The author explicitly accepted both linked proposals and authorized implementation,
+validation and the book chapter, with incremental commits. Acceptance includes
+the Node 20-compatible database candidate and qualification conditions, recoverable
+Project/session coordination, curated memory, journal-v3 compatibility work and
+unchanged CLI feature scope. Implementation is not started at this acceptance;
+completion evidence will follow actual implementation commits. The original
+proposal wording below records the design adopted by this decision.
+
+### Implementation evidence
+
+Not started at acceptance. Implement the accepted scope. Before adding the dependency,
 qualify 12.11.1 installation and package consumption on the supported Node/OS
 matrix, inspect its SQLite version and current upstream fixes, and verify
 worker shutdown. A failed qualification requires revising the proposal, not an

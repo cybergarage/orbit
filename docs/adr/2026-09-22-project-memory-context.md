@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-22
-decision-date: null
+decision-date: 2026-09-22
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -248,7 +248,19 @@ Inspected on 2026-09-22; source links and test-reading limits are in the researc
 
 ## Implementation and Confirmation
 
-Not started; depends on acceptance of both ADRs. Implement and verify the complete journal-v3 reader/writer compatibility
+### Author acceptance — 2026-09-22
+
+The author explicitly accepted both linked proposals and authorized implementation,
+validation and the book chapter, with incremental commits. Acceptance includes
+the Node 20-compatible database candidate and qualification conditions, recoverable
+Project/session coordination, curated memory, journal-v3 compatibility work and
+unchanged CLI feature scope. Implementation is not started at this acceptance;
+completion evidence will follow actual implementation commits. The original
+proposal wording below records the design adopted by this decision.
+
+### Implementation evidence
+
+Not started at acceptance; both linked ADRs were accepted together. Implement and verify the complete journal-v3 reader/writer compatibility
 matrix and prepared-input binding before enabling memory. Required tests:
 no A-to-B leakage; same-cwd Projects; snapshot determinism; whole-entry budgets;
 explicit selection overflow; source changed/deleted/moved; stale preparation;
