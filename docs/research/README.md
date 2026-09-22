@@ -117,6 +117,7 @@ at pinned revisions by default. If either is not relevant, record why.
 
 | Investigated | Status     | Topic                                                                                                                                   |
 | ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-22   | current    | [Projects and Cross-session Memory](2026-09-22-projects-and-cross-session-memory.md)                                                    |
 | 2026-09-14   | current    | [Cancelled Tool Calls and Subsequent Model Context](2026-09-14-cancelled-tool-history-and-context.md)                                   |
 | 2026-09-13   | current    | [Human-selected Workflow Candidates](2026-09-13-human-selected-workflow-candidates.md)                                                  |
 | 2026-09-12   | current    | [Workflow Evaluation Evidence and Comparable Trials](2026-09-12-workflow-evaluation-evidence.md)                                        |
