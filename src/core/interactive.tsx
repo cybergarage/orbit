@@ -380,6 +380,15 @@ function handleDebugCommand(state: InteractiveState, input: string): SlashComman
   }
 }
 
+/**
+ * Normalizes typed or pasted interactive input before it is appended to the prompt buffer.
+ * Terminals send pasted line breaks as carriage returns, which would move the cursor to the
+ * start of the line when rendered and overwrite earlier text.
+ */
+export function normalizeInteractiveInput(value: string): string {
+  return value.replaceAll(/\r\n?/gu, '\n')
+}
+
 export function formatProviderModel(provider: ProviderName, model: string): string {
   return `${provider}:${model}`
 }
@@ -663,7 +672,8 @@ function InteractiveApp({
     }
 
     if (key.escape) return
-    setState((currentState) => ({...currentState, input: currentState.input + value}))
+    const normalized = normalizeInteractiveInput(value)
+    setState((currentState) => ({...currentState, input: currentState.input + normalized}))
   })
 
   return (

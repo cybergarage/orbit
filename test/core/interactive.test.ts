@@ -13,6 +13,7 @@ import {
   handleInventoryCommand,
   handleModelCommand,
   handleSlashCommand,
+  normalizeInteractiveInput,
   slashCommandHelpMessage,
   submitInteractiveInput,
 } from '../../src/core/interactive.js'
@@ -473,5 +474,19 @@ describe('interactive helpers', () => {
     ])
     await resumed.close()
     await fs.rm(root, {force: true, recursive: true})
+  })
+
+  describe('normalizeInteractiveInput', () => {
+    it('converts pasted carriage returns to line feeds', () => {
+      expect(normalizeInteractiveInput('first line\rsecond line\rthird line')).to.equal('first line\nsecond line\nthird line')
+    })
+
+    it('converts CRLF line breaks to single line feeds', () => {
+      expect(normalizeInteractiveInput('first line\r\nsecond line')).to.equal('first line\nsecond line')
+    })
+
+    it('leaves single-line input unchanged', () => {
+      expect(normalizeInteractiveInput('hello')).to.equal('hello')
+    })
   })
 })
