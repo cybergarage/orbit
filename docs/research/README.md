@@ -117,6 +117,7 @@ at pinned revisions by default. If either is not relevant, record why.
 
 | Investigated | Status     | Topic                                                                                                                                   |
 | ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-24   | current    | [Agent Plugins Compatibility](2026-09-24-agent-plugins-compatibility.md)                                                                |
 | 2026-09-24   | current    | [Memory Retrieval and Consolidation](2026-09-24-memory-retrieval-and-consolidation.md)                                                  |
 | 2026-09-22   | current    | [Projects and Cross-session Memory](2026-09-22-projects-and-cross-session-memory.md)                                                    |
 | 2026-09-14   | current    | [Cancelled Tool Calls and Subsequent Model Context](2026-09-14-cancelled-tool-history-and-context.md)                                   |
