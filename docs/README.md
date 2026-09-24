@@ -19,6 +19,8 @@ as a product contract.
 - Read the feature guides for current user-visible behavior, including
   [Input budgets and compaction](context-compaction.md).
 
+- Load portable local packages with [Agent Plugins](plugins.md).
+
 ## Document types
 
 | Document type        | Location                                                            | Owns                                                                                  | Does not own                                                     |

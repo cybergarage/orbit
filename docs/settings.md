@@ -222,3 +222,10 @@ use this same setting. Programmatic Agent/Service options can override it.
 ### Interrupted tool context
 
 `interruptionPolicy` accepts exactly `{"mode":"disabled"}` (default) or `{"mode":"verified-not-dispatched","revision":1}`. It is independent of `contextPolicy`, included in enabled request/selection identity, and inherited by Agent, Thread, CLI/Ink and GUI service preparation. Saved data is never implicitly migrated. See [the feature guide](interrupted-context.md) before enabling it on a shared Session/journal pair.
+
+## Explicit plugin activation
+
+Agent Plugins are selected through product `--plugin` arguments or the library
+`PluginCatalog`, not automatically inherited from workspace settings. Native
+`mcp.servers` remains a separate input. See [Agent Plugins](plugins.md) for instance
+IDs, persistent data, component support and startup behavior.

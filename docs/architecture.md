@@ -6,6 +6,15 @@ that are not implemented belong under [Concepts](concepts/README.md), and the
 rationale for significant choices belongs in
 [Architecture Decision Records](adr/README.md).
 
+## Plugin composition
+
+`src/core/plugins/` inspects explicit local Agent Plugins packages and binds
+Skill roots and stdio server descriptors. `src/apps/plugins.ts` supplies common
+CLI/GUI activation. Agent validates loaded configuration before a Run, composes
+plugin servers with native settings and keeps the existing Skill selection and
+tool execution paths. Startup failure isolation does not bypass the Run's
+unknown-operation barrier. See [Agent Plugins](plugins.md) for the public contract.
+
 ## System overview
 
 Orbit is a TypeScript agent framework with an oclif-based CLI and a loopback-only
@@ -227,10 +236,10 @@ requests. Session v2 records retain exact sources without projecting old bodies
 as new instructions. Journal admission/readiness records contain metadata only.
 ThreadManager compares selections before replay; CLI, Ink and GUI share that
 contract. Product root discovery lives in `src/apps/skill-catalog.ts`.
-Skill catalog metadata includes optional license and compatibility descriptions.
-They are displayed and source-validated in saved snapshots without granting
-permissions or altering model input. Projection v1 remains for two-field sources;
-v2 covers descriptive fields.
+Skill catalogs retain descriptive metadata, portable string-map metadata and
+informational allowed-tools. Versioned projections preserve old validation and
+use v3 for portable fields, empty bodies and plugin path provenance. Plugin
+resource reads remain separate from persisted SKILL.md snapshots.
 See [Explicit Skill selection](skills.md) for APIs, limits and reader migration.
 
 ## Read-only workflow evaluation

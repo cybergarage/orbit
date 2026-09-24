@@ -1,5 +1,7 @@
 # Coding Tools
 
+Portable local packages can contribute stdio MCP servers through the [Agent Plugins loader](plugins.md). Native MCP configuration described below remains supported.
+
 ## Inspecting tools and MCP servers
 
 Use these commands without configuring a model or provider credentials:

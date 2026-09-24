@@ -18,7 +18,7 @@ import {
 } from '../../core/index.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
 import {startGuiServer} from '../gui/server.js'
-import {productSkillCatalog} from '../skill-catalog.js'
+import {productExtensions} from '../plugins.js'
 import {ensureStartupStorage} from '../storage-startup.js'
 
 export async function runGuiCommand(
@@ -68,11 +68,18 @@ export async function runGuiCommand(
         messages: content ? [new Message(MessageType.Session, {content, role: Role.System})] : [],
         model: {name: projectResolved.model, provider: projectResolved.provider},
         settings: projectResolved.settings,
-        skillCatalog: await productSkillCatalog(directory, options.skillRoots),
+        ...(await productExtensions(directory, {
+          ...options,
+          pluginDataDir: options.pluginDataDir ? path.resolve(cwd, options.pluginDataDir) : undefined,
+          plugins: options.plugins?.map((entry) => {
+            const at = entry.indexOf('=')
+            return at < 1 ? entry : `${entry.slice(0, at)}=${path.resolve(cwd, entry.slice(at + 1))}`
+          }),
+        })),
       }
     },
     settings: resolved.settings,
-    skillCatalog: await productSkillCatalog(cwd, options.skillRoots),
+    ...(await productExtensions(cwd, options)),
     version: options.version,
   }).catch(async (error: unknown) => {
     await projectStore.close()

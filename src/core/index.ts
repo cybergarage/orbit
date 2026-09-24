@@ -146,6 +146,14 @@ export {splitSystemPrompt} from './models/prompt.js'
 export type {Provider, ProviderName} from './models/provider.js'
 export {createProvider, getProvider, getProviderNames, isProvider, isProviderName} from './models/provider.js'
 export {getRoles, Role} from './models/role.js'
+export {PLUGIN_MCP_SCHEMA, PLUGIN_SCHEMA, PluginCatalog} from './plugins/index.js'
+export type {
+  LoadedPlugins,
+  PluginDiagnostic,
+  PluginInspection,
+  PluginInstance,
+  PluginManifest,
+} from './plugins/index.js'
 export {inspectGraphRun} from './processor/graph-inspection.js'
 export type {GraphInspection, GraphTranscriptEvidence} from './processor/graph-inspection.js'
 export {CompiledProcessorGraph, compileProcessorGraph, DEFAULT_GRAPH_PROFILE} from './processor/index.js'
@@ -258,9 +266,10 @@ export {
   parseInterruptionPolicy,
   VerifiedContextError,
 } from './session/index.js'
-export type {ContextProjectionEntry, InterruptionPolicy} from './session/index.js'
-export type {TranscriptMigrationInspection} from './session/index.js'
 
+export type {ContextProjectionEntry, InterruptionPolicy} from './session/index.js'
+
+export type {TranscriptMigrationInspection} from './session/index.js'
 export {
   loadWorkspaceSettings,
   loadWorkspaceSettingsSync,
@@ -280,8 +289,8 @@ export type {
   WorkspaceSettingsSource,
 } from './settings.js'
 export * from './skills/index.js'
-
 export {State} from './state.js'
+
 export {serializeMessage, ThreadEventType, ThreadManager, ThreadStatus} from './thread.js'
 export type {
   CreateThreadOptions,
@@ -307,8 +316,8 @@ export type {
 } from './thread.js'
 
 export {GptTokenizer} from './tokenizer/index.js'
-export type {Tokenizer} from './tokenizer/index.js'
 
+export type {Tokenizer} from './tokenizer/index.js'
 export {
   BuiltinToolName,
   createBashTool,
@@ -355,6 +364,6 @@ export type {
   ToolSource,
   WriteToolInput,
 } from './tools/index.js'
-export {LocalWorkspaceLocator} from './workspace.js'
 
+export {LocalWorkspaceLocator} from './workspace.js'
 export type {LocalWorkspaceLocatorOptions, WorkspaceLocator} from './workspace.js'

@@ -113,6 +113,7 @@ export interface OrbitApplicationServiceOptions {
   logLevel?: LogLevel
   logStore?: SessionLogStore
   model?: string
+  plugins?: CoreAgentOptions['plugins']
   projectStore?: ProjectStore
   provider?: ProviderName
   repository?: SessionRepository
@@ -131,6 +132,7 @@ export type StartApplicationRunResult =
 export class OrbitApplicationService {
   readonly diagnostics: DiagnosticEventBus
   readonly logs: SessionLogStore
+  readonly plugins?: CoreAgentOptions['plugins']
   readonly projectMemory?: ProjectMemoryService
   readonly projects?: ProjectService
   readonly repository: SessionRepository
@@ -157,7 +159,8 @@ export class OrbitApplicationService {
     options: OrbitApplicationServiceOptions &
       Required<Pick<OrbitApplicationServiceOptions, 'contexts' | 'cwd' | 'settingsSources'>>,
   ) {
-    this.skillCatalog = options.skillCatalog
+    this.plugins = options.plugins
+    this.skillCatalog = options.plugins?.skillCatalog ?? options.skillCatalog
     const resolved = resolveAgentOptions(
       {
         model: options.model,
@@ -249,6 +252,12 @@ export class OrbitApplicationService {
         )
         const workspace = (await new LocalWorkspaceLocator({start: cwd}).directories()).at(-1)
         const content = contexts.map((item) => item.content).join('\n\n')
+        const workspaceSkills = new SkillCatalog(
+          workspace ? [{directory: path.join(workspace, '.orbit', 'skills'), id: 'workspace'}] : [],
+        )
+        const plugins = this.plugins
+          ? {...this.plugins, skillCatalog: workspaceSkills.withRoots(this.plugins.inspection.skillRoots)}
+          : undefined
         return {
           contextPolicy: resolved.settings.contextPolicy,
           cwd,
@@ -257,9 +266,8 @@ export class OrbitApplicationService {
           messages: content ? [new Message(MessageType.Session, {content, role: Role.System})] : [],
           model: {name: resolved.model, provider: resolved.provider},
           settings: resolved.settings,
-          skillCatalog: workspace
-            ? new SkillCatalog([{directory: path.join(workspace, '.orbit', 'skills'), id: 'workspace'}])
-            : undefined,
+          ...(plugins ? {plugins} : {}),
+          skillCatalog: plugins?.skillCatalog ?? (workspace ? workspaceSkills : undefined),
         }
       })
     if (options.projectStore) {
@@ -349,6 +357,7 @@ export class OrbitApplicationService {
         diagnostics: this.diagnostics,
         messages: systemMessages,
         model: {name: this.runtime.model, provider: this.runtime.provider},
+        plugins: this.plugins,
         projectMemory: this.projectMemory,
         settings: this.settings,
         skillCatalog: this.skillCatalog,
@@ -476,6 +485,17 @@ export class OrbitApplicationService {
     return catalog ? catalog.list(signal) : {candidates: [], complete: true, issues: ['No Skill catalog configured']}
   }
 
+  pluginInspection(threadId?: string) {
+    const plugins =
+      threadId && this.threadRuntime.has(threadId) ? this.threadRuntime.get(threadId)?.plugins : this.plugins
+    const inspection = plugins?.inspection
+    return {
+      complete: inspection?.complete ?? true,
+      diagnostics: inspection?.diagnostics ?? [],
+      plugins: inspection?.plugins ?? [],
+    }
+  }
+
   async previewProjectMemory(threadId: string, selection: ProjectMemorySelection) {
     if (!this.projectMemory) throw new ProjectStoreError('missing', 'Project memory is not configured')
     if (!this.threadManager.getThread(threadId)) await this.resumeSession(threadId)
@@ -586,7 +606,7 @@ export class OrbitApplicationService {
     if (summary === undefined) throw new Error(`Unknown session: ${sessionId}`)
     const runtime = this.projects
       ? await this.resolveProjectRuntime(summary.cwd)
-      : {settings: this.settings, skillCatalog: this.skillCatalog}
+      : {plugins: this.plugins, settings: this.settings, skillCatalog: this.skillCatalog}
     let thread: ThreadSnapshot
     try {
       thread = this.threadManager.resumeThread(summary.file, {

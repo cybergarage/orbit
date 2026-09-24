@@ -7,7 +7,7 @@ import {Client} from '@modelcontextprotocol/sdk/client'
 // The runtime ESM export requires the .js suffix even though the lint resolver cannot resolve it.
 // eslint-disable-next-line import/no-unresolved
 import {getDefaultEnvironment, StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js'
-import {randomUUID} from 'node:crypto'
+import {createHash, randomUUID} from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
@@ -19,9 +19,10 @@ import type {ExecutionPolicy} from './execution/authorization.js'
 import type {RunContext} from './execution/run.js'
 import type {McpServerSettings, McpSettings} from './settings.js'
 
-import {executePrepared} from './execution/authorization.js'
+import {canonicalPath, executePrepared} from './execution/authorization.js'
 import {copyJSON} from './execution/journal.js'
 import {until} from './execution/run.js'
+import {validatePluginStartup} from './plugins/catalog.js'
 import {textToolResult} from './tools/definition.js'
 import {createSchemaValidator, validateSchemaKeywords} from './tools/schema.js'
 
@@ -82,7 +83,7 @@ export function createMcpTransport(settings: McpServerSettings, options: McpTool
   return new StdioClientTransport({
     args: settings.args,
     command: settings.command,
-    cwd: options.cwd,
+    cwd: settings.plugin?.cwd ?? options.cwd,
     env: options.execution ? {...settings.env} : {...getDefaultEnvironment(), ...settings.env},
   })
 }
@@ -128,6 +129,14 @@ class StdioMcpToolManager implements McpToolManager {
     cwd = this.options.cwd,
   ): Promise<McpConnection> {
     if (this.closed) throw new Error('MCP manager is closed')
+    if (serverSettings.plugin && !this.options.execution) {
+      const p = serverSettings.plugin
+      if ((await canonicalPath(p.data)) !== p.data || (await canonicalPath(p.dataRoot)) !== p.dataRoot)
+        throw new Error('Plugin data path changed')
+      await fs.mkdir(p.data, {recursive: true})
+      if (!(await validatePluginStartup(p))) throw new Error('Plugin startup binding changed')
+    }
+
     const client = (this.options.clientFactory ?? createMcpClient)(serverName, serverSettings)
     if (this.closed) throw new Error('MCP manager is closed')
     const connection: McpConnection = {client, tools: []}
@@ -157,12 +166,18 @@ class StdioMcpToolManager implements McpToolManager {
         type: 'mcp.server.connected',
       })
       connection.tools = await Promise.all(
-        result.tools.map((remoteTool) => wrapMcpTool(serverName, client, remoteTool, this.options.execution?.run)),
+        result.tools.map((remoteTool) =>
+          wrapMcpTool(serverName, client, remoteTool, this.options.execution?.run, Boolean(serverSettings.plugin)),
+        ),
       )
       return connection
     } catch (error) {
       // The manager owns partial connections and closes them through its shared close result.
-      const message = error instanceof Error ? error.message : String(error)
+      const message = serverSettings.plugin
+        ? 'Plugin MCP initialization failed'
+        : error instanceof Error
+          ? error.message
+          : String(error)
       this.options.diagnostics?.emit({
         ...this.options.diagnosticContext,
         data: {durationMs: performance.now() - startedAt, error: message, serverName},
@@ -182,9 +197,16 @@ class StdioMcpToolManager implements McpToolManager {
       throw new Error('MCP source limit exceeded')
     for (const [serverName, serverSettings] of Object.entries(servers)) {
       // MCP stdio startup is intentionally ordered so partially connected clients remain closable on later failures.
-      // eslint-disable-next-line no-await-in-loop
-      const connection = await this.managedConnect(serverName, serverSettings)
-      tools.push(...connection.tools)
+
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const connection = await this.managedConnect(serverName, serverSettings)
+        tools.push(...connection.tools)
+      } catch (error) {
+        if (!serverSettings.plugin) throw error
+        this.options.execution?.run.check()
+        this.options.diagnostics?.emit({data: {serverName}, level: 'error', type: 'mcp.server.failed'})
+      }
     }
 
     this.options.diagnostics?.emit({
@@ -200,15 +222,30 @@ class StdioMcpToolManager implements McpToolManager {
     if (!execution) return this.connectServer(serverName, settings)
     const {policy, run} = execution
     const frozen = copyJSON({...settings, env: {...getDefaultEnvironment(), ...settings.env}})
+    if (settings.plugin) {
+      const p = settings.plugin
+      if ((await canonicalPath(p.dataRoot)) !== p.dataRoot || (await canonicalPath(p.data)) !== p.data)
+        throw new Error('Plugin data path changed')
+      await fs.mkdir(p.data, {recursive: true})
+      await fs.access(p.data, fs.constants.W_OK)
+      if (!(await validatePluginStartup(p))) throw new Error('Plugin startup binding changed')
+    }
+
     const id = randomUUID()
-    const cwd = await fs.realpath(this.options.cwd ?? process.cwd())
+    const workspace = await fs.realpath(this.options.cwd ?? process.cwd())
+    const cwd = settings.plugin?.cwd ?? workspace
     // Injected transport factories own executable resolution for their backend.
     const executable = this.options.transportFactory
       ? undefined
       : await resolveExecutable(frozen.command, cwd, frozen.env)
     if (executable) frozen.command = executable.file
     let connection: McpConnection | undefined
-    const binding = {configuration: frozen, server: serverName, ...(executable ? {executable} : {})}
+    const binding = {
+      ...(settings.plugin ? {plugin: settings.plugin} : {}),
+      configuration: frozen,
+      server: serverName,
+      ...(executable ? {executable} : {}),
+    }
     const preparation = {
       binding,
       effect: 'mcp' as const,
@@ -226,6 +263,7 @@ class StdioMcpToolManager implements McpToolManager {
         warning: 'Starting this MCP process grants its host access; no OS sandbox is supplied.',
       },
       async revalidate() {
+        if (settings.plugin && !(await validatePluginStartup(settings.plugin))) return false
         if (!executable) return true
         try {
           return JSON.stringify(await executableIdentity(executable.file)) === JSON.stringify(executable)
@@ -233,13 +271,13 @@ class StdioMcpToolManager implements McpToolManager {
           return false
         }
       },
-      targets: [cwd],
+      targets: [workspace],
     }
     const result = await executePrepared(
       run,
       {
         binding,
-        cwd,
+        cwd: workspace,
         effect: 'mcp',
         id,
         input: frozen,
@@ -247,12 +285,13 @@ class StdioMcpToolManager implements McpToolManager {
         preview: preparation.preview,
         runId: run.id,
         sessionId: run.options.sessionId,
-        targets: [cwd],
+        targets: [workspace],
         variant: 'mcp-startup',
         version: 1,
       },
       preparation,
       policy,
+      Boolean(settings.plugin),
     )
     if (!connection || result.isError) throw new Error('MCP startup denied')
     return connection
@@ -274,8 +313,14 @@ async function wrapMcpTool(
   client: McpClient,
   remoteTool: McpToolDefinition,
   run?: RunContext,
+  plugin = false,
 ): Promise<AgentTool> {
-  const toolName = mcpToolName(serverName, remoteTool.name)
+  const toolName = plugin
+    ? `plugin_${createHash('sha256')
+        .update(JSON.stringify([serverName, remoteTool.name]))
+        .digest('hex')
+        .slice(0, 56)}`
+    : mcpToolName(serverName, remoteTool.name)
   if (run) validateSchemaKeywords(remoteTool.inputSchema)
   const validate = run ? await createSchemaValidator(remoteTool.inputSchema) : undefined
 

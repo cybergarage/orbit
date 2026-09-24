@@ -7,9 +7,11 @@ import type {SessionEntry} from '../session/entries.js'
 import type {SkillSnapshot} from './catalog.js'
 
 import {canonicalJSON, copyJSON} from '../execution/journal.js'
+import {contained} from '../plugins/files.js'
 import {normalizeSkillSelections, skillId} from './catalog.js'
 import {
   parseSkillSource,
+  SKILL_PORTABLE_PROJECTION_REVISION,
   SKILL_RECORD_BYTES,
   SKILL_RECORD_SNAPSHOTS,
   skillDigest,
@@ -42,31 +44,46 @@ export function parseSkillEntry(value: unknown): SessionSkillEntry {
     throw new Error('Skill record exceeds 4 MiB')
   normalizeSkillSelections(entry.skills)
   for (const skill of entry.skills) {
-    for (const key of [
-      'rootId',
-      'rootDirectory',
-      'baseDirectory',
-      'file',
-      'name',
-      'description',
-      'source',
-      'body',
-    ] as const)
+    for (const key of ['rootId', 'rootDirectory', 'baseDirectory', 'file', 'name', 'description', 'source'] as const)
       if (typeof skill[key] !== 'string' || !skill[key]) throw new Error('Invalid Skill snapshot')
     if (!/^[A-Za-z0-9_-]{1,128}$/u.test(skill.rootId)) throw new Error('Invalid Skill root ID')
     if (skill.bytes !== Buffer.byteLength(skill.source, 'utf8') || skill.digest !== skillDigest(skill.source))
       throw new Error('Skill snapshot digest mismatch')
     const decoded = new TextDecoder('utf8', {fatal: true, ignoreBOM: true}).decode(Buffer.from(skill.source))
     if (decoded !== skill.source) throw new Error('Skill source is not lossless UTF-8')
-    const parsed = parseSkillSource(skill.source)
-    if (skill.projectionRevision !== skillProjectionRevision(parsed))
+    const portable = skill.projectionRevision === SKILL_PORTABLE_PROJECTION_REVISION
+    const parsed = parseSkillSource(skill.source, !portable)
+    if (!portable && (skill.plugin !== undefined || skill.allowedTools !== undefined || skill.metadata !== undefined))
+      throw new Error('Unexpected portable Skill metadata')
+    if (skill.plugin) {
+      const p = skill.plugin
+      if (
+        !portable ||
+        typeof p.id !== 'string' ||
+        !/^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/.test(p.id) ||
+        typeof p.digest !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(p.digest)
+      )
+        throw new Error('Invalid plugin Skill identity')
+      for (const item of [p.root, p.resolvedDirectory, p.resolvedFile])
+        if (typeof item !== 'string' || !path.isAbsolute(item)) throw new Error('Invalid plugin Skill path')
+      for (const item of [skill.rootDirectory, p.resolvedDirectory, p.resolvedFile])
+        if (!contained(p.root, item)) throw new Error('Plugin Skill path escapes')
+      if (skill.rootId !== `plugin-${p.id}`) throw new Error('Plugin Skill root mismatch')
+    }
+
+    if (
+      skill.projectionRevision !== (skill.plugin ? SKILL_PORTABLE_PROJECTION_REVISION : skillProjectionRevision(parsed))
+    )
       throw new Error('Unsupported Skill projection revision')
     if (
       parsed.body !== skill.body ||
       parsed.name !== skill.name ||
       parsed.description !== skill.description ||
       parsed.license !== skill.license ||
-      parsed.compatibility !== skill.compatibility
+      parsed.compatibility !== skill.compatibility ||
+      parsed.allowedTools !== skill.allowedTools ||
+      canonicalJSON(parsed.metadata ?? null) !== canonicalJSON(skill.metadata ?? null)
     )
       throw new Error('Skill snapshot derivation mismatch')
     if (

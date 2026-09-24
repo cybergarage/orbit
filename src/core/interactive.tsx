@@ -35,6 +35,7 @@ export interface InteractiveSessionOptions {
   journalLevel?: 'file-and-directory-sync' | 'file-sync'
   logger?: Logger
   onAgentCreated?: (agent: Agent) => void
+  plugins?: import('./plugins/index.js').LoadedPlugins
   session?: Session
   sessionRepository?: SessionRepository
   settings?: WorkspaceSettings
@@ -57,6 +58,7 @@ export interface InteractiveState {
   messages: Message[]
   model: string
   pendingSkills?: SkillSelection[]
+  plugins?: import('./plugins/index.js').LoadedPlugins
   provider: ProviderName
   session?: Session
   settings?: WorkspaceSettings
@@ -99,6 +101,7 @@ export function createInitialInteractiveState(
     | 'journalLevel'
     | 'logger'
     | 'model'
+    | 'plugins'
     | 'provider'
     | 'session'
     | 'settings'
@@ -197,8 +200,7 @@ export async function submitInteractiveInput(
   const systemMessages = state.systemPrompt
     ? [new Message(MessageType.Session, {content: state.systemPrompt, role: Role.System})]
     : []
-  const session =
-    state.session ?? new Session({messages: state.conversationMessages})
+  const session = state.session ?? new Session({messages: state.conversationMessages})
   const agent = new AgentClass({
     cwd: state.cwd,
     defaultToolProfile: ToolProfile.Coding,
@@ -216,6 +218,7 @@ export async function submitInteractiveInput(
       name: state.model,
       provider: state.provider,
     },
+    plugins: state.plugins,
     settings: state.settings,
     skillCatalog: state.skillCatalog,
     state: new State(session),
@@ -408,6 +411,7 @@ function InteractiveApp({
   journalLevel,
   logger,
   onAgentCreated,
+  plugins,
   session,
   settings,
   skillCatalog,
@@ -433,6 +437,7 @@ function InteractiveApp({
       journalLevel,
       logger,
       model: initialModel,
+      plugins,
       provider: initialProvider,
       skillCatalog,
       ...(session === undefined ? {} : {session}),
@@ -563,8 +568,7 @@ function InteractiveApp({
         ? [new Message(MessageType.Session, {content: state.systemPrompt, role: Role.System})]
         : []
       const userMessage = nextMessages.at(-1) as Message
-      const session =
-        state.session ?? new Session({messages: state.conversationMessages})
+      const session = state.session ?? new Session({messages: state.conversationMessages})
       setState({
         ...state,
         input: '',
@@ -594,6 +598,7 @@ function InteractiveApp({
           name: state.model,
           provider: state.provider,
         },
+        plugins: state.plugins,
         settings: state.settings,
         skillCatalog: state.skillCatalog,
         state: new State(session),
@@ -725,7 +730,12 @@ export async function runInteractiveSession(options: InteractiveSessionOptions):
     options.session ??
     repository.create({
       cwd: options.cwd,
-      formatVersion: options.settings?.interruptionPolicy?.mode === 'verified-not-dispatched' ? 3 : options.skillCatalog || options.settings?.contextPolicy?.mode === 'budgeted' ? 2 : 1,
+      formatVersion:
+        options.settings?.interruptionPolicy?.mode === 'verified-not-dispatched'
+          ? 3
+          : options.skillCatalog || options.settings?.contextPolicy?.mode === 'budgeted'
+            ? 2
+            : 1,
       model: options.initialModel,
       originator: 'orbit-interactive',
       provider: options.initialProvider,

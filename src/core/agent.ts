@@ -143,8 +143,8 @@ export interface AgentOptions {
     policy?: ExecutionPolicy
     responderScope?: string
   }
-
   interruptionPolicy?: InterruptionPolicy
+
   logger?: Logger
   logStore?: SessionLogStore
   messages?: Message[]
@@ -152,6 +152,7 @@ export interface AgentOptions {
     name?: string
     provider?: ProviderName
   }
+  plugins?: import('./plugins/index.js').LoadedPlugins
   projectMemory?: ProjectMemoryService
   selectionProjector?: WorkflowContextProjector
   settings?: WorkspaceSettings
@@ -167,6 +168,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   public readonly interruptionPolicy: InterruptionPolicy
   public readonly logger: Logger
   public readonly messages: Message[]
+  public readonly plugins?: import('./plugins/index.js').LoadedPlugins
   public readonly settings: WorkspaceSettings
   public readonly skillCatalog?: SkillCatalog
   public readonly state: State
@@ -192,9 +194,18 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   // eslint-disable-next-line complexity
   constructor(options: AgentOptions = {}) {
     const createModel = options.deps?.createModel ?? getModel
-    this.skillCatalog = options.skillCatalog
+    this.plugins = options.plugins
+    this.skillCatalog = options.plugins?.skillCatalog ?? options.skillCatalog
     this.projectMemory = options.projectMemory
     this.settings = mergeWorkspaceSettings(loadWorkspaceSettingsSync(options.cwd), options.settings)
+    if (this.plugins) {
+      const {servers} = this.plugins.inspection
+      for (const name of Object.keys(servers))
+        if (Object.hasOwn(this.settings.mcp?.servers ?? {}, name))
+          throw new Error('Plugin and native MCP server identity conflict')
+      this.settings.mcp = {servers: {...this.settings.mcp?.servers, ...servers}}
+    }
+
     this.interruptionPolicy = Object.freeze(
       parseInterruptionPolicy(options.interruptionPolicy ?? this.settings.interruptionPolicy ?? {mode: 'disabled'}),
     )
@@ -626,6 +637,11 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         'agent invoke started',
       )
       const mcpTools = await run.wait('mcp-discovery', options!.mcp!.getTools())
+      if (run.operations.some((operation) => operation.status === 'unknown')) {
+        run.requestStop('unknown-operation')
+        throw new Error('Plugin startup has an unknown outcome; execution requires reconciliation')
+      }
+
       throwIfAborted(options?.signal)
       const tools = [...this.tools, ...mcpTools, ...(options?.tools ?? [])]
       const registry = new ToolRegistry()
@@ -1259,6 +1275,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       },
       execute: async (run) => {
         evidenceJournal = run.journal
+        if (this.plugins) await run.wait('plugin-validation', this.plugins.validate())
         if (this.interruptionPolicy.mode === 'verified-not-dispatched' && !this.model.prepare)
           throw new Error('model-does-not-support-verified-context')
         await preflightInterruptedContext(session, run, this.interruptionPolicy)

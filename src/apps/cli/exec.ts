@@ -13,7 +13,7 @@ import {loadWorkspaceSettings} from '../../core/settings.js'
 import {parseSkillSelection} from '../../core/skills/index.js'
 import {confirmOperation} from '../approval.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
-import {productSkillCatalog} from '../skill-catalog.js'
+import {productExtensions} from '../plugins.js'
 
 type AgentClass = new (options?: ConstructorParameters<typeof Agent>[0]) => Agent
 
@@ -52,8 +52,10 @@ export async function runExecCommand(
   const AgentClass = deps.agentClass ?? Agent
   const controller = new AbortController()
   const stop = () => controller.abort('user')
-  const skillCatalog = await productSkillCatalog(cwd, options.skillRoots)
+  const extensions = await productExtensions(cwd, options)
+  const {skillCatalog} = extensions
   const agent = new AgentClass({
+    ...(extensions.plugins ? {plugins: extensions.plugins} : {}),
     cwd,
     defaultToolProfile: ToolProfile.Coding,
     execution: {

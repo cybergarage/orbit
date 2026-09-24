@@ -12,6 +12,8 @@ export interface AgentOptions {
   journalLevel?: 'file-and-directory-sync' | 'file-sync'
   lang?: string
   model?: string
+  pluginDataDir?: string
+  plugins?: string[]
   provider?: ProviderName
   settings?: WorkspaceSettings
   skillRoots?: string[]

@@ -15,6 +15,8 @@ import {
   Message,
   MessageType,
   OrbitApplicationService,
+  PLUGIN_SCHEMA,
+  PluginCatalog,
 } from '../../../src/core/index.js'
 import {SessionRepository} from '../../session-storage-fixture.js'
 
@@ -37,6 +39,16 @@ describe('Project application runtime', () => {
       await fs.writeFile(path.join(root, name, 'AGENTS.md'), `Instructions for ${name}`)
     }
 
+    const packageRoot = path.join(root, 'plugin')
+    await fs.mkdir(path.join(packageRoot, 'skills', 'shared'), {recursive: true})
+    await fs.writeFile(path.join(packageRoot, 'plugin.json'), JSON.stringify({$schema: PLUGIN_SCHEMA, name: 'shared'}))
+    await fs.writeFile(
+      path.join(packageRoot, 'skills', 'shared', 'SKILL.md'),
+      '---\nname: shared\ndescription: Shared skill\n---\nInstruction',
+    )
+    const plugins = await new PluginCatalog([{directory: packageRoot, id: 'shared'}], {
+      dataRoot: path.join(root, 'plugin-data'),
+    }).load()
     const service = new OrbitApplicationService({
       contexts: [],
       createAgent(options) {
@@ -54,6 +66,7 @@ describe('Project application runtime', () => {
       cwd: root,
       logStore: new MemorySessionLogStore(),
       model: 'startup',
+      plugins,
       projectStore: store,
       provider: 'openai',
       repository,
@@ -77,10 +90,20 @@ describe('Project application runtime', () => {
       expect(agents.find((agent) => agent.cwd === at.cwd)?.messages?.[0].content).equals('Instructions for a')
       expect(agents.find((agent) => agent.cwd === bt.cwd)?.messages?.[0].content).equals('Instructions for b')
       expect(service.runtime.cwd).equals(root)
+      expect(service.pluginInspection(at.id).plugins.map((p) => p.id)).deep.equals(['shared'])
+      const projectRuntime = agents.find((agent) => agent.cwd === at.cwd)!
+      expect((await projectRuntime.skillCatalog!.list()).candidates.map((c) => c.name)).deep.equals(['shared'])
+      expect(projectRuntime.plugins?.skillCatalog).equals(projectRuntime.skillCatalog)
       const finished = new Promise<void>((resolve) => {
         const pending = new Set([at.id, bt.id])
         const unsubscribe = service.subscribe((event) => {
-          if (event.type === 'run.completed' && event.threadId) { pending.delete(event.threadId); if (pending.size === 0) { unsubscribe(); resolve() } }
+          if (event.type === 'run.completed' && event.threadId) {
+            pending.delete(event.threadId)
+            if (pending.size === 0) {
+              unsubscribe()
+              resolve()
+            }
+          }
         })
       })
       await Promise.all([service.startRun(at.id, 'First'), service.startRun(bt.id, 'Second')])

@@ -10,7 +10,7 @@ import {Agent, runInteractiveSession} from '../../core/index.js'
 import {selectOllamaModel} from '../../core/models/adapters/ollama.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
-import {productSkillCatalog} from '../skill-catalog.js'
+import {productExtensions} from '../plugins.js'
 import {ensureStartupStorage} from '../storage-startup.js'
 
 type AgentClass = typeof Agent
@@ -50,7 +50,7 @@ export async function runInteractiveCommand(
     initialProvider: resolvedOptions.provider,
     journalLevel: resolvedOptions.journalLevel,
     settings: resolvedOptions.settings,
-    skillCatalog: await productSkillCatalog(process.cwd(), options.skillRoots),
+    ...(await productExtensions(process.cwd(), options)),
     systemPrompt,
   })
 }

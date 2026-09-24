@@ -28,6 +28,7 @@ USAGE
 * [`orbit gui`](#orbit-gui)
 * [`orbit help [COMMAND]`](#orbit-help-command)
 * [`orbit mcp list`](#orbit-mcp-list)
+* [`orbit plugins list`](#orbit-plugins-list)
 * [`orbit resume [SESSION]`](#orbit-resume-session)
 * [`orbit session [SESSION]`](#orbit-session-session)
 * [`orbit skills`](#orbit-skills)
@@ -67,10 +68,10 @@ Send a prompt to the agent and print the response
 
 ```
 USAGE
-  $ orbit exec [PROMPT] [--anthropic-api-key-env <value>] [--debug] [--execution-policy
-    workspace-confirm|unrestricted] [--journal-level file-and-directory-sync|file-sync] [--lang en|ja] [--model <value>]
-    [--ollama-host <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai] [--skill-root
-    <value>...] [--skill <value>...]
+  $ orbit exec [PROMPT] [--plugin <value>...] [--plugin-data-dir <value>] [--anthropic-api-key-env
+    <value>] [--debug] [--execution-policy workspace-confirm|unrestricted] [--journal-level
+    file-and-directory-sync|file-sync] [--lang en|ja] [--model <value>] [--ollama-host <value>] [--openai-api-key-env
+    <value>] [--provider anthropic|ollama|openai] [--skill-root <value>...] [--skill <value>...]
 
 ARGUMENTS
   [PROMPT]  Prompt to send to the agent
@@ -87,6 +88,8 @@ FLAGS
   --model=<value>                  Model name (overrides workspace setting and provider default)
   --ollama-host=<value>            Ollama host URL
   --openai-api-key-env=<value>     Environment variable name for the OpenAI API key
+  --plugin=<value>...              Enable local plugin ID=DIRECTORY (repeatable)
+  --plugin-data-dir=<value>        Persistent plugin instance data root
   --provider=<option>              LLM provider (overrides workspace setting)
                                    <options: anthropic|ollama|openai>
   --skill=<value>...               Select Skill ID@DIGEST for this Run (repeatable)
@@ -109,10 +112,10 @@ Start the local Orbit graphical interface
 
 ```
 USAGE
-  $ orbit gui [--anthropic-api-key-env <value>] [--debug] [--execution-policy
-    workspace-confirm|unrestricted] [--journal-level file-and-directory-sync|file-sync] [--lang en|ja] [--model <value>]
-    [--ollama-host <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai] [--skill-root
-    <value>...] [--port <value>]
+  $ orbit gui [--plugin <value>...] [--plugin-data-dir <value>] [--anthropic-api-key-env <value>]
+    [--debug] [--execution-policy workspace-confirm|unrestricted] [--journal-level file-and-directory-sync|file-sync]
+    [--lang en|ja] [--model <value>] [--ollama-host <value>] [--openai-api-key-env <value>] [--provider
+    anthropic|ollama|openai] [--skill-root <value>...] [--port <value>]
 
 FLAGS
   --anthropic-api-key-env=<value>  Environment variable name for the Anthropic API key
@@ -126,6 +129,8 @@ FLAGS
   --model=<value>                  Model name (overrides workspace setting and provider default)
   --ollama-host=<value>            Ollama host URL
   --openai-api-key-env=<value>     Environment variable name for the OpenAI API key
+  --plugin=<value>...              Enable local plugin ID=DIRECTORY (repeatable)
+  --plugin-data-dir=<value>        Persistent plugin instance data root
   --port=<value>                   Loopback port (uses an available port by default)
   --provider=<option>              LLM provider (overrides workspace setting)
                                    <options: anthropic|ollama|openai>
@@ -182,16 +187,35 @@ EXAMPLES
 
 _See code: [src/cli/mcp/list.ts](https://github.com/cybergarage/orbit/blob/v0.6.1/src/apps/cli/mcp/list.ts)_
 
+## `orbit plugins list`
+
+Inspect explicitly selected local plugins without starting servers
+
+```
+USAGE
+  $ orbit plugins list [--plugin <value>...] [--plugin-data-dir <value>] [--json]
+
+FLAGS
+  --json                     Print plugin metadata and diagnostics as JSON
+  --plugin=<value>...        Enable local plugin ID=DIRECTORY (repeatable)
+  --plugin-data-dir=<value>  Persistent plugin instance data root
+
+DESCRIPTION
+  Inspect explicitly selected local plugins without starting servers
+```
+
+_See code: [src/cli/plugins/list.ts](https://github.com/cybergarage/orbit/blob/v0.6.1/src/apps/cli/plugins/list.ts)_
+
 ## `orbit resume [SESSION]`
 
 Resume a saved interactive session
 
 ```
 USAGE
-  $ orbit resume [SESSION] [--anthropic-api-key-env <value>] [--debug] [--execution-policy
-    workspace-confirm|unrestricted] [--journal-level file-and-directory-sync|file-sync] [--lang en|ja] [--model <value>]
-    [--ollama-host <value>] [--openai-api-key-env <value>] [--provider anthropic|ollama|openai] [--skill-root
-    <value>...] [--all] [--last]
+  $ orbit resume [SESSION] [--plugin <value>...] [--plugin-data-dir <value>] [--anthropic-api-key-env
+    <value>] [--debug] [--execution-policy workspace-confirm|unrestricted] [--journal-level
+    file-and-directory-sync|file-sync] [--lang en|ja] [--model <value>] [--ollama-host <value>] [--openai-api-key-env
+    <value>] [--provider anthropic|ollama|openai] [--skill-root <value>...] [--all] [--last]
 
 ARGUMENTS
   [SESSION]  Exact ID of the saved session to resume
@@ -210,6 +234,8 @@ FLAGS
   --model=<value>                  Model name (overrides workspace setting and provider default)
   --ollama-host=<value>            Ollama host URL
   --openai-api-key-env=<value>     Environment variable name for the OpenAI API key
+  --plugin=<value>...              Enable local plugin ID=DIRECTORY (repeatable)
+  --plugin-data-dir=<value>        Persistent plugin instance data root
   --provider=<option>              LLM provider (overrides workspace setting)
                                    <options: anthropic|ollama|openai>
   --skill-root=<value>...          Explicit Skill root ID=DIRECTORY (repeatable); replaces the workspace default
@@ -265,11 +291,13 @@ List bounded Skill metadata and source digests without running a model
 
 ```
 USAGE
-  $ orbit skills [--json] [--skill-root <value>...]
+  $ orbit skills [--plugin <value>...] [--plugin-data-dir <value>] [--json] [--skill-root <value>...]
 
 FLAGS
-  --json                   Print JSON metadata
-  --skill-root=<value>...  Explicit root ID=DIRECTORY; replaces the workspace default
+  --json                     Print JSON metadata
+  --plugin=<value>...        Enable local plugin ID=DIRECTORY (repeatable)
+  --plugin-data-dir=<value>  Persistent plugin instance data root
+  --skill-root=<value>...    Explicit root ID=DIRECTORY; replaces the workspace default
 
 DESCRIPTION
   List bounded Skill metadata and source digests without running a model
@@ -283,9 +311,9 @@ Inspect, initialize, reset or recover storage under external offline exclusion
 
 ```
 USAGE
-  $ orbit storage ACTION [SESSION] [--confirm-reset] [--dry-run] [--initialize] [--log-root <value>]
-    [--project-file <value>] [--exclusive-storage-control] [--journal-root <value>] [--restarters-disabled]
-    [--reviewed-artifacts <value>] [--session-root <value>] [--writers-stopped]
+  $ orbit storage ACTION [SESSION] [--confirm-reset] [--dry-run] [--exclusive-storage-control] [--initialize]
+    [--journal-root <value>] [--log-root <value>] [--project-file <value>] [--restarters-disabled] [--reviewed-artifacts
+    <value>] [--session-root <value>] [--writers-stopped]
 
 ARGUMENTS
   ACTION     (initialize|inspect|recover|resume|migrate-transcript|resume-transcript|reset)

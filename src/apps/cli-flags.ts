@@ -6,8 +6,10 @@ import {Flags} from '@oclif/core'
 import type {AgentOptions} from '../core/chat.js'
 
 import {getProvider, isProvider} from '../core/index.js'
+import {pluginFlags} from './plugins.js'
 
 export const agentFlags = {
+  ...pluginFlags,
   'anthropic-api-key-env': Flags.string({
     description: 'Environment variable name for the Anthropic API key',
     required: false,
@@ -64,6 +66,8 @@ export function toAgentOptions(flags: {
   ollamaHost?: string
   'openai-api-key-env'?: string
   openaiApiKeyEnv?: string
+  plugin?: string[]
+  'plugin-data-dir'?: string
   provider?: string
   'skill-root'?: string[]
 }): AgentOptions {
@@ -73,6 +77,8 @@ export function toAgentOptions(flags: {
   const executionPolicy = flags['execution-policy']
   const journalLevel = flags['journal-level']
   return {
+    ...(flags.plugin ? {plugins: flags.plugin} : {}),
+    ...(flags['plugin-data-dir'] ? {pluginDataDir: flags['plugin-data-dir']} : {}),
     ...(flags['skill-root'] ? {skillRoots: flags['skill-root']} : {}),
     ...(executionPolicy === 'unrestricted' || executionPolicy === 'workspace-confirm' ? {executionPolicy} : {}),
     ...(journalLevel === 'file-sync' || journalLevel === 'file-and-directory-sync' ? {journalLevel} : {}),

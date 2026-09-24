@@ -77,7 +77,9 @@ try {
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import {randomUUID} from 'node:crypto'
-import {SqliteProjectStore} from '@cybergarage/orbit'
+import {PluginCatalog, PLUGIN_SCHEMA, SqliteProjectStore} from '@cybergarage/orbit'
+assert.equal(PLUGIN_SCHEMA, 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json')
+assert.deepEqual((await new PluginCatalog([], {dataRoot: path.resolve('plugin-data')}).inspect()).plugins, [])
 const store = await SqliteProjectStore.open({file: path.resolve('catalog/projects.sqlite')})
 try {
   const id = randomUUID()

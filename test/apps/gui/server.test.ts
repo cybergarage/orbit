@@ -13,6 +13,8 @@ import {
   guiSlashCommandHelpMessage,
   MemorySessionLogStore,
   OrbitApplicationService,
+  PLUGIN_SCHEMA,
+  PluginCatalog,
   SkillCatalog,
 } from '../../../src/core/index.js'
 import {SessionRepository} from '../../session-storage-fixture.js'
@@ -26,6 +28,10 @@ describe('GUI server', () => {
       path.join(skillRoot, 'review', 'SKILL.md'),
       '---\nname: review\ndescription: Inspect tests\nlicense: MIT\ncompatibility: Requires Node.js\n---\nInspect the test.',
     )
+    const packageRoot = path.join(root, 'plugin')
+    await fs.mkdir(packageRoot)
+    await fs.writeFile(path.join(packageRoot, 'plugin.json'), JSON.stringify({$schema: PLUGIN_SCHEMA, name: 'gui-plugin'}))
+    const plugins = await new PluginCatalog([{directory: packageRoot, id: 'gui'}], {dataRoot: path.join(root, 'data')}).load(new SkillCatalog([{directory: skillRoot, id: 'gui'}]))
     const service = new OrbitApplicationService({
       contexts: [],
       createAgent: () => ({
@@ -37,6 +43,7 @@ describe('GUI server', () => {
       cwd: root,
       logStore: new MemorySessionLogStore(),
       model: 'test-model',
+      plugins,
       provider: 'ollama',
       repository: new SessionRepository({rootDir: path.join(root, 'sessions')}),
       settingsSources: [],
@@ -51,6 +58,11 @@ describe('GUI server', () => {
       const unauthorized = await fetch(`${baseUrl}/api/runtime`)
       expect(unauthorized.status).to.equal(403)
 
+      expect((await fetch(`${baseUrl}/api/plugins`)).status).equal(403)
+      const pluginResponse = await fetch(`${baseUrl}/api/plugins`, {headers})
+      expect(pluginResponse.status).equal(200)
+      const pluginMetadata = await pluginResponse.json() as {plugins: Array<{id: string}>}
+      expect(pluginMetadata.plugins[0].id).equal('gui')
       const skills = await fetch(`${baseUrl}/api/skills`, {headers})
       expect(skills.status).to.equal(200)
       const listing = (await skills.json()) as {candidates: Array<{compatibility?: string; license?: string;}>}

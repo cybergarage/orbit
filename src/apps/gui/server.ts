@@ -114,6 +114,9 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
   app.post('/api/sessions/:sessionId/resume', async (request, response) => {
     response.json(await options.service.resumeSession(request.params.sessionId))
   })
+  app.get('/api/plugins', (request, response) =>
+    response.json(options.service.pluginInspection(z.string().max(160).optional().parse(request.query.threadId))),
+  )
   app.get('/api/skills', async (request, response) => {
     const controller = new AbortController()
     const abort = () => controller.abort()

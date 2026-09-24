@@ -47,8 +47,7 @@ function deferred<T>() {
   return {promise, resolve}
 }
 
-const parse = (extra: string) =>
-  parseSkillSource(`---\nname: review\ndescription: Inspect tests\n${extra}\n---\nbody`)
+const parse = (extra: string) => parseSkillSource(`---\nname: review\ndescription: Inspect tests\n${extra}\n---\nbody`)
 
 describe('explicit run-scoped Skill selection', () => {
   let root: string
@@ -100,29 +99,29 @@ describe('explicit run-scoped Skill selection', () => {
       expect(() => parseSkillSource(`---\n${metadata}\n---\nbody`)).to.throw()
     })
 
-  it('bounds descriptions by Unicode code points and rejects empty bodies', () => {
+  it('bounds descriptions by Unicode code points and preserves legacy body validation', () => {
     expect(
       parseSkillSource(`---\nname: review\ndescription: ${'😀'.repeat(1024)}\n---\nbody`).description,
     ).to.have.length(2048)
     expect(() => parseSkillSource(`---\nname: review\ndescription: ${'😀'.repeat(1025)}\n---\nbody`)).to.throw()
-    expect(() => parseSkillSource(source('review', ' '))).to.throw()
+    expect(parseSkillSource(source('review', ' ')).body).equal('')
+    expect(() => parseSkillSource(source('review', ' '), true)).to.throw()
   })
 
   it('validates optional descriptive metadata without granting tool permissions', () => {
+    expect(parse('allowed-tools: Bash').allowedTools).equal('Bash')
+    expect(parse('compatibility: ""').compatibility).equal('')
     expect(parse('license: MIT').license).to.equal('MIT')
     expect(parse(`compatibility: ${'😀'.repeat(500)}`).compatibility).to.have.length(1000)
     for (const extra of [
       'license: 1',
       'license: null',
-      'license: " "',
       'license: [MIT]',
       'compatibility: false',
-      'compatibility: ""',
       `compatibility: ${'😀'.repeat(501)}`,
       'license: MIT\nlicense: Apache-2.0',
       'license: &x MIT',
       'compatibility: !!str node',
-      'allowed-tools: Bash',
     ])
       expect(() => parse(extra)).to.throw()
     expect(parse('license: |\n  See LICENSE\ncompatibility: Node.js').license).to.equal('See LICENSE\n')
@@ -517,16 +516,16 @@ describe('explicit run-scoped Skill selection', () => {
   for (const phase of ['read', 'close'])
     it('waits for cancelled ' + phase + ' to settle before releasing ownership', async () => {
       await write(root)
-      let closes = 0;
-        let delayed = false
-      const entered = deferred<void>();
-        const release = deferred<void>()
+      let closes = 0
+      let delayed = false
+      const entered = deferred<void>()
+      const release = deferred<void>()
       const io: SkillIO = {
         ...fs,
         async open(...args: Parameters<typeof fs.open>) {
-          const h = await fs.open(...args);
-            const read = h.read.bind(h);
-            const close = h.close.bind(h)
+          const h = await fs.open(...args)
+          const read = h.read.bind(h)
+          const close = h.close.bind(h)
           if (delayed) {
             if (phase === 'read')
               h.read = async (...params: Parameters<typeof h.read>) => {
@@ -549,12 +548,12 @@ describe('explicit run-scoped Skill selection', () => {
           return h
         },
       }
-      const c = new SkillCatalog([{directory: root, id: 'root'}], {}, io);
-        const list = await c.list()
+      const c = new SkillCatalog([{directory: root, id: 'root'}], {}, io)
+      const list = await c.list()
       delayed = true
       const controller = new AbortController()
-      const resolution = c.resolve(list.candidates, controller.signal);
-        const rejection = assert.rejects(resolution, /cancelled/)
+      const resolution = c.resolve(list.candidates, controller.signal)
+      const rejection = assert.rejects(resolution, /cancelled/)
       await entered.promise
       controller.abort()
       let settled = false
@@ -575,20 +574,22 @@ describe('explicit run-scoped Skill selection', () => {
     await write(root)
     await write(root, 'second')
     let requested = 0
-    const io: SkillIO = {...fs, async open(...args: Parameters<typeof fs.open>) {
-      const h = await fs.open(...args)
-      h.read = async (...params: Parameters<typeof h.read>) => {
-        if (!Buffer.isBuffer(params[0])) throw new Error('Expected bounded buffer read')
-        requested += params[0].length
-        throw new Error('Read outcome unconfirmed')
-      }
+    const io: SkillIO = {
+      ...fs,
+      async open(...args: Parameters<typeof fs.open>) {
+        const h = await fs.open(...args)
+        h.read = async (...params: Parameters<typeof h.read>) => {
+          if (!Buffer.isBuffer(params[0])) throw new Error('Expected bounded buffer read')
+          requested += params[0].length
+          throw new Error('Read outcome unconfirmed')
+        }
 
-      return h
-    }}
+        return h
+      },
+    }
     const result = await new SkillCatalog([{directory: root, id: 'fixture'}], {listingBytes: 10}, io).list()
     expect(result.complete).to.equal(false)
     expect(result.candidates).to.deep.equal([])
     expect(requested).to.equal(10)
   })
-
 })

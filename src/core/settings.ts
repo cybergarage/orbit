@@ -26,6 +26,7 @@ export interface McpServerSettings {
   args?: string[]
   command: string
   env?: Record<string, string>
+  plugin?: import('./plugins/catalog.js').PluginStartup
 }
 
 export interface McpSettings {

@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 import {Command, Flags} from '@oclif/core'
 
-import {productSkillCatalog} from '../skill-catalog.js'
+import {pluginFlags, productExtensions} from '../plugins.js'
 export default class Skills extends Command {
   static description = 'List bounded Skill metadata and source digests without running a model'
   static flags = {
+    ...pluginFlags,
     json: Flags.boolean({description: 'Print JSON metadata'}),
     'skill-root': Flags.string({
       description: 'Explicit root ID=DIRECTORY; replaces the workspace default',
@@ -15,7 +16,11 @@ export default class Skills extends Command {
 
   async run(): Promise<void> {
     const {flags} = await this.parse(Skills)
-    const catalog = await productSkillCatalog(process.cwd(), flags['skill-root'])
+    const {skillCatalog: catalog} = await productExtensions(process.cwd(), {
+      pluginDataDir: flags['plugin-data-dir'],
+      plugins: flags.plugin,
+      skillRoots: flags['skill-root'],
+    })
     const controller = new AbortController()
     const stop = () => controller.abort()
     process.on('SIGINT', stop)

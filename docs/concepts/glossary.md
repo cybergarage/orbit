@@ -204,3 +204,10 @@ A workflow candidate is an immutable, versioned Graph manifest tied to a fixed c
 ### Verified interrupted context
 
 An opt-in model-input view supported by retained proof of nondispatch in a cancelled Run. Its synthetic tool response is an error-form notice, not actual tool output. A context projection record proves derivation structure; only owned runtime verification can qualify the view for use. See [the feature guide](../interrupted-context.md).
+
+### Plugin instance
+
+A host-selected local package identity that contributes Skills and MCP server
+configuration. Its stable ID owns a persistent data directory; its manifest name
+is descriptive metadata. Activating an instance does not approve its operations.
+See [Agent Plugins](../plugins.md).

@@ -16,6 +16,7 @@ description: Review the target test and distinguish observed results from guesse
 license: MIT
 compatibility: Requires git and Node.js.
 ---
+
 Identify the target test, inspect its assertions and explain what a passing result
 would establish. Use ordinary tools and obtain required operation confirmation.
 Report the command and its actual outcome; do not infer success from a timeout.
@@ -50,35 +51,35 @@ are browser state; a full page reload clears unsent selections.
 ## Catalog validation and initial limits
 
 Only immediate child directories containing `SKILL.md` are inspected. Candidate
-symlinks and hard links are rejected. Canonical-root aliases conflict even if
+symlinks and hard links are rejected for ordinary roots. Explicit plugin roots
+resolve internal aliases while enforcing the package boundary. Canonical-root aliases conflict even if
 they have different configured IDs. Same-name Skills in different roots remain
 distinct; their names do not establish precedence.
 
 Frontmatter uses pinned `yaml` 2.9.1. Require string `name` and
-`description`, a matching directory name and nonempty instructions. Optional
-`license` and `compatibility` must be nonblank strings. Compatibility permits
-at most 500 Unicode code points; license has no additional field length limit
-beyond the existing file and record byte limits. Values are preserved in
-listings and saved snapshots and shown in CLI, Ink and GUI candidate lists.
-They describe licensing and environment requirements; Orbit does not evaluate
-license approval, install dependencies or grant permissions from these fields.
-Other optional Agent Skills fields, including `allowed-tools`, remain rejected.
+`description` and a matching directory name. A minimal Skill may have an empty
+instruction body. Optional `license`, `compatibility` and `allowed-tools` are
+strings; `metadata` is a mapping of string keys to string values. Compatibility
+permits at most 500 Unicode code points. Source/record byte limits still apply.
+Values are retained in listings and snapshots. `allowed-tools` is descriptive
+in Orbit and never grants pre-approval or broadens host permissions. Orbit does
+not install dependencies or infer licensing approval from metadata.
 
 Names use lowercase ASCII letters/digits with single internal hyphens (1–64 characters).
 Descriptions allow up to 1,024 Unicode code points. Quoted and block scalars,
 BOM and CRLF are supported. Duplicate keys, anchors, aliases, explicit tags,
-unknown keys, nested metadata and invalid UTF-8 are rejected. The closing `---`
+unknown keys, non-string metadata values and invalid UTF-8 are rejected. The closing `---`
 ends frontmatter; subsequent text is the instruction body, not another metadata
 document. The original BOM and line endings remain in the snapshot.
 
-| Limit | Initial product value |
-| --- | ---: |
-| Roots | 8 |
-| Inspected directory entries, including invalid candidates | 4,096 |
-| Candidate directories | 128 |
-| Source bytes per file | 65,536 |
-| Total listing bytes, including failed reads and overflow probes | 2,097,152 |
-| Selected Skills per Run | 4 |
+| Limit                                                           | Initial product value |
+| --------------------------------------------------------------- | --------------------: |
+| Roots                                                           |                     8 |
+| Inspected directory entries, including invalid candidates       |                 4,096 |
+| Candidate directories                                           |                   128 |
+| Source bytes per file                                           |                65,536 |
+| Total listing bytes, including failed reads and overflow probes |             2,097,152 |
+| Selected Skills per Run                                         |                     4 |
 
 These are bounded starting values, not tuned quality or latency optima.
 `complete: false` and `issues` explain where discovery stopped, including when a
@@ -95,6 +96,9 @@ encode paths and configured root identity; they are not signed provenance or
 protection against all hostile filesystem races. Once resolved, frozen bytes
 remain in use for that Run even if files change later.
 
+Explicit local packages can add Skills through [Agent Plugins](plugins.md).
+Package resources are accessed separately and are not saved as Skill snapshots.
+
 ## Library and application APIs
 
 ```ts
@@ -106,10 +110,10 @@ const listing = await catalog.list(abortSignal)
 const skills = selectedCandidates.map(({id, digest}) => ({id, digest}))
 const agent = new Agent({cwd: '/workspace', skillCatalog: catalog})
 try {
-  const handle = await agent.startRun(
-    [new Message(MessageType.User, {content: 'Review the target test.'})],
-    {requestId, skills},
-  )
+  const handle = await agent.startRun([new Message(MessageType.User, {content: 'Review the target test.'})], {
+    requestId,
+    skills,
+  })
   const result = await handle.finished
   // Inspect outcome, recording, quiescence and unresolved work independently.
 } finally {
@@ -158,8 +162,10 @@ and user input, resolves all choices, saves one `skill_context` revision 1 and
 synchronizes it before journal readiness and the first model call. The record
 contains ordered exact UTF-8 sources, digests, metadata, derived bodies and
 projection revision `yaml-2.9.1-body-v1` for sources without descriptive fields,
-or `yaml-2.9.1-body-v2` when license or compatibility is present. Both revisions
-remain readable. Reopen compares optional metadata against the source and
+or `yaml-2.9.1-body-v2` when license or compatibility is present. Projection `yaml-2.9.1-body-v3` handles portable metadata, empty bodies and
+plugin provenance when required. New readers retain exact v1/v2 validation;
+old readers can reject v3 snapshots. All three revisions remain readable by
+the current reader. Reopen compares optional metadata against the source and
 rejects removed, changed or injected values, including new fields on a v1
 projection. Reopen validates derivation, identity, ordering and the immutable
 revision. A snapshot is evidence of resolved input,

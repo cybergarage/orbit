@@ -896,6 +896,10 @@ function App() {
                   type="checkbox"
                 />
                 {candidate.name} — {candidate.file} — {candidate.description}
+                {candidate.plugin && <span> · Plugin: {candidate.plugin.id}</span>}
+                {candidate.allowedTools !== undefined && (
+                  <span> · Suggested tools (no permission grant): {candidate.allowedTools}</span>
+                )}
                 {candidate.license !== undefined && <span> · License: {candidate.license}</span>}
                 {candidate.compatibility !== undefined && <span> · Compatibility: {candidate.compatibility}</span>}
               </label>

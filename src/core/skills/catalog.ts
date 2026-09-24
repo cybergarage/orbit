@@ -8,11 +8,13 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import {canonicalJSON, copyJSON} from '../execution/journal.js'
-import {parseSkillSource, SKILL_METADATA_PROJECTION_REVISION, skillDigest, skillProjectionRevision} from './parser.js'
+import {contained, packagePath} from '../plugins/files.js'
+import {parseSkillSource, SKILL_PORTABLE_PROJECTION_REVISION, skillDigest, skillProjectionRevision} from './parser.js'
 
 export interface SkillRoot {
   directory: string
   id: string
+  plugin?: {digest: string; id: string; root: string}
 }
 export interface SkillSelection {
   digest: string
@@ -35,13 +37,16 @@ export const DEFAULT_SKILL_LIMITS: Readonly<SkillLimits> = Object.freeze({
   selections: 4,
 })
 export interface SkillCandidate extends SkillSelection {
+  allowedTools?: string
   baseDirectory: string
   bytes: number
   compatibility?: string
   description: string
   file: string
   license?: string
+  metadata?: Record<string, string>
   name: string
+  plugin?: {digest: string; id: string; resolvedDirectory: string; resolvedFile: string; root: string}
   rootDirectory: string
   rootId: string
 }
@@ -112,11 +117,11 @@ export class SkillCatalog {
       throw new Error('Invalid Skill limits')
     if (roots.length > this.limits.roots) throw new Error('Skill root limit exceeded')
     const ids = new Set<string>()
-    this.roots = roots.map(({directory, id}) => {
+    this.roots = roots.map(({directory, id, plugin}) => {
       if (!/^[A-Za-z0-9_-]{1,128}$/u.test(id) || ids.has(id) || typeof directory !== 'string' || !directory)
         throw new Error('Invalid Skill root')
       ids.add(id)
-      return Object.freeze({directory: path.resolve(directory), id})
+      return Object.freeze({directory: path.resolve(directory), id, ...(plugin ? {plugin: copyJSON(plugin)} : {})})
     })
   }
 
@@ -125,7 +130,7 @@ export class SkillCatalog {
       canonicalJSON({
         canonicalRoots: this.canonicalRoots,
         limits: this.limits,
-        revision: SKILL_METADATA_PROJECTION_REVISION,
+        revision: SKILL_PORTABLE_PROJECTION_REVISION,
         roots: this.roots,
       }),
     )
@@ -157,6 +162,10 @@ export class SkillCatalog {
     )
     if (results.some((result) => result.status === 'rejected'))
       throw new Error('Skill resource cleanup remains unconfirmed')
+  }
+
+  withRoots(roots: readonly SkillRoot[]): SkillCatalog {
+    return new SkillCatalog([...this.roots, ...roots], this.limits, this.io)
   }
 
   private async closeResource(close: () => Promise<void>): Promise<void> {
@@ -224,7 +233,7 @@ export class SkillCatalog {
           const entry = await dir.read()
           if (!entry) break
           entries++
-          if (!entry.isDirectory()) continue
+          if (!entry.isDirectory() && !(root.plugin && entry.isSymbolicLink())) continue
           if (candidates >= this.limits.candidates) {
             issue('Skill candidate limit exceeded')
             break
@@ -233,8 +242,25 @@ export class SkillCatalog {
           candidates++
           const base = path.join(root.directory, entry.name)
           const file = path.join(base, 'SKILL.md')
+          if (root.plugin) {
+            try {
+              await this.io.lstat(file)
+            } catch (error) {
+              if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue
+              issue(`${root.id}/${entry.name}: Skill file unavailable`)
+              continue
+            }
+          }
+
           try {
-            const before = await this.observe(root.directory, base, file)
+            const plugin = root.plugin
+              ? {
+                  ...root.plugin,
+                  resolvedDirectory: await packagePath(root.plugin.root, base, 'directory'),
+                  resolvedFile: await packagePath(root.plugin.root, file, 'file'),
+                }
+              : undefined
+            const before = await this.observe(root.directory, base, file, plugin)
             if (before.root !== root.identity) throw new Error('Skill root changed')
             const remaining = this.limits.listingBytes - bytes
             if (remaining <= 0) {
@@ -242,21 +268,29 @@ export class SkillCatalog {
               break
             }
 
-            const read = await this.read(file, Math.min(this.limits.fileBytes + 1, remaining), signal, (count) => {
-              bytes += count
-            })
+            const read = await this.read(
+              plugin?.resolvedFile ?? file,
+              Math.min(this.limits.fileBytes + 1, remaining),
+              signal,
+              (count) => {
+                bytes += count
+              },
+            )
             if (!read.eof) {
               if (read.bytes.length > this.limits.fileBytes) throw new Error('Skill file byte limit exceeded')
               throw new Error('Skill listing byte limit exceeded')
             }
 
-            const after = await this.observe(root.directory, base, file)
+            const after = await this.observe(root.directory, base, file, plugin)
             if (canonicalJSON(before) !== canonicalJSON(after) || read.identity !== before.file)
               throw new Error('Skill identity changed')
             const source = new TextDecoder('utf8', {fatal: true, ignoreBOM: true}).decode(read.bytes)
             const parsed = parseSkillSource(source)
             if (parsed.name !== entry.name) throw new Error('Skill name must match its directory')
             const candidate: SkillCandidate = {
+              ...(plugin ? {plugin} : {}),
+              ...(parsed.allowedTools === undefined ? {} : {allowedTools: parsed.allowedTools}),
+              ...(parsed.metadata === undefined ? {} : {metadata: parsed.metadata}),
               ...(parsed.license === undefined ? {} : {license: parsed.license}),
               ...(parsed.compatibility === undefined ? {} : {compatibility: parsed.compatibility}),
               baseDirectory: base,
@@ -298,7 +332,23 @@ export class SkillCatalog {
     root: string,
     directory: string,
     file: string,
+    plugin?: SkillCandidate['plugin'],
   ): Promise<{directory: string; file: string; root: string}> {
+    if (plugin) {
+      if (
+        !contained(plugin.root, root) ||
+        (await packagePath(plugin.root, directory, 'directory')) !== plugin.resolvedDirectory ||
+        (await packagePath(plugin.root, file, 'file')) !== plugin.resolvedFile
+      )
+        throw new Error('Plugin Skill path changed')
+      const [d, f, r] = await Promise.all([
+        this.io.lstat(plugin.resolvedDirectory),
+        this.io.lstat(plugin.resolvedFile),
+        this.io.lstat(root),
+      ])
+      return {directory: identity(d), file: unchanged(f), root: identity(r)}
+    }
+
     const d = await this.io.lstat(directory)
     const f = await this.io.lstat(file)
     const r = await this.io.lstat(root)
@@ -376,11 +426,11 @@ export class SkillCatalog {
       const configured = this.roots.find((root) => root.id === c.rootId)
       if (!configured || (await this.io.realpath(configured.directory)) !== c.rootDirectory)
         throw new Error('Skill root binding changed; refresh listing')
-      const before = await this.observe(c.rootDirectory, c.baseDirectory, c.file)
+      const before = await this.observe(c.rootDirectory, c.baseDirectory, c.file, c.plugin)
       if (canonicalJSON(before) !== canonicalJSON({directory: known.directory, file: known.file, root: known.root}))
         throw new Error('Skill identity changed; refresh listing')
-      const read = await this.read(c.file, this.limits.fileBytes + 1, signal)
-      const after = await this.observe(c.rootDirectory, c.baseDirectory, c.file)
+      const read = await this.read(c.plugin?.resolvedFile ?? c.file, this.limits.fileBytes + 1, signal)
+      const after = await this.observe(c.rootDirectory, c.baseDirectory, c.file, c.plugin)
       if ((await this.io.realpath(configured.directory)) !== c.rootDirectory)
         throw new Error('Skill root binding changed during loading; refresh listing')
       if (
@@ -397,10 +447,17 @@ export class SkillCatalog {
         parsed.name !== c.name ||
         parsed.description !== c.description ||
         parsed.license !== c.license ||
-        parsed.compatibility !== c.compatibility
+        parsed.compatibility !== c.compatibility ||
+        parsed.allowedTools !== c.allowedTools ||
+        canonicalJSON(parsed.metadata ?? null) !== canonicalJSON(c.metadata ?? null)
       )
         throw new Error('Skill metadata changed')
-      result.push({...c, ...parsed, projectionRevision: skillProjectionRevision(parsed), source})
+      result.push({
+        ...c,
+        ...parsed,
+        projectionRevision: c.plugin ? SKILL_PORTABLE_PROJECTION_REVISION : skillProjectionRevision(parsed),
+        source,
+      })
     }
 
     check(signal)

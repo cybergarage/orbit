@@ -139,6 +139,7 @@ export async function executePrepared(
   descriptor: PreparedOperation,
   preparation: OperationPreparation,
   policy: ExecutionPolicy,
+  deferPluginStartupFailure = false,
 ): Promise<ToolResult> {
   const operation = freezeJSON(copyJSON({...descriptor, preview: redactPreview(descriptor.preview)}))
   const digest = run.journal.digest(operation)
@@ -257,7 +258,10 @@ export async function executePrepared(
     })
     return result
   } catch (error) {
-    if (!run.signal.aborted) {
+    if (
+      !run.signal.aborted &&
+      !(deferPluginStartupFailure && operation.variant === 'mcp-startup' && operation.binding.plugin)
+    ) {
       // Arbitrary executor rejection cannot establish external completion.
       run.requestStop(outcome.status === 'unknown' ? 'unknown-operation' : 'runtime-failed')
     }
