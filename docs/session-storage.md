@@ -20,6 +20,64 @@ requires explicit offline inspection and maintenance; startup never repairs it.
 Without a terminal, `orbit gui` reports the required storage command and exits
 instead of prompting. Library and read-only inspection behavior is unchanged.
 
+## Clear test storage offline
+
+`orbit storage reset` permanently clears the selected session and execution
+journal directories, logs, Project catalog and curated memory. It also discards
+registration metadata, migration backups, journal keys and recovery/deletion
+evidence inside those directories. Settings, credentials, workspace files and
+external backups are not targets. This is destructive test maintenance, not
+ordinary Session deletion or a recovery command.
+
+```sh
+orbit storage reset --dry-run
+orbit storage reset
+orbit storage reset --initialize
+```
+
+Dry-run prints the resolved targets and whether they exist without writing or
+prompting. Normal terminal execution shows the same targets and asks you to type
+exactly `RESET`, acknowledging that all other CLI, GUI, library and older writer
+processes are stopped, automatic restarters are disabled, and you have external
+exclusive control of every target. Any other answer, EOF or Ctrl-C cancels before
+mutation. The default outcome is unregistered storage: the next `orbit` or
+`orbit gui` startup offers initialization. `--initialize` registers a fresh pair
+only after every deletion succeeds; the Project database is recreated lazily
+by GUI startup.
+
+Defaults are the normal session/journal pair, the log path (including
+`ORBIT_LOG_DIR` when set), and `~/.orbit/projects.sqlite` with its SQLite sidecars.
+Custom resets require **all four** absolute paths; no omitted target falls back
+to your normal data:
+
+```sh
+orbit storage reset --session-root /tmp/orbit-test/sessions \
+  --journal-root /tmp/orbit-test/sessions/.runs \
+  --log-root /tmp/orbit-test/logs --project-file /tmp/orbit-test/projects.sqlite \
+  --dry-run
+```
+
+Unattended execution requires `--confirm-reset` together with
+`--writers-stopped --restarters-disabled --exclusive-storage-control`.
+`--confirm-reset` never replaces the three offline declarations. Reset-specific
+flags are rejected for other storage actions.
+
+Reset refuses live or unknown Session ownership, conflicting known storage
+partners, symlinks/hard-linked files, nested/ancestor registrations, protected
+root/home/cwd ancestors, configuration/workspace markers, and overlapping targets
+except the supported session-root/.runs pair. Use dedicated storage directories.
+Unknown/torn registration metadata can be discarded with explicit reset consent;
+unknown writer ownership still requires offline investigation.
+
+Deletion is not atomic across these paths. Bindings are invalidated before
+payload deletion; the session directory is removed last. Keep external exclusion
+in place across failure or process death. A reported failure lists remaining
+targets; preview and rerun the same reset while still offline. Missing targets
+are tolerated. If deletion succeeds but initialization fails, the command reports
+that distinction and directs you to storage inspect/resume. Neither successful
+reset nor PID inspection establishes that an external service cannot restart.
+The command does not provide secure erasure or physical power-loss guarantees.
+
 ## Initialize or migrate offline
 
 Stop every CLI, GUI, library host and older Orbit binary using either root.

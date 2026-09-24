@@ -116,6 +116,16 @@ function inspectStorageOwnership(b: {journalRoot: string; sessionRoot: string}):
   }
 }
 
+/** Internal offline reset preflight; inspection never removes legacy ownership evidence. */
+export function assertStorageResetOffline(
+  sessionRoot: string,
+  journalRoot: string,
+  conditions: OfflineStorageConditions,
+): void {
+  assertOfflineStorage(conditions)
+  inspectStorageOwnership({journalRoot, sessionRoot})
+}
+
 export function initializeSessionStorage(
   sessionRoot: string,
   journalRoot: string,

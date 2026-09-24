@@ -290,6 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                        |
 | ---------- | ---------- | -------------- | ----------------------------------------------------------------------------------------------- |
+| 2026-09-24 | accepted | in-progress | [Offline Storage Reset](2026-09-24-offline-storage-reset.md) |
 | 2026-09-22 | accepted   | not-started    | [Project Catalog and Session Membership](2026-09-22-project-catalog-and-session-membership.md)  |
 | 2026-09-22 | accepted   | not-started    | [Project Memory and Run Context](2026-09-22-project-memory-context.md)                          |
 | 2026-09-14 | accepted   | partial        | [Verified Context for Interrupted Tool Groups](2026-09-14-verified-interrupted-tool-context.md) |

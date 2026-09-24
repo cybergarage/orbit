@@ -14,7 +14,7 @@ $ npm install -g @cybergarage/orbit
 $ orbit COMMAND
 running command...
 $ orbit (--version)
-@cybergarage/orbit/0.6.1 darwin-arm64 node-v26.5.0
+@cybergarage/orbit/0.6.1 darwin-arm64 node-v26.9.0
 $ orbit --help [COMMAND]
 USAGE
   $ orbit COMMAND
@@ -279,27 +279,33 @@ _See code: [src/cli/skills.ts](https://github.com/cybergarage/orbit/blob/v0.6.1/
 
 ## `orbit storage ACTION [SESSION]`
 
-Inspect storage or initialize, resume and recover it under external offline exclusion
+Inspect, initialize, reset or recover storage under external offline exclusion
 
 ```
 USAGE
-  $ orbit storage ACTION [SESSION] [--exclusive-storage-control] [--journal-root <value>]
-    [--restarters-disabled] [--reviewed-artifacts <value>] [--session-root <value>] [--writers-stopped]
+  $ orbit storage ACTION [SESSION] [--confirm-reset] [--dry-run] [--initialize] [--log-root <value>]
+    [--project-file <value>] [--exclusive-storage-control] [--journal-root <value>] [--restarters-disabled]
+    [--reviewed-artifacts <value>] [--session-root <value>] [--writers-stopped]
 
 ARGUMENTS
-  ACTION     (initialize|inspect|recover|resume|migrate-transcript|resume-transcript)
+  ACTION     (initialize|inspect|recover|resume|migrate-transcript|resume-transcript|reset)
   [SESSION]  Exact session ID for inspection, recovery or transcript migration
 
 FLAGS
+  --confirm-reset               Confirm destructive reset without a prompt; requires all offline declarations
+  --dry-run                     Preview reset targets without modifying storage; reset only
   --exclusive-storage-control   Confirm external exclusive administration of both roots
+  --initialize                  Initialize a new session/journal pair after clearing storage; reset only
   --journal-root=<value>        Matching execution journal root
+  --log-root=<value>            Log directory to clear; reset only, requires all four custom targets
+  --project-file=<value>        Project SQLite database to clear; reset only, requires all four custom targets
   --restarters-disabled         Confirm automatic restarters remain disabled through interruption
   --reviewed-artifacts=<value>  JSON file mapping reviewed artifact absolute paths to SHA-256 values; resume only
   --session-root=<value>        Session repository root
   --writers-stopped             Confirm all current and old writer processes are stopped
 
 DESCRIPTION
-  Inspect storage or initialize, resume and recover it under external offline exclusion
+  Inspect, initialize, reset or recover storage under external offline exclusion
 ```
 
 _See code: [src/cli/storage.ts](https://github.com/cybergarage/orbit/blob/v0.6.1/src/apps/cli/storage.ts)_

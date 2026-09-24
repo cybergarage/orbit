@@ -168,6 +168,13 @@ Session records reconstruct history, optional logs support diagnostics, and
 journals preserve admission and operation evidence. All persistent entry points
 use the same registered roots; see [storage migration](session-storage.md).
 
+`session/storage-reset.ts` implements explicit offline test reset separately
+from Session deletion. `apps/storage-reset.ts` selects and previews the CLI/GUI
+storage targets and obtains destructive confirmation. Reset invalidates bindings
+and clears selected session, journal, log and Project database storage under
+operator-maintained exclusion; it never runs as an online GUI endpoint. See
+[offline reset](session-storage.md#clear-test-storage-offline).
+
 ## Configuration and context
 
 Workspace settings are merged from discovered `.orbit/settings.json` files and

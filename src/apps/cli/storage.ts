@@ -13,21 +13,33 @@ import {
   recoverSessionWriter,
   SessionRepository,
 } from '../../core/index.js'
+import {runStorageReset} from '../storage-reset.js'
 
 export default class StorageCommand extends Command {
   static args = {
     action: Args.string({
-      options: ['initialize', 'inspect', 'recover', 'resume', 'migrate-transcript', 'resume-transcript'],
+      options: ['initialize', 'inspect', 'recover', 'resume', 'migrate-transcript', 'resume-transcript', 'reset'],
       required: true,
     }),
     session: Args.string({description: 'Exact session ID for inspection, recovery or transcript migration'}),
   }
-  static description = 'Inspect storage or initialize, resume and recover it under external offline exclusion'
+  static description = 'Inspect, initialize, reset or recover storage under external offline exclusion'
   static flags = {
+    'confirm-reset': Flags.boolean({
+      description: 'Confirm destructive reset without a prompt; requires all offline declarations',
+    }),
+    'dry-run': Flags.boolean({description: 'Preview reset targets without modifying storage; reset only'}),
     'exclusive-storage-control': Flags.boolean({
       description: 'Confirm external exclusive administration of both roots',
     }),
+    initialize: Flags.boolean({
+      description: 'Initialize a new session/journal pair after clearing storage; reset only',
+    }),
     'journal-root': Flags.string({description: 'Matching execution journal root'}),
+    'log-root': Flags.string({description: 'Log directory to clear; reset only, requires all four custom targets'}),
+    'project-file': Flags.string({
+      description: 'Project SQLite database to clear; reset only, requires all four custom targets',
+    }),
     'restarters-disabled': Flags.boolean({
       description: 'Confirm automatic restarters remain disabled through interruption',
     }),
@@ -45,6 +57,34 @@ export default class StorageCommand extends Command {
       this.error('Only inspection, recovery or transcript migration takes a session ID')
     if (flags['reviewed-artifacts'] && args.action !== 'resume')
       this.error('Reviewed artifacts are only accepted by resume')
+    if (
+      args.action !== 'reset' &&
+      (flags['confirm-reset'] ||
+        flags['dry-run'] ||
+        flags.initialize ||
+        flags['log-root'] !== undefined ||
+        flags['project-file'] !== undefined)
+    )
+      this.error('Reset flags are only accepted by storage reset')
+    if (args.action === 'reset') {
+      await runStorageReset(
+        {
+          confirmReset: flags['confirm-reset'],
+          dryRun: flags['dry-run'],
+          exclusiveStorageControl: flags['exclusive-storage-control'],
+          initialize: flags.initialize,
+          journalRoot: flags['journal-root'],
+          logRoot: flags['log-root'],
+          projectFile: flags['project-file'],
+          restartersDisabled: flags['restarters-disabled'],
+          sessionRoot: flags['session-root'],
+          writersStopped: flags['writers-stopped'],
+        },
+        {log: (message) => this.log(message)},
+      )
+      return
+    }
+
     if (args.action === 'inspect') {
       this.log(
         JSON.stringify(

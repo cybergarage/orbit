@@ -164,6 +164,15 @@ Last guard removal establishes logical readiness after prerequisite syncs; API
 success additionally requires final namespace synchronization. See
 [session storage](../session-storage.md).
 
+### Storage reset
+
+An explicitly confirmed offline administrative deletion of selected Session,
+execution journal, log and Project storage for testing. It discards recovery
+evidence and normally leaves the roots unregistered, unlike ordinary Session
+deletion, which retains registration and a minimal deletion marker. External
+exclusion remains necessary across partial failure. See
+[offline reset](../session-storage.md#clear-test-storage-offline).
+
 ## Status qualifiers
 
 - **Current:** implemented in the maintained repository.
