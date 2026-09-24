@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-09-24
 decision-date: 2026-09-24
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-09-24
+implementation-commits:
+  - e7090331b2e181be36084f088e7c52a82d713dd2
 superseded-by: []
 ---
 
@@ -101,9 +102,10 @@ registration identities and catalog ownership.
 
 ## Implementation and Confirmation
 
-Source, command help and maintained documentation are implemented and uncommitted.
-Metadata remains in-progress pending an implementation commit and separate ADR
-finalization. Local validation on 2026-09-24:
+Implementation completed on 2026-09-24 in
+`e7090331b2e181be36084f088e7c52a82d713dd2`, including source, tests, command help
+and maintained documentation. This later documentation change records completion.
+Local validation on 2026-09-24:
 
 - Headers and build passed; oclif regenerated the command reference.
 - Nineteen focused reset/storage command tests passed using isolated directories.
@@ -122,8 +124,8 @@ No actual user storage was reset during implementation or verification.
 
 ## Follow-up Work
 
-Record validation and implementation commit hashes after a separately requested
-commit. Physical failure, secure erasure and distributed storage are not claimed.
+No required implementation work remains for the defined offline test-reset scope.
+Physical failure, secure erasure and distributed storage are not claimed.
 
 ## References
 
