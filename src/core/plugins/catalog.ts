@@ -394,8 +394,11 @@ export async function validatePluginStartup(plugin: PluginStartup, command: stri
     if ((await fs.realpath(sourceCwd)) !== plugin.cwd) return false
     const cwd = await fs.realpath(plugin.cwd)
     if (cwd !== plugin.cwd || ![plugin.root, plugin.data].some((root) => contained(root, cwd))) return false
-    if (plugin.command.startsWith('./') &&
-      (await packagePath(plugin.root, path.resolve(plugin.root, plugin.command), 'file')) !== command) return false
+    if (
+      plugin.command.startsWith('./') &&
+      (await packagePath(plugin.root, path.resolve(plugin.root, plugin.command), 'file')) !== command
+    )
+      return false
     return true
   } catch {
     return false

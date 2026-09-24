@@ -2,9 +2,11 @@
 status: accepted
 proposed-date: 2026-09-24
 decision-date: 2026-09-25
-implementation-status: not-started
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-09-25
+implementation-commits:
+  - 27d2b7d9073ad2d3509006cfd4d2bf95ec6e4716
+  - 077d1b2eb459b19937b573c7afcbdcbf5cb100ce
 superseded-by: []
 ---
 
@@ -22,7 +24,8 @@ Accepted by the author on 2026-09-25 with the explicit instruction to accept
 this ADR and proceed with implementation, verification and chapter 13 updates.
 Review confirms the stdio-first scope and the separation between independent
 component loading and the unknown-operation execution barrier. Implementation
-has not started at acceptance; completion requires the confirmation below.
+had not started when acceptance was committed; completed implementation and
+confirmation are recorded below.
 
 ### Scope and public boundary
 
@@ -220,6 +223,55 @@ test or assessment of either product's complete Agent Plugins support occurred.
    authentication and distribution work; defer rather than make it a prerequisite.
 
 ## Implementation and Confirmation
+
+Completed on 2026-09-25. Commit
+`27d2b7d9073ad2d3509006cfd4d2bf95ec6e4716` implements the shared catalog,
+portable Skill projection, managed stdio startup and CLI/Ink/GUI/library
+composition. Commit `077d1b2eb459b19937b573c7afcbdcbf5cb100ce` additionally
+rejects internal executable/cwd aliases retargeted after preparation. The
+finalization includes only documentation and formatter line wrapping beyond
+those implementation commits.
+
+Maintained behavior is documented in [Plugins](../plugins.md),
+[Skills](../skills.md), [Architecture](../architecture.md),
+[Settings](../settings.md), [Tools](../tools.md), the generated CLI reference
+and the glossary. The Plugins guide maps the official conformance checklist
+to executable tests and states the transport and platform limits.
+
+Verification used macOS arm64 and Node.js 26.9.0:
+
+- `npm run headers:check` and `npm run build` passed.
+- Final `npm test`: **912 passing**, including cancellation, exhausted budget,
+  journal failure, denied startup, unknown outcome admission, Project runtime
+  propagation, legacy/new Skill records, internal aliases and resource escapes.
+  ESLint completed with warnings and no errors; formatter changes were reviewed.
+- A real stdio fixture continues past a failed child, preserves package cwd,
+  injected data/root values and original remote tool names, and verifies process
+  exit. Injected managed clients separately establish the unknown-outcome
+  barrier and resource ownership; no unknown effect is relabeled as failure.
+- `npm run test:package` passed: independent consumer build/test, public
+  PluginCatalog export probe, CLI help and a 363-file package inventory.
+- Book repository commit `860a0d170a3cb8cbad18459cc692c1cff149f460`
+  updates chapters 12/13, the package diagram, analysis and review records.
+  Chapter/full-book HTML, prose/structure checks, diagram review, EPUBCheck
+  (zero diagnostics), KDP size checks and embedded-image/reference checks passed.
+
+Intermediate results are retained as limits of those runs, not hidden successes:
+the first sandboxed full run had 899 passes and nine failures (two corrected
+CLI option shapes, an ungenerated command manifest and six loopback permission
+failures). The subsequent permitted run passed 908 tests. A later full run had
+908 passes and three failures in existing subprocess interruption/recovery tests
+(spawn timeout, test timeout and unfinished recording). The final sequential
+run passed all 912 without changing their timeouts or weakening assertions.
+Focused integration checks passed 21 tests, then 17 tests for added lifecycle
+and Project checks, and 17 plugin tests after the alias correction.
+
+Windows, live-provider selection quality, remote authentication and manual GUI
+visual interaction were not exercised. Published main could not be verified;
+these are local commits, not evidence of a published release. The previously
+deferred parent ADR trials and publication decisions remain deferred.
+
+The original implementation plan and acceptance conditions follow.
 
 Before source changes, obtain author acceptance or explicit delegation for this
 record, record the review and decision date, and commit acceptance. Implement in

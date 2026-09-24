@@ -11,6 +11,11 @@ superseded-by: []
 
 # Descriptive Skill Metadata
 
+The accepted [Local Agent Plugins Client](2026-09-24-agent-plugins-client.md)
+subsequently extends optional metadata and minimal Skill input handling with a
+v3 projection. Its implementation preserves the v1/v2 validation described here.
+The original decision and its verification below remain historical evidence.
+
 ## Purpose
 
 Accept standard Skills containing license and environment descriptions without
