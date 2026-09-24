@@ -16,6 +16,7 @@ as a product contract.
 - Read [Current Architecture](architecture.md) for the structure implemented in
   the repository today.
 - Read [Development](development.md) to build, test, and change Orbit.
+- Run opt-in [local coding E2E evaluation](e2e-evaluation.md) with Ollama, Docker and one official SWE-bench problem.
 - Read the feature guides for current user-visible behavior, including
   [Input budgets and compaction](context-compaction.md).
 

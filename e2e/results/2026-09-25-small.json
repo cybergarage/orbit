@@ -1,0 +1,507 @@
+{
+  "artifactRoot": "tmp/e2e/runs/2026-09-24T17-44-16.558Z-small",
+  "environment": {
+    "arch": "arm64",
+    "date": "2026-09-24T17:44:16.700Z",
+    "docker": {
+      "Client": {
+        "Version": "29.8.0",
+        "ApiVersion": "1.56",
+        "DefaultAPIVersion": "1.56",
+        "GitCommit": "88096ef",
+        "GoVersion": "go1.26.8",
+        "Os": "darwin",
+        "Arch": "arm64",
+        "BuildTime": "Thu Sep  3 21:49:43 2026",
+        "Context": "desktop-linux"
+      },
+      "Server": {
+        "Platform": {
+          "Name": "Docker Desktop 4.92.0 (240144)"
+        },
+        "Version": "29.8.0",
+        "ApiVersion": "1.56",
+        "MinAPIVersion": "1.40",
+        "Os": "linux",
+        "Arch": "arm64",
+        "Components": [
+          {
+            "Name": "Engine",
+            "Version": "29.8.0",
+            "Details": {
+              "ApiVersion": "1.56",
+              "Arch": "arm64",
+              "BuildTime": "Thu Sep  3 21:49:37 2026",
+              "Experimental": "false",
+              "GitCommit": "3ce5872",
+              "GoVersion": "go1.26.8",
+              "KernelVersion": "7.0.12-linuxkit",
+              "MinAPIVersion": "1.40",
+              "Module": "github.com/moby/moby/v2",
+              "ModuleVersion": "v2.0.0+unknown",
+              "Os": "linux"
+            }
+          },
+          {
+            "Name": "containerd",
+            "Version": "v2.3.5",
+            "Details": {
+              "GitCommit": "1294c24a7da8e5a793ed378161673abe94118892"
+            }
+          },
+          {
+            "Name": "runc",
+            "Version": "1.5.1",
+            "Details": {
+              "GitCommit": "v1.5.1-0-g8f2685a4"
+            }
+          },
+          {
+            "Name": "docker-init",
+            "Version": "0.19.0",
+            "Details": {
+              "GitCommit": "de40ad0"
+            }
+          }
+        ],
+        "GitCommit": "3ce5872",
+        "GoVersion": "go1.26.8",
+        "KernelVersion": "7.0.12-linuxkit",
+        "BuildTime": "2026-09-03T21:49:37.000000000+00:00"
+      }
+    },
+    "image": "sha256:4eca5aeab6c2770a8027291a7257216dabf20b62cb3280d91bad77b4760d3096",
+    "models": [
+      {
+        "capabilities": ["completion", "vision", "audio", "tools", "thinking"],
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "gemma4",
+          "families": ["gemma4"],
+          "parameter_size": "11.9B",
+          "quantization_level": "Q4_K_M"
+        },
+        "digest": "4eb23ef187e2c5462566d6a1d3bbbc2f1346d0b4327cbb66d58fffbcc9b2b05c",
+        "model": "gemma4:12b",
+        "ollama": {
+          "version": "0.34.3"
+        },
+        "parameters": "top_k                          64\ntop_p                          0.95\ntemperature                    1",
+        "size": 7556508396,
+        "templateSha256": "b507b9c2f6ca642bffcd06665ea7c91f235fd32daeefdf875a0f938db05fb315"
+      },
+      {
+        "capabilities": ["tools", "thinking", "completion", "vision"],
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": ["qwen35"],
+          "parameter_size": "9.0B",
+          "quantization_level": "Q4_K_M"
+        },
+        "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+        "model": "ornith-1.5:9b",
+        "ollama": {
+          "version": "0.34.3"
+        },
+        "size": 6550813657,
+        "templateSha256": "f55f52930aa8bf44ab5cb85f99370fcc3c56e9a85640b812086d5330bce5d86b"
+      }
+    ],
+    "node": "v26.9.0",
+    "orbitCommit": "3bbd0cfd5a8c7f601fc0a9f637653ec13971b06f",
+    "platform": "darwin",
+    "workingTree": " M eslint.config.mjs\n M package.json\n?? .claude/\n?? .dockerignore\n?? e2e/\n"
+  },
+  "summary": {
+    "planned": 24,
+    "results": [
+      {
+        "artifactPassed": true,
+        "caseId": "read",
+        "directory": "gemma4-12b-read-1",
+        "elapsedMs": 28491,
+        "model": "gemma4:12b",
+        "reason": "Independent checks passed",
+        "repetition": 0,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 1771,
+          "outputTokens": 54
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "read",
+        "directory": "gemma4-12b-read-2",
+        "elapsedMs": 11229,
+        "model": "gemma4:12b",
+        "reason": "Independent checks passed",
+        "repetition": 1,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 1777,
+          "outputTokens": 56
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "read",
+        "directory": "gemma4-12b-read-3",
+        "elapsedMs": 11266,
+        "model": "gemma4:12b",
+        "reason": "Independent checks passed",
+        "repetition": 2,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 1777,
+          "outputTokens": 56
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "single-file",
+        "directory": "gemma4-12b-single-file-1",
+        "elapsedMs": 45392,
+        "model": "gemma4:12b",
+        "reason": "Independent checks passed",
+        "repetition": 0,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 4233,
+          "outputTokens": 307
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "single-file",
+        "directory": "gemma4-12b-single-file-2",
+        "elapsedMs": 40841,
+        "model": "gemma4:12b",
+        "reason": "Independent checks passed",
+        "repetition": 1,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 4233,
+          "outputTokens": 307
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "single-file",
+        "directory": "gemma4-12b-single-file-3",
+        "elapsedMs": 40860,
+        "model": "gemma4:12b",
+        "reason": "Independent checks passed",
+        "repetition": 2,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 4233,
+          "outputTokens": 307
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "test-repair",
+        "directory": "gemma4-12b-test-repair-1",
+        "elapsedMs": 41669,
+        "model": "gemma4:12b",
+        "reason": "Independent checks passed",
+        "repetition": 0,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 5212,
+          "outputTokens": 250
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": false,
+        "caseId": "test-repair",
+        "directory": "gemma4-12b-test-repair-2",
+        "elapsedMs": 1068217,
+        "model": "gemma4:12b",
+        "reason": "No quiescent runtime result",
+        "repetition": 1,
+        "runtimeOutcome": "cancelled",
+        "status": "timeout",
+        "usage": {
+          "inputTokens": 3078,
+          "outputTokens": 128
+        },
+        "usageComplete": false
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "test-repair",
+        "directory": "gemma4-12b-test-repair-3",
+        "elapsedMs": 29372,
+        "model": "gemma4:12b",
+        "reason": "Independent checks passed",
+        "repetition": 2,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 5212,
+          "outputTokens": 250
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": false,
+        "caseId": "multi-file",
+        "directory": "gemma4-12b-multi-file-1",
+        "elapsedMs": 118313,
+        "model": "gemma4:12b",
+        "reason": "Runtime outcome: budget-exceeded",
+        "repetition": 0,
+        "runtimeOutcome": "budget-exceeded",
+        "status": "unresolved",
+        "usage": {
+          "inputTokens": 14745,
+          "outputTokens": 1121
+        },
+        "usageComplete": false
+      },
+      {
+        "artifactPassed": false,
+        "caseId": "multi-file",
+        "directory": "gemma4-12b-multi-file-2",
+        "elapsedMs": 129324,
+        "model": "gemma4:12b",
+        "reason": "Runtime outcome: budget-exceeded",
+        "repetition": 1,
+        "runtimeOutcome": "budget-exceeded",
+        "status": "unresolved",
+        "usage": {
+          "inputTokens": 14745,
+          "outputTokens": 1121
+        },
+        "usageComplete": false
+      },
+      {
+        "artifactPassed": false,
+        "caseId": "multi-file",
+        "directory": "gemma4-12b-multi-file-3",
+        "elapsedMs": 974402,
+        "model": "gemma4:12b",
+        "reason": "Error: Agent close incomplete; execution resources remain owned; Run 359ebe7a-3ac5-4d96-84eb-f1df80c78a60: incomplete; reason=application; recording=acknowledged; quiescence=false",
+        "repetition": 2,
+        "runtimeOutcome": "incomplete",
+        "status": "timeout",
+        "usage": {
+          "inputTokens": 3549,
+          "outputTokens": 233
+        },
+        "usageComplete": false
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "read",
+        "directory": "ornith-1.5-9b-read-1",
+        "elapsedMs": 14870,
+        "model": "ornith-1.5:9b",
+        "reason": "Independent checks passed",
+        "repetition": 0,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 2854,
+          "outputTokens": 105
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "read",
+        "directory": "ornith-1.5-9b-read-2",
+        "elapsedMs": 8550,
+        "model": "ornith-1.5:9b",
+        "reason": "Independent checks passed",
+        "repetition": 1,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 2854,
+          "outputTokens": 105
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "read",
+        "directory": "ornith-1.5-9b-read-3",
+        "elapsedMs": 9460,
+        "model": "ornith-1.5:9b",
+        "reason": "Independent checks passed",
+        "repetition": 2,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 2854,
+          "outputTokens": 105
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "single-file",
+        "directory": "ornith-1.5-9b-single-file-1",
+        "elapsedMs": 27986,
+        "model": "ornith-1.5:9b",
+        "reason": "Independent checks passed",
+        "repetition": 0,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 5287,
+          "outputTokens": 348
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "single-file",
+        "directory": "ornith-1.5-9b-single-file-2",
+        "elapsedMs": 28822,
+        "model": "ornith-1.5:9b",
+        "reason": "Independent checks passed",
+        "repetition": 1,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 5287,
+          "outputTokens": 348
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "single-file",
+        "directory": "ornith-1.5-9b-single-file-3",
+        "elapsedMs": 28584,
+        "model": "ornith-1.5:9b",
+        "reason": "Independent checks passed",
+        "repetition": 2,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 5287,
+          "outputTokens": 348
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "test-repair",
+        "directory": "ornith-1.5-9b-test-repair-1",
+        "elapsedMs": 79194,
+        "model": "ornith-1.5:9b",
+        "reason": "Independent checks passed",
+        "repetition": 0,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 26495,
+          "outputTokens": 803
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": false,
+        "caseId": "test-repair",
+        "directory": "ornith-1.5-9b-test-repair-2",
+        "elapsedMs": 935821,
+        "model": "ornith-1.5:9b",
+        "reason": "Runtime outcome: failed",
+        "repetition": 1,
+        "runtimeOutcome": "failed",
+        "status": "unresolved",
+        "usage": {
+          "inputTokens": 3310,
+          "outputTokens": 244
+        },
+        "usageComplete": false
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "test-repair",
+        "directory": "ornith-1.5-9b-test-repair-3",
+        "elapsedMs": 76712,
+        "model": "ornith-1.5:9b",
+        "reason": "Independent checks passed",
+        "repetition": 2,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 26547,
+          "outputTokens": 874
+        },
+        "usageComplete": true
+      },
+      {
+        "artifactPassed": false,
+        "caseId": "multi-file",
+        "directory": "ornith-1.5-9b-multi-file-1",
+        "elapsedMs": 1448251,
+        "model": "ornith-1.5:9b",
+        "reason": "No quiescent runtime result",
+        "repetition": 0,
+        "runtimeOutcome": "completed",
+        "status": "timeout",
+        "usage": {
+          "inputTokens": 15403,
+          "outputTokens": 2278
+        },
+        "usageComplete": false
+      },
+      {
+        "artifactPassed": false,
+        "caseId": "multi-file",
+        "directory": "ornith-1.5-9b-multi-file-2",
+        "elapsedMs": 1054415,
+        "model": "ornith-1.5:9b",
+        "reason": "No quiescent runtime result",
+        "repetition": 1,
+        "runtimeOutcome": "completed",
+        "status": "timeout",
+        "usage": {
+          "inputTokens": 15621,
+          "outputTokens": 1463
+        },
+        "usageComplete": false
+      },
+      {
+        "artifactPassed": true,
+        "caseId": "multi-file",
+        "directory": "ornith-1.5-9b-multi-file-3",
+        "elapsedMs": 102664,
+        "model": "ornith-1.5:9b",
+        "reason": "Independent checks passed",
+        "repetition": 2,
+        "runtimeOutcome": "completed",
+        "status": "resolved",
+        "usage": {
+          "inputTokens": 9336,
+          "outputTokens": 1222
+        },
+        "usageComplete": true
+      }
+    ]
+  }
+}

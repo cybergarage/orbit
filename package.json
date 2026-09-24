@@ -110,7 +110,12 @@
     "test": "TS_NODE_PROJECT=tsconfig.test.json mocha --forbid-only \"test/**/*.test.ts\"",
     "version": "npm run docs:commands && git add docs/cli.md",
     "docs:commands": "oclif manifest && oclif readme --readme-path docs/cli.md",
-    "test:package": "node bin/test-package.mjs"
+    "test:package": "node bin/test-package.mjs",
+    "test:e2e:ollama": "mocha --no-config --no-package --forbid-only e2e/small.e2e.mjs",
+    "test:e2e:unit": "mocha --no-config --no-package --forbid-only e2e/host.test.mjs",
+    "e2e:build": "docker build -f e2e/Dockerfile -t orbit-e2e:local .",
+    "eval:swebench": "node e2e/swebench.mjs",
+    "test:e2e:graders": "mocha --no-config --no-package --forbid-only e2e/graders.e2e.mjs"
   },
   "types": "dist/index.d.ts",
   "prettier": "@oclif/prettier-config",

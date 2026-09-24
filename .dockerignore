@@ -1,0 +1,11 @@
+**
+!package.json
+!package-lock.json
+!tsconfig.json
+!src/**
+!src
+!bin
+!bin/build-gui.mjs
+!e2e
+!e2e/worker.mjs
+!e2e/Dockerfile

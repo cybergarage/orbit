@@ -1,0 +1,533 @@
+{
+  "attempts": [
+    {
+      "artifactRoot": "tmp/e2e/swe/solve-ornith-1.5-9b-928e5fc3-f60b-4f9e-961e-e0c8c1e5f313",
+      "metadata": {
+        "config": {
+          "model": "ornith-1.5:9b",
+          "ollamaHost": "http://host.docker.internal:11434",
+          "options": {
+            "num_ctx": 32768,
+            "num_predict": 4096,
+            "seed": 42,
+            "temperature": 0.6,
+            "top_p": 0.95
+          },
+          "rounds": 30,
+          "think": true,
+          "timeoutMs": 900000
+        },
+        "dataset": {
+          "dataset": "princeton-nlp/SWE-bench_Lite",
+          "revision": "6ec7bb89b9342f664a54a6e0a6ea6501d3437cc2",
+          "split": "test",
+          "instance_id": "sympy__sympy-20590",
+          "repo": "sympy/sympy",
+          "base_commit": "cffd4e0f86fefd4802349a9f9b19ed70934ea354"
+        },
+        "elapsedMs": 1261497,
+        "imageId": "sha256:6bf0e425baaf7c1863f0d7d58119c45e8962990b7a63b38828100c3eedfaa45a",
+        "metadata": {
+          "capabilities": ["tools", "thinking", "completion", "vision"],
+          "details": {
+            "parent_model": "",
+            "format": "gguf",
+            "family": "qwen35",
+            "families": ["qwen35"],
+            "parameter_size": "9.0B",
+            "quantization_level": "Q4_K_M"
+          },
+          "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+          "model": "ornith-1.5:9b",
+          "ollama": {
+            "version": "0.34.3"
+          },
+          "size": 6550813657,
+          "templateSha256": "f55f52930aa8bf44ab5cb85f99370fcc3c56e9a85640b812086d5330bce5d86b"
+        },
+        "orbitCommit": "3bbd0cfd5a8c7f601fc0a9f637653ec13971b06f",
+        "runStatus": "timeout",
+        "sourceArchiveSha256": "932ba79e0521f1076e0e14ff134ea1a93d970b3a839b867f11039b4f0a6babda",
+        "usage": {
+          "inputTokens": 43901,
+          "outputTokens": 2593
+        },
+        "usageComplete": false
+      },
+      "runtime": {
+        "cleanupErrors": [],
+        "operations": [
+          {
+            "id": "e0b4ebe8-3162-4a4c-b3c0-382ed7e4e399",
+            "status": "failed"
+          },
+          {
+            "id": "a24bd43c-548e-4f80-8459-9b6c57182f0c",
+            "status": "failed"
+          },
+          {
+            "id": "c87b84ef-f1f4-41c7-ad24-0a268d055f63",
+            "status": "succeeded"
+          },
+          {
+            "id": "06f123ed-d51d-48a8-af0b-d6f3f11ac41e",
+            "status": "succeeded"
+          },
+          {
+            "id": "7490a1d3-2968-4143-8af0-ac4acc6a6e4a",
+            "status": "succeeded"
+          },
+          {
+            "id": "68f80751-2082-440d-8db1-1a73ec86b504",
+            "status": "succeeded"
+          },
+          {
+            "id": "789dd2b8-b639-4928-ae20-436cd328ff5e",
+            "status": "succeeded"
+          },
+          {
+            "id": "fe4a8fbf-adc4-4666-90d2-c9c518cf9879",
+            "status": "succeeded"
+          },
+          {
+            "id": "c45257c7-e247-40b0-912a-132c100ff091",
+            "status": "succeeded"
+          },
+          {
+            "id": "2c616f30-1de8-4a90-a4b4-cdec04cf4425",
+            "status": "succeeded"
+          },
+          {
+            "id": "af8815f8-da09-4150-b0bf-c7a7b904e713",
+            "status": "succeeded"
+          },
+          {
+            "id": "786e282e-3baa-4dae-a9d6-fae96aec8e0a",
+            "status": "succeeded"
+          }
+        ],
+        "outcome": "cancelled",
+        "quiescence": true,
+        "reason": "application",
+        "recording": {
+          "level": "memory",
+          "mode": "memory",
+          "status": "acknowledged"
+        },
+        "runId": "6bcb9ef2-76fd-46ae-9cf1-d513201d2e17",
+        "sessionId": "01a0d4e8-f08b-776d-b316-82be53dfa167",
+        "stopRequest": "application",
+        "unresolved": []
+      },
+      "patchBytes": 0
+    },
+    {
+      "artifactRoot": "tmp/e2e/swe/solve-ornith-1.5-9b-83643716-def2-49de-891c-8bd46cb34b54",
+      "metadata": {
+        "config": {
+          "model": "ornith-1.5:9b",
+          "ollamaHost": "http://host.docker.internal:11434",
+          "options": {
+            "num_ctx": 32768,
+            "num_predict": 4096,
+            "seed": 42,
+            "temperature": 0.6,
+            "top_p": 0.95
+          },
+          "rounds": 30,
+          "think": false,
+          "timeoutMs": 900000
+        },
+        "dataset": {
+          "dataset": "princeton-nlp/SWE-bench_Lite",
+          "revision": "6ec7bb89b9342f664a54a6e0a6ea6501d3437cc2",
+          "split": "test",
+          "instance_id": "sympy__sympy-20590",
+          "repo": "sympy/sympy",
+          "base_commit": "cffd4e0f86fefd4802349a9f9b19ed70934ea354"
+        },
+        "elapsedMs": 220621,
+        "imageId": "sha256:6bf0e425baaf7c1863f0d7d58119c45e8962990b7a63b38828100c3eedfaa45a",
+        "metadata": {
+          "capabilities": ["tools", "thinking", "completion", "vision"],
+          "details": {
+            "parent_model": "",
+            "format": "gguf",
+            "family": "qwen35",
+            "families": ["qwen35"],
+            "parameter_size": "9.0B",
+            "quantization_level": "Q4_K_M"
+          },
+          "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+          "model": "ornith-1.5:9b",
+          "ollama": {
+            "version": "0.34.3"
+          },
+          "size": 6550813657,
+          "templateSha256": "f55f52930aa8bf44ab5cb85f99370fcc3c56e9a85640b812086d5330bce5d86b"
+        },
+        "orbitCommit": "3bbd0cfd5a8c7f601fc0a9f637653ec13971b06f",
+        "runStatus": "runtime-error",
+        "sourceArchiveSha256": "932ba79e0521f1076e0e14ff134ea1a93d970b3a839b867f11039b4f0a6babda",
+        "usage": {
+          "inputTokens": 338601,
+          "outputTokens": 3751
+        },
+        "usageComplete": false
+      },
+      "runtime": {
+        "cleanupErrors": [],
+        "operations": [
+          {
+            "id": "65833b26-ac68-46ac-8cc0-fb03093eea23",
+            "status": "succeeded"
+          },
+          {
+            "id": "24312a5e-3698-402b-bb73-871de7e6f31b",
+            "status": "succeeded"
+          },
+          {
+            "id": "98fa0a9b-2342-4a8f-9c20-a63b87d4804e",
+            "status": "succeeded"
+          },
+          {
+            "id": "10bff4fa-9653-4790-8d48-ad98b3b27d8b",
+            "status": "succeeded"
+          },
+          {
+            "id": "6f86aa91-0f43-405c-b8d5-033c304f9784",
+            "status": "succeeded"
+          },
+          {
+            "id": "8d641ba3-8ef2-45e7-b206-c14cea8ed3b5",
+            "status": "succeeded"
+          },
+          {
+            "id": "a56b8b08-f36c-485a-82d1-465d4a334289",
+            "status": "succeeded"
+          },
+          {
+            "id": "ce359282-311a-46ab-ad93-94369d891d46",
+            "status": "succeeded"
+          },
+          {
+            "id": "dcbf6227-b1ef-4878-8c14-56254545f644",
+            "status": "succeeded"
+          },
+          {
+            "id": "c660886b-ce3f-4b0a-abc2-803e4cbcee8c",
+            "status": "succeeded"
+          },
+          {
+            "id": "fdb67984-6e68-4753-9be5-8858d9b168eb",
+            "status": "failed"
+          },
+          {
+            "id": "099ebf8f-d36e-4bf4-a70c-68562f0cc318",
+            "status": "succeeded"
+          },
+          {
+            "id": "4e333714-6ac6-48f1-b845-62e63708bb91",
+            "status": "succeeded"
+          },
+          {
+            "id": "a37cdfb6-0831-49cd-a692-46ced61524ce",
+            "status": "failed"
+          },
+          {
+            "id": "56c65dd1-4eb0-453b-ba52-8426ba741a2a",
+            "status": "succeeded"
+          },
+          {
+            "id": "784673c7-30b7-4c22-93cd-5190d4b93ace",
+            "status": "succeeded"
+          },
+          {
+            "id": "9bbe1398-e769-4e2f-b80e-bd4849ba013c",
+            "status": "succeeded"
+          },
+          {
+            "id": "7509c818-562b-40f0-8f39-cd05c8d20b16",
+            "status": "failed"
+          },
+          {
+            "id": "ef425076-c5c9-4a03-9d64-9ee92f092d7d",
+            "status": "succeeded"
+          },
+          {
+            "id": "4b08136e-b695-48d9-ae5e-dcafa50f4b6d",
+            "status": "succeeded"
+          },
+          {
+            "id": "b059647f-f0a4-4644-a232-7c8cbc32b775",
+            "status": "succeeded"
+          },
+          {
+            "id": "60103e65-75df-4864-8427-0a7b831e5a8a",
+            "status": "succeeded"
+          },
+          {
+            "id": "c71b7869-fd9d-4388-bdd9-e68ee559b077",
+            "status": "succeeded"
+          },
+          {
+            "id": "f7c788a0-16f2-44e8-b800-6fa8ce00b074",
+            "status": "succeeded"
+          },
+          {
+            "id": "73fe4eca-42ca-4d45-9446-c9d3cbf5e31d",
+            "status": "succeeded"
+          },
+          {
+            "id": "fa1be54a-5e19-4d91-a554-8c3dd4cde1ce",
+            "status": "failed"
+          },
+          {
+            "id": "e17b7c8e-ac5b-4afc-a668-97dede570b44",
+            "status": "succeeded"
+          },
+          {
+            "id": "ac6659fe-ac31-4692-8975-4e29376f897d",
+            "status": "succeeded"
+          },
+          {
+            "id": "e8ffe8c5-ba1b-4f0d-a0f5-46a2ee8af017",
+            "status": "succeeded"
+          },
+          {
+            "id": "9ed03afe-dc7b-4d6c-a917-8e5514e9ce1c",
+            "status": "succeeded"
+          }
+        ],
+        "outcome": "budget-exceeded",
+        "quiescence": true,
+        "reason": "budget-exceeded",
+        "recording": {
+          "level": "memory",
+          "mode": "memory",
+          "status": "acknowledged"
+        },
+        "runId": "4b32b845-ab79-4495-a4a2-e3e756a83408",
+        "sessionId": "01a0d501-f859-72fe-ba18-d5fbfb298ce1",
+        "stopRequest": "budget-exceeded",
+        "unresolved": []
+      },
+      "patchBytes": 9435
+    }
+  ],
+  "gold": {
+    "dataset": {
+      "dataset": "princeton-nlp/SWE-bench_Lite",
+      "revision": "6ec7bb89b9342f664a54a6e0a6ea6501d3437cc2",
+      "split": "test",
+      "instance_id": "sympy__sympy-20590",
+      "repo": "sympy/sympy",
+      "base_commit": "cffd4e0f86fefd4802349a9f9b19ed70934ea354"
+    },
+    "datasetFileSha256": "9281ceb57a962b562e73c70a962710fa60cfb3efcce20469de6ea4c6af06bf2a",
+    "evaluationPlatform": "linux/amd64 (Docker emulation on ARM64)",
+    "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+    "harnessVersion": "4.1.0",
+    "imageDigests": [
+      "orbit-swebench/sweb.eval.x86_64.sympy_1776_sympy-20590@sha256:3a282752833ce34730ee0621e22033501c993f45742775ca57f04c9ff27178a0",
+      "swebench/sweb.eval.x86_64.sympy_1776_sympy-20590@sha256:3a282752833ce34730ee0621e22033501c993f45742775ca57f04c9ff27178a0"
+    ],
+    "imageId": "sha256:3a282752833ce34730ee0621e22033501c993f45742775ca57f04c9ff27178a0",
+    "predictionsSha256": null,
+    "processExit": 0,
+    "report": {
+      "sympy__sympy-20590": {
+        "patch_is_None": false,
+        "patch_exists": true,
+        "patch_successfully_applied": true,
+        "resolved": true,
+        "tests_status": {
+          "FAIL_TO_PASS": {
+            "success": ["test_immutable"],
+            "failure": []
+          },
+          "PASS_TO_PASS": {
+            "success": [
+              "test__aresame",
+              "test_structure",
+              "test_equality",
+              "test_matches_basic",
+              "test_has",
+              "test_subs",
+              "test_subs_with_unicode_symbols",
+              "test_atoms",
+              "test_free_symbols_empty",
+              "test_doit",
+              "test_S",
+              "test_xreplace",
+              "test_preorder_traversal",
+              "test_sorted_args",
+              "test_call",
+              "test_rewrite",
+              "test_literal_evalf_is_number_is_zero_is_comparable",
+              "test_as_Basic",
+              "test_atomic",
+              "test_as_dummy",
+              "test_canonical_variables"
+            ],
+            "failure": []
+          },
+          "FAIL_TO_FAIL": {
+            "success": [],
+            "failure": []
+          },
+          "PASS_TO_FAIL": {
+            "success": [],
+            "failure": []
+          }
+        }
+      }
+    },
+    "reportFile": "logs/run_evaluation/orbit-gold-ea931f71-2f96-4e60-a209-51fa42a4d52b/gold/sympy__sympy-20590/report.json",
+    "runId": "orbit-gold-ea931f71-2f96-4e60-a209-51fa42a4d52b",
+    "status": "resolved"
+  },
+  "emptyPrediction": {
+    "aggregate": {
+      "total_instances": 1,
+      "submitted_instances": 1,
+      "completed_instances": 0,
+      "resolved_instances": 0,
+      "unresolved_instances": 0,
+      "empty_patch_instances": 1,
+      "error_instances": 0,
+      "completed_ids": [],
+      "incomplete_ids": [],
+      "empty_patch_ids": ["sympy__sympy-20590"],
+      "submitted_ids": ["sympy__sympy-20590"],
+      "resolved_ids": [],
+      "unresolved_ids": [],
+      "error_ids": [],
+      "schema_version": 2
+    },
+    "gradingDisposition": "skipped-empty-patch",
+    "dataset": {
+      "dataset": "princeton-nlp/SWE-bench_Lite",
+      "revision": "6ec7bb89b9342f664a54a6e0a6ea6501d3437cc2",
+      "split": "test",
+      "instance_id": "sympy__sympy-20590",
+      "repo": "sympy/sympy",
+      "base_commit": "cffd4e0f86fefd4802349a9f9b19ed70934ea354"
+    },
+    "datasetFileSha256": "9281ceb57a962b562e73c70a962710fa60cfb3efcce20469de6ea4c6af06bf2a",
+    "evaluationPlatform": "linux/amd64 (Docker emulation on ARM64)",
+    "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+    "harnessInstallation": {
+      "sourceCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+      "sourceType": "local checkout"
+    },
+    "harnessVersion": "4.1.0",
+    "imageDigests": [
+      "orbit-swebench/sweb.eval.x86_64.sympy_1776_sympy-20590@sha256:3a282752833ce34730ee0621e22033501c993f45742775ca57f04c9ff27178a0",
+      "swebench/sweb.eval.x86_64.sympy_1776_sympy-20590@sha256:3a282752833ce34730ee0621e22033501c993f45742775ca57f04c9ff27178a0"
+    ],
+    "imageId": "sha256:3a282752833ce34730ee0621e22033501c993f45742775ca57f04c9ff27178a0",
+    "imageReference": "swebench/sweb.eval.x86_64.sympy_1776_sympy-20590@sha256:3a282752833ce34730ee0621e22033501c993f45742775ca57f04c9ff27178a0",
+    "predictionsSha256": "9c323d3429c423779a4f401b6504f2915cf41c543fe49e16f81cd1a9cfa4655b",
+    "processExit": 0,
+    "reportFile": "logs/run_evaluation/orbit-prediction-d60b9b22-5033-4bbe-8e9d-8827817e87d0/orbit-ornith-1.5-9b/sympy__sympy-20590/report.json",
+    "runId": "orbit-prediction-d60b9b22-5033-4bbe-8e9d-8827817e87d0",
+    "status": "unresolved"
+  },
+  "generatedPrediction": {
+    "aggregate": {
+      "total_instances": 1,
+      "submitted_instances": 1,
+      "completed_instances": 1,
+      "resolved_instances": 1,
+      "unresolved_instances": 0,
+      "empty_patch_instances": 0,
+      "error_instances": 0,
+      "completed_ids": ["sympy__sympy-20590"],
+      "incomplete_ids": [],
+      "empty_patch_ids": [],
+      "submitted_ids": ["sympy__sympy-20590"],
+      "resolved_ids": ["sympy__sympy-20590"],
+      "unresolved_ids": [],
+      "error_ids": [],
+      "schema_version": 2
+    },
+    "aggregateFile": "orbit-ornith-1.5-9b.orbit-prediction-7d5beac0-3aba-4501-9868-0a05158327aa.json",
+    "dataset": {
+      "dataset": "princeton-nlp/SWE-bench_Lite",
+      "revision": "6ec7bb89b9342f664a54a6e0a6ea6501d3437cc2",
+      "split": "test",
+      "instance_id": "sympy__sympy-20590",
+      "repo": "sympy/sympy",
+      "base_commit": "cffd4e0f86fefd4802349a9f9b19ed70934ea354"
+    },
+    "datasetFileSha256": "9281ceb57a962b562e73c70a962710fa60cfb3efcce20469de6ea4c6af06bf2a",
+    "evaluationPlatform": "linux/amd64 (Docker emulation on ARM64)",
+    "gradingDisposition": "evaluated-or-error",
+    "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+    "harnessInstallation": {
+      "sourceCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+      "sourceType": "local checkout"
+    },
+    "harnessVersion": "4.1.0",
+    "imageDigests": [
+      "orbit-swebench/sweb.eval.x86_64.sympy_1776_sympy-20590@sha256:3a282752833ce34730ee0621e22033501c993f45742775ca57f04c9ff27178a0",
+      "swebench/sweb.eval.x86_64.sympy_1776_sympy-20590@sha256:3a282752833ce34730ee0621e22033501c993f45742775ca57f04c9ff27178a0"
+    ],
+    "imageId": "sha256:3a282752833ce34730ee0621e22033501c993f45742775ca57f04c9ff27178a0",
+    "imageReference": "swebench/sweb.eval.x86_64.sympy_1776_sympy-20590@sha256:3a282752833ce34730ee0621e22033501c993f45742775ca57f04c9ff27178a0",
+    "predictionsSha256": "3f4418fdd60561839e23171160ebeea7e0c6d183ea9c723c445484bfcb9e5ace",
+    "processExit": 0,
+    "report": {
+      "sympy__sympy-20590": {
+        "patch_is_None": false,
+        "patch_exists": true,
+        "patch_successfully_applied": true,
+        "resolved": true,
+        "tests_status": {
+          "FAIL_TO_PASS": {
+            "success": ["test_immutable"],
+            "failure": []
+          },
+          "PASS_TO_PASS": {
+            "success": [
+              "test__aresame",
+              "test_structure",
+              "test_equality",
+              "test_matches_basic",
+              "test_has",
+              "test_subs",
+              "test_subs_with_unicode_symbols",
+              "test_atoms",
+              "test_free_symbols_empty",
+              "test_doit",
+              "test_S",
+              "test_xreplace",
+              "test_preorder_traversal",
+              "test_sorted_args",
+              "test_call",
+              "test_rewrite",
+              "test_literal_evalf_is_number_is_zero_is_comparable",
+              "test_as_Basic",
+              "test_atomic",
+              "test_as_dummy",
+              "test_canonical_variables"
+            ],
+            "failure": []
+          },
+          "FAIL_TO_FAIL": {
+            "success": [],
+            "failure": []
+          },
+          "PASS_TO_FAIL": {
+            "success": [],
+            "failure": []
+          }
+        }
+      }
+    },
+    "reportFile": "logs/run_evaluation/orbit-prediction-7d5beac0-3aba-4501-9868-0a05158327aa/orbit-ornith-1.5-9b/sympy__sympy-20590/report.json",
+    "runId": "orbit-prediction-7d5beac0-3aba-4501-9868-0a05158327aa",
+    "status": "resolved"
+  }
+}
