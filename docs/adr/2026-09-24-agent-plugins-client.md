@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-24
-decision-date: null
+decision-date: 2026-09-25
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -18,9 +18,11 @@ authorization, explicit Skill selection, evidence and resource ownership.
 
 ## Decision
 
-Proposed for author acceptance. The author requested Agent Plugins support and
-incremental commits; acceptance of this concrete architecture has not yet been
-recorded. Do not implement this record while it remains proposed.
+Accepted by the author on 2026-09-25 with the explicit instruction to accept
+this ADR and proceed with implementation, verification and chapter 13 updates.
+Review confirms the stdio-first scope and the separation between independent
+component loading and the unknown-operation execution barrier. Implementation
+has not started at acceptance; completion requires the confirmation below.
 
 ### Scope and public boundary
 
@@ -213,7 +215,7 @@ test or assessment of either product's complete Agent Plugins support occurred.
    and failure semantics; rejected as an adequate implementation.
 3. Support MCP only: smaller compliant component scope, but omits the requested
    reuse of Skills and the existing chapter connection.
-4. Support local Skills and stdio with shared managed execution: proposed scope.
+4. Support local Skills and stdio with shared managed execution: accepted scope.
 5. Add remote transports, marketplaces and native hooks now: independent design,
    authentication and distribution work; defer rather than make it a prerequisite.
 
