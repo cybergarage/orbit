@@ -5,6 +5,21 @@ execution-journal roots. Read-only inspection of older transcripts remains
 available. A new installation must initialize storage before creating its first
 persistent session. In-memory Sessions do not require this procedure.
 
+## Interactive startup
+
+`orbit` and `orbit gui` check storage before starting the interactive session or
+GUI server. In a terminal, unregistered storage displays both roots and asks
+`Confirm these conditions and create session storage? (y/N)`. Answer `y` or `yes`
+only after stopping other writers, disabling automatic restarters and establishing
+exclusive administrative control as described below. Initialization uses the same
+offline procedure; successful initialization continues startup. Any other answer,
+end of input or Ctrl-C cancels startup without creating storage.
+
+Ready storage starts normally. Legacy, incomplete or conflicting registration
+requires explicit offline inspection and maintenance; startup never repairs it.
+Without a terminal, `orbit gui` reports the required storage command and exits
+instead of prompting. Library and read-only inspection behavior is unchanged.
+
 ## Initialize or migrate offline
 
 Stop every CLI, GUI, library host and older Orbit binary using either root.

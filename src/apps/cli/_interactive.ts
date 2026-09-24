@@ -11,6 +11,7 @@ import {selectOllamaModel} from '../../core/models/adapters/ollama.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
 import {productSkillCatalog} from '../skill-catalog.js'
+import {ensureStartupStorage} from '../storage-startup.js'
 
 type AgentClass = typeof Agent
 
@@ -22,11 +23,14 @@ export async function runInteractiveCommand(
     contextLoader?: typeof loadSystemContexts
     ollamaModelSelector?: typeof selectOllamaModel
     settingsLoader?: typeof loadWorkspaceSettings
+    storagePreflight?: typeof ensureStartupStorage
   } = {},
 ): Promise<void> {
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     throw new Error('Interactive mode requires a TTY.')
   }
+
+  await (deps.storagePreflight ?? ensureStartupStorage)()
 
   const resolvedOptions = await resolveWorkspaceAgentOptions(
     options,

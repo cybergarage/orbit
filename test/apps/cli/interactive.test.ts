@@ -72,6 +72,7 @@ describe('runInteractiveCommand', () => {
           contextLoader: async () => [{content: 'Workspace context', source: {kind: 'none'} as const}],
           ollamaModelSelector: async () => 'qwen3:latest',
           settingsLoader: async () => ({provider: 'ollama'}),
+          async storagePreflight() {},
         },
       )
     } finally {

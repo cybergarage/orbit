@@ -19,8 +19,13 @@ import {
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
 import {startGuiServer} from '../gui/server.js'
 import {productSkillCatalog} from '../skill-catalog.js'
+import {ensureStartupStorage} from '../storage-startup.js'
 
-export async function runGuiCommand(options: AgentOptions & {port?: number; version?: string}): Promise<void> {
+export async function runGuiCommand(
+  options: AgentOptions & {port?: number; version?: string},
+  deps: {storagePreflight?: typeof ensureStartupStorage} = {},
+): Promise<void> {
+  await (deps.storagePreflight ?? ensureStartupStorage)()
   const cwd = process.cwd()
   const resolved = await resolveWorkspaceAgentOptions(options, cwd)
   const projectStore = await SqliteProjectStore.open({file: path.join(path.dirname(sessionsDir()), 'projects.sqlite')})

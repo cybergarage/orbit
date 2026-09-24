@@ -22,6 +22,11 @@ npm run build
 ./bin/run.js gui
 ```
 
+`orbit gui` checks session storage before opening the server. Unregistered storage
+prompts for confirmed offline initialization in a terminal; see
+[storage startup](session-storage.md#interactive-startup) for prerequisites and
+non-interactive behavior.
+
 Orbit prints a loopback URL containing a random capability token. Open that
 exact URL in a browser. An available port is selected automatically; use a
 fixed loopback port when needed:
