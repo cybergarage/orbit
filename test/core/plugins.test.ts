@@ -16,7 +16,7 @@ import {
   PluginCatalog,
 } from '../../src/core/index.js'
 import {createMcpToolManager} from '../../src/core/mcp.js'
-import {expandPluginValue} from '../../src/core/plugins/catalog.js'
+import {expandPluginValue, validatePluginStartup} from '../../src/core/plugins/catalog.js'
 import {parseSkillSource, SKILL_PORTABLE_PROJECTION_REVISION} from '../../src/core/skills/parser.js'
 import {parseSkillEntry} from '../../src/core/skills/record.js'
 
@@ -368,6 +368,26 @@ describe('portable local plugins', () => {
     } finally {
       await agent.close()
     }
+  })
+
+  it('rejects internal executable and cwd aliases retargeted after preparation', async () => {
+    await fs.writeFile(path.join(pkg, 'first'), 'first')
+    await fs.writeFile(path.join(pkg, 'second'), 'second')
+    await fs.mkdir(path.join(pkg, 'one'))
+    await fs.mkdir(path.join(pkg, 'two'))
+    await fs.symlink('first', path.join(pkg, 'command'))
+    await fs.symlink('one', path.join(pkg, 'working'), 'dir')
+    await mcp({server: {command: './command', cwd: './working', type: 'stdio'}})
+    const server = (await catalog.inspect()).servers['plugin:test:server']
+    expect(await validatePluginStartup(server.plugin!, server.command)).equal(true)
+    await fs.unlink(path.join(pkg, 'command'))
+    await fs.symlink('second', path.join(pkg, 'command'))
+    expect(await validatePluginStartup(server.plugin!, server.command)).equal(false)
+    await fs.unlink(path.join(pkg, 'command'))
+    await fs.symlink('first', path.join(pkg, 'command'))
+    await fs.unlink(path.join(pkg, 'working'))
+    await fs.symlink('two', path.join(pkg, 'working'), 'dir')
+    expect(await validatePluginStartup(server.plugin!, server.command)).equal(false)
   })
 
   it('rejects oversized files and wrong component kinds without losing the other component', async () => {

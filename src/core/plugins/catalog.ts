@@ -40,6 +40,7 @@ export interface PluginManifest {
 export interface PluginStartup {
   command: string
   cwd: string
+  cwdSource: string
   data: string
   dataRoot: string
   digest: string
@@ -322,6 +323,7 @@ export class PluginCatalog {
             plugin: {
               command,
               cwd: resolvedCwd,
+              cwdSource: cwd,
               data,
               dataRoot,
               digest,
@@ -371,7 +373,7 @@ export class PluginCatalog {
 class MissingComponent extends Error {}
 
 /** Validate package bindings again immediately before a managed startup. */
-export async function validatePluginStartup(plugin: PluginStartup): Promise<boolean> {
+export async function validatePluginStartup(plugin: PluginStartup, command: string): Promise<boolean> {
   try {
     if (
       (await fs.realpath(plugin.root)) !== plugin.root ||
@@ -386,10 +388,14 @@ export async function validatePluginStartup(plugin: PluginStartup): Promise<bool
         plugin.mcpDigest
     )
       return false
+    const sourceCwd = plugin.cwdSource.startsWith('./')
+      ? path.resolve(plugin.root, plugin.cwdSource)
+      : expandPluginValue(plugin.cwdSource, plugin.root, plugin.data)
+    if ((await fs.realpath(sourceCwd)) !== plugin.cwd) return false
     const cwd = await fs.realpath(plugin.cwd)
     if (cwd !== plugin.cwd || ![plugin.root, plugin.data].some((root) => contained(root, cwd))) return false
-    if (plugin.command.startsWith('./'))
-      await packagePath(plugin.root, path.resolve(plugin.root, plugin.command), 'file')
+    if (plugin.command.startsWith('./') &&
+      (await packagePath(plugin.root, path.resolve(plugin.root, plugin.command), 'file')) !== command) return false
     return true
   } catch {
     return false

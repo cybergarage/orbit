@@ -134,7 +134,7 @@ class StdioMcpToolManager implements McpToolManager {
       if ((await canonicalPath(p.data)) !== p.data || (await canonicalPath(p.dataRoot)) !== p.dataRoot)
         throw new Error('Plugin data path changed')
       await fs.mkdir(p.data, {recursive: true})
-      if (!(await validatePluginStartup(p))) throw new Error('Plugin startup binding changed')
+      if (!(await validatePluginStartup(p, serverSettings.command))) throw new Error('Plugin startup binding changed')
     }
 
     const client = (this.options.clientFactory ?? createMcpClient)(serverName, serverSettings)
@@ -228,7 +228,7 @@ class StdioMcpToolManager implements McpToolManager {
         throw new Error('Plugin data path changed')
       await fs.mkdir(p.data, {recursive: true})
       await fs.access(p.data, fs.constants.W_OK)
-      if (!(await validatePluginStartup(p))) throw new Error('Plugin startup binding changed')
+      if (!(await validatePluginStartup(p, settings.command))) throw new Error('Plugin startup binding changed')
     }
 
     const id = randomUUID()
@@ -263,7 +263,7 @@ class StdioMcpToolManager implements McpToolManager {
         warning: 'Starting this MCP process grants its host access; no OS sandbox is supplied.',
       },
       async revalidate() {
-        if (settings.plugin && !(await validatePluginStartup(settings.plugin))) return false
+        if (settings.plugin && !(await validatePluginStartup(settings.plugin, settings.command))) return false
         if (!executable) return true
         try {
           return JSON.stringify(await executableIdentity(executable.file)) === JSON.stringify(executable)
