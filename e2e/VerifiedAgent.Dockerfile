@@ -1,5 +1,7 @@
 FROM orbit-e2e:swe
 USER root
+COPY e2e/orbit-test.py /usr/local/bin/orbit-test
+RUN chmod 755 /usr/local/bin/orbit-test
 RUN apt-get update && apt-get install -y --no-install-recommends python3-venv && rm -rf /var/lib/apt/lists/*
 RUN python3 -m venv /opt/evaluation-python && /opt/evaluation-python/bin/pip install --no-cache-dir \
     pip==24.0 setuptools==69.5.1 wheel==0.43.0 \

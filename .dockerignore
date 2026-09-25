@@ -9,3 +9,4 @@
 !e2e
 !e2e/worker.mjs
 !e2e/Dockerfile
+!e2e/orbit-test.py

@@ -115,6 +115,59 @@ describe('E2E host control (no model or Docker)', () => {
     }
   })
 
+  it('preserves a failing test exit code when displaying only the log tail', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-test-'))
+    try {
+      const result = await command(
+        'python3',
+        [
+          'e2e/orbit-test.py',
+          '--log-dir',
+          root,
+          '--tail',
+          '20',
+          '--',
+          'python3',
+          '-c',
+          'print("x" * 5000); raise SystemExit(7)',
+        ],
+        {allowFailure: true},
+      )
+      expect(result.code).to.equal(7)
+      expect(result.stdout.length).to.be.lessThan(1000)
+      const report = JSON.parse(result.stdout.split('ORBIT_TEST_RESULT ')[1])
+      expect(report.exitCode).to.equal(7)
+      expect((await fs.readFile(report.log, 'utf8')).length).to.equal(5001)
+    } finally {
+      await fs.rm(root, {force: true, recursive: true})
+    }
+  })
+
+  it('terminates timed out test processes and records a distinct timeout result', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-test-'))
+    try {
+      const result = await command(
+        'python3',
+        [
+          'e2e/orbit-test.py',
+          '--log-dir',
+          root,
+          '--timeout',
+          '0.1',
+          '--',
+          'python3',
+          '-c',
+          'import time; time.sleep(30)',
+        ],
+        {allowFailure: true},
+      )
+      expect(result.code).to.equal(124)
+      expect(JSON.parse(result.stdout.split('ORBIT_TEST_RESULT ')[1]).timedOut).to.equal(true)
+    } finally {
+      await fs.rm(root, {force: true, recursive: true})
+    }
+  })
+
   describe('Pinned SWE case isolation', () => {
     const selected = {
       base_commit: 'b'.repeat(40),

@@ -276,3 +276,19 @@ Pygments are pinned to versions compatible with the selected Sphinx source.
 Source copies preserve relative symbolic links instead of rewriting them to host
 paths. Public smoke checks for Django, pytest and Sphinx passed locally after
 these environment corrections; they are not official issue-resolution scores.
+
+## Preserving local test failures
+
+The Verified image includes `orbit-test`, a test-local command wrapper:
+
+```sh
+orbit-test --timeout 120 --tail 12000 -- python3 -m pytest -p no:cacheprovider tests/test_example.py -q
+```
+
+It executes an argument vector directly, displays at most the requested tail
+bytes, and returns the test process's exit status. A timeout kills the process
+group and returns 124; launch failure returns 127. Every invocation saves the full
+combined output and a JSON result under `/output/test-runs`, outside the patch.
+Use its printed `ORBIT_TEST_RESULT` rather than piping a test command through
+`tail`. Orbit's general-purpose Bash tool remains unchanged. This wrapper is a
+convenience, not a security boundary or a claim that the model used it.
