@@ -28,7 +28,8 @@ export interface ShellConfig {
 
 export function createBashTool() {
   return defineBuiltinTool({
-    description: 'Execute a command with Bash in the current working directory.',
+    description:
+      'Execute a command with Bash in the current working directory. Unhandled failures stop execution (errexit and pipefail).',
     async execute(input, context) {
       if (context.signal.aborted) throw new Error('Bash command aborted.')
       const shell = (context.preparedShell as ShellConfig | undefined) ?? resolveShell()
@@ -156,16 +157,16 @@ function appendCapture(current: string, chunk: string): {truncated: boolean; val
 
 export function resolveShell(): ShellConfig {
   if (process.platform !== 'win32') {
-    if (fs.existsSync('/bin/bash')) return {args: ['-c'], shell: '/bin/bash'}
+    if (fs.existsSync('/bin/bash')) return {args: ['-e', '-o', 'pipefail', '-c'], shell: '/bin/bash'}
     const bash = findOnPath('bash')
     if (!bash) throw new Error('No Bash shell found')
-    return {args: ['-c'], shell: bash}
+    return {args: ['-e', '-o', 'pipefail', '-c'], shell: bash}
   }
 
   const configured = process.env.ORBIT_BASH_PATH
   if (configured !== undefined) {
     if (!fs.existsSync(configured)) throw new Error(`Configured Bash shell does not exist: ${configured}`)
-    return {args: ['-c'], shell: configured}
+    return {args: ['-e', '-o', 'pipefail', '-c'], shell: configured}
   }
 
   const candidates = [
@@ -180,7 +181,7 @@ export function resolveShell(): ShellConfig {
     throw new Error('No Bash shell found. Install Git Bash or set ORBIT_BASH_PATH.')
   }
 
-  return {args: ['-c'], shell}
+  return {args: ['-e', '-o', 'pipefail', '-c'], shell}
 }
 
 function findOnPath(command: string): string | undefined {

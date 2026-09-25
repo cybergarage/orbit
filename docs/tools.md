@@ -131,7 +131,15 @@ creates a read-only subset:
 `timeoutSeconds` is optional and has no default. Orbit captures stdout and
 stderr, preserves their arrival order in model-visible output, reports the exit
 code, and kills the process tree when a call is cancelled or times out. A
-non-zero exit code is a completed command result; a timeout is a tool error.
+non-zero exit code is a completed command result marked as a tool error; a
+timeout is also a tool error.
+
+Bash starts with `-e -o pipefail`: an unhandled failing command or pipeline stops
+execution, and a trailing log filter or successful `echo` does not hide that
+failure. Use explicit conditional handling (`if`, `||`) for expected nonzero
+statuses. Commands can override shell options or suppress errors deliberately;
+Orbit reports the resulting exit status, not an independently verified test
+verdict. SIGPIPE from pipelines such as `grep | head` may also be nonzero.
 
 On Unix, Orbit resolves Bash without starting a discovery process; `sh` is not a fallback. On
 Windows, it uses `ORBIT_BASH_PATH`, Git Bash, or `bash.exe` on `PATH`.

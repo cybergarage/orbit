@@ -47,7 +47,7 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
         it(`${model} / ${id} / ${repetition}`, async () => {
           const directory = path.join(root, `${model.replaceAll(/[^a-zA-Z0-9.-]/g, '-')}-${id}-${repetition}`)
           await fs.mkdir(directory, {recursive: true})
-          const row = {browser: 'not-run', directory, id, model, repetition, status: 'environment-error'}
+          const row = {checks: 'not-run', directory, id, model, repetition, status: 'environment-error'}
           try {
             let review
             if (id === 'sdd') {
@@ -96,7 +96,7 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
             await checkFiles(path.join(directory, 'implementation/workspace'), c)
             const grade = await gradeBook(path.join(directory, 'implementation'))
             await writeJSON(path.join(directory, 'grade.json'), grade)
-            row.browser = grade.passed ? 'passed' : 'failed'
+            row.checks = grade.passed ? 'passed' : 'failed'
             if (grade.timedOut || grade.code === 125) row.status = 'grading-error'
             else if (grade.passed && runtimePassed(run)) row.status = 'resolved'
           } catch (error) {

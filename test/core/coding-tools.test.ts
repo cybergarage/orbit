@@ -152,6 +152,35 @@ describe('coding tools', () => {
     expect(failure.details).to.include({exitCode: 7})
   })
 
+  for (const command of [
+    '(exit 7) | cat',
+    '(exit 7) | cat; echo misleading-success',
+    '(exit 7); echo misleading-success',
+  ]) {
+    it(`preserves failure for ${command}`, async () => {
+      if (process.platform === 'win32' && process.env.ORBIT_BASH_PATH === undefined) return
+      const failure = await invoke(createBashTool(), {command}, root)
+      expect(failure.isError).to.equal(true)
+      expect(failure.details).to.include({exitCode: 7})
+      expect(toolResultText(failure)).to.include('[command exit code 7]')
+      expect(toolResultText(failure)).not.to.include('misleading-success')
+    })
+  }
+
+  for (const command of [
+    "printf 'handled' | cat",
+    "(exit 7) || printf 'handled'",
+    "if (exit 7); then exit 1; else printf 'handled'; fi",
+  ]) {
+    it(`allows successful pipelines and explicit error handling for ${command}`, async () => {
+      if (process.platform === 'win32' && process.env.ORBIT_BASH_PATH === undefined) return
+      const result = await invoke(createBashTool(), {command}, root)
+      expect(result.isError).not.to.equal(true)
+      expect(result.details).to.include({exitCode: 0})
+      expect(toolResultText(result)).to.equal('handled')
+    })
+  }
+
   describe('ToolRegistry and ToolRuntime', () => {
     it('rejects duplicate names with source details', () => {
       const registry = new ToolRegistry()

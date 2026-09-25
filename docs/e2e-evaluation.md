@@ -364,15 +364,13 @@ ORBIT_E2E_IMAGE=orbit-e2e:verified-guarded npm run test:e2e:verified-checks
 These controls cover a missing source import, failing added and modified tests,
 a baseline failure, and preservation of unwanted files for review.
 
-The current Verified image also exports `SHELLOPTS=pipefail`. This preserves a
-failing test's status through a trailing `| tail` even when the model ignores
-`orbit-test`. The Docker controls exercise both paths through Orbit's actual
-Bash implementation. This setting belongs only to the evaluation image; it does
-not change the product's shell defaults. A later successful command can still
-mask a shell-list failure, so the helper and independent quality checks remain
-necessary. Some pipelines such as `grep | head` can also return nonzero after
-SIGPIPE; examine the recorded output rather than treating every nonzero status
-as a repository test failure.
+The Verified image also exports `SHELLOPTS=pipefail`. Orbit's Bash tool now
+starts with both errexit and pipefail, preserving unhandled failures through log
+filters and stopping before later successful commands. Explicit shell error
+handling can still suppress a failure; independent quality checks remain
+necessary. Some pipelines such as `grep | head` can return nonzero after SIGPIPE;
+examine the recorded output rather than treating every nonzero status as a
+repository test failure. See [Bash semantics](tools.md#bash).
 
 ## English book workflows
 
@@ -451,6 +449,10 @@ containers, never in the host process.
 Evidence is saved under `tmp/e2e/runs/<timestamp>-book/`: pinned template origin,
 image IDs, model metadata, prompts, per-phase usage/events, workspace snapshots,
 independent grader logs, and an incremental summary with all planned trials.
+The summary's `checks` field reports the combined type-check, unit-test, build
+and browser verdict (`not-run`, `passed`, or `failed`). Earlier artifacts used
+`browser` for that combined verdict; failure there does not establish that the
+browser phase ran. Inspect `grade.log` to identify the failing phase.
 `resolved` requires both clean runtime completion and passing independent checks;
 a budget stop remains unresolved even if some artifacts work. Adding these
 cases does not establish successful model results; run and retain the matrix

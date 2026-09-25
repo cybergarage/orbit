@@ -292,4 +292,7 @@ See [Model context capacity](model-context-capacity.md) for the public contract.
 Budgeted context preparation can compact completed rounds within an active Run.
 Projection-version-3 checkpoints retain exact current-Run user references and
 validate tool-group boundaries on save/reopen. Provider termination is checked
-before assistant history append or tool dispatch. See [Input budgets](context-compaction.md).
+before assistant history append or tool dispatch. A classified context or
+truncation failure permits one regeneration only after a strictly smaller
+checkpoint is committed. Summary and retry consume the same Run budgets.
+See [Input budgets](context-compaction.md).
