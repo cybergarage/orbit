@@ -117,6 +117,7 @@ at pinned revisions by default. If either is not relevant, record why.
 
 | Investigated | Status     | Topic                                                                                                                                   |
 | ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-25   | current    | [Book Workflow Failures at Context Exhaustion](2026-09-25-book-workflow-context-exhaustion.md)                                          |
 | 2026-09-25   | current    | [Agent Execution Limits and GUI Continuation](2026-09-25-agent-execution-limits-and-gui-continuation.md)                                |
 | 2026-09-24   | current    | [Agent Plugins Compatibility](2026-09-24-agent-plugins-compatibility.md)                                                                |
 | 2026-09-24   | current    | [Memory Retrieval and Consolidation](2026-09-24-memory-retrieval-and-consolidation.md)                                                  |
