@@ -59,6 +59,16 @@ and original instructions, and explicit old-reader incompatibility. This narrows
 the earlier compaction decision's whole-current-turn protection to verbatim user
 inputs and complete recent tool groups; its recording and migration rules remain.
 
+### Shell failure propagation refinement (2026-09-25)
+
+Accepted during the requested staged implementation: pipefail alone does not
+preserve failure in `npm test | tail; echo done`. Start Bash with both errexit
+and pipefail, so ordinary unhandled failures stop the command list. Explicit
+conditional handling (`if`, `||`) and shell option overrides remain possible.
+This extends the original pipeline decision to the observed trailing-command
+case; it does not infer a test verdict from output text. Book summaries label the
+combined independent checks as checks, not as a browser-only verdict.
+
 ## Consequences
 
 Long turns can release context without losing original user instructions or
