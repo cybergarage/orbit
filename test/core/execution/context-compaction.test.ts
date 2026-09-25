@@ -112,7 +112,7 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
 
             if (mode === 'oversized') summary.goals[0].text = 'x'.repeat(6000)
             if (mode === 'bad-test') summary.tests[0].outcome = 'invented'
-            return new Message(MessageType.Assistant, {content: JSON.stringify(summary)})
+            return new Message(MessageType.Assistant, {content: JSON.stringify(summary), ...(mode === 'truncated' ? {payload: {response: {durationMs: 1, model: 'fixture', provider: 'ollama', stopReason: 'length'}}} : {})})
           }
 
           expect(request.cap).to.equal(profile.outputReserve)
@@ -227,7 +227,7 @@ describe('budgeted context preparation', () => {
     expect(messages[1].content).to.equal('Continue with the latest request')
     expect(events.some((event) => event.type === 'context-prepared' && event.outcome === 'compacted')).to.equal(true)
   })
-  for (const mode of ['error', 'tool', 'bad-id', 'empty', 'oversized', 'bad-test'])
+  for (const mode of ['error', 'tool', 'bad-id', 'empty', 'oversized', 'bad-test', 'truncated'])
     it('uses the fitting unchanged context after ' + mode, async () => {
       const session = new Session()
       const model = fixtureModel(oldConversation(session), mode)

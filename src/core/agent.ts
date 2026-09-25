@@ -59,6 +59,7 @@ import {
 } from './logs/index.js'
 import {createMcpToolManager} from './mcp.js'
 import {getModel, Message, MessageType} from './models/index.js'
+import {assertCompleteModelResponse} from './models/termination.js'
 import {boundedGraphJSON, graphBinding} from './processor/graph-definition.js'
 import {
   bindGraphJournal,
@@ -809,6 +810,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                     iterationOptions,
                   ),
             )
+            assertCompleteModelResponse(modelMessage)
           } catch (error) {
             if (diagnostics === undefined) {
               this.logger.error(

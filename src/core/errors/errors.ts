@@ -6,6 +6,7 @@ export const OrbitErrorCode = {
   InvalidConfiguration: 'INVALID_CONFIGURATION',
   InvalidInput: 'INVALID_INPUT',
   ModelAborted: 'MODEL_ABORTED',
+  ModelIncomplete: 'MODEL_INCOMPLETE',
   OperatorSequenceEmpty: 'OPERATOR_SEQUENCE_EMPTY',
 } as const
 
@@ -60,5 +61,11 @@ export class ModelAbortError extends OrbitError {
 export class ContextOverflowError extends OrbitError {
   constructor(message: string, options: Omit<OrbitErrorOptions, 'code'> = {}) {
     super(message, {...options, code: OrbitErrorCode.ContextOverflow})
+  }
+}
+
+export class IncompleteModelResponseError extends OrbitError {
+  constructor(readonly stopReason: string) {
+    super(`Model response is incomplete: ${stopReason}`, {code: OrbitErrorCode.ModelIncomplete})
   }
 }

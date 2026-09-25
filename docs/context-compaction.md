@@ -193,3 +193,13 @@ The prepared-request budget still includes it. Library callers opt in explicitly
 GUI Project conversations default to curated mode and offer Off. CLI workflows
 remain single-session. See [Projects and curated memory](projects.md) for API,
 source validation, compatibility and retained-history behavior.
+
+## Incomplete generations
+
+Agent checks provider termination metadata before accepting a response as
+conversation history or executing any returned tool calls. Length, max-token,
+context-window, content-filter, refusal and pause stops produce a typed
+`IncompleteModelResponseError` instead of a completed turn. Summaries pass the
+same gate, even when a truncated response happens to contain valid JSON.
+Raw provider diagnostics remain available when enabled. A custom Model without
+termination metadata retains compatibility; it owns truthful completion signaling.

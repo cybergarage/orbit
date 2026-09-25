@@ -45,6 +45,7 @@ export type {
 } from './diagnostics/index.js'
 export {
   ContextOverflowError,
+  IncompleteModelResponseError,
   InvalidConfigurationError,
   InvalidInputError,
   ModelAbortError,

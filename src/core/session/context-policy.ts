@@ -13,6 +13,7 @@ import {currentGraphVisit} from '../execution/graph-state.js'
 import {Message, MessageType} from '../message/index.js'
 import {getToolCalls} from '../models/adapters/tools.js'
 import {resolveModelContextCapacity} from '../models/context-capacity.js'
+import {assertCompleteModelResponse} from '../models/termination.js'
 import {GptTokenizer} from '../tokenizer/index.js'
 import {persistedContextMessage, sourceDigest, validateSummary, validateToolGroups} from './compaction.js'
 import {SessionContextBuilder} from './context-builder.js'
@@ -254,6 +255,7 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
     run.consume('modelCalls')
     const response = await run.wait('context-summary', summaryRequest.invoke())
     run.check()
+    assertCompleteModelResponse(response)
     if (getToolCalls(response).length > 0) throw new ContextBudgetError('summary-returned-tool-call')
     const summary: unknown = JSON.parse(response.content)
     validateSummary(summary, new Set(originals.map((message) => message.id)))

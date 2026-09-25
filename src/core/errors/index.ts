@@ -3,6 +3,7 @@
 
 export {
   ContextOverflowError,
+  IncompleteModelResponseError,
   InvalidConfigurationError,
   InvalidInputError,
   ModelAbortError,

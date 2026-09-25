@@ -15,6 +15,7 @@ export {Agent} from '../agent.js'
 export type {AgentInvokeOptions, AgentOptions, AgentTool} from '../agent.js'
 export {
   ContextOverflowError,
+  IncompleteModelResponseError,
   InvalidConfigurationError,
   InvalidInputError,
   ModelAbortError,
