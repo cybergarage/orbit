@@ -6,7 +6,8 @@ implementation-status: completed
 implementation-completed-date: 2026-09-25
 implementation-commits:
   - 7612eaedee8d4fbe9ba5ecd03a75b875e31449c6
-superseded-by: []
+superseded-by:
+  - 2026-09-25-unlimited-run-budgets.md
 ---
 
 # Coding Budgets and Explicit Continuation
@@ -138,3 +139,10 @@ finite configurable defaults, explicit continuation and a narrowly verified
 append-only legacy path address the reported failure without replaying commands
 or weakening operation authorization. This decision is accepted for that scope;
 implementation and validation evidence follow in a later commit.
+
+## Partial supersession — 2026-09-25
+
+[Unlimited Run Budgets](2026-09-25-unlimited-run-budgets.md) replaces the
+finite-only aggregate limit representation and defaults. This record remains
+accepted for explicit continuation and verified nondispatch recovery; its
+original rationale and implementation evidence are preserved.
