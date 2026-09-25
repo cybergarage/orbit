@@ -1,8 +1,8 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-25
-decision-date: null
-implementation-status: not-started
+decision-date: 2026-09-25
+implementation-status: in-progress
 implementation-completed-date: null
 implementation-commits: []
 superseded-by: []
@@ -52,6 +52,12 @@ error. Provide accurate command status to the model and preserve failure evidenc
 in summaries. Do not infer test success from arbitrary text or treat a model's
 completion as independent verification. Explicit shell error suppression remains
 possible and must be documented rather than guessed away.
+
+Accepted on 2026-09-25 under the author's explicit implementation and staged
+commit request. Review confirms bounded recovery, preservation of tool groups
+and original instructions, and explicit old-reader incompatibility. This narrows
+the earlier compaction decision's whole-current-turn protection to verbatim user
+inputs and complete recent tool groups; its recording and migration rules remain.
 
 ## Consequences
 
