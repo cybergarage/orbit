@@ -8,6 +8,10 @@ sessions. The interface has three areas:
   cancellation;
 - an optional log pane scoped to the selected session.
 
+Message history and logs scroll independently within the window, including
+after reopening a session with a long saved history. The log list does not push
+the prompt composer below the window.
+
 Project-enabled hosts group separate conversations through core catalog APIs.
 See [Projects](projects.md) for navigation, archive, movement, runtime resolution
 and the unchanged CLI scope.

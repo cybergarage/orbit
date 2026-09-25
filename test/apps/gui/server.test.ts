@@ -55,6 +55,15 @@ describe('GUI server', () => {
     const headers = {'X-Orbit-Token': server.token}
 
     try {
+      const page = await fetch(`${baseUrl}/?token=${server.token}`)
+      expect(page.status).to.equal(200)
+      const html = await page.text()
+      // The log pane must shrink within the viewport when restored logs are long.
+      // Otherwise its grid row grows and pushes the composer below the hidden body overflow.
+      const diagnosticsStyle = html.match(/\.diagnostics\s*\{([^}]+)\}/)?.[1]
+      expect(diagnosticsStyle).to.match(/min-height:\s*0\s*;/)
+      expect(diagnosticsStyle).to.match(/min-width:\s*0\s*;/)
+
       const unauthorized = await fetch(`${baseUrl}/api/runtime`)
       expect(unauthorized.status).to.equal(403)
 

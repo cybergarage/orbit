@@ -473,7 +473,7 @@ button:disabled { opacity:.5; cursor:default; }
 .send { display:grid; width:32px; height:32px; place-items:center; border:0; border-radius:9px; background:#d8dde6; color:#111419; font-weight:800; }
 .send.stop { background:#da6f76; color:white; }
 .send:disabled { cursor:default; opacity:.35; }
-.diagnostics { display:flex; flex-direction:column; background:#0d1014; }
+.diagnostics { display:flex; flex-direction:column; min-width:0; min-height:0; background:#0d1014; }
 .diagnostics .topbar { gap:10px; }
 .filters { display:flex; gap:6px; }
 select { max-width:130px; border:1px solid #303743; border-radius:7px; background:#171b21; color:#bcc3cd; padding:5px 7px; font-size:11px; }
