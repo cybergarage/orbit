@@ -290,7 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                        |
 | ---------- | ---------- | -------------- | ----------------------------------------------------------------------------------------------- |
-| 2026-09-25 | accepted   | in-progress    | [Model Context Capacity Discovery](2026-09-25-model-context-capacity.md) |
+| 2026-09-25 | accepted   | completed      | [Model Context Capacity Discovery](2026-09-25-model-context-capacity.md) |
 | 2026-09-25 | accepted   | completed      | [Unlimited Run Budgets](2026-09-25-unlimited-run-budgets.md) |
 | 2026-09-25 | accepted   | completed      | [Coding Budgets and Explicit Continuation](2026-09-25-coding-budgets-and-continuation.md)       |
 | 2026-09-24 | accepted   | completed      | [Local Agent Plugins Client](2026-09-24-agent-plugins-client.md)                                |

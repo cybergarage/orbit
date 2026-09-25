@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-09-25
 decision-date: 2026-09-25
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-09-25
+implementation-commits:
+  - 99a0b57517032458b0bef5916081f64072d64c9e
 superseded-by: []
 ---
 
@@ -94,11 +95,14 @@ pages supply the catalog values. Specifications were checked on 2026-09-25.
 
 ## Implementation and Confirmation
 
-Implemented and validated in the working tree on 2026-09-25. The public
+Implemented in `99a0b57517032458b0bef5916081f64072d64c9e` and validated
+on 2026-09-25. The public
 resolver, provider metadata methods, settings, exact OpenAI catalog, budgeted
 preparation, and E2E transport precedence are covered by deterministic tests.
-The implementation remains uncommitted; completion metadata is intentionally
-unset until a requested implementation commit and later evidence commit exist.
+The author subsequently requested commits. The accepted decision and supporting
+research were recorded first, followed by the implementation commit above. This
+later documentation change records completion without changing the accepted
+rationale or claiming the separately deferred work is complete.
 
 Validation:
 
