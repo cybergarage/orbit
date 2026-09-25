@@ -60,7 +60,7 @@ that observation, policy, testing, and composition are consistent.
 - Executable steps have stable identity, explicit inputs and outputs, and an
   observable invocation boundary.
 - Durable state is not hidden inside incidental call-stack state.
-- A live run has finite budgets and explicit terminal outcomes.
+- A live run has configurable aggregate budgets, unlimited by default, and explicit terminal outcomes. Approval and cleanup remain bounded.
 - External effects pass through policy-aware boundaries.
 - Adaptation never promotes a graph solely because an LLM proposed it.
 - Documentation and traces must make the active behavior explainable.

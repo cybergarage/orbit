@@ -69,15 +69,15 @@ together. A known nonzero Bash exit can be an ordinary failed tool result
 followed by a completed Agent turn. An unknown external outcome quarantines
 resources and prevents conflicting admission until the owner verifies it.
 
-The coding product profile is finite and configurable:
+The coding product profile uses unlimited aggregate budgets by default:
 
-| Limit                                     | Initial value             |
-| ----------------------------------------- | ------------------------- |
-| Elapsed run time                          | 3,600,000 ms (60 minutes) |
-| Model calls / tool requests / tool rounds | 101 / 1,000 / 100         |
-| Approval wait                             | 300,000 ms                |
-| Cleanup                                   | 5,000 ms                  |
-| MCP startup per source / enabled sources  | 30,000 ms / 16            |
+| Limit                                    | Initial value    |
+| ---------------------------------------- | ---------------- |
+| Elapsed run time                         | `unlimited`      |
+| Model calls / tool requests / tool rounds | `unlimited` each |
+| Approval wait                            | 300,000 ms       |
+| Cleanup                                  | 5,000 ms         |
+| MCP startup per source / enabled sources | 30,000 ms / 16   |
 
 Workspace `executionLimits`, Agent `execution.limits`, and per-run `limits`
 override these defaults in that order, field by field. Thread and application
@@ -87,8 +87,25 @@ limit. Raising tool rounds may also require raising model calls and tool request
 Each tool-containing model response consumes one round, regardless of batch size.
 GUI limits apply to the next submission and do not change an active Run.
 
-`parseRunLimits()` validates overrides. Times are positive safe integers capped at
-2,147,483,647 ms to avoid timer overflow; other limits are nonnegative safe integers.
+`parseRunLimits()` validates overrides. The exact JSON string `"unlimited"` is
+accepted for `elapsedMs`, `modelCalls`, `toolRequests` and `toolRounds`. No aggregate
+timer or counter ceiling is installed for these fields. Finite times are positive
+safe integers capped at 2,147,483,647 ms to avoid timer overflow; finite counters
+are nonnegative safe integers (zero prevents that work). `null`, `Infinity` and
+numeric strings are invalid. Approval, cleanup, MCP startup/source limits and
+Graph visit limits remain finite. Unlimited total time retains the MCP SDK's
+finite per-request default timeout and normal cancellation behavior.
+
+Agent `maxToolIterations` and Graph Agent overrides also accept `"unlimited"`.
+An override cannot widen a finite parent Agent limit, and finite Run counters
+still apply. Unlimited defaults place execution duration and model usage under
+the caller's control; completion, explicit stop, cancellation and errors end work.
+Provider context limits and storage capacity remain independent constraints.
+
+The literal is preserved in JSON settings, snapshots, journals and turn context.
+New readers accept historical numeric records without rewriting them. Old Orbit
+versions may reject unlimited turn-context records; use a reader with unlimited
+support when opening newly recorded sessions.
 Snapshots include effective `limits` when recorded. `parseBudgetReason(result.reason)`
 returns the exhausted limit, consumed amount and requested increment when available;
 older generic reasons and non-counter Graph budgets may have no detail.
@@ -111,8 +128,8 @@ or failed evidence. Such a refusal requires inspection or a new conversation;
 `recording: acknowledged` alone never proves eligibility. Recovered GUI status is
 informational; core rechecks evidence before continuing.
 
-Owners can pass positive finite time limits and nonnegative integer call/source limits through `execution.limits`
-or per-run limits. These values are starting limits, not measured optima.
+Owners can set optional finite aggregate ceilings through `execution.limits`
+or per-run limits. Lifecycle and resource limits remain separately configurable.
 The supervisor checks elapsed time at admission boundaries and tracks started
 promises even when a caller stops waiting. In-process timers cannot preempt
 synchronous JavaScript, blocking syscalls, or arbitrary native code. OpenAI and

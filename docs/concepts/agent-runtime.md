@@ -25,7 +25,7 @@ over execution.
 ## Current Orbit Implementation
 
 `Agent.startRun()` and `Agent.invoke()` share `RunSupervisor`, which owns
-admission, finite budgets, cancellation, started work, cleanup and one terminal
+admission, optional aggregate budgets, cancellation, started work, cleanup and one terminal
 result. Agent owns the model/tool loop. The supervisor acknowledges required
 journal records before admission and dispatch; operation preparation and policy
 bind each single-use permission to the actual call.
@@ -70,7 +70,7 @@ callbacks or let arbitrary nodes bypass persistence and cancellation.
 
 ## Invariants
 
-- Each turn has an identity, a finite execution budget, and one terminal
+- Each turn has an identity, configurable execution ceilings (unlimited by default), and one terminal
   outcome.
 - Every model request is derived from an explicit context snapshot.
 - Tool input is validated before external effects occur.

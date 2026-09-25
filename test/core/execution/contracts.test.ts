@@ -129,10 +129,10 @@ describe('cross-contract execution races', () => {
       expect((await handle.finished).outcome).equal('budget-exceeded')
       expect(DEFAULT_RUN_LIMITS).includes({
         cleanupMs: 5000,
-        elapsedMs: 3_600_000,
-        modelCalls: 101,
-        toolRequests: 1000,
-        toolRounds: 100,
+        elapsedMs: 'unlimited',
+        modelCalls: 'unlimited',
+        toolRequests: 'unlimited',
+        toolRounds: 'unlimited',
       })
     } finally {
       clock.restore()
@@ -190,9 +190,13 @@ describe('cross-contract execution races', () => {
     })
     const closed = supervisor.close()
     expect(supervisor.close()).equal(closed)
-    gate.resolve(new MemoryExecutionJournal('session'))
+    const journal = new MemoryExecutionJournal('session')
+    const closeJournal = sinon.spy(journal, 'close')
+    gate.resolve(journal)
     await start.catch(() => {})
-    expect((await closed).incomplete).equal(false)
+    // Aborted admission is conservatively quarantined even if opening settles later.
+    expect((await closed).incomplete).equal(true)
+    expect(closeJournal.calledOnce).equal(true)
     expect(dispatches).equal(0)
   })
 

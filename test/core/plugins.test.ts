@@ -279,7 +279,7 @@ describe('portable local plugins', () => {
                 async connect() {
                   connected.push(name)
                   if (mode === 'cancel') run.requestStop('user')
-                  if (mode === 'budget') run.consume('toolRequests', run.limits.toolRequests + 1)
+                  if (mode === 'budget') run.consume('toolRequests', 1)
                 },
                 async listTools() {
                   return {tools: []}
@@ -298,7 +298,7 @@ describe('portable local plugins', () => {
             },
           }),
         },
-        execution: {policy: {generation: 'test', profile: 'unrestricted', roots: [root]}},
+        execution: {limits: {toolRequests: 0}, policy: {generation: 'test', profile: 'unrestricted', roots: [root]}},
         logStore: new MemorySessionLogStore(),
         plugins,
       })

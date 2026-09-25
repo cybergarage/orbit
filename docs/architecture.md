@@ -87,7 +87,7 @@ invocation performs the following sequence:
    dedicated summary call and restores it for ordinary answering iterations.
 4. Parse each tool call, prepare its immutable operation, decide policy, obtain
    any single-operation approval, and acknowledge intent before dispatch.
-5. Record known tool outcomes and repeat within the shared finite budget.
+5. Record known tool outcomes and repeat under shared optional execution ceilings (unlimited by default), until completion, cancellation or failure.
 6. Settle owned work and cleanup, synchronize the transcript, and acknowledge
    one terminal journal summary. Return an immutable `RunResult`; uncertainty
    produces `incomplete` and retains affected resources for reconciliation.

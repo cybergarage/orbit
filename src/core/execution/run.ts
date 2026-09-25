@@ -7,13 +7,13 @@ import {performance} from 'node:perf_hooks'
 import type {ProjectContextSnapshot} from '../projects/memory-context.js'
 import type {SkillSelection} from '../skills/catalog.js'
 import type {ExecutionJournal, JournalKind, JournalLevel, JournalRecord} from './journal.js'
-import type {BudgetExhaustion, RunLimits} from './limits.js'
+import type {BudgetExhaustion, ExecutionLimit, RunLimits} from './limits.js'
 
 import {parseProjectContext} from '../projects/memory-context.js'
 import {normalizeSkillSelections} from '../skills/catalog.js'
 import {currentGraphVisit, GraphDeclaredFailure} from './graph-state.js'
 import {canonicalJSON, copyJSON, safeIdentity} from './journal.js'
-import {budgetReason, DEFAULT_RUN_LIMITS, parseRunLimits} from './limits.js'
+import {budgetReason, DEFAULT_RUN_LIMITS, executionLimitValue, parseRunLimits} from './limits.js'
 import {recordReconciliation} from './recovery.js'
 
 export {DEFAULT_RUN_LIMITS} from './limits.js'
@@ -159,10 +159,11 @@ export class RunContext {
     this.stopped = new Promise((resolve) => {
       this.resolveStop = resolve
     })
-    this.timer = setTimeout(
-      () => this.exhaust('elapsedMs', Math.ceil(this.elapsed()), 0),
-      Math.max(0, this.remaining()),
-    )
+    if (limits.elapsedMs !== 'unlimited')
+      this.timer = setTimeout(
+        () => this.exhaust('elapsedMs', Math.ceil(this.elapsed()), 0),
+        Math.max(0, this.remaining()),
+      )
   }
 
   get signal(): AbortSignal {
@@ -262,7 +263,7 @@ export class RunContext {
 
   consume(kind: keyof RunContext['budget'], count = 1): void {
     this.check()
-    if (this.budget[kind] + count > this.limits[kind]) {
+    if (this.budget[kind] + count > executionLimitValue(this.limits[kind])) {
       this.exhaust(kind, this.budget[kind], count)
       throw new RunStoppedError('budget-exceeded')
     }
@@ -284,8 +285,13 @@ export class RunContext {
     }
   }
 
-  exhaust(limitName: keyof RunLimits, consumed: number, requested: number, limit = this.limits[limitName]): void {
-    if (this.stopReason || this.result) return
+  exhaust(
+    limitName: keyof RunLimits,
+    consumed: number,
+    requested: number,
+    limit: ExecutionLimit = this.limits[limitName],
+  ): void {
+    if (limit === 'unlimited' || this.stopReason || this.result) return
     this.budgetExhaustion = {consumed, limit, limitName, requested}
     this.requestStop('budget-exceeded')
   }
@@ -333,7 +339,7 @@ export class RunContext {
   }
 
   remaining(): number {
-    return this.limits.elapsedMs - this.elapsed()
+    return executionLimitValue(this.limits.elapsedMs) - this.elapsed()
   }
 
   async replyApproval(reply: ApprovalReply): Promise<'recorded'> {
@@ -461,6 +467,7 @@ export class RunContext {
 
 export class RunSupervisor {
   private admission?: Promise<RunHandle>
+  private readonly admissionController = new AbortController()
   private admissionFailed = false
   private admitting = false
   private closed = false
@@ -473,6 +480,7 @@ export class RunSupervisor {
     deadline = performance.now() + DEFAULT_RUN_LIMITS.cleanupMs,
   ): Promise<{incomplete: boolean; results: RunResult[]}> {
     this.closed = true
+    this.admissionController.abort('shutdown')
     this.closePromise ??= (async () => {
       let admissionPending = false
       try {
@@ -488,7 +496,10 @@ export class RunSupervisor {
       }
 
       const results = await Promise.all(active.map(({handle}) => handle.finished))
-      return {incomplete: admissionPending || active.some(({context}) => !context.released), results}
+      return {
+        incomplete: admissionPending || this.admissionFailed || active.some(({context}) => !context.released),
+        results,
+      }
     })()
     return this.closePromise
   }
@@ -557,6 +568,10 @@ export class RunSupervisor {
   }
 
   private async admit<T>(options: RunStartOptions<T>): Promise<RunHandle<T>> {
+    const admissionSignal = AbortSignal.any([
+      this.admissionController.signal,
+      ...(options.signal ? [options.signal] : []),
+    ])
     const startedAt = performance.now()
     const limits = {...DEFAULT_RUN_LIMITS, ...options.limits}
     let journal: ExecutionJournal | undefined
@@ -564,9 +579,10 @@ export class RunSupervisor {
       if (options.journalVersion === 3 && !options.prepareProjectContext)
         throw new Error('Journal v3 requires Project context preparation')
       parseRunLimits(limits)
+      if (admissionSignal.aborted) throw new RunStoppedError('cancelled-before-admission')
       const opening = options.journal()
       try {
-        journal = await until(opening, startedAt + limits.elapsedMs)
+        journal = await until(opening, startedAt + executionLimitValue(limits.elapsedMs), admissionSignal)
       } catch (error) {
         this.admissionFailed = true
         opening.then((late) => late.close()).catch(() => {})
@@ -607,14 +623,17 @@ export class RunSupervisor {
       let projectContext: ProjectContextSnapshot | undefined
       if (options.prepareProjectContext) {
         const controller = new AbortController()
-        const abort = () => controller.abort(options.signal?.reason)
-        options.signal?.addEventListener('abort', abort, {once: true})
-        const timer = setTimeout(
-          () => controller.abort(new Error('Project context preparation exceeded the Run deadline')),
-          Math.max(0, startedAt + limits.elapsedMs - performance.now()),
-        )
+        const abort = () => controller.abort(admissionSignal.reason)
+        admissionSignal.addEventListener('abort', abort, {once: true})
+        const timer =
+          limits.elapsedMs === 'unlimited'
+            ? undefined
+            : setTimeout(
+                () => controller.abort(new Error('Project context preparation exceeded the Run deadline')),
+                Math.max(0, startedAt + executionLimitValue(limits.elapsedMs) - performance.now()),
+              )
         try {
-          if (options.signal?.aborted) abort()
+          if (admissionSignal.aborted) abort()
           projectContext = parseProjectContext(await options.prepareProjectContext(controller.signal))
           controller.signal.throwIfAborted()
         } catch (error) {
@@ -622,7 +641,7 @@ export class RunSupervisor {
           throw error
         } finally {
           clearTimeout(timer)
-          options.signal?.removeEventListener('abort', abort)
+          admissionSignal.removeEventListener('abort', abort)
         }
 
         if (projectContext.sessionId !== options.sessionId) throw new Error('Project context session mismatch')
@@ -649,7 +668,8 @@ export class RunSupervisor {
           undefined,
           projectContext ? 3 : options.journalVersion,
         ),
-        startedAt + limits.elapsedMs,
+        startedAt + executionLimitValue(limits.elapsedMs),
+        admissionSignal,
       ).catch((error) => {
         this.admissionFailed = true
         throw error
@@ -657,7 +677,8 @@ export class RunSupervisor {
       if (projectContext)
         await until(
           journal.append(id, 'project-context', {snapshot: projectContext}, performance.now() - startedAt),
-          startedAt + limits.elapsedMs,
+          startedAt + executionLimitValue(limits.elapsedMs),
+          admissionSignal,
         ).catch((error) => {
           this.admissionFailed = true
           throw error
@@ -828,20 +849,27 @@ export class RunSupervisor {
   }
 }
 
-export async function until<T>(promise: Promise<T>, deadline: number): Promise<T> {
+export async function until<T>(promise: Promise<T>, deadline: number, signal?: AbortSignal): Promise<T> {
+  if (deadline === Infinity && !signal) return promise
   let timer: ReturnType<typeof setTimeout> | undefined
+  let abort: (() => void) | undefined
   try {
     return await Promise.race([
       promise,
       new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(
-          () => reject(new RunStoppedError('Settlement deadline exceeded')),
-          Math.max(0, deadline - performance.now()),
-        )
+        if (deadline !== Infinity)
+          timer = setTimeout(
+            () => reject(new RunStoppedError('Settlement deadline exceeded')),
+            Math.max(0, deadline - performance.now()),
+          )
+        abort = () => reject(new RunStoppedError('Settlement cancelled'))
+        signal?.addEventListener('abort', abort, {once: true})
+        if (signal?.aborted) abort()
       }),
     ])
   } finally {
     if (timer) clearTimeout(timer)
+    if (abort) signal?.removeEventListener('abort', abort)
   }
 }
 

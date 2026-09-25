@@ -232,20 +232,25 @@ IDs, persistent data, component support and startup behavior.
 
 ## Execution limits
 
-`executionLimits` sets finite budgets for each new Run. Fields merge across
-workspace settings and can be overridden by Agent configuration or a submission.
+`executionLimits` sets aggregate and lifecycle budgets for each new Run.
+Total time, tool rounds, model calls and tool requests default to `"unlimited"`.
+Fields merge across workspace settings and can be overridden by Agent configuration or a submission.
 For example:
 
 ```json
 {
   "executionLimits": {
-    "toolRounds": 100,
-    "modelCalls": 101,
-    "toolRequests": 1000,
-    "elapsedMs": 3600000
+    "toolRounds": "unlimited",
+    "modelCalls": "unlimited",
+    "toolRequests": "unlimited",
+    "elapsedMs": "unlimited"
   }
 }
 ```
+
+Use numeric overrides such as `"toolRounds": 100` and `"elapsedMs": 3600000`
+to restore a finite ceiling. Existing numeric workspace settings still apply.
+Only the four aggregate fields accept `"unlimited"`; lifecycle timeouts remain finite.
 
 The GUI exposes limits for the next run and continuation after budget exhaustion.
 These limits do not change operation permissions. See [Managed execution](execution.md)

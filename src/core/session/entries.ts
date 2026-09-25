@@ -1,6 +1,7 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import type {ExecutionLimit} from '../execution/limits.js'
 import type {MessagePayload, MessageType} from '../message/index.js'
 import type {ProviderName} from '../models/provider.js'
 import type {Role} from '../models/role.js'
@@ -64,7 +65,7 @@ export interface SessionMessageEntry {
 
 export interface SessionTurnContextEntry {
   cwd: string
-  maxToolIterations: number
+  maxToolIterations: ExecutionLimit
   model: string
   provider: ProviderName
   timestamp: string

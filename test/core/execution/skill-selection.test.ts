@@ -442,6 +442,7 @@ describe('managed Skill execution and surfaces', () => {
                   return new Message(MessageType.Assistant, {content: 'Done'})
                 }),
             },
+            execution: {...o.execution, limits: {...o.execution?.limits, toolRounds: 100}},
             toolProfile: 'none',
           }),
         cwd: root,

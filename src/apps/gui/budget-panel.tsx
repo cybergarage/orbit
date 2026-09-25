@@ -1,7 +1,7 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {RunLimits} from '../../core/execution/limits.js'
+import type {ExecutionLimit, RunLimits} from '../../core/execution/limits.js'
 import type {RunSnapshot} from '../../core/execution/run.js'
 
 import {parseBudgetReason} from '../../core/execution/limits.js'
@@ -43,7 +43,7 @@ export function BudgetPanel({
 }: {
   active: boolean
   limits: RunLimits
-  onChange: (key: keyof RunLimits, value: number) => void
+  onChange: (key: keyof RunLimits, value: ExecutionLimit) => void
   onContinue: () => void
   snapshot?: RunSnapshot
 }) {
@@ -62,31 +62,44 @@ export function BudgetPanel({
       )}
       <details open={stopped || undefined}>
         <summary>Limits for the next run</summary>
-        {Object.entries(labels).map(([key, label]) => (
-          <label key={key}>
-            {label}
-            <input
-              aria-label={label}
-              disabled={active}
-              min={key === 'elapsedMs' ? 1 : 0}
-              onChange={(event) =>
-                onChange(
-                  key as keyof RunLimits,
-                  event.target.value === ''
-                    ? Number.NaN
-                    : Number(event.target.value) * (key === 'elapsedMs' ? 60_000 : 1),
-                )
-              }
-              step={1}
-              type="number"
-              value={
-                Number.isFinite(limits[key as keyof RunLimits])
-                  ? limits[key as keyof RunLimits] / (key === 'elapsedMs' ? 60_000 : 1)
-                  : ''
-              }
-            />
-          </label>
-        ))}
+        {(Object.entries(labels) as [keyof typeof labels, string][]).map(([key, label]) => {
+          const limit = limits[key]
+          const finiteDefaults = {elapsedMs: 3_600_000, modelCalls: 101, toolRequests: 1000, toolRounds: 100}
+          return (
+            <label key={key}>
+              {label}
+              <select
+                aria-label={label}
+                disabled={active}
+                onChange={(event) =>
+                  onChange(key, event.target.value === 'unlimited' ? 'unlimited' : finiteDefaults[key])
+                }
+                value={limit === 'unlimited' ? 'unlimited' : 'limited'}
+              >
+                <option value="unlimited">Unlimited</option>
+                <option value="limited">Limited</option>
+              </select>
+              {limit !== 'unlimited' && (
+                <input
+                  aria-label={`${label} value`}
+                  disabled={active}
+                  min={key === 'elapsedMs' ? 1 : 0}
+                  onChange={(event) =>
+                    onChange(
+                      key,
+                      event.target.value === ''
+                        ? Number.NaN
+                        : Number(event.target.value) * (key === 'elapsedMs' ? 60_000 : 1),
+                    )
+                  }
+                  step={1}
+                  type="number"
+                  value={Number.isFinite(limit) ? limit / (key === 'elapsedMs' ? 60_000 : 1) : ''}
+                />
+              )}
+            </label>
+          )
+        })}
       </details>
       {stopped && (
         <button disabled={active || !canContinueBudget(snapshot)} onClick={onContinue}>

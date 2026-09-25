@@ -6,6 +6,7 @@ import {createHash} from 'node:crypto'
 import type {JsonSchema, ToolSource} from '../tools/definition.js'
 
 import {canonicalJSON} from '../execution/journal.js'
+import {isExecutionLimit} from '../execution/limits.js'
 import {createSchemaValidator, validateSchemaKeywords} from '../tools/schema.js'
 
 export type GraphJSON = boolean | GraphJSON[] | null | number | string | {[key: string]: GraphJSON}
@@ -119,10 +120,7 @@ export class CompiledProcessorGraph {
           const config = node.configuration as {instruction?: unknown; maxToolIterations?: unknown}
           if (config.instruction !== undefined && typeof config.instruction !== 'string')
             throw new Error('Invalid Agent instruction')
-          if (
-            config.maxToolIterations !== undefined &&
-            (!Number.isSafeInteger(config.maxToolIterations) || Number(config.maxToolIterations) < 0)
-          )
+          if (config.maxToolIterations !== undefined && !isExecutionLimit(config.maxToolIterations))
             throw new Error('Invalid Agent iteration limit')
         }
 

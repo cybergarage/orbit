@@ -338,7 +338,10 @@ async function wrapMcpTool(
           name: remoteTool.name,
         },
         undefined,
-        {signal: options?.signal, ...(run ? {timeout: Math.max(1, run.remaining())} : {})},
+        {
+          signal: options?.signal,
+          ...(run && Number.isFinite(run.remaining()) ? {timeout: Math.max(1, run.remaining())} : {}),
+        },
       )
     },
     name: toolName,

@@ -51,6 +51,26 @@ describe('GUI budget continuation', () => {
     expect(html).not.contain('disabled=""')
   })
 
+  it('renders unlimited defaults and optional numeric ceilings', () => {
+    const render = (limits = DEFAULT_RUN_LIMITS, active = false) =>
+      renderToStaticMarkup(
+        createElement(BudgetPanel, {
+          active,
+          limits,
+          onChange() {},
+          onContinue() {},
+        }),
+      )
+    const unlimited = render()
+    expect(unlimited.match(/value="unlimited" selected=""/g)).length(4)
+    expect(unlimited).not.contain('type="number"')
+    const finite = render({...DEFAULT_RUN_LIMITS, elapsedMs: 3_600_000, toolRounds: 12})
+    expect(finite).contain('aria-label="Time limit (minutes) value"')
+    expect(finite).contain('value="60"')
+    expect(finite).contain('value="12"')
+    expect(render(DEFAULT_RUN_LIMITS, true)).contain('disabled=""')
+  })
+
   it('supports recovered evidence but disables continuation for unknown work or failed recording', () => {
     const state = snapshot()
     state.result!.recording.status = 'recovered'

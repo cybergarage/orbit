@@ -198,7 +198,8 @@ source validation, compatibility and retained-history behavior.
 
 Open **Limits for the next run** below the conversation to change tool rounds,
 model calls, tool requests or elapsed minutes. Settings apply to the next Send or
-Continue action, including per-workspace defaults. They cannot alter active work.
+Continue action, including per-workspace defaults. Each aggregate field defaults
+to **Unlimited**; select **Limited** to enter a numeric ceiling. They cannot alter active work.
 
 After a budget stop, Orbit explains the exhausted limit and shows
 **Continue with these limits**. Optionally type additional guidance before using

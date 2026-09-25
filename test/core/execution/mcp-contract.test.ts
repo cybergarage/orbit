@@ -8,7 +8,7 @@ import path from 'node:path'
 
 import type {McpClient} from '../../../src/core/mcp.js'
 
-import {Agent, DEFAULT_RUN_LIMITS, MemorySessionLogStore, Message, MessageType} from '../../../src/core/index.js'
+import {Agent, MemorySessionLogStore, Message, MessageType} from '../../../src/core/index.js'
 import {createMcpToolManager} from '../../../src/core/mcp.js'
 
 const user = [new Message(MessageType.User, {content: 'exercise MCP'})]
@@ -187,7 +187,8 @@ describe('managed MCP catalog and remote outcomes', () => {
       expect(result.outcome).equal('incomplete')
       expect(result.quiescence).equal(false)
       expect(result.operations.at(-1)?.status).equal('unknown')
-      expect(timeout).within(1, DEFAULT_RUN_LIMITS.elapsedMs)
+      // Unlimited aggregate time leaves the SDK's finite request default intact.
+      expect(timeout).equal(undefined)
       expect(counts.calls).equal(1)
       expect(counts.models).equal(1)
       expect((await agent.startRun(user, {requestId: 'same-request'})).id).equal(handle.id)

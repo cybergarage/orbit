@@ -96,7 +96,9 @@ export function validateGraphRecord(entries: JournalRecord[], record: JournalRec
       Object.keys(counters).sort().join(',') !== 'modelCalls,toolRequests,toolRounds' ||
       Object.entries(counters).some(
         ([key, value]) =>
-          !integer(value) || Number(value) < Number(previousBudget?.[key] ?? 0) || Number(value) > Number(limits[key]),
+          !integer(value) ||
+          Number(value) < Number(previousBudget?.[key] ?? 0) ||
+          (limits[key] !== 'unlimited' && (!integer(limits[key]) || Number(value) > Number(limits[key]))),
       )
     )
       throw new Error('Invalid Graph shared budget evidence')

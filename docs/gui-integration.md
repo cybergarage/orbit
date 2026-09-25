@@ -205,7 +205,8 @@ source validation, compatibility and retained-history behavior.
 
 ### Budget continuation requests
 
-The message endpoint also accepts optional `limits` (validated partial Run limits)
+The message endpoint also accepts optional `limits` (validated partial Run limits;
+aggregate fields accept numbers or `"unlimited"` and default to unlimited)
 and `continueFromRunId`. Use a fresh `requestId` for an intentional continuation;
 reuse it only for uncertain delivery of the identical request. Changed limits or
 continuation identity conflict with an existing request ID. `ThreadSnapshot` exposes

@@ -58,7 +58,9 @@ Processor input. The managed Graph supports declared serial edges and router lab
 ### Execution plane
 
 The runtime that admits a run, invokes its fixed graph version, enforces
-budgets and policy, records evidence, and produces a terminal outcome.
+budgets and policy, records evidence, and produces a terminal outcome. Aggregate
+work budgets default to `unlimited`; callers can supply finite ceilings. Approval,
+cleanup and per-operation constraints are separate from these aggregate budgets.
 
 ### Graph version
 

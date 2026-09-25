@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type {DiagnosticContext, DiagnosticEventBus} from '../diagnostics/index.js'
+import type {ExecutionLimit} from '../execution/limits.js'
 import type {Message} from '../message/index.js'
 import type {Operator, OperatorOptions} from '../processor/index.js'
 import type {ModelToolSpec, ToolResult} from '../tools/index.js'
@@ -82,7 +83,7 @@ export interface ModelInvokeOptions extends OperatorOptions {
   diagnosticContext?: DiagnosticContext
   diagnostics?: DiagnosticEventBus
   maxOutputTokens?: number
-  maxToolIterations?: number
+  maxToolIterations?: ExecutionLimit
   signal?: AbortSignal
   tools?: ModelToolSpec[]
 }

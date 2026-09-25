@@ -10,6 +10,7 @@ import type {AgentEvent, AgentEventHandler} from './agent-events.js'
 import type {DiagnosticContext, DiagnosticEventBus} from './diagnostics/index.js'
 import type {ExecutionPolicy} from './execution/authorization.js'
 import type {ExecutionJournal, JournalLevel} from './execution/journal.js'
+import type {ExecutionLimit} from './execution/limits.js'
 import type {ApprovalReply, ApprovalRequest, RunContext, RunHandle, RunLimits, RunSnapshot} from './execution/run.js'
 import type {Logger} from './logger/index.js'
 import type {SessionLogStore} from './logs/index.js'
@@ -46,7 +47,7 @@ import {AgentEventType} from './agent-events.js'
 import {InvalidInputError, ModelAbortError, OrbitError} from './errors/index.js'
 import {assertManagedTool, executeManagedTool} from './execution/authorization.js'
 import {copyJSON, FileExecutionJournal, MemoryExecutionJournal} from './execution/journal.js'
-import {parseRunLimits} from './execution/limits.js'
+import {executionLimitValue, isExecutionLimit, parseRunLimits} from './execution/limits.js'
 import {isolateLogger} from './execution/observer.js'
 import {DEFAULT_RUN_LIMITS, RunExecutionError, RunStoppedError, RunSupervisor, until} from './execution/run.js'
 import {
@@ -97,7 +98,7 @@ export interface AgentInvokeOptions extends OperatorOptions {
   diagnosticContext?: DiagnosticContext
   diagnostics?: DiagnosticEventBus
   limits?: Partial<RunLimits>
-  maxToolIterations?: number
+  maxToolIterations?: ExecutionLimit
   memory?: ProjectMemorySelection
 
   onEvent?: AgentEventHandler
@@ -547,7 +548,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   ): Promise<GraphValue | Message> {
     const graph = options?.graph
     const maxToolIterations = options?.maxToolIterations ?? options!.executionContext!.limits.toolRounds
-    if (!Number.isSafeInteger(maxToolIterations) || maxToolIterations < 0) throw new Error('Invalid maxToolIterations')
+    if (!isExecutionLimit(maxToolIterations)) throw new Error('Invalid maxToolIterations')
     const run = options!.executionContext!
     const policy = options!.executionPolicy!
     const managed = {allowLegacyTools: this.execution.allowLegacyTools, policy}
@@ -710,7 +711,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
 
       let graphIteration = 0
       const runAgentStage = async (stageMax = maxToolIterations): Promise<Message> => {
-        for (let localIteration = 0; localIteration <= stageMax; localIteration += 1) {
+        for (let localIteration = 0; localIteration <= executionLimitValue(stageMax); localIteration += 1) {
           const iteration = graph ? graphIteration++ : localIteration
           throwIfAborted(options?.signal)
           this.logger.debug({iteration, maxToolIterations}, 'agent model iteration started')
@@ -863,7 +864,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           const reserveTools = () => {
             run.consume('toolRequests', toolCalls.length)
             if (toolCalls.length === 0) return
-            if (localIteration === stageMax) {
+            if (stageMax !== 'unlimited' && localIteration === stageMax) {
               run.exhaust('toolRounds', localIteration, 1, stageMax)
               run.check()
             }
@@ -958,9 +959,9 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       if (!graph) return await runAgentStage()
       const value = await executeProcessorGraph(graph, run, session, {
         async agent(input, configuration) {
-          const config = configuration as null | {instruction?: string; maxToolIterations?: number}
+          const config = configuration as null | {instruction?: string; maxToolIterations?: ExecutionLimit}
           const stageMax = config?.maxToolIterations ?? maxToolIterations
-          if (!Number.isSafeInteger(stageMax) || stageMax < 0 || stageMax > maxToolIterations)
+          if (!isExecutionLimit(stageMax) || executionLimitValue(stageMax) > executionLimitValue(maxToolIterations))
             throw new Error('Invalid graph Agent iteration limit')
           if (
             graphIteration > 0 ||

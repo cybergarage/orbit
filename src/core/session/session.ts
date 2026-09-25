@@ -5,6 +5,7 @@ import process from 'node:process'
 import {v7 as uuidv7} from 'uuid'
 
 import type {JournalLevel} from '../execution/journal.js'
+import type {ExecutionLimit} from '../execution/limits.js'
 import type {Message} from '../message/index.js'
 import type {ProviderName} from '../models/provider.js'
 import type {SessionSkillEntry} from '../skills/record.js'
@@ -38,7 +39,7 @@ export interface AppendMessageOptions {
 
 export interface RecordTurnContextOptions {
   cwd: string
-  maxToolIterations: number
+  maxToolIterations: ExecutionLimit
   model: string
   provider: ProviderName
   turnId: string

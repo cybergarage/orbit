@@ -7,7 +7,7 @@ import type {ParseBudget} from './json.js'
 import type {EvaluationAttempt, EvaluationCategory, EvaluationPlan} from './schema.js'
 
 import {validateNext} from '../execution/journal.js'
-import {DEFAULT_RUN_LIMITS} from '../execution/run.js'
+import {DEFAULT_RUN_LIMITS, parseRunLimits} from '../execution/limits.js'
 import {inspectGraphRun} from '../processor/graph-inspection.js'
 import {parseSessionFile} from '../session/codec.js'
 import {digest, parseJSON, textBundle} from './json.js'
@@ -70,11 +70,10 @@ function inspectJournal(
     !limits ||
     Array.isArray(limits) ||
     typeof limits !== 'object' ||
-    Object.keys(DEFAULT_RUN_LIMITS).some(
-      (key) => typeof limits[key] !== 'number' || !Number.isFinite(limits[key]) || Number(limits[key]) < 0,
-    )
+    Object.keys(DEFAULT_RUN_LIMITS).some((key) => !Object.hasOwn(limits, key))
   )
     throw new Error('Invalid admitted limits')
+  parseRunLimits(limits)
   const outcomes = new Map<string, string>()
   for (const entry of records) {
     if (entry.kind === 'operation-intent') outcomes.set(String(entry.data.operationId), 'unknown')

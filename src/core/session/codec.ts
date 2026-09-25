@@ -205,7 +205,10 @@ function parseTurnContextEntry(entry: Record<string, unknown>, file: string, lin
 
   return {
     cwd: requireString(entry.cwd, file, line, 'cwd'),
-    maxToolIterations: requireNonNegativeInteger(entry.maxToolIterations, file, line, 'maxToolIterations'),
+    maxToolIterations:
+      entry.maxToolIterations === 'unlimited'
+        ? 'unlimited'
+        : requireNonNegativeInteger(entry.maxToolIterations, file, line, 'maxToolIterations'),
     model: requireString(entry.model, file, line, 'model'),
     provider,
     timestamp: requireString(entry.timestamp, file, line, 'timestamp'),

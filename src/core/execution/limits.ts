@@ -1,32 +1,45 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
+/** JSON-safe optional ceiling for aggregate execution work. */
+export type ExecutionLimit = 'unlimited' | number
+
+export function isExecutionLimit(value: unknown): value is ExecutionLimit {
+  return value === 'unlimited' || (Number.isSafeInteger(value) && Number(value) >= 0)
+}
+
+/** Internal arithmetic only; never persist the resulting Infinity. */
+export function executionLimitValue(value: ExecutionLimit): number {
+  return value === 'unlimited' ? Infinity : value
+}
+
 export interface RunLimits {
   approvalMs: number
   cleanupMs: number
-  elapsedMs: number
+  elapsedMs: ExecutionLimit
   mcpServers: number
   mcpStartupMs: number
-  modelCalls: number
-  toolRequests: number
-  toolRounds: number
+  modelCalls: ExecutionLimit
+  toolRequests: ExecutionLimit
+  toolRounds: ExecutionLimit
 }
 
 export const DEFAULT_RUN_LIMITS: Readonly<RunLimits> = Object.freeze({
   approvalMs: 300_000,
   cleanupMs: 5000,
-  elapsedMs: 3_600_000,
+  elapsedMs: 'unlimited',
   mcpServers: 16,
   mcpStartupMs: 30_000,
-  modelCalls: 101,
-  toolRequests: 1000,
-  toolRounds: 100,
+  modelCalls: 'unlimited',
+  toolRequests: 'unlimited',
+  toolRounds: 'unlimited',
 })
 
 /** Validate untrusted partial settings without silently accepting misspelled limits. */
 export function parseRunLimits(value: unknown): Partial<RunLimits> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Run limits must be an object')
   for (const [name, limit] of Object.entries(value)) {
+    if (['elapsedMs', 'modelCalls', 'toolRequests', 'toolRounds'].includes(name) && limit === 'unlimited') continue
     if (
       !Object.hasOwn(DEFAULT_RUN_LIMITS, name) ||
       !Number.isSafeInteger(limit) ||

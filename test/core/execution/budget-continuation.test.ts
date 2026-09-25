@@ -109,12 +109,13 @@ async function legacyFixture(intent = false) {
 
 describe('execution budgets', () => {
   describe('coding budgets and continuation', () => {
-    it('completes more than five tool rounds with the product defaults', async () => {
-      const {agent, close, dispatches} = await create(8)
+    it('completes more than the former 100 tool rounds with unlimited defaults', async function () {
+      this.timeout(10_000)
+      const {agent, close, dispatches} = await create(110)
       try {
         const handle = await agent.startRun([user()])
         expect((await handle.finished).outcome).equal('completed')
-        expect(dispatches()).equal(8)
+        expect(dispatches()).equal(110)
         expect(handle.getSnapshot().limits).deep.equal(DEFAULT_RUN_LIMITS)
       } finally {
         await close()
@@ -140,6 +141,39 @@ describe('execution budgets', () => {
           expect(dispatches()).equal(key === 'modelCalls' ? 3 : 2)
           expect(JSON.stringify(agent.getSession().getEntries()).startsWith(before.slice(0, -1))).equal(true)
           expect((await first.finished).outcome).equal('budget-exceeded')
+        } finally {
+          await close()
+        }
+      })
+    }
+
+    it('keeps an explicit Agent iteration ceiling with otherwise unlimited defaults', async () => {
+      const {agent, close, dispatches} = await create(5)
+      try {
+        const handle = await agent.startRun([user()], {maxToolIterations: 2})
+        expect((await handle.finished).outcome).equal('budget-exceeded')
+        expect(dispatches()).equal(2)
+      } finally {
+        await close()
+      }
+    })
+
+    for (const parentLimit of ['unlimited', 2] as const) {
+      it(`checks an unlimited Graph Agent override against parent ${parentLimit}`, async () => {
+        const {agent, close} = await create(1)
+        try {
+          const graph = await library.compileProcessorGraph(
+            {
+              edges: [{from: 'agent', id: 'done', to: 'finished'}],
+              entry: 'agent',
+              id: 'unlimited',
+              nodes: [{adapter: 'agent', configuration: {maxToolIterations: 'unlimited'}, id: 'agent'}],
+              terminals: [{id: 'finished', outcome: 'completed'}],
+            },
+            [{id: 'agent', inputSchema: {}, kind: 'agent', outputSchema: {}, version: '1'}],
+          )
+          const handle = await agent.startGraphRun(graph, 'inspect', {maxToolIterations: parentLimit})
+          expect((await handle.finished).outcome).equal(parentLimit === 'unlimited' ? 'completed' : 'failed')
         } finally {
           await close()
         }
