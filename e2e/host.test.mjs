@@ -38,6 +38,16 @@ describe('E2E host control (no model or Docker)', () => {
     expect(() => evaluationPrompt('Read only.', {strategy: 'typo'})).to.throw('Unknown evaluation strategy')
   })
 
+  it('isolates stopping instructions from the Verified test-runner control', () => {
+    const control = evaluationPrompt('Fix issue.', {strategy: 'verified-tests-v1', swe: true})
+    const focused = evaluationPrompt('Fix issue.', {strategy: 'verified-focused-v1', swe: true})
+    expect(focused.startsWith(control)).to.equal(true)
+    expect(control).to.include('orbit-test')
+    expect(control).not.to.include('Completion criteria:')
+    expect(focused).to.include('Completion criteria:')
+    expect(() => evaluationPrompt('Fix issue.', {strategy: 'verified-focused-v1'})).to.throw('require a SWE repository')
+  })
+
   it('counts interrupted requests without inventing response timings', () => {
     const failure = {data: {durationMs: 3, input: {path: 'a'}, isError: true, name: 'edit'}, type: 'tool.completed'}
     const metrics = summarizeEvents([

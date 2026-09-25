@@ -5,6 +5,15 @@ export const strategyVersion = 'coding-recovery-v1'
 
 export function evaluationPrompt(task, {strategy = strategyVersion, swe = false} = {}) {
   if (strategy === 'baseline') return task
+  if (['verified-focused-v1', 'verified-tests-v1'].includes(strategy)) {
+    if (!swe) throw new Error('Verified strategies require a SWE repository')
+    const testing =
+      '\n\nEvaluation environment:\n- Work in /workspace. This is a source snapshot without Git history. python3 uses the prepared repository source and dependencies.\n- Run focused public tests with orbit-test --timeout 120 --tail 12000 -- <test argv>. It preserves exit status and saves full logs outside the patch. Use python3 -m pytest -p no:cacheprovider <existing-test-path> -q for pytest/Sphinx; use python3 tests/runtests.py <existing-test-module> --settings=test_sqlite --parallel=1 for Django. Inspect actual paths before choosing a test.\n- Check ORBIT_TEST_RESULT: a nonzero exit code is a failure even if some tests passed. Do not pipe tests through tail, ignore failures, or leave generated caches in the patch. Check any tests you add.\n'
+    const stopping =
+      '\nCompletion criteria:\n- After implementing the minimal fix, run a focused regression for the reported behavior and the affected existing test module. When those checks pass, summarize the actual changes and test results and finish.\n- Expand testing only for a concrete observed failure related to the change. Do not guess unrelated test names or expand to the whole repository after relevant checks pass. If a failure persists, report it accurately instead of claiming success.\n- Official hidden tests run later; do not attempt to access them or claim they passed.\n'
+    return task + testing + (strategy === 'verified-focused-v1' ? stopping : '')
+  }
+
   if (strategy !== strategyVersion) throw new Error(`Unknown evaluation strategy: ${strategy}`)
   const environment = swe
     ? 'Use python3, not python. pytest and mpmath are installed. This is a source snapshot without .git history; do not look for Git metadata or run Git history commands.'

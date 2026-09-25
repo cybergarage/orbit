@@ -324,3 +324,31 @@ On the saved September 25 baseline, this check detected Sphinx's failing added
 regression and six cache files despite official resolution. The corresponding
 original public test file passed in the corrected environment. Django's modified
 tests passed; pytest had no changed eligible tests and was marked `not-measured`.
+
+## Controlled completion instructions
+
+`ORBIT_E2E_STRATEGY=verified-tests-v1` adds only the prepared-environment and
+`orbit-test` instructions to the original issue prompt.
+`ORBIT_E2E_STRATEGY=verified-focused-v1` adds completion criteria to that exact
+control: finish after a focused regression and the affected existing test module
+pass, expand only for a concrete related failure, and report unresolved failures.
+Both are opt-in SWE evaluation strategies; `baseline` remains the default and
+Orbit's product prompt and execution limits are unchanged.
+
+```sh
+# Rebuild the local and SWE base images first, as above.
+docker build -f e2e/VerifiedAgent.Dockerfile -t orbit-e2e:verified-improved .
+ORBIT_E2E_IMAGE=orbit-e2e:verified-improved \
+ORBIT_E2E_STRATEGY=verified-focused-v1 \
+ORBIT_SWE_CASE=e2e/swebench/django__django-15731.json \
+ORBIT_SWE_ROUNDS=50 npm run eval:swebench -- solve ornith-1.5:9b
+```
+
+Use `verified-tests-v1` with the same image, case and generation settings for a
+comparison that changes only the completion instructions. Each solve creates a
+new Session and workspace. Grade each saved prediction with the pinned official
+harness as above. Compare runtime completion, official resolution and independent
+quality separately; a budget stop does not make a resolved patch unresolved.
+One attempt per condition is diagnostic evidence, not a model ranking or a
+statistically established improvement. Historical runs with different dependency
+images cannot isolate the effect of the new prompt.
