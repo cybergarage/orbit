@@ -8,7 +8,7 @@ import {OllamaAgent} from '../dist/core/models/adapters/ollama.js'
 import {Agent, DiagnosticEventBus, MemorySessionLogStore, Message, Session, State} from '../dist/index.js'
 
 const config = JSON.parse(fs.readFileSync('/input/config.json', 'utf8'))
-fs.cpSync('/fixture', '/workspace', {recursive: true})
+fs.cpSync('/fixture', '/workspace', {recursive: true, verbatimSymlinks: true})
 const session = new Session({formatVersion: 2})
 const diagnostics = new DiagnosticEventBus({
   capture: 'full',

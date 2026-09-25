@@ -7,6 +7,7 @@ import path from 'node:path'
 
 import {normalizePatch} from './grading.mjs'
 import {activeContainers, command, digest, docker, image, ollamaMetadata, repo, runAgent, writeJSON} from './host.mjs'
+import {preflightRepository, prepareRepositorySource} from './repository-checks.mjs'
 import {evaluationPrompt, readRounds} from './strategy.mjs'
 import {validateSWECase, verifyPreparedSWECase} from './swe-case.mjs'
 
@@ -173,7 +174,6 @@ switch (action) {
     const [instance] = JSON.parse(await fs.readFile(path.join(root, 'instance.json'), 'utf8'))
     verifyPreparedSWECase(instance, selected, instanceId)
     const model = argument ?? 'ornith-1.5:9b'
-    const metadata = await ollamaMetadata(model)
     const directory = path.join(root, `solve-${model.replaceAll(':', '-')}-${randomUUID()}`)
     await fs.mkdir(directory)
     const pristine = path.join(directory, 'pristine')
@@ -186,6 +186,26 @@ switch (action) {
     if (!response.ok) throw new Error(`Source archive: ${response.status}`)
     await fs.writeFile(archive, Buffer.from(await response.arrayBuffer()))
     await command('tar', ['-xzf', archive, '--strip-components=1', '-C', pristine])
+    const preparation = selected ? await prepareRepositorySource(pristine, instance.repo, selected.version) : []
+    let preflight
+    if (selected) {
+      preflight = await preflightRepository({
+        directory: path.join(directory, 'preflight'),
+        repository: instance.repo,
+        workspace: pristine,
+      })
+      if (!preflight.passed) {
+        await writeJSON(path.join(directory, 'metadata.json'), {
+          dataset: gold.dataset,
+          preflight,
+          preparation,
+          runStatus: 'environment-error',
+        })
+        throw new Error(`Repository preflight failed before model execution: ${directory}`)
+      }
+    }
+
+    const metadata = await ollamaMetadata(model)
     const runDirectory = path.join(directory, 'agent')
     const run = await runAgent({
       directory: runDirectory,
@@ -236,6 +256,8 @@ switch (action) {
       metadata,
       metrics: run.metrics,
       orbitCommit: (await command('git', ['rev-parse', 'HEAD'])).stdout.trim(),
+      preflight,
+      preparation,
       runStatus: run.status,
       runtimeOutcome: run.result?.runtime?.outcome,
       sourceArchiveSha256: digest(await fs.readFile(archive)),

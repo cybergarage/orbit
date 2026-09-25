@@ -1,10 +1,14 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 import {expect} from 'chai'
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 
 import {recoveryObserved} from './cases.mjs'
 import {gradeCase, normalizePatch} from './grading.mjs'
 import {command} from './host.mjs'
+import {prepareRepositorySource, repositoryProfile} from './repository-checks.mjs'
 import {evaluationPrompt, readRounds, summarizeEvents} from './strategy.mjs'
 import {validateSWECase, verifyPreparedSWECase} from './swe-case.mjs'
 
@@ -88,6 +92,27 @@ describe('E2E host control (no model or Docker)', () => {
     const failure = await command(process.execPath, ['-e', 'process.exit(1)'], {allowFailure: true})
     expect(failure.timedOut).to.equal(false)
     expect(failure.code).to.equal(1)
+  })
+
+  it('prepares only the supported source version without overwriting an existing module', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-source-'))
+    try {
+      await fs.mkdir(path.join(root, 'src/_pytest'), {recursive: true})
+      const prepared = await prepareRepositorySource(root, 'pytest-dev/pytest', '7.2')
+      expect(prepared).to.have.length(1)
+      expect(await fs.readFile(path.join(root, prepared[0].path), 'utf8')).to.include('7.2.0')
+      let error
+      try {
+        await prepareRepositorySource(root, 'pytest-dev/pytest', '7.2')
+      } catch (error_) {
+        error = error_
+      }
+
+      expect(error.code).to.equal('EEXIST')
+      expect(() => repositoryProfile('unknown/repo')).to.throw('No preflight profile')
+    } finally {
+      await fs.rm(root, {force: true, recursive: true})
+    }
   })
 
   describe('Pinned SWE case isolation', () => {

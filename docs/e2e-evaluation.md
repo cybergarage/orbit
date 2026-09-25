@@ -250,3 +250,29 @@ ORBIT_SWE_CASE=e2e/swebench/django__django-15731.json npm run eval:swebench -- g
 Prepare the matching dataset first on a new machine. Change both the manifest
 and JSONL filename to regrade the other two problems. A replay is a new grading
 run of the existing patch, not a new model attempt.
+
+## Repository preflight
+
+Verified solving now checks the pristine source in a separate network-disabled
+container before making any Ollama request. It verifies imports resolve under
+`/workspace`, records installed Python dependencies, and runs a public smoke
+suite selected by repository (not by hidden grading tests). Failure is recorded
+as `environment-error` in the attempt's `preflight/report.json` and metadata;
+no model attempt is counted as completed. The preflight copy is disposable and
+does not modify the solver's initial source or leak gold/test patches.
+
+Rebuild `e2e/VerifiedAgent.Dockerfile` when using this check. Its PYTHONPATH selects
+the target source even when a command is launched outside the repository root.
+The added `py` dependency supports the selected pytest source, and Pygments is
+pinned for the selected Sphinx version. This is still a bounded smoke check, not
+proof that every repository test passes. Local harness changes do not alter
+product APIs, authorization or runtime defaults and do not require a new ADR.
+
+For the pinned pytest 7.2 archive, preparation creates its missing generated
+`src/_pytest/_version.py` before the initial snapshot. The path and exact contents
+are recorded in `preparation`; an existing file is never overwritten. Other
+pytest versions fail closed until they have a supported profile. Alabaster and
+Pygments are pinned to versions compatible with the selected Sphinx source.
+Source copies preserve relative symbolic links instead of rewriting them to host
+paths. Public smoke checks for Django, pytest and Sphinx passed locally after
+these environment corrections; they are not official issue-resolution scores.

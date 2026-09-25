@@ -145,7 +145,7 @@ export async function runAgent({
   await writeJSON(path.join(input, 'config.json'), config)
   const initial = path.join(directory, 'initial')
   await fs.mkdir(initial)
-  if (workspace) await fs.cp(workspace, initial, {recursive: true})
+  if (workspace) await fs.cp(workspace, initial, {recursive: true, verbatimSymlinks: true})
   else
     for (const [name, text] of Object.entries(files)) {
       await fs.mkdir(path.dirname(path.join(initial, name)), {recursive: true})
