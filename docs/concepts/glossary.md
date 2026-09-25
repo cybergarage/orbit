@@ -217,3 +217,11 @@ A host-selected local package identity that contributes Skills and MCP server
 configuration. Its stable ID owns a persistent data directory; its manifest name
 is descriptive metadata. Activating an instance does not approve its operations.
 See [Agent Plugins](../plugins.md).
+
+### Effective context capacity
+
+The model capacity available under the selected runtime configuration and
+application accounting ceiling. It is distinct from the model's declared maximum
+and from remaining input space after output reservation. Unknown capacity is not
+unlimited. See [Model context capacity](../model-context-capacity.md) for current
+provider discovery and budgeted preparation.

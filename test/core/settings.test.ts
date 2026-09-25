@@ -145,6 +145,27 @@ describe('loadWorkspaceSettings', () => {
     })
   })
 
+  it('loads and validates provider context windows in both loaders', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-context-settings-'))
+    try {
+      await fs.mkdir(path.join(root, '.orbit'))
+      const file = path.join(root, '.orbit', SETTINGS_FILE_NAME)
+      await fs.writeFile(file, JSON.stringify({providers: {ollama: {contextWindow: 32_768}}}))
+      expect((await loadWorkspaceSettings(root)).providers?.ollama?.contextWindow).to.equal(32_768)
+      expect(loadWorkspaceSettingsSync(root).providers?.ollama?.contextWindow).to.equal(32_768)
+      for (const contextWindow of [0, -1, 1.5, 'unlimited', null]) {
+        // Sequential writes exercise validation of the same settings file.
+        // eslint-disable-next-line no-await-in-loop
+        await fs.writeFile(file, JSON.stringify({providers: {ollama: {contextWindow}}}))
+        // eslint-disable-next-line no-await-in-loop
+        await expectReject(loadWorkspaceSettings(root), 'contextWindow must be a positive safe integer')
+        expect(() => loadWorkspaceSettingsSync(root)).to.throw('contextWindow must be a positive safe integer')
+      }
+    } finally {
+      await fs.rm(root, {force: true, recursive: true})
+    }
+  })
+
   it('loads built-in tool profile settings', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-'))
     await fs.mkdir(path.join(root, '.orbit'), {recursive: true})

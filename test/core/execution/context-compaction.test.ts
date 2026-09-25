@@ -157,6 +157,62 @@ async function execute(session: Session, model: Model, selected = policy, input 
 }
 
 describe('budgeted context preparation', () => {
+  it('uses the smaller discovered runtime for protected-input admission', async () => {
+    const session = new Session()
+    const model = fixtureModel('unused')
+    model.getContextInfo = async () => ({
+      contextWindow: 262_144,
+      maxInputTokens: null,
+      maxOutputTokens: null,
+      requiresRuntimeContext: true,
+      runtimeContextWindow: 2500,
+      source: 'api',
+    })
+    const {result} = await execute(session, model, policy, 'x'.repeat(1600))
+    expect(result.outcome).to.equal('failed')
+    expect(JSON.stringify(result)).to.contain('protected-context-exceeds-budget')
+    expect(model.requests).to.have.length(0)
+    expect(policy.profile.window).to.equal(20_000)
+  })
+
+  it('pins the resolved window into prepared ordinary and summary requests', async () => {
+    const session = new Session()
+    const model = fixtureModel(oldConversation(session))
+    model.getContextInfo = async () => ({
+      contextWindow: 262_144,
+      maxInputTokens: null,
+      maxOutputTokens: 4096,
+      runtimeContextWindow: 12_000,
+      source: 'api',
+    })
+    const original = model.prepare!.bind(model)
+    const windows: Array<number | undefined> = []
+    model.prepare = (messages, options) => {
+      windows.push(options?.contextWindow)
+      return original(messages, options)
+    }
+
+    const {result} = await execute(session, model)
+    expect(result.outcome).to.equal('completed')
+    expect(windows.length).to.be.greaterThan(1)
+    expect(windows.every((window) => window === 12_000)).to.equal(true)
+  })
+
+  it('refuses an output reserve beyond discovered provider limits before dispatch', async () => {
+    const model = fixtureModel('unused')
+    model.getContextInfo = async () => ({
+      contextWindow: 20_000,
+      maxInputTokens: null,
+      maxOutputTokens: 999,
+      runtimeContextWindow: null,
+      source: 'api',
+    })
+    const {result} = await execute(new Session(), model)
+    expect(result.outcome).to.equal('failed')
+    expect(JSON.stringify(result)).to.contain('output limit')
+    expect(model.requests).to.have.length(0)
+  })
+
   it('saves one checkpoint, retains originals and keeps the latest request', async () => {
     const session = new Session()
     const id = oldConversation(session)

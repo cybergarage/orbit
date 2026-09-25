@@ -127,6 +127,8 @@ export type {
 } from './mcp.js'
 export {Message, MessageType, UserMessage} from './message/index.js'
 export type {MessageOptions, MessagePayload} from './message/index.js'
+export {resolveModelContextCapacity} from './models/context-capacity.js'
+export type {ModelContextCapacity, ModelContextInfo, ModelContextOptions} from './models/context-capacity.js'
 export {DEFAULT_MODELS, getModel, getModelRegistry, ModelRegistry, registerModelProvider} from './models/factory.js'
 export type {ModelProviderRegistration} from './models/factory.js'
 export type {

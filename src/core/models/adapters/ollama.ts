@@ -7,6 +7,7 @@ import {performance} from 'node:perf_hooks'
 import {Ollama} from 'ollama'
 
 import type {Message} from '../../message/index.js'
+import type {ModelContextInfo} from '../context-capacity.js'
 import type {
   Model,
   ModelInvokeOptions,
@@ -19,12 +20,13 @@ import type {Provider, ProviderName} from '../provider.js'
 
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
+import {metadataRecord, positiveTokenLimit, readModelMetadata, unknownModelContextInfo} from '../context-capacity.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
 import {freezeModelRequest} from '../prepared.js'
 import {getModelOutputParts, getToolCalls, getToolResult, getToolResultImages, stringifyToolResult} from './tools.js'
 
 export interface OllamaAgentOptions {
-  client?: Pick<Ollama, 'abort' | 'chat'>
+  client?: Partial<Pick<Ollama, 'ps' | 'show'>> & Pick<Ollama, 'abort' | 'chat'>
 }
 
 export interface OllamaModelSelectionOptions {
@@ -33,14 +35,68 @@ export interface OllamaModelSelectionOptions {
 
 export class OllamaAgent implements Model {
   private readonly abort = () => this.client.abort()
-  private readonly client: Pick<Ollama, 'abort' | 'chat'>
+  private readonly client: Partial<Pick<Ollama, 'ps' | 'show'>> & Pick<Ollama, 'abort' | 'chat'>
+  private readonly hasInjectedClient: boolean
 
   constructor(
     private readonly model: string,
     private readonly provider: Provider,
     options: OllamaAgentOptions = {},
   ) {
+    this.hasInjectedClient = options.client !== undefined
     this.client = options.client ?? new Ollama(createOllamaOptions(provider))
+  }
+
+  async getContextInfo(options: {signal?: AbortSignal} = {}): Promise<ModelContextInfo> {
+    const client = this.hasInjectedClient
+      ? this.client
+      : new Ollama({
+          ...createOllamaOptions(this.provider),
+          // Node 20 provides fetch; its experimental label does not affect this supported API.
+          fetch: (input, init) =>
+            // eslint-disable-next-line n/no-unsupported-features/node-builtins
+            globalThis.fetch(input, {
+              ...init,
+              signal: AbortSignal.any([AbortSignal.timeout(5000), ...(options.signal ? [options.signal] : [])]),
+            }),
+        })
+    const [shown, running] = await Promise.all([
+      readModelMetadata(async () => client.show?.({model: this.model}), options.signal),
+      readModelMetadata(async () => client.ps?.(), options.signal),
+    ])
+    const show = metadataRecord(shown)
+    const info = metadataRecord(show.model_info)
+    const architecture = info['general.architecture']
+    const contextWindow =
+      typeof architecture === 'string' ? positiveTokenLimit(info[`${architecture}.context_length`]) : null
+    const {models} = metadataRecord(running)
+    const loaded = Array.isArray(models)
+      ? models
+          .map((entry) => metadataRecord(entry))
+          .find((entry) =>
+            [entry.name, entry.model].some(
+              (name) =>
+                typeof name === 'string' &&
+                (name === this.model || name === `${this.model}:latest` || `${name}:latest` === this.model),
+            ),
+          )
+      : undefined
+    const parameter =
+      typeof show.parameters === 'string' ? /^num_ctx\s+(\d+)\s*$/m.exec(show.parameters)?.[1] : undefined
+    const runtimeContextWindow =
+      this.provider.getContextWindow?.() ??
+      positiveTokenLimit(loaded?.context_length) ??
+      positiveTokenLimit(parameter === undefined ? null : Number(parameter))
+    return {
+      ...unknownModelContextInfo(),
+      contextWindow,
+      requiresRuntimeContext: true,
+      runtimeContextWindow,
+      source:
+        contextWindow !== null || loaded !== undefined || parameter !== undefined
+          ? ('api' as const)
+          : ('unknown' as const),
+    }
   }
 
   getModel(): string {
@@ -60,14 +116,26 @@ export class OllamaAgent implements Model {
   }
 
   prepare(messages: Message[], options?: Partial<ModelInvokeOptions>): PreparedModelInvocation {
+    const contextWindow = options?.contextWindow ?? this.provider.getContextWindow?.()
+    if (contextWindow !== undefined && positiveTokenLimit(contextWindow) === null)
+      throw new Error('Invalid contextWindow: expected a positive safe integer')
     const request = freezeModelRequest(
       {
         messages: messages.map((message) => toOllamaMessage(message)),
         model: this.model,
         stream: false as const,
         // Provider wire field.
-        // eslint-disable-next-line camelcase
-        ...(options?.maxOutputTokens === undefined ? {} : {options: {num_predict: options.maxOutputTokens}}),
+
+        ...(options?.maxOutputTokens === undefined && contextWindow === undefined
+          ? {}
+          : {
+              options: {
+                // eslint-disable-next-line camelcase
+                ...(options?.maxOutputTokens === undefined ? {} : {num_predict: options.maxOutputTokens}),
+                // eslint-disable-next-line camelcase
+                ...(contextWindow === undefined ? {} : {num_ctx: contextWindow}),
+              },
+            }),
         ...(options?.tools && options.tools.length > 0 ? {tools: options.tools.map((tool) => toOllamaTool(tool))} : {}),
       },
       options?.maxOutputTokens,

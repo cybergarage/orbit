@@ -38,7 +38,10 @@ stays in memory while each Run snapshots the JSON profile for its journal.
 These are illustrative values, not a measured product profile. Replace the model
 identity, window and counts using the selected model and application conditions.
 A model switch with a mismatched profile refuses the next budgeted invocation.
-Orbit does not infer a window from the model name.
+Before each budgeted preparation, Orbit reconciles the profile with
+[provider metadata and runtime context settings](model-context-capacity.md).
+The profile window is a ceiling/fallback; discovered smaller limits reduce it.
+OpenAI uses a documented exact-ID catalog rather than model-name inference.
 
 The ordinary input budget is `window - outputReserve - safetyMargin`. Counts
 must be nonnegative safe integers, reserves must be positive, and

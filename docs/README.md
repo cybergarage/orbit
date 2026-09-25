@@ -82,6 +82,7 @@ routing contract belongs in an ADR, and its implemented structure appears in
 
 - [Explicit Skill selection](skills.md): source-identified, one-Run instructions and historical snapshots.
 - [Settings](settings.md)
+- [Model context capacity](model-context-capacity.md)
 - [Coding Tools](tools.md)
 - [Sessions](session.md)
 - [Session Logs](logging.md)

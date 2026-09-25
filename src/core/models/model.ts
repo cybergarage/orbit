@@ -6,6 +6,7 @@ import type {ExecutionLimit} from '../execution/limits.js'
 import type {Message} from '../message/index.js'
 import type {Operator, OperatorOptions} from '../processor/index.js'
 import type {ModelToolSpec, ToolResult} from '../tools/index.js'
+import type {ModelContextInfo} from './context-capacity.js'
 import type {ProviderName} from './provider.js'
 
 export interface ModelToolCall {
@@ -80,6 +81,7 @@ export interface ModelToolResultPayload {
 }
 
 export interface ModelInvokeOptions extends OperatorOptions {
+  contextWindow?: number
   diagnosticContext?: DiagnosticContext
   diagnostics?: DiagnosticEventBus
   maxOutputTokens?: number
@@ -94,6 +96,7 @@ export interface PreparedModelInvocation {
 }
 
 export interface Model extends Operator<Message[], Message, ModelInvokeOptions> {
+  getContextInfo?(options?: {signal?: AbortSignal}): Promise<ModelContextInfo>
   getModel(): string
   getName(suffix?: string): string
   getProvider(): ProviderName

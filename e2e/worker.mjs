@@ -19,13 +19,20 @@ const diagnostics = new DiagnosticEventBus({
 diagnostics.subscribe((event) => fs.appendFileSync('/output/events.jsonl', JSON.stringify(event) + '\n'))
 const sdk = new Ollama({host: config.ollamaHost})
 // Test-local transport configuration: exercise the real Orbit serializer and
-// response parser without adding provider settings to the public runtime API.
+// response parser. Expose num_ctx so discovery sees the same runtime setting;
+// prepared output/context limits take precedence over test defaults.
 const client = {
   abort: () => sdk.abort(),
   chat: (request) =>
-    sdk.chat({...request, keep_alive: '60s', options: {...request.options, ...config.options}, think: config.think}),
+    sdk.chat({...request, keep_alive: '60s', options: {...config.options, ...request.options}, think: config.think}),
+  ps: () => sdk.ps(),
+  show: (request) => sdk.show(request),
 }
-const model = new OllamaAgent(config.model, {getName: () => 'ollama'}, {client})
+const model = new OllamaAgent(
+  config.model,
+  {getContextWindow: () => config.options.num_ctx, getName: () => 'ollama'},
+  {client},
+)
 const agent = new Agent({
   cwd: '/workspace',
   deps: {createModel: () => model},

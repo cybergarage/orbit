@@ -255,3 +255,11 @@ Only the four aggregate fields accept `"unlimited"`; lifecycle timeouts remain f
 The GUI exposes limits for the next run and continuation after budget exhaustion.
 These limits do not change operation permissions. See [Managed execution](execution.md)
 for all defaults, validation, library overrides and continuation semantics.
+
+## Provider context capacity
+
+`providers.<provider>.contextWindow` accepts a positive safe integer. It sets
+Ollama `num_ctx` and provides an accounting ceiling for cloud models.
+[Model context capacity](model-context-capacity.md) explains metadata discovery,
+precedence, unknown limits and the OpenAI catalog. This setting does not enable
+compaction; `contextPolicy` still controls budgeted preparation.

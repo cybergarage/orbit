@@ -19,6 +19,7 @@ import {LocalWorkspaceLocator} from './workspace.js'
 export interface ProviderConnectionSettings {
   apiKey?: string
   apiKeyEnv?: string
+  contextWindow?: number
   host?: string
 }
 
@@ -232,13 +233,22 @@ function validateProviderConnectionSettings(
   file: string,
   provider: string,
 ): ProviderConnectionSettings {
-  const {apiKey, apiKeyEnv, host} = value
+  const {apiKey, apiKeyEnv, contextWindow, host} = value
   if (apiKey !== undefined && typeof apiKey !== 'string') {
     throw new Error(`Invalid workspace settings in ${file}: providers.${provider}.apiKey must be a string.`)
   }
 
   if (apiKeyEnv !== undefined && typeof apiKeyEnv !== 'string') {
     throw new Error(`Invalid workspace settings in ${file}: providers.${provider}.apiKeyEnv must be a string.`)
+  }
+
+  if (
+    contextWindow !== undefined &&
+    (typeof contextWindow !== 'number' || !Number.isSafeInteger(contextWindow) || contextWindow <= 0)
+  ) {
+    throw new Error(
+      `Invalid workspace settings in ${file}: providers.${provider}.contextWindow must be a positive safe integer.`,
+    )
   }
 
   if (host !== undefined && typeof host !== 'string') {
@@ -249,6 +259,7 @@ function validateProviderConnectionSettings(
     ...(typeof apiKey === 'string' ? {apiKey} : {}),
     ...(typeof apiKeyEnv === 'string' ? {apiKeyEnv} : {}),
     ...(typeof host === 'string' ? {host} : {}),
+    ...(typeof contextWindow === 'number' ? {contextWindow} : {}),
   }
 }
 

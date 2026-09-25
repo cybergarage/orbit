@@ -73,6 +73,8 @@ export type {SkillConfig, SkillMetadata, SkillSource, SkillSourceInfo} from '../
 export {State} from '../state.js'
 export {tool, Tool, ToolProfile} from '../tools/index.js'
 export type {ToolConfig, ToolContext, ToolHandler, ToolInput, ToolOptions, ToolOutput} from '../tools/index.js'
+export {resolveModelContextCapacity} from './context-capacity.js'
+export type {ModelContextCapacity, ModelContextInfo, ModelContextOptions} from './context-capacity.js'
 export {DEFAULT_MODELS, getModel, getModelRegistry, ModelRegistry, registerModelProvider} from './factory.js'
 export type {ModelProviderRegistration} from './factory.js'
 export type {

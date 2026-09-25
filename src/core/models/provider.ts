@@ -9,6 +9,7 @@ export type ProviderName = string
 
 export interface Provider {
   getAPIKey(): string | undefined
+  getContextWindow?(): number | undefined
   getHost(): string | undefined
   getName(): ProviderName
 }
@@ -56,6 +57,10 @@ class SettingsProvider implements Provider {
     }
 
     return this.getConfiguredAPIKey()
+  }
+
+  getContextWindow(): number | undefined {
+    return this.settings?.providers?.[this.name]?.contextWindow
   }
 
   getHost(): string | undefined {

@@ -12,6 +12,7 @@ import type {VerifiedModelContext} from './verified-context.js'
 import {currentGraphVisit} from '../execution/graph-state.js'
 import {Message, MessageType} from '../message/index.js'
 import {getToolCalls} from '../models/adapters/tools.js'
+import {resolveModelContextCapacity} from '../models/context-capacity.js'
 import {GptTokenizer} from '../tokenizer/index.js'
 import {persistedContextMessage, sourceDigest, validateSummary, validateToolGroups} from './compaction.js'
 import {SessionContextBuilder} from './context-builder.js'
@@ -151,8 +152,31 @@ function notify(options: PreparationOptions, event: ContextPreparationEvent): vo
 export async function prepareSessionContext(options: PreparationOptions): Promise<PreparedModelInvocation> {
   const {model, policy, run, session} = options
   const profile = structuredClone(policy.profile)
+  validateContextProfile(profile, model)
+  run.check()
+  const capacity = await resolveModelContextCapacity(model, {
+    contextWindow: options.modelOptions.contextWindow,
+    outputReserve: profile.outputReserve,
+    safetyMargin: profile.safetyMargin,
+    signal: options.modelOptions.signal,
+    windowLimit: profile.window,
+  })
+  run.check()
+  if (capacity.maxOutputTokens !== null && profile.summaryOutput > capacity.maxOutputTokens)
+    throw new ContextBudgetError('summary-output-exceeds-model-limit')
+  profile.window = Math.min(profile.window, capacity.effectiveContextWindow ?? profile.window)
+  // Independent input limits also apply to summaries, whose output reserve differs.
+  if (capacity.maxInputTokens !== null)
+    profile.window = Math.min(
+      profile.window,
+      capacity.maxInputTokens + Math.min(profile.outputReserve, profile.summaryOutput),
+    )
+  const inputBudget = profile.window - profile.outputReserve - profile.safetyMargin
+  profile.trigger = Math.min(profile.trigger, inputBudget)
+  profile.target = Math.min(profile.target, profile.trigger - 1)
   options = {
     ...options,
+    modelOptions: {...options.modelOptions, contextWindow: profile.window},
     policy: {...policy, profile},
     prefix: options.prefix.map((message) => new Message(message.type, persistedContextMessage(message))),
   }

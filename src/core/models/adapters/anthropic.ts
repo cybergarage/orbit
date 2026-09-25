@@ -12,6 +12,7 @@ import {Anthropic} from '@anthropic-ai/sdk'
 import {performance} from 'node:perf_hooks'
 
 import type {Message} from '../../message/index.js'
+import type {ModelContextInfo} from '../context-capacity.js'
 import type {
   Model,
   ModelInvokeOptions,
@@ -23,6 +24,7 @@ import type {Provider, ProviderName} from '../provider.js'
 
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
+import {metadataRecord, positiveTokenLimit, readModelMetadata, unknownModelContextInfo} from '../context-capacity.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
 import {freezeModelRequest} from '../prepared.js'
 import {splitSystemPrompt} from '../prompt.js'
@@ -30,11 +32,11 @@ import {Role} from '../role.js'
 import {getToolCalls, getToolResult, isToolResultError, stringifyToolOutput} from './tools.js'
 
 export interface AnthropicAgentOptions {
-  client?: Pick<Anthropic, 'messages'>
+  client?: Partial<Pick<Anthropic, 'models'>> & Pick<Anthropic, 'messages'>
 }
 
 export class AnthropicAgent implements Model {
-  private readonly client: Pick<Anthropic, 'messages'>
+  private readonly client: Partial<Pick<Anthropic, 'models'>> & Pick<Anthropic, 'messages'>
 
   constructor(
     private readonly model: string,
@@ -42,6 +44,26 @@ export class AnthropicAgent implements Model {
     options: AnthropicAgentOptions = {},
   ) {
     this.client = options.client ?? new Anthropic({...createAnthropicOptions(provider), maxRetries: 0})
+  }
+
+  async getContextInfo(options: {signal?: AbortSignal} = {}): Promise<ModelContextInfo> {
+    const metadata = metadataRecord(
+      await readModelMetadata(
+        async () =>
+          this.client.models?.retrieve(this.model, undefined, {maxRetries: 0, signal: options.signal, timeout: 5000}),
+        options.signal,
+      ),
+    )
+    // Current API fields may precede the installed SDK's type declarations.
+    const maxInputTokens = positiveTokenLimit(metadata.max_input_tokens)
+    const maxOutputTokens = positiveTokenLimit(metadata.max_tokens)
+    return {
+      ...unknownModelContextInfo(),
+      maxInputTokens,
+      maxOutputTokens,
+      runtimeContextWindow: this.provider.getContextWindow?.() ?? null,
+      source: maxInputTokens !== null || maxOutputTokens !== null ? ('api' as const) : ('unknown' as const),
+    }
   }
 
   getModel(): string {

@@ -13,6 +13,7 @@ import {performance} from 'node:perf_hooks'
 import {OpenAI} from 'openai'
 
 import type {Message} from '../../message/index.js'
+import type {ModelContextInfo} from '../context-capacity.js'
 import type {
   Model,
   ModelInvokeOptions,
@@ -27,6 +28,7 @@ import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
 import {freezeModelRequest} from '../prepared.js'
+import {openAIContextInfo} from './openai-context.js'
 import {getToolCalls, getToolResult, stringifyToolResult} from './tools.js'
 
 export interface OpenAIAgentOptions {
@@ -42,6 +44,10 @@ export class OpenAIAgent implements Model {
     options: OpenAIAgentOptions = {},
   ) {
     this.client = options.client ?? new OpenAI({...createOpenAIOptions(provider), maxRetries: 0})
+  }
+
+  async getContextInfo(): Promise<ModelContextInfo> {
+    return openAIContextInfo(this.model, this.provider.getContextWindow?.() ?? null)
   }
 
   getModel(): string {
