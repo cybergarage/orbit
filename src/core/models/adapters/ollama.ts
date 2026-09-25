@@ -18,6 +18,7 @@ import type {
 } from '../model.js'
 import type {Provider, ProviderName} from '../provider.js'
 
+import {ContextOverflowError, IncompleteModelResponseError} from '../../errors/index.js'
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {metadataRecord, positiveTokenLimit, readModelMetadata, unknownModelContextInfo} from '../context-capacity.js'
@@ -165,6 +166,19 @@ export class OllamaAgent implements Model {
             {durationMs: performance.now() - startedAt, model: this.model, provider: this.getProvider()},
             error,
           )
+          const details = metadataRecord(error)
+          const message = error instanceof Error ? error.message : ''
+          if (
+            details.status_code === 500 &&
+            /^llama-server returned invalid tool call arguments for .+: unexpected end of JSON input$/.test(message)
+          )
+            throw new IncompleteModelResponseError('invalid-tool-arguments', {cause: error})
+          if (
+            details.status_code === 400 &&
+            (message === 'the input length exceeds the context length' ||
+              message.startsWith('the prompt is longer than the context length currently available to the model;'))
+          )
+            throw new ContextOverflowError('Ollama context window exceeded', {cause: error})
           throw error
         } finally {
           options?.signal?.removeEventListener('abort', this.abort)

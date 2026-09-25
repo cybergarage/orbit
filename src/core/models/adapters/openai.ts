@@ -24,8 +24,10 @@ import type {
 } from '../model.js'
 import type {Provider, ProviderName} from '../provider.js'
 
+import {ContextOverflowError} from '../../errors/index.js'
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
+import {metadataRecord} from '../context-capacity.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
 import {freezeModelRequest} from '../prepared.js'
 import {openAIContextInfo} from './openai-context.js'
@@ -102,6 +104,9 @@ export class OpenAIAgent implements Model {
             {durationMs: performance.now() - startedAt, model: this.model, provider: this.getProvider()},
             error,
           )
+          const details = metadataRecord(error)
+          if (details.status === 400 && details.code === 'context_length_exceeded')
+            throw new ContextOverflowError('OpenAI context window exceeded', {cause: error})
           throw error
         }
 

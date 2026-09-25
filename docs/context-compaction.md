@@ -116,8 +116,14 @@ The noninteractive CLI reports enabled budgeting and compaction outcomes on stde
 
 Unknown input size, protected-input overflow, an oversized summary request,
 cancellation, exhausted Run budgets, unresolved work and recording failures do
-not bypass the budget. Provider overflow stops; Orbit does not retry by deleting
-oldest messages. A storage failure marks required recording failed and retains
+not bypass the budget. With budgeting enabled, a recognized provider overflow,
+recoverable length stop, or Ollama truncated tool-argument response can trigger
+one forced compaction and one regeneration. The checkpoint must advance, fit the
+target, and produce a request smaller than the rejected input. Recovery never
+falls back to the unchanged request. A second failure stops; refusals, filters,
+pauses and unrelated provider errors do not trigger this recovery. Summary and
+regeneration calls count against the same Run budget. Orbit never retries by
+deleting oldest messages. A storage failure marks required recording failed and retains
 the existing Run's recovery conditions. See [Execution](execution.md).
 
 ## Checkpoints and resume

@@ -65,7 +65,10 @@ export class ContextOverflowError extends OrbitError {
 }
 
 export class IncompleteModelResponseError extends OrbitError {
-  constructor(readonly stopReason: string) {
-    super(`Model response is incomplete: ${stopReason}`, {code: OrbitErrorCode.ModelIncomplete})
+  constructor(
+    readonly stopReason: string,
+    options: Omit<OrbitErrorOptions, 'code'> = {},
+  ) {
+    super(`Model response is incomplete: ${stopReason}`, {...options, code: OrbitErrorCode.ModelIncomplete})
   }
 }

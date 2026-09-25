@@ -22,6 +22,7 @@ import type {
 } from '../model.js'
 import type {Provider, ProviderName} from '../provider.js'
 
+import {ContextOverflowError} from '../../errors/index.js'
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {metadataRecord, positiveTokenLimit, readModelMetadata, unknownModelContextInfo} from '../context-capacity.js'
@@ -120,6 +121,15 @@ export class AnthropicAgent implements Model {
             {durationMs: performance.now() - startedAt, model: this.model, provider: this.getProvider()},
             error,
           )
+          const details = metadataRecord(error)
+          const body = metadataRecord(metadataRecord(details.error).error)
+          if (
+            details.status === 400 &&
+            body.type === 'invalid_request_error' &&
+            typeof body.message === 'string' &&
+            body.message.startsWith('prompt is too long')
+          )
+            throw new ContextOverflowError('Anthropic context window exceeded', {cause: error})
           throw error
         }
 

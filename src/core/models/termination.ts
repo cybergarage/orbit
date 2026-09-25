@@ -3,7 +3,7 @@
 
 import type {Message} from '../message/index.js'
 
-import {IncompleteModelResponseError} from '../errors/index.js'
+import {ContextOverflowError, IncompleteModelResponseError} from '../errors/index.js'
 
 /** A rejected response is never appended as executable conversation history. */
 export function assertCompleteModelResponse(message: Message): void {
@@ -20,3 +20,12 @@ const incompleteReasons = new Set([
   'pause_turn',
   'refusal',
 ])
+
+/** Only ordinary generation failures are eligible; callers must first reduce input. */
+export function isRecoverableContextFailure(error: unknown): boolean {
+  return (
+    error instanceof ContextOverflowError ||
+    (error instanceof IncompleteModelResponseError &&
+      ['invalid-tool-arguments', 'length', 'max_tokens', 'model_context_window_exceeded'].includes(error.stopReason))
+  )
+}

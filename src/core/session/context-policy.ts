@@ -119,12 +119,16 @@ interface PreparationOptions {
   onEvent?: (event: ContextPreparationEvent) => void
   policy: Extract<ContextPolicy, {mode: 'budgeted'}>
   prefix: Message[]
+  recoveryRequest?: Readonly<Record<string, unknown>>
   reverify?: () => Promise<void>
   run: RunContext
   session: Session
   verifiedContext?: VerifiedModelContext
 }
-function checkedEstimate(prepared: PreparedModelInvocation, options: PreparationOptions): RequestEstimate {
+function checkedEstimate(
+  prepared: Pick<PreparedModelInvocation, 'request'>,
+  options: PreparationOptions,
+): RequestEstimate {
   const estimate = (options.policy.estimator ?? estimateJSONRequest)(prepared.request, options.policy.profile)
   if (
     estimate.model !== options.policy.profile.model ||
@@ -200,7 +204,7 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
   const context = options.verifiedContext ?? new SessionContextBuilder().build(session)
   const ordinary = prepareRequest(options, [...options.prefix, ...context.messages])
   const before = checkedEstimate(ordinary, options)
-  if (before.tokens < profile.trigger) return ordinary
+  if (!options.recoveryRequest && before.tokens < profile.trigger) return ordinary
   if (
     run.snapshot().approvals.length > 0 ||
     hasPendingEffects(run) ||
@@ -239,7 +243,7 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
 
   if (protectedTokens() > budget) throw new ContextBudgetError('protected-context-exceeds-budget')
   if (cut <= previousCut) {
-    if (before.tokens <= budget) return ordinary
+    if (!options.recoveryRequest && before.tokens <= budget) return ordinary
     throw new ContextBudgetError('no-complete-turn-to-compact')
   }
 
@@ -322,12 +326,15 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
       ...all.slice(cut),
     ])
     const after = checkedEstimate(next, options)
-    if (after.tokens >= before.tokens || after.tokens > profile.target)
+    const recoveryCeiling = options.recoveryRequest
+      ? checkedEstimate({request: options.recoveryRequest}, options).tokens
+      : before.tokens
+    if (after.tokens >= Math.min(before.tokens, recoveryCeiling) || after.tokens > profile.target)
       throw new ContextBudgetError('summary-does-not-fit-target')
     candidate.afterTokens = after.tokens
   } catch (error) {
     run.check()
-    if (hasPendingEffects(run) || before.tokens > budget) throw error
+    if (options.recoveryRequest || hasPendingEffects(run) || before.tokens > budget) throw error
     notify(options, {
       beforeTokens: before.tokens,
       outcome: 'failed',

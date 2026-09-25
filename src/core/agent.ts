@@ -59,7 +59,7 @@ import {
 } from './logs/index.js'
 import {createMcpToolManager} from './mcp.js'
 import {getModel, Message, MessageType} from './models/index.js'
-import {assertCompleteModelResponse} from './models/termination.js'
+import {assertCompleteModelResponse, isRecoverableContextFailure} from './models/termination.js'
 import {boundedGraphJSON, graphBinding} from './processor/graph-definition.js'
 import {
   bindGraphJournal,
@@ -751,13 +751,9 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
 
           let modelMessage: Message
           try {
-            // Tool loops are sequential because each model response depends on the previous tool results.
-
-            const prepared =
+            const preparation: Parameters<typeof prepareSessionContext>[0] | undefined =
               options?.contextPolicy?.mode === 'budgeted'
-                ? // Context preparation is sequential because it uses this iteration history.
-                  // eslint-disable-next-line no-await-in-loop
-                  await prepareSessionContext({
+                ? {
                     verifiedContext,
                     ...(verifiedContext ? {reverify: () => reverifyInterruptedContext(session, run)} : {}),
                     model: this.model,
@@ -774,43 +770,61 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                     ],
                     run,
                     session,
-                  })
-                : verifiedContext
-                  ? this.model.prepare!(
-                      [
-                        ...this.messages,
-                        ...projectContextPrefix(options?.projectContext),
-                        ...skillPrefix(options?.activeSkills ?? []).map(
-                          (content) => new Message(MessageType.User, {content}),
-                        ),
-                        ...verifiedContext.messages,
-                      ],
-                      iterationOptions,
-                    )
-                  : undefined
-            // Recheck retained proof after summaries and immediately before ordinary dispatch.
-            // eslint-disable-next-line no-await-in-loop
-            if (verifiedContext) await reverifyInterruptedContext(session, run)
-            run.consume('modelCalls')
-            // The next model iteration depends on these results.
-            // eslint-disable-next-line no-await-in-loop
-            modelMessage = await run.wait(
-              'model',
-              prepared
-                ? prepared.invoke()
-                : this.model.invoke(
+                  }
+                : undefined
+            // Each preparation depends on the previous completed tool round.
+
+            let prepared = preparation
+              ? // eslint-disable-next-line no-await-in-loop -- Preparation depends on the preceding tool round.
+                await prepareSessionContext(preparation)
+              : verifiedContext
+                ? this.model.prepare!(
                     [
                       ...this.messages,
                       ...projectContextPrefix(options?.projectContext),
                       ...skillPrefix(options?.activeSkills ?? []).map(
                         (content) => new Message(MessageType.User, {content}),
                       ),
-                      ...context.messages,
+                      ...verifiedContext.messages,
                     ],
                     iterationOptions,
-                  ),
-            )
-            assertCompleteModelResponse(modelMessage)
+                  )
+                : undefined
+            const invoke = async (): Promise<Message> => {
+              if (verifiedContext) await reverifyInterruptedContext(session, run)
+              run.consume('modelCalls')
+              const response = await run.wait(
+                'model',
+                prepared
+                  ? prepared.invoke()
+                  : this.model.invoke(
+                      [
+                        ...this.messages,
+                        ...projectContextPrefix(options?.projectContext),
+                        ...skillPrefix(options?.activeSkills ?? []).map(
+                          (content) => new Message(MessageType.User, {content}),
+                        ),
+                        ...context.messages,
+                      ],
+                      iterationOptions,
+                    ),
+              )
+              assertCompleteModelResponse(response)
+              return response
+            }
+
+            try {
+              // eslint-disable-next-line no-await-in-loop
+              modelMessage = await invoke()
+            } catch (error) {
+              if (!preparation || !prepared || !isRecoverableContextFailure(error)) throw error
+              // A recovery preparation must commit a strictly smaller checkpoint. No unchanged-input fallback.
+              // eslint-disable-next-line no-await-in-loop
+              prepared = await prepareSessionContext({...preparation, recoveryRequest: prepared.request})
+              // Exactly one retry for this generation; a second failure escapes to the Run terminal.
+              // eslint-disable-next-line no-await-in-loop
+              modelMessage = await invoke()
+            }
           } catch (error) {
             if (diagnostics === undefined) {
               this.logger.error(
