@@ -6,6 +6,8 @@ import {createHash, randomUUID} from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
+import {summarizeEvents} from './strategy.mjs'
+
 export const repo = path.resolve(import.meta.dirname, '..')
 export const image = process.env.ORBIT_E2E_IMAGE ?? 'orbit-e2e:local'
 export const nodeImage = 'node:22-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c'
@@ -20,8 +22,12 @@ export async function command(
     let stderr = ''
     let stdout = ''
     let timedOut = false
+    const startedAt = Date.now()
+    let timeoutObservedAt
+
     const timer = setTimeout(() => {
       timedOut = true
+      timeoutObservedAt = Date.now()
       child.kill('SIGKILL')
     }, timeoutMs)
     child.stdout.on('data', (data) => {
@@ -38,7 +44,16 @@ export async function command(
     })
     child.once('close', async (code) => {
       clearTimeout(timer)
-      const result = {code, stderr, stdout, timedOut}
+      const result = {
+        code,
+        elapsedMs: Date.now() - startedAt,
+        stderr,
+        stdout,
+        timedOut,
+        timeoutMs,
+        timeoutOverrunMs:
+          timeoutObservedAt === undefined ? null : Math.max(0, timeoutObservedAt - startedAt - timeoutMs),
+      }
       try {
         if (log) await fs.writeFile(log, stdout + stderr)
         if (!allowFailure && (code !== 0 || timedOut))
@@ -108,6 +123,7 @@ export async function runAgent({
   numCtx = 16_384,
   prompt,
   rounds = 12,
+  strategy = 'baseline',
   think = false,
   timeoutMs = 240_000,
   workspace,
@@ -120,7 +136,9 @@ export async function runAgent({
     ollamaHost: process.env.ORBIT_E2E_OLLAMA_HOST ?? 'http://host.docker.internal:11434',
     options: {num_ctx: numCtx, num_predict: 4096, seed: 42, temperature: 0.6, top_p: 0.95},
     prompt,
+    promptSha256: digest(prompt),
     rounds,
+    strategy,
     think,
     timeoutMs,
   }
@@ -213,6 +231,7 @@ export async function runAgent({
     elapsedMs: Date.now() - start,
     error,
     execution,
+    metrics: summarizeEvents(events),
     model,
     result,
     status,

@@ -8,7 +8,10 @@ import path from 'node:path'
 import {cases} from './cases.mjs'
 import {gradeCase} from './grading.mjs'
 import {command, docker, image, ollamaMetadata, repo, runAgent, writeJSON} from './host.mjs'
+import {evaluationPrompt, readRounds, strategyVersion} from './strategy.mjs'
 
+const strategy = process.env.ORBIT_E2E_STRATEGY ?? strategyVersion
+const rounds = readRounds(process.env.ORBIT_E2E_ROUNDS, 12)
 const models = (process.env.ORBIT_E2E_MODELS ?? 'gemma4:12b,ornith-1.5:9b').split(',')
 const repetitions = Number(process.env.ORBIT_E2E_REPETITIONS ?? 3)
 if (!Number.isInteger(repetitions) || repetitions < 1 || repetitions > 10)
@@ -49,7 +52,14 @@ describe('Ollama coding E2E (real models, Docker)', function () {
       for (let repetition = 0; repetition < repetitions; repetition++) {
         it(`${model} / ${c.id} / ${repetition + 1}`, async () => {
           const directory = path.join(root, `${model.replaceAll(':', '-')}-${c.id}-${repetition + 1}`)
-          const run = await runAgent({directory, files: c.files, model, prompt: c.prompt})
+          const run = await runAgent({
+            directory,
+            files: c.files,
+            model,
+            prompt: evaluationPrompt(c.prompt, {strategy}),
+            rounds,
+            strategy,
+          })
           const checked = await gradeCase(directory, c, run)
           const {grade} = checked
           const row = {
@@ -57,11 +67,15 @@ describe('Ollama coding E2E (real models, Docker)', function () {
             caseId: c.id,
             directory: path.basename(directory),
             elapsedMs: run.elapsedMs,
+            metrics: run.metrics,
             model,
+            promptSha256: run.config.promptSha256,
             reason: checked.reason,
             repetition,
+            rounds,
             runtimeOutcome: run.result?.runtime?.outcome,
             status: checked.status,
+            strategy,
             usage: run.usage,
             usageComplete: run.usageComplete,
           }

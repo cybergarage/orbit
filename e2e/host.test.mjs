@@ -5,6 +5,7 @@ import {expect} from 'chai'
 import {recoveryObserved} from './cases.mjs'
 import {gradeCase, normalizePatch} from './grading.mjs'
 import {command} from './host.mjs'
+import {evaluationPrompt, readRounds, summarizeEvents} from './strategy.mjs'
 
 const entry = (exitCode) => ({
   message: {
@@ -19,6 +20,34 @@ const entry = (exitCode) => ({
   type: 'message',
 })
 describe('E2E host control (no model or Docker)', () => {
+  it('rejects invalid budgets rather than disabling the limit', () => {
+    expect(readRounds(undefined, 30)).to.equal(30)
+    expect(readRounds('50', 30)).to.equal(50)
+    for (const value of ['0', '-1', 'NaN', 'Infinity', '1.5', '', '101'])
+      expect(() => readRounds(value, 30)).to.throw('Evaluation rounds')
+  })
+
+  it('preserves baseline instructions and refuses unknown strategies', () => {
+    expect(evaluationPrompt('Read only.', {strategy: 'baseline'})).to.equal('Read only.')
+    expect(() => evaluationPrompt('Read only.', {strategy: 'typo'})).to.throw('Unknown evaluation strategy')
+  })
+
+  it('counts interrupted requests without inventing response timings', () => {
+    const failure = {data: {durationMs: 3, input: {path: 'a'}, isError: true, name: 'edit'}, type: 'tool.completed'}
+    const metrics = summarizeEvents([
+      {type: 'model.request.started'},
+      {data: {durationMs: 7, providerMetadata: {evalDurationNs: 2_000_000}}, type: 'model.response.completed'},
+      failure, failure,
+      {type: 'model.request.started'},
+    ])
+    expect(metrics.modelCallsStarted).to.equal(2)
+    expect(metrics.modelCallsCompleted).to.equal(1)
+    expect(metrics.ollamaEvalMs).to.equal(2)
+    expect(metrics.modelWallMs).to.equal(7)
+    expect(metrics.repeatedFailedCalls).to.equal(1)
+    expect(metrics.toolErrors).to.equal(2)
+  })
+
   it('separates a runtime failure from a host deadline', async () => {
     const failed = {result: {runtime: {outcome: 'failed', quiescence: true}}}
     expect((await gradeCase('/unused', {}, failed)).status).to.equal('runtime-error')

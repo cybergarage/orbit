@@ -7,7 +7,10 @@ import path from 'node:path'
 
 import {normalizePatch} from './grading.mjs'
 import {activeContainers, command, digest, docker, image, ollamaMetadata, repo, runAgent, writeJSON} from './host.mjs'
+import {evaluationPrompt, readRounds} from './strategy.mjs'
 
+const strategy = process.env.ORBIT_E2E_STRATEGY ?? 'baseline'
+const rounds = readRounds(process.env.ORBIT_SWE_ROUNDS, 50)
 const root = path.join(repo, 'tmp/e2e/swe')
 const python = process.env.ORBIT_SWE_PYTHON ?? path.join(repo, 'tmp/e2e/venv/bin/python')
 const instanceId = 'sympy__sympy-20590'
@@ -182,9 +185,13 @@ switch (action) {
       directory: runDirectory,
       model,
       numCtx: 32_768,
-      prompt: `Resolve the following issue in the repository at /workspace. Inspect the code, implement a minimal fix and run relevant tests. Do not retrieve solutions from the network. Do not alter existing tests to hide failures.\n\n${instance.problem_statement}`,
-      rounds: 30,
-      think: process.env.ORBIT_SWE_THINK !== 'false',
+      prompt: evaluationPrompt(
+        `Resolve the following issue in the repository at /workspace. Inspect the code, implement a minimal fix and run relevant tests. Do not retrieve solutions from the network. Do not alter existing tests to hide failures.\n\n${instance.problem_statement}`,
+        {strategy, swe: true},
+      ),
+      rounds,
+      strategy,
+      think: process.env.ORBIT_SWE_THINK === 'true',
       timeoutMs: 900_000,
       workspace: pristine,
     })
@@ -220,13 +227,22 @@ switch (action) {
       elapsedMs: run.elapsedMs,
       imageId: JSON.parse((await docker(['image', 'inspect', image])).stdout)[0].Id,
       metadata,
+      metrics: run.metrics,
       orbitCommit: (await command('git', ['rev-parse', 'HEAD'])).stdout.trim(),
       runStatus: run.status,
+      runtimeOutcome: run.result?.runtime?.outcome,
       sourceArchiveSha256: digest(await fs.readFile(archive)),
       usage: run.usage,
       usageComplete: run.usageComplete,
     })
-    console.log(JSON.stringify({directory, patchBytes: Buffer.byteLength(patch), runStatus: run.status}))
+    console.log(
+      JSON.stringify({
+        directory,
+        patchBytes: Buffer.byteLength(patch),
+        runStatus: run.status,
+        runtimeOutcome: run.result?.runtime?.outcome,
+      }),
+    )
 
     break
   }

@@ -104,7 +104,7 @@ nor dataset records. The trusted host extracts the resulting diff into official
 JSONL fields `instance_id`, `model_name_or_path`, `model_patch`. A fresh official
 container applies and grades that patch. The evaluator report determines
 resolution; process exit zero alone is insufficient. The SWE solving budget is
-900 seconds/30 tool iterations (31 model calls), context 32768, thinking enabled by default (`ORBIT_SWE_THINK=false` disables it for a separately recorded experiment). Small cases use
+900 seconds/50 tool iterations (51 model calls), context 32768, thinking disabled by default (`ORBIT_SWE_THINK=true` enables it for a separately recorded experiment). Small cases use
 context 16384 and thinking disabled. Both use temperature 0.6, top-p 0.95,
 num_predict 4096 and seed 42. Settings are recorded for every trial.
 
@@ -147,3 +147,46 @@ A future provider-options API or safety-sensitive tool error redesign needs its
 own proposed ADR and approval before implementation.
 
 An empty prediction is handled by the official harness as `empty_patch_ids`, with no test execution. The wrapper records it as unresolved with `gradingDisposition: skipped-empty-patch`; it never calls that a successfully graded patch.
+
+## Recovery and completion experiment
+
+The small-case default evaluation strategy is `coding-recovery-v1`. SWE-bench retains `baseline`: the recovery strategy did not improve the measured SWE attempts. It supplies
+known environment facts, asks the agent to re-read after an exact-text edit
+failure, preserve test exit status, and finish after focused checks pass. These
+are test-host instructions; they contain no case solution, reference patch or
+hidden test information. Orbit's default runtime limits and product prompts are
+unchanged. Use `ORBIT_E2E_STRATEGY=baseline` to reproduce the original prompts.
+
+`ORBIT_E2E_ROUNDS` changes the small-case budget (default 12), while
+`ORBIT_SWE_ROUNDS` changes the one-problem budget (default 50). Values must be
+integers from 1 to 100. The host sets tool iterations, tool rounds and model-call
+allowance together; time limits remain unchanged. The instruction text does not
+include the selected budget, so a 30/50 comparison uses exactly the same prompt.
+Each run records its strategy and prompt hash.
+
+```sh
+# Three repetitions per small case/model, improved instructions, original budget:
+caffeinate -i npm run test:e2e:ollama
+
+# Reproduce the recovery-strategy comparison explicitly; grade both predictions.
+ORBIT_E2E_STRATEGY=coding-recovery-v1 ORBIT_SWE_ROUNDS=30 ORBIT_SWE_THINK=false ORBIT_E2E_IMAGE=orbit-e2e:swe caffeinate -i npm run eval:swebench -- solve ornith-1.5:9b
+ORBIT_E2E_STRATEGY=coding-recovery-v1 ORBIT_SWE_ROUNDS=50 ORBIT_SWE_THINK=false ORBIT_E2E_IMAGE=orbit-e2e:swe caffeinate -i npm run eval:swebench -- solve ornith-1.5:9b
+```
+
+`metrics` records started/completed model calls, tool calls/errors, repeated failed
+calls with identical tool name/input JSON, and completed-response Ollama loading,
+prompt evaluation and generation durations. Interrupted calls contribute no
+invented response duration. `execution` includes the observed command elapsed
+time and timeout-callback overrun. These help locate delay; they cannot establish
+whether a long gap was host sleep, scheduling, transport or inference without
+further evidence. Diagnostic metrics never replace independent grading.
+
+Changing these test-host prompts and limits is a local evaluation change, not an
+architecture change. Safety-sensitive edit error disclosure or product-wide
+budget changes remain separate design work requiring an approved ADR.
+
+A repeated failed call is a diagnostic count, not proof of an unproductive loop:
+rerunning a failing test after a partial fix can be appropriate. Inspect tool
+names, edits and test outputs before attributing that count to failed recovery.
+
+The measured SWE configuration is the original prompt, 50 iterations and thinking disabled. It completed in 41 tool calls and passed official grading in one trial. This selects a useful evaluation default, not a universal optimal budget. See [the follow-up results](../e2e/results/2026-09-25-recovery.md) for the unsuccessful recovery-prompt trials as well.
