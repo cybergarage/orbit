@@ -373,3 +373,81 @@ mask a shell-list failure, so the helper and independent quality checks remain
 necessary. Some pipelines such as `grep | head` can also return nonzero after
 SIGPIPE; examine the recorded output rather than treating every nonzero status
 as a repository test failure.
+
+## English book workflows
+
+The opt-in book suite runs the same 16-card memory game through three Orbit
+workflows, based on the English edition of *AI Coding Agent Fundamentals* and
+its [pinned starter templates](../e2e/book/README.md):
+
+| Case | Inputs and execution |
+| --- | --- |
+| `vibe` | Starter and natural-language game prompt, without a game specification or test plan. |
+| `sdd` | First reviews `spec.md` with `test.md` deliberately absent. The host rejects changed or added review files. A fresh implementation Run receives the review, a frozen specification with the book's selected clarifications, and the common test plan. |
+| `loop` | Starter, `spec.md`, `test.md`, and `progress.md`; one bounded Run iterates implementation and verification and records progress. Specifications must remain unchanged. |
+
+```sh
+npm run test:e2e:book:unit
+npm run e2e:book:build
+npm run test:e2e:book:graders
+ORBIT_E2E_MODELS=ornith-1.5:9b npm run test:e2e:book
+# Select just one workflow:
+ORBIT_E2E_CASE=sdd ORBIT_E2E_REPETITIONS=1 npm run test:e2e:book
+```
+
+The build installs the upstream locked TypeScript/Vite/Vitest stack on pinned
+Node 24 and a separately locked Chromium/Playwright grader. It requires network
+access; trial dependencies are preinstalled. The default is one trial per style
+with `ornith-1.5:9b`, run serially. Existing small-case defaults are unchanged.
+`ORBIT_E2E_MODELS`, `ORBIT_E2E_REPETITIONS` (1–10), `ORBIT_E2E_CASE`, and
+`ORBIT_E2E_ROUNDS` (default 50) select the matrix. Each implementation gets 900
+seconds and context 32768; SDD additionally gets a 240-second, 12-round review.
+The SDD review and implementation use separate Sessions, with the review answer
+explicitly carried forward. Compare their combined costs with the other styles.
+The shared host's generation settings, cleanup, and resource limits apply.
+`ORBIT_E2E_IMAGE` overrides `orbit-e2e:book-agent` and
+`ORBIT_BOOK_GRADER_IMAGE` overrides `orbit-e2e:book-grader`.
+
+This harness uses fixed, preselected review decisions instead of a person
+interactively selecting findings. The review is instructed to read only and its
+final workspace is checked; it does not implement Codex Plan mode or prove that
+no transient writes occurred. Loop iteration is inside a single budgeted Orbit
+Run, not an unbounded external retry loop. Browser work remains pending in the
+agent's report. Unchanged progress or checked-off browser items in the supplied
+progress checklist fail the Loop checks; this is not a semantic audit of every
+claim in prose.
+
+A shared observation contract adds `data-testid` hooks for cards, reset, move
+count, and completion, plus card state and visible-symbol attributes. These
+requirements and a nonzero-test requirement are supplied equally to all three
+styles. They make the evaluation reproducible but add constraints beyond the
+book's original Vibe prompt. They do not prescribe internal TypeScript APIs.
+
+After each implementation the host checks frozen files and runs a fresh,
+network-disabled grader container. It invokes the installed type checker,
+Vitest (rejecting zero tests), and Vite build directly, then exercises Chromium
+against the production preview. It checks a 4-by-4 board at 320px, keyboard
+selection, move accounting, immediate matching, input locking, the 799/800ms
+mismatch boundary, completion, reset, and cancellation of old timers. It requires
+all eight symbols to occur twice and accessible card labels. It does not certify
+visual quality, screen-reader behavior, shuffle quality, every spec item, or the
+quality of agent-authored unit tests. Card-state attributes are a cooperative
+observation interface, not proof against a deliberately deceptive application.
+Rare decks that never exercise a required branch fail coverage rather than
+silently passing. External model access is available to the solver for Ollama;
+the no-web instruction is not a network allowlist.
+
+Grader controls require no model and cover a working game, untouched starter,
+zero tests, early mismatch timeout, missing reset cancellation, and a premature
+successful process exit. A separate random completion marker prevents exit code
+zero alone from passing. Generated code executes only inside the disposable
+containers, never in the host process.
+
+Evidence is saved under `tmp/e2e/runs/<timestamp>-book/`: pinned template origin,
+image IDs, model metadata, prompts, per-phase usage/events, workspace snapshots,
+independent grader logs, and an incremental summary with all planned trials.
+`resolved` requires both clean runtime completion and passing independent checks;
+a budget stop remains unresolved even if some artifacts work. Adding these
+cases does not establish successful model results; run and retain the matrix
+before making claims about workflow effectiveness. These test-local additions
+change no Orbit product APIs or runtime policies.

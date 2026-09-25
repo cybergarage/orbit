@@ -1,0 +1,60 @@
+:root {
+  color: #172033;
+  background: #f2f5f9;
+  font-family:
+    Inter, "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+#app {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+}
+
+.starter {
+  width: min(100%, 640px);
+  padding: 48px;
+  border: 1px solid #d8deea;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 20px 50px rgb(23 32 51 / 10%);
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: #3157c8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 7vw, 3.5rem);
+  line-height: 1.1;
+}
+
+.starter > p:last-child {
+  margin: 20px 0 0;
+  color: #526078;
+  line-height: 1.8;
+}
+
+@media (max-width: 480px) {
+  .starter {
+    padding: 32px 24px;
+  }
+}

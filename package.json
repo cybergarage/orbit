@@ -116,7 +116,11 @@
     "e2e:build": "docker build -f e2e/Dockerfile -t orbit-e2e:local .",
     "eval:swebench": "node e2e/swebench.mjs",
     "test:e2e:verified-checks": "mocha --no-config --no-package --forbid-only e2e/verified-checks.e2e.mjs",
-    "test:e2e:graders": "mocha --no-config --no-package --forbid-only e2e/graders.e2e.mjs"
+    "test:e2e:graders": "mocha --no-config --no-package --forbid-only e2e/graders.e2e.mjs",
+    "e2e:book:build": "docker build -f e2e/book/Dockerfile --target agent -t orbit-e2e:book-agent . && docker build -f e2e/book/Dockerfile --target grader -t orbit-e2e:book-grader .",
+    "test:e2e:book": "mocha --no-config --no-package --forbid-only e2e/book/book.e2e.mjs",
+    "test:e2e:book:unit": "mocha --no-config --no-package --forbid-only e2e/book/cases.test.mjs",
+    "test:e2e:book:graders": "mocha --no-config --no-package --forbid-only e2e/book/graders.e2e.mjs"
   },
   "types": "dist/index.d.ts",
   "prettier": "@oclif/prettier-config",

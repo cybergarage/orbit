@@ -1,0 +1,62 @@
+{
+  "repository": "https://github.com/cybergarage/ai-coding-book-starter",
+  "revision": "4e9af157884ec4cfb64e464987dc8fd8e4d1007f",
+  "files": {
+    "LICENSE": {
+      "source": "LICENSE",
+      "sha256": "5db94f22f739ef1db80731876b1f17af884c89d2147a1da4bf629fc85660db79"
+    },
+    "fixture/index.html": {
+      "source": "en/starter/index.html",
+      "sha256": "a186ac74a4ee38f26716325022968d2a145837432da06de5c640109db3307ecc"
+    },
+    "fixture/package-lock.json": {
+      "source": "en/starter/package-lock.json",
+      "sha256": "76c07186517c1b75d8b2c4e2ccc7b18d8dd333cc27763c40a72031336aa13f5b"
+    },
+    "fixture/package.json": {
+      "source": "en/starter/package.json",
+      "sha256": "c782d5242ff627a9443b63d3641dd0518ebffbb479a795e7c124dfed3b4b0ac9"
+    },
+    "fixture/src/main.ts": {
+      "source": "en/starter/src/main.ts",
+      "sha256": "f89bcc2b66a678f99c9baddadb00af0816af76182705bdc0f6eb584e975be65e"
+    },
+    "fixture/src/style.css": {
+      "source": "en/starter/src/style.css",
+      "sha256": "3e82eb2d7fd0a960d309babc227054ca620ea6200e27b532b0ce19fb0292bc12"
+    },
+    "fixture/tsconfig.json": {
+      "source": "en/starter/tsconfig.json",
+      "sha256": "a995e5d9e252cf1b2b763efe06705398909579f225ec2e784ba1f4d21f03d1b9"
+    },
+    "templates/AGENTS.md": {
+      "source": "en/templates/codex/AGENTS.md",
+      "sha256": "be3440a605a82a9984f0d9357fa68ad77f07aec4e440d7f10b7520632622e5ae"
+    },
+    "templates/common/progress.md": {
+      "source": "en/templates/common/progress.md",
+      "sha256": "892cfb2819a7b3d69bad04afed398ba921770dcf18be1d36dd9c837e3485180b"
+    },
+    "templates/common/spec.md": {
+      "source": "en/templates/common/spec.md",
+      "sha256": "4c4e64aaa44d238db44d26cc9ffb8c7281504d3694f43d960eb21526807125d2"
+    },
+    "templates/common/test.md": {
+      "source": "en/templates/common/test.md",
+      "sha256": "c96537c58fdb24465194c084f0a47939a2209c407cd417b544548e17269a3782"
+    },
+    "templates/prompts/autonomous.md": {
+      "source": "en/templates/codex/prompts/autonomous.md",
+      "sha256": "cd656f53e7a55b939e8daa5e859bd0bafba2c44647e71b6171d0f1e1463b2ddf"
+    },
+    "templates/prompts/spec-driven.md": {
+      "source": "en/templates/codex/prompts/spec-driven.md",
+      "sha256": "ff9e78eb3fbeb81d56a9b28225afcae0994e129cbea968b5c48dcd9bb3cd97e4"
+    },
+    "templates/prompts/vibe.md": {
+      "source": "en/templates/codex/prompts/vibe.md",
+      "sha256": "7644efb5e06289f94adaa3abd7f4a3912c2fa948dd82a43149bbb5f603a83b28"
+    }
+  }
+}
