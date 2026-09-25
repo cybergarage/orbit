@@ -2,9 +2,13 @@
 status: accepted
 proposed-date: 2026-09-25
 decision-date: 2026-09-25
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-09-25
+implementation-commits:
+  - b738be87592422aac2899f33a529c2a2fb63d50a
+  - 24c3abc14b2f3ba2f2a2af6067d970e46bd861c8
+  - 301a0aefe4035f2346bab47e5ef07d477e13aec3
+  - f47fe3a910bbdf92a81af3015764a3acd74c68fb
 superseded-by: []
 ---
 
@@ -120,11 +124,25 @@ source links and observed evidence; none demonstrates full book-task success.
 
 ## Implementation and Confirmation
 
-Pending sequential implementation and deterministic regression tests, including
-truncated tool nondispatch, long-turn checkpoint reopen, strict input reduction,
-retry limits, failure/cancellation paths and failing shell pipelines. Run the
-repository validation set before each implementation commit. Later documentation
-records full implementation hashes and completion evidence.
+Completed in the four implementation commits above, in the requested order.
+Termination tests cover truncated responses before history append or tool
+execution. Long-turn tests cover repeated compaction, exact user preservation,
+complete tool groups, persisted reopen and tamper rejection. Regeneration tests
+cover strict request reduction, one retry, exhausted budgets, cancellation,
+summary failures and unrelated provider errors. Shell tests cover failing
+pipelines, trailing commands and explicit conditional error handling.
+
+At the final implementation revision, `npm run headers:check`, `npm run build`
+and `npm test` passed (1,010 tests), followed sequentially by the E2E host tests
+(16) and book fixture tests (7). During stage three, one existing recovery
+process-death test timed out while 1,003 tests passed; its full isolated suite
+then passed (25 tests). The final full suite also passed that case. No live model
+book matrix or browser grader control run was performed for this implementation;
+these deterministic results do not establish book-task success or summary fidelity.
+
+Maintained behavior is documented in the compaction, tools, architecture and E2E
+guides. The earlier whole-active-turn boundary is superseded only as described
+above; canonical history, verified interruption and migration requirements remain.
 
 ## Follow-up Work
 

@@ -9,6 +9,7 @@ implementation-commits:
   - 8fbfee61243b27d5d243aeaf0d127d019af32261
 superseded-by:
   - docs/adr/2026-09-14-verified-interrupted-tool-context.md
+  - docs/adr/2026-09-25-long-turn-context-recovery.md
 ---
 
 # Budgeted Session Compaction

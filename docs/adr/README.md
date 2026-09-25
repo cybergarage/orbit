@@ -290,7 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                        |
 | ---------- | ---------- | -------------- | ----------------------------------------------------------------------------------------------- |
-| 2026-09-25 | accepted | in-progress | [Long-Turn Context Recovery](2026-09-25-long-turn-context-recovery.md) |
+| 2026-09-25 | accepted | completed | [Long-Turn Context Recovery](2026-09-25-long-turn-context-recovery.md) |
 | 2026-09-25 | accepted   | completed      | [Model Context Capacity Discovery](2026-09-25-model-context-capacity.md) |
 | 2026-09-25 | accepted   | completed      | [Unlimited Run Budgets](2026-09-25-unlimited-run-budgets.md) |
 | 2026-09-25 | accepted   | completed      | [Coding Budgets and Explicit Continuation](2026-09-25-coding-budgets-and-continuation.md)       |
