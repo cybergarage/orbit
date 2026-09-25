@@ -36,10 +36,10 @@ Create one service for the host and subscribe before starting work:
 import {OrbitApplicationService} from '@cybergarage/orbit'
 
 const application = await OrbitApplicationService.create({cwd: workspacePath})
-const unsubscribe = application.subscribeRunSnapshots(snapshot => {
+const unsubscribe = application.subscribeRunSnapshots((snapshot) => {
   sendToRenderer(snapshot)
 })
-const unsubscribeLogs = application.subscribeLogs(record => {
+const unsubscribeLogs = application.subscribeLogs((record) => {
   sendLogToRenderer(record)
 })
 const thread = application.createThread()
@@ -202,3 +202,13 @@ The prepared-request budget still includes it. Library callers opt in explicitly
 GUI Project conversations default to curated mode and offer Off. CLI workflows
 remain single-session. See [Projects and curated memory](projects.md) for API,
 source validation, compatibility and retained-history behavior.
+
+### Budget continuation requests
+
+The message endpoint also accepts optional `limits` (validated partial Run limits)
+and `continueFromRunId`. Use a fresh `requestId` for an intentional continuation;
+reuse it only for uncertain delivery of the identical request. Changed limits or
+continuation identity conflict with an existing request ID. `ThreadSnapshot` exposes
+`executionLimits` when supported by its Agent and `run.limits` for recorded runs.
+The application restores saved Run status when resuming a session; recovered status
+is observational, while continuation verifies owned storage before model/tool work.

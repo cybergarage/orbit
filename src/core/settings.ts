@@ -5,10 +5,12 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 
+import type {RunLimits} from './execution/limits.js'
 import type {ContextPolicy, ContextProfile} from './session/context-policy.js'
 import type {InterruptionPolicy} from './session/verified-context.js'
 
 import {DOT_APP_DIR_NAME, SETTINGS_FILE_NAME} from './app.js'
+import {parseRunLimits} from './execution/limits.js'
 import {getProvider, isProvider, type ProviderName} from './models/provider.js'
 import {parseInterruptionPolicy} from './session/verified-context.js'
 import {type BuiltinToolSelection, isBuiltinToolName, isToolProfile} from './tools/index.js'
@@ -37,6 +39,7 @@ export type ToolSettings = BuiltinToolSelection
 
 export interface WorkspaceSettings {
   contextPolicy?: ContextPolicy
+  executionLimits?: Partial<RunLimits>
   interruptionPolicy?: InterruptionPolicy
   mcp?: McpSettings
   model?: string
@@ -180,7 +183,7 @@ function validateWorkspaceSettings(parsed: unknown, file: string): WorkspaceSett
     throw new Error(`Invalid workspace settings in ${file}: settings must be an object.`)
   }
 
-  const {contextPolicy, interruptionPolicy, mcp, model, provider, providers, tools} = parsed
+  const {contextPolicy, executionLimits, interruptionPolicy, mcp, model, provider, providers, tools} = parsed
   const providerOptions = getProvider().join(', ')
 
   if (provider !== undefined && !isProvider(provider)) {
@@ -192,6 +195,7 @@ function validateWorkspaceSettings(parsed: unknown, file: string): WorkspaceSett
   }
 
   return {
+    ...(executionLimits === undefined ? {} : {executionLimits: parseRunLimits(executionLimits)}),
     ...(interruptionPolicy === undefined ? {} : {interruptionPolicy: parseInterruptionPolicy(interruptionPolicy)}),
     ...(contextPolicy === undefined ? {} : {contextPolicy: parseContextPolicy(contextPolicy)}),
     ...(typeof model === 'string' ? {model} : {}),
@@ -318,6 +322,9 @@ function validateBuiltinToolNames(value: unknown, file: string, field: 'exclude'
 
 function mergeWorkspaceSettingsInto(target: WorkspaceSettings, source: WorkspaceSettings): void {
   Object.assign(target, {
+    ...(source.executionLimits === undefined
+      ? {}
+      : {executionLimits: {...target.executionLimits, ...parseRunLimits(source.executionLimits)}}),
     ...(source.interruptionPolicy === undefined
       ? {}
       : {interruptionPolicy: parseInterruptionPolicy(source.interruptionPolicy)}),

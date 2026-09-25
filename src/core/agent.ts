@@ -26,6 +26,8 @@ import type {
 import type {CompiledProcessorGraph, GraphJSON} from './processor/graph-definition.js'
 import type {GraphInvocation, GraphSnapshot, GraphValue} from './processor/graph-execution.js'
 import type {Operator, OperatorOptions} from './processor/index.js'
+import type {ProjectMemoryService} from './projects/memory-service.js'
+import type {WorkflowContextProjector, WorkflowExpectation, WorkflowSubmission} from './selection/binding.js'
 import type {ContextPolicy} from './session/context-policy.js'
 import type {SessionContextBuilder as SessionContextBuilderType, SessionError} from './session/index.js'
 import type {InterruptionPolicy} from './session/verified-context.js'
@@ -44,6 +46,7 @@ import {AgentEventType} from './agent-events.js'
 import {InvalidInputError, ModelAbortError, OrbitError} from './errors/index.js'
 import {assertManagedTool, executeManagedTool} from './execution/authorization.js'
 import {copyJSON, FileExecutionJournal, MemoryExecutionJournal} from './execution/journal.js'
+import {parseRunLimits} from './execution/limits.js'
 import {isolateLogger} from './execution/observer.js'
 import {DEFAULT_RUN_LIMITS, RunExecutionError, RunStoppedError, RunSupervisor, until} from './execution/run.js'
 import {
@@ -64,6 +67,15 @@ import {
   validateGraphCatalog,
 } from './processor/graph-execution.js'
 import {formatOperatorName, OperatorType} from './processor/index.js'
+import {
+  parseMemorySelection,
+  parseProjectContext,
+  type ProjectContextSnapshot,
+  type ProjectMemorySelection,
+} from './projects/memory-context.js'
+import {encodeWorkflowSubmission, parseWorkflowSubmission} from './selection/binding.js'
+import {immutable, selectionDigest} from './selection/validation.js'
+import {budgetToolResults, continueBudgetRun} from './session/budget-continuation.js'
 import {prepareSessionContext} from './session/context-policy.js'
 import {Session, SessionContextBuilder, TurnPhase} from './session/index.js'
 import {
@@ -78,23 +90,10 @@ import {skillPrefix} from './skills/record.js'
 import {State} from './state.js'
 import {adaptInvokableTool, createBuiltinTools, ToolProfile, ToolRegistry, ToolRuntime} from './tools/index.js'
 
-const DEFAULT_MAX_TOOL_ITERATIONS = 5
-
-import type {ProjectMemoryService} from './projects/memory-service.js'
-import type {WorkflowContextProjector, WorkflowExpectation, WorkflowSubmission} from './selection/binding.js'
-
-import {
-  parseMemorySelection,
-  parseProjectContext,
-  type ProjectContextSnapshot,
-  type ProjectMemorySelection,
-} from './projects/memory-context.js'
-import {encodeWorkflowSubmission, parseWorkflowSubmission} from './selection/binding.js'
-import {immutable, selectionDigest} from './selection/validation.js'
-
 export type AgentTool = InvokableTool
 
 export interface AgentInvokeOptions extends OperatorOptions {
+  continueFromRunId?: string
   diagnosticContext?: DiagnosticContext
   diagnostics?: DiagnosticEventBus
   limits?: Partial<RunLimits>
@@ -244,7 +243,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       ...(options.toolDefinitions ?? []),
     ]
     this.tools = [...(options.tools ?? [])]
-    this.execution = options.execution ?? {}
+    this.execution = {...options.execution, limits: {...this.settings.executionLimits, ...options.execution?.limits}}
     this.selectionProjector = options.selectionProjector ? Object.freeze({...options.selectionProjector}) : undefined
     this.mcpFactory =
       options.deps?.createMcpToolManager ??
@@ -313,6 +312,10 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       }
     })()
     return this.closePromise
+  }
+
+  getExecutionLimits(): RunLimits {
+    return {...DEFAULT_RUN_LIMITS, ...this.execution.limits}
   }
 
   getGraphSnapshot(runId: string): GraphSnapshot | undefined {
@@ -543,7 +546,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     options?: Partial<ManagedInvokeOptions>,
   ): Promise<GraphValue | Message> {
     const graph = options?.graph
-    const maxToolIterations = options?.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS
+    const maxToolIterations = options?.maxToolIterations ?? options!.executionContext!.limits.toolRounds
     if (!Number.isSafeInteger(maxToolIterations) || maxToolIterations < 0) throw new Error('Invalid maxToolIterations')
     const run = options!.executionContext!
     const policy = options!.executionPolicy!
@@ -850,7 +853,36 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           }
 
           const toolCalls = getToolCalls(storedModelMessage)
-          run.consume('toolRequests', toolCalls.length)
+          const callIds = new Set<string>()
+          for (const call of toolCalls) {
+            if (typeof call.id !== 'string' || call.id.length === 0 || callIds.has(call.id))
+              throw new InvalidInputError('Tool call IDs must be unique within a model response')
+            callIds.add(call.id)
+          }
+
+          const reserveTools = () => {
+            run.consume('toolRequests', toolCalls.length)
+            if (toolCalls.length === 0) return
+            if (localIteration === stageMax) {
+              run.exhaust('toolRounds', localIteration, 1, stageMax)
+              run.check()
+            }
+
+            run.consume('toolRounds')
+          }
+
+          try {
+            reserveTools()
+          } catch (error) {
+            if (run.stopReason === 'budget-exceeded' && toolCalls.length > 0) {
+              const notices = session.appendMessages(budgetToolResults(toolCalls), {iteration, turnId})
+              for (const message of notices)
+                emitAgentEvent(options?.onEvent, {iteration, message, type: AgentEventType.MessageCompleted})
+            }
+
+            throw error
+          }
+
           this.logger.debug({iteration, toolCallCount: toolCalls.length}, 'agent tool calls received')
           if (toolCalls.length === 0) {
             if (!graph) {
@@ -883,26 +915,9 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
             return storedModelMessage
           }
 
-          if (localIteration === stageMax) {
-            this.logger.debug(
-              {maxToolIterations, toolCallCount: toolCalls.length},
-              'agent max tool iterations exceeded',
-            )
-            run.requestStop('budget-exceeded')
-            run.check()
-          }
-
           // Tool execution for one model turn can run in parallel before the next model call.
           const signal = options?.signal ?? new AbortController().signal
 
-          const callIds = new Set<string>()
-          for (const call of toolCalls) {
-            if (typeof call.id !== 'string' || call.id.length === 0 || callIds.has(call.id))
-              throw new InvalidInputError('Tool call IDs must be unique within a model response')
-            callIds.add(call.id)
-          }
-
-          run.consume('toolRounds')
           // The next model iteration depends on these results.
           // eslint-disable-next-line no-await-in-loop
           const toolResults = await toolRuntime.executeAll(
@@ -1072,8 +1087,9 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       ...(this.interruptionPolicy.mode === 'verified-not-dispatched'
         ? {interruptionPolicy: this.interruptionPolicy}
         : {}),
+      ...(options.continueFromRunId ? {continueFromRunId: options.continueFromRunId} : {}),
       limits: options.limits ?? {},
-      maxToolIterations: options.maxToolIterations ?? DEFAULT_MAX_TOOL_ITERATIONS,
+      maxToolIterations: options.maxToolIterations ?? null,
       messages: serialized,
       tools: (options.tools ?? []).map((tool) => ({
         name: tool.name,
@@ -1194,7 +1210,17 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   ): Promise<RunHandle<T>> {
     const skills = normalizeSkillSelections(options.skills)
     if (skills.length > 0 && !this.skillCatalog) throw new Error('Skill catalog is not configured')
-    options = {...options, skills, tools: options.tools ? [...options.tools] : undefined}
+    if (options.continueFromRunId !== undefined) {
+      if (!/^[A-Za-z0-9_-]{1,160}$/u.test(options.continueFromRunId)) throw new Error('Invalid continuation run ID')
+      if (graph || options.selection) throw new Error('Budget continuation requires an ordinary unselected Agent run')
+    }
+
+    options = {
+      ...options,
+      ...(options.limits === undefined ? {} : {limits: parseRunLimits(options.limits)}),
+      skills,
+      tools: options.tools ? [...options.tools] : undefined,
+    }
     if (graph && options.tools)
       options.tools = options.tools.map((tool) =>
         Object.freeze({
@@ -1275,6 +1301,11 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       },
       execute: async (run) => {
         evidenceJournal = run.journal
+        if (options.continueFromRunId) {
+          if (graph) throw new Error('Budget continuation is only supported for ordinary Agent runs')
+          await continueBudgetRun(session, run, options.continueFromRunId)
+        }
+
         if (this.plugins) await run.wait('plugin-validation', this.plugins.validate())
         if (this.interruptionPolicy.mode === 'verified-not-dispatched' && !this.model.prepare)
           throw new Error('model-does-not-support-verified-context')
@@ -1334,7 +1365,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       input: options.selection ? JSON.parse(options.selection.input) : this.managedSubmission(messages, options, graph),
       journal: () => this.getJournal(session),
       ...(graph ? {journalVersion: 2 as const} : {}),
-      limits: {...this.execution.limits, ...options.limits},
+      limits: parseRunLimits({...this.execution.limits, ...options.limits}),
       onApproval: this.execution.onApproval,
       onSnapshot: options.onRunSnapshot,
       requestedSkills: skills,

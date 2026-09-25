@@ -106,6 +106,10 @@ One admitted execution with a run identifier, cancellation boundary, and
 terminal outcome. The shared supervisor admits one Agent turn from CLI, GUI or
 library. Its immutable result separates execution, quiescence and recording.
 
+A budget continuation is a new explicit Run in the same conversation, linked by
+`continueFromRunId`; it preserves the old terminal outcome and does not replay
+operations. Eligibility is checked against retained execution evidence.
+
 ### Prepared operation
 
 An immutable description binding parsed input, targets, environment, source and

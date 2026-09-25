@@ -189,3 +189,20 @@ The prepared-request budget still includes it. Library callers opt in explicitly
 GUI Project conversations default to curated mode and offer Off. CLI workflows
 remain single-session. See [Projects and curated memory](projects.md) for API,
 source validation, compatibility and retained-history behavior.
+
+## Run limits and continuation
+
+Open **Limits for the next run** below the conversation to change tool rounds,
+model calls, tool requests or elapsed minutes. Settings apply to the next Send or
+Continue action, including per-workspace defaults. They cannot alter active work.
+
+After a budget stop, Orbit explains the exhausted limit and shows
+**Continue with these limits**. Optionally type additional guidance before using
+it. This starts a new Run in the same conversation; it does not replay the last
+tool. The previous result stays unchanged. Saved budget-stop status is restored
+when reopening a session after a server restart.
+
+`Recording: acknowledged` means storage acknowledgement, not task completion.
+Unknown work, failed recording or unverifiable old history can prevent continuation.
+Orbit displays the reason; retain the old conversation and inspect logs or start a
+new chat with your task and known progress. See [execution recovery](execution.md#continue-after-a-budget-stop).

@@ -11,7 +11,8 @@ implementation-commits:
   - 8ffef065251a0b04c0810f67a5318502c6be4df6
   - abac54535177c3d721e94567d25057a8b6f20441
   - 49c61e58adecc18c806b94701240a5753eed547c
-superseded-by: []
+superseded-by:
+  - 2026-09-25-coding-budgets-and-continuation.md
 ---
 
 # Managed Run Lifecycle
@@ -578,3 +579,10 @@ acknowledgement and child termination. The bounded schema follow-up above is
 resolved for the requested scope; broader server functionality is not inferred.
 This record's accepted / partial state and deferred environment, deployment and
 representative-application evidence remain unchanged.
+
+## Partial Supersession — 2026-09-25
+
+[Coding Budgets and Explicit Continuation](2026-09-25-coding-budgets-and-continuation.md)
+replaces the original product budget defaults and adds explicit continuation of
+verified budget stops. The remaining lifecycle, ownership, authorization and
+recovery requirements retain their existing status and follow-up obligations.

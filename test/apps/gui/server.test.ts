@@ -89,6 +89,16 @@ describe('GUI server', () => {
       })
       expect(unsupportedSelection.status).to.equal(400)
 
+      for (const limits of [{toolRounds: -1}, {toolRounds: 1.5}, {unknown: 1}, {elapsedMs: 0}]) {
+        // Each invalid request must finish before asserting its response.
+        // eslint-disable-next-line no-await-in-loop
+        const invalidLimits = await fetch(`${baseUrl}/api/threads/${created.id}/messages`, {
+          body: JSON.stringify({content: 'hello', limits, requestId: 'invalid-limits'}),
+          headers: {...headers, 'Content-Type': 'application/json'}, method: 'POST',
+        })
+        expect(invalidLimits.status).equal(400)
+      }
+
       const commandResponse = await fetch(`${baseUrl}/api/threads/${created.id}/messages`, {
         body: JSON.stringify({content: '/help'}),
         headers: {...headers, 'Content-Type': 'application/json'},

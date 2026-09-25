@@ -31,6 +31,10 @@ journal records before admission and dispatch; operation preparation and policy
 bind each single-use permission to the actual call.
 
 `ThreadManager` and the application service project the same run snapshots.
+Budget exhaustion is a terminal outcome, not completion of the user task. An explicit
+continuation creates a new Run with its own limits and retains the prior result.
+Known nondispatch notices preserve usable tool groups without claiming execution.
+See [Managed execution](../execution.md#continue-after-a-budget-stop).
 Session history supplies model context; optional diagnostics observe the work.
 Optional budgeted preparation uses the same Run for a tool-free summary call.
 A checkpoint changes selected model input while preserving canonical history;

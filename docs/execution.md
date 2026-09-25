@@ -10,23 +10,27 @@ that a target project's tests passed or that an application accepted the patch.
 ```ts
 import {Agent, Message, MessageType, ToolProfile} from '@cybergarage/orbit'
 
-const agent = new Agent({cwd: workspacePath, toolProfile: ToolProfile.Coding,
+const agent = new Agent({
+  cwd: workspacePath,
+  toolProfile: ToolProfile.Coding,
   execution: {
     responderScope: 'application-owner',
     async onApproval(request) {
       // Authenticate the actual user and display request.preview in your UI.
       const approve = await askOwner(request.preview)
       await agent.replyApproval(request.runId, {
-        requestId: request.id, digest: request.digest,
-        responderScope: 'application-owner', approve,
+        requestId: request.id,
+        digest: request.digest,
+        responderScope: 'application-owner',
+        approve,
       })
     },
   },
 })
 try {
-  const handle = await agent.startRun([
-    new Message(MessageType.User, {content: 'Inspect the failing test.'}),
-  ], {requestId: crypto.randomUUID()})
+  const handle = await agent.startRun([new Message(MessageType.User, {content: 'Inspect the failing test.'})], {
+    requestId: crypto.randomUUID(),
+  })
   const snapshot = handle.getSnapshot()
   // handle.requestStop() requests cancellation; it does not prove termination.
   const result = await handle.finished
@@ -65,15 +69,47 @@ together. A known nonzero Bash exit can be an ordinary failed tool result
 followed by a completed Agent turn. An unknown external outcome quarantines
 resources and prevents conflicting admission until the owner verifies it.
 
-The initial product profile is deliberately finite:
+The coding product profile is finite and configurable:
 
-| Limit | Initial value |
-| --- | --- |
-| Elapsed run time | 600,000 ms |
-| Model calls / tool requests / tool rounds | 6 / 32 / 5 |
-| Approval wait | 300,000 ms |
-| Cleanup | 5,000 ms |
-| MCP startup per source / enabled sources | 30,000 ms / 16 |
+| Limit                                     | Initial value             |
+| ----------------------------------------- | ------------------------- |
+| Elapsed run time                          | 3,600,000 ms (60 minutes) |
+| Model calls / tool requests / tool rounds | 101 / 1,000 / 100         |
+| Approval wait                             | 300,000 ms                |
+| Cleanup                                   | 5,000 ms                  |
+| MCP startup per source / enabled sources  | 30,000 ms / 16            |
+
+Workspace `executionLimits`, Agent `execution.limits`, and per-run `limits`
+override these defaults in that order, field by field. Thread and application
+submission accept per-run limits. The Agent's default `maxToolIterations` follows
+the effective `toolRounds`; an explicitly supplied value remains an additional
+limit. Raising tool rounds may also require raising model calls and tool requests.
+Each tool-containing model response consumes one round, regardless of batch size.
+GUI limits apply to the next submission and do not change an active Run.
+
+`parseRunLimits()` validates overrides. Times are positive safe integers capped at
+2,147,483,647 ms to avoid timer overflow; other limits are nonnegative safe integers.
+Snapshots include effective `limits` when recorded. `parseBudgetReason(result.reason)`
+returns the exhausted limit, consumed amount and requested increment when available;
+older generic reasons and non-counter Graph budgets may have no detail.
+
+### Continue after a budget stop
+
+Use a new request ID and `continueFromRunId` with `startRun`, Thread submission or
+application submission. Supply new `limits` as needed. This starts a new Run in the
+same conversation and checks the saved stop; it never extends an immutable terminal
+Run or automatically replays a tool. The GUI provides this explicit action.
+
+New batches stopped by a budget before dispatch receive error results explaining
+nondispatch, so the next model request has complete tool groups. Explicit legacy
+continuation can append the same kind of notice for an unresolved final assistant
+batch after verifying synchronized transcript and journal evidence under writer
+ownership. It preserves old bytes and terminal outcomes, does not migrate v2 to
+v3, and is separate from cancelled-context projection. It refuses intervening
+history, ambiguous/matched intents, partial batches, Graph recovery, unknown effects
+or failed evidence. Such a refusal requires inspection or a new conversation;
+`recording: acknowledged` alone never proves eligibility. Recovered GUI status is
+informational; core rechecks evidence before continuing.
 
 Owners can pass positive finite time limits and nonnegative integer call/source limits through `execution.limits`
 or per-run limits. These values are starting limits, not measured optima.

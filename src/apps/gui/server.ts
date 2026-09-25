@@ -9,6 +9,7 @@ import {z} from 'zod'
 
 import type {DiagnosticEvent, LogRecord, OrbitApplicationService} from '../../core/index.js'
 
+import {parseRunLimits} from '../../core/execution/limits.js'
 import {ExecutionRequestError} from '../../core/execution/run.js'
 import {DiagnosticCapture, InvalidInputError} from '../../core/index.js'
 import {parseMemorySelection} from '../../core/projects/memory-context.js'
@@ -35,6 +36,21 @@ export interface GuiServer {
 const messageSchema = z
   .object({
     content: z.string().trim().min(1),
+    continueFromRunId: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,160}$/u)
+      .optional(),
+    limits: z
+      .record(z.string(), z.number())
+      .refine((value) => {
+        try {
+          parseRunLimits(value)
+          return true
+        } catch {
+          return false
+        }
+      }, 'Invalid run limits')
+      .optional(),
     memory: z.unknown().optional(),
     requestId: z.unknown().optional(),
     skills: z.unknown().optional(),
@@ -141,7 +157,7 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
     return response.json(thread)
   })
   app.post('/api/threads/:threadId/messages', async (request, response) => {
-    const {content} = messageSchema.parse(request.body)
+    const {content, continueFromRunId, limits} = messageSchema.parse(request.body)
     const requestId = content.startsWith('/')
       ? undefined
       : z
@@ -150,6 +166,8 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
           .parse(request.body.requestId)
     response.status(202).json(
       await options.service.startRun(request.params.threadId, content, {
+        continueFromRunId,
+        limits: limits === undefined ? undefined : parseRunLimits(limits),
         memory: request.body.memory === undefined ? undefined : parseMemorySelection(request.body.memory),
         requestId,
         skills: z
@@ -444,6 +462,9 @@ button:disabled { opacity:.5; cursor:default; }
 .tool-card { margin-top:9px; border:1px solid #303743; border-radius:8px; background:#15191f; }
 .tool-card summary { cursor:pointer; padding:8px 10px; color:#b5bdc9; font-size:12px; }
 .tool-card pre { margin:0; border-top:1px solid #303743; padding:10px; overflow:auto; color:#a8d5ba; font-size:11px; white-space:pre-wrap; }
+.run-budget { margin:0 auto 12px; max-width:900px; font-size:13px; }
+.run-budget label { display:inline-flex; gap:8px; align-items:center; margin:8px 14px 8px 0; }
+.run-budget input { width:85px; color:inherit; background:#20242d; border:1px solid #414958; border-radius:5px; padding:5px; }
 .composer-wrap { padding:12px max(18px,7%) 18px; }
 .composer { margin:auto; max-width:900px; border:1px solid #3a424f; border-radius:14px; background:#1a1e25; box-shadow:0 10px 35px #0005; }
 .composer.drafting { border-color:#49566a; }

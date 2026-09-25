@@ -229,3 +229,24 @@ Agent Plugins are selected through product `--plugin` arguments or the library
 `PluginCatalog`, not automatically inherited from workspace settings. Native
 `mcp.servers` remains a separate input. See [Agent Plugins](plugins.md) for instance
 IDs, persistent data, component support and startup behavior.
+
+## Execution limits
+
+`executionLimits` sets finite budgets for each new Run. Fields merge across
+workspace settings and can be overridden by Agent configuration or a submission.
+For example:
+
+```json
+{
+  "executionLimits": {
+    "toolRounds": 100,
+    "modelCalls": 101,
+    "toolRequests": 1000,
+    "elapsedMs": 3600000
+  }
+}
+```
+
+The GUI exposes limits for the next run and continuation after budget exhaustion.
+These limits do not change operation permissions. See [Managed execution](execution.md)
+for all defaults, validation, library overrides and continuation semantics.

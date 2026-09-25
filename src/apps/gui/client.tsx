@@ -7,6 +7,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {createRoot} from 'react-dom/client'
 
+import type {RunLimits} from '../../core/execution/limits.js'
 import type {
   DiagnosticCapture,
   DiagnosticEvent,
@@ -24,6 +25,8 @@ import type {
   ThreadSnapshot,
 } from '../../core/index.js'
 
+import {DEFAULT_RUN_LIMITS, parseRunLimits} from '../../core/execution/limits.js'
+import {BudgetPanel} from './budget-panel.js'
 import {ProjectMemoryPanel} from './project-memory-panel.js'
 import {
   acceptGuiRun,
@@ -72,6 +75,14 @@ function App() {
   const [pendingSkills, setPendingSkills] = useState<Record<string, SkillSelection[]>>({})
   const [skillHistory, setSkillHistory] = useState('')
   const [prompt, setPrompt] = useState('')
+  const [limitOverrides, setLimitOverrides] = useState<Record<string, Partial<RunLimits>>>({})
+  const nextLimits = {
+    ...DEFAULT_RUN_LIMITS,
+    ...runtime?.executionLimits,
+    ...thread?.executionLimits,
+    ...limitOverrides[thread?.id ?? ''],
+  }
+
   const [runPresentations, setRunPresentations] = useState<Record<string, GuiRunPresentation>>({})
   const [error, setError] = useState<string>()
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -297,26 +308,36 @@ function App() {
   const retrySubmission = useRef<
     undefined | {content: string; requestId: string; selectionKey: string; threadId: string}
   >(undefined)
-  const submit = async () => {
-    if (thread === undefined || prompt.trim().length === 0 || (projectsEnabled && membershipThread !== thread.id))
+  const submit = async (continueFromRunId?: string) => {
+    if (
+      thread === undefined ||
+      (!continueFromRunId && prompt.trim().length === 0) ||
+      (projectsEnabled && membershipThread !== thread.id)
+    )
       return
     const threadId = thread.id
     const presentation = runPresentations[threadId] ?? reconcileGuiRunWithThread(undefined, thread.status)
     if (isGuiRunActive(presentation) || pendingSubmissions.current.has(threadId)) return
-    const content = prompt
+    const content =
+      prompt.trim() ||
+      'Continue the unfinished task, respecting the original constraints. Reassess the current state before taking any action.'
     const skills = content.startsWith('/') ? [] : (pendingSkills[threadId] ?? [])
     const memory = membership?.projectId
       ? (memorySelections[threadId] ?? {mode: 'curated' as const})
       : {mode: 'off' as const}
-    const selectionKey = JSON.stringify({memory, skills})
+    const limits = {...limitOverrides[threadId]}
+    const selectionKey = JSON.stringify({continueFromRunId, limits, memory, skills})
     pendingSubmissions.current.add(threadId)
     try {
+      parseRunLimits(limits)
       setError(undefined)
       setPrompt('')
       setRunPresentations((current) => ({...current, [threadId]: beginGuiRun()}))
       const result = await api<StartApplicationRunResult>(`/api/threads/${encodeURIComponent(threadId)}/messages`, {
         body: JSON.stringify({
           content,
+          continueFromRunId,
+          limits,
           memory,
           requestId: (() => {
             const prior = retrySubmission.current
@@ -546,7 +567,10 @@ function App() {
         )}
         {thread?.run?.result ? (
           <div role="status">
-            Run: {thread.run.result.outcome}. Recording: {thread.run.result.recording.status}.{' '}
+            {thread.run.result.outcome === 'budget-exceeded'
+              ? 'Run stopped at its limit.'
+              : `Run: ${thread.run.result.outcome}.`}{' '}
+            Recording: {thread.run.result.recording.status}.{' '}
             {thread.run.result.quiescence ? '' : 'Work may still be active; conflicting resources remain reserved.'}
           </div>
         ) : null}
@@ -596,6 +620,18 @@ function App() {
           <div ref={messagesEnd} />
         </div>
         <div className="composer-wrap">
+          {thread && (
+            <BudgetPanel
+              active={runActive}
+              limits={nextLimits}
+              onChange={(key, value) =>
+                setLimitOverrides((current) => ({...current, [thread.id]: {...current[thread.id], [key]: value}}))
+              }
+              onContinue={() => submit(thread.run?.runId).catch(showError(setError))}
+              snapshot={thread.run}
+            />
+          )}
+
           <details>
             <summary>Skills · pending {(pendingSkills[thread?.id ?? ''] ?? []).length}</summary>
             <button
@@ -709,7 +745,7 @@ function App() {
                     prompt.trim().length === 0 ||
                     (projectsEnabled && membershipThread !== thread.id)
                   }
-                  onClick={submit}
+                  onClick={() => submit().catch(showError(setError))}
                   title="Send message"
                 >
                   ↑

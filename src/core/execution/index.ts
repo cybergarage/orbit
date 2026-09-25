@@ -17,6 +17,9 @@ export type {
   JournalLevel,
   JournalRecord,
 } from './journal.js'
+export {parseBudgetReason, parseRunLimits} from './limits.js'
+export type {BudgetExhaustion} from './limits.js'
+
 export {inspectExecutionJournal, recordReconciliation} from './recovery.js'
 export type {JournalInspection} from './recovery.js'
 

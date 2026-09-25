@@ -13,11 +13,27 @@ import {
   loadWorkspaceSettingsSync,
   loadWorkspaceSettingsWithSources,
   loadWorkspaceSettingsWithSourcesSync,
+  mergeWorkspaceSettings,
 } from '../../src/core/settings.js'
 
 describe('loadWorkspaceSettings', () => {
   afterEach(() => {
     configureApp({appName: 'orbit'})
+  })
+
+  it('merges and validates execution limits from workspace files', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-settings-budgets-'))
+    try {
+      await fs.mkdir(path.join(root, '.orbit'))
+      const file = path.join(root, '.orbit', SETTINGS_FILE_NAME)
+      await fs.writeFile(file, JSON.stringify({executionLimits: {modelCalls: 50, toolRounds: 40}}))
+      const settings = await loadWorkspaceSettings(root)
+      expect(settings.executionLimits).deep.equal({modelCalls: 50, toolRounds: 40})
+      expect(mergeWorkspaceSettings(settings, {executionLimits: {toolRounds: 80}}).executionLimits)
+        .deep.equal({modelCalls: 50, toolRounds: 80})
+      await fs.writeFile(file, JSON.stringify({executionLimits: {toolRounds: -1}}))
+      await expectReject(loadWorkspaceSettings(root), 'Invalid run limit')
+    } finally { await fs.rm(root, {force: true, recursive: true}) }
   })
 
   it('prefers .orbit/settings.json over workspace settings.json', async () => {

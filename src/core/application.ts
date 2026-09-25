@@ -39,6 +39,7 @@ import {
   DiagnosticCapture as Capture,
   DiagnosticEventBus as EventBus,
 } from './diagnostics/index.js'
+import {DEFAULT_RUN_LIMITS, parseRunLimits} from './execution/limits.js'
 import {inspectExecutionJournal} from './execution/recovery.js'
 import {recoveredRunSnapshot} from './execution/run.js'
 import {createCompositeLogger} from './logger/index.js'
@@ -95,6 +96,7 @@ export interface RuntimeSnapshot {
   contextMode?: 'budgeted' | 'disabled'
   contexts: RuntimeContextSource[]
   cwd: string
+  executionLimits?: import('./execution/limits.js').RunLimits
   model: string
   provider: ProviderName
   sessionRoot: string
@@ -147,6 +149,7 @@ export class OrbitApplicationService {
   private readonly ownsLogs: boolean
   private preferences: GuiPreferences
   private readonly projectCreations = new Map<string, {projectId: string; promise: Promise<ThreadSnapshot>}>()
+  private readonly recoveredThreadRuns = new Map<string, RunSnapshot>()
   private readonly resolveProjectRuntime: (cwd: string) => Promise<CoreAgentOptions>
   private readonly runListeners = new Set<(snapshot: RunSnapshot) => void>()
   private readonly selectedScopes = new Map<string, string>()
@@ -197,6 +200,7 @@ export class OrbitApplicationService {
         size: context.content.length,
       })),
       cwd: options.cwd,
+      executionLimits: {...DEFAULT_RUN_LIMITS, ...this.settings.executionLimits, ...options.execution?.limits},
       model: resolved.model,
       provider: resolved.provider,
       sessionRoot: this.repository.rootDir ?? sessionsDir(),
@@ -436,6 +440,7 @@ export class OrbitApplicationService {
     await this.projects?.finishDeletion(sessionId)
     if (deleted === undefined) return false
 
+    this.recoveredThreadRuns.delete(sessionId)
     this.displayMessages.delete(sessionId)
     this.diagnostics.emit({
       data: {deletedSessionId: sessionId, file: deleted.file},
@@ -604,6 +609,28 @@ export class OrbitApplicationService {
 
     const summary = await this.findSession(sessionId)
     if (summary === undefined) throw new Error(`Unknown session: ${sessionId}`)
+    const inspection = await inspectExecutionJournal(this.repository.journalRoot, sessionId).catch(
+      (error: NodeJS.ErrnoException) => {
+        if (error.code === 'ENOENT') return
+        throw error
+      },
+    )
+    const latest = inspection?.runs
+      .sort((a, b) => (a.records[0]?.timestamp ?? '').localeCompare(b.records[0]?.timestamp ?? ''))
+      .at(-1)
+    if (latest) {
+      const saved = recoveredRunSnapshot(latest.runId, sessionId, latest.records, {
+        level: latest.records[0]?.data.level === 'file-and-directory-sync' ? 'file-and-directory-sync' : 'file-sync',
+        mode: 'file',
+      })
+      if (latest.issue || !inspection?.keyAvailable) {
+        saved.quarantined = true
+        if (saved.result) saved.result.recording.status = 'failed'
+      }
+
+      this.recoveredThreadRuns.set(sessionId, saved)
+    }
+
     const runtime = this.projects
       ? await this.resolveProjectRuntime(summary.cwd)
       : {plugins: this.plugins, settings: this.settings, skillCatalog: this.skillCatalog}
@@ -646,7 +673,7 @@ export class OrbitApplicationService {
       )
     }
 
-    return thread
+    return this.withDisplayMessages(thread)
   }
 
   async skillHistory(sessionId: string) {
@@ -670,13 +697,25 @@ export class OrbitApplicationService {
   async startRun(
     threadId: string,
     content: string,
-    request?: string | {memory?: ProjectMemorySelection; requestId?: string; skills?: SkillSelection[]},
+    request?:
+      | string
+      | {
+          continueFromRunId?: string
+          limits?: Partial<import('./execution/limits.js').RunLimits>
+          memory?: ProjectMemorySelection
+          requestId?: string
+          skills?: SkillSelection[]
+        },
   ): Promise<StartApplicationRunResult> {
     if (this.selectedScopes.has(threadId)) throw new Error('Thread requires its workflow selection coordinator')
-    const {memory, requestId, skills} =
-      typeof request === 'string' ? {memory: undefined, requestId: request, skills: undefined} : (request ?? {})
+    const {continueFromRunId, limits, memory, requestId, skills} =
+      typeof request === 'string' ? {requestId: request} : (request ?? {})
+    if (limits !== undefined) parseRunLimits(limits)
+    if (continueFromRunId !== undefined && !/^[A-Za-z0-9_-]{1,160}$/u.test(continueFromRunId))
+      throw new Error('Invalid continuation run ID')
     if (this.projects && !this.threadManager.getThread(threadId)) await this.resumeSession(threadId)
     if (content.startsWith('/')) {
+      if (continueFromRunId) throw new Error('Use a message rather than a slash command when continuing a run')
       const thread = this.threadManager.getThread(threadId)
       if (thread === undefined) throw new Error(`Unknown thread: ${threadId}`)
       const response = this.handleGuiSlashCommand(thread, content)
@@ -712,6 +751,8 @@ export class OrbitApplicationService {
 
     await this.projects?.requireActive(threadId)
     const handle = this.threadManager.startRun(threadId, content, {
+      continueFromRunId,
+      limits,
       memory,
       requestId,
       skillCatalogRevision: this.catalogForThread(threadId)?.configuration,
@@ -930,6 +971,8 @@ export class OrbitApplicationService {
   }
 
   private withDisplayMessages(thread: ThreadSnapshot): ThreadSnapshot {
+    if (!thread.run && this.recoveredThreadRuns.has(thread.id))
+      thread = {...thread, run: this.recoveredThreadRuns.get(thread.id)}
     const displayed = this.displayMessages.get(thread.id)
     if (displayed === undefined) return thread
 

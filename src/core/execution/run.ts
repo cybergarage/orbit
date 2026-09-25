@@ -7,33 +7,18 @@ import {performance} from 'node:perf_hooks'
 import type {ProjectContextSnapshot} from '../projects/memory-context.js'
 import type {SkillSelection} from '../skills/catalog.js'
 import type {ExecutionJournal, JournalKind, JournalLevel, JournalRecord} from './journal.js'
+import type {BudgetExhaustion, RunLimits} from './limits.js'
 
 import {parseProjectContext} from '../projects/memory-context.js'
 import {normalizeSkillSelections} from '../skills/catalog.js'
 import {currentGraphVisit, GraphDeclaredFailure} from './graph-state.js'
 import {canonicalJSON, copyJSON, safeIdentity} from './journal.js'
+import {budgetReason, DEFAULT_RUN_LIMITS, parseRunLimits} from './limits.js'
 import {recordReconciliation} from './recovery.js'
 
-export interface RunLimits {
-  approvalMs: number
-  cleanupMs: number
-  elapsedMs: number
-  mcpServers: number
-  mcpStartupMs: number
-  modelCalls: number
-  toolRequests: number
-  toolRounds: number
-}
-export const DEFAULT_RUN_LIMITS: Readonly<RunLimits> = Object.freeze({
-  approvalMs: 300_000,
-  cleanupMs: 5000,
-  elapsedMs: 600_000,
-  mcpServers: 16,
-  mcpStartupMs: 30_000,
-  modelCalls: 6,
-  toolRequests: 32,
-  toolRounds: 5,
-})
+export {DEFAULT_RUN_LIMITS} from './limits.js'
+export type {RunLimits} from './limits.js'
+
 export type RunOutcome = 'budget-exceeded' | 'cancelled' | 'completed' | 'failed' | 'incomplete'
 export type RunPhase = 'awaiting-approval' | 'finalizing' | 'initializing' | 'running' | 'stopping' | 'terminal'
 export interface OperationOutcome {
@@ -73,6 +58,7 @@ export interface ApprovalReply {
 export interface RunSnapshot {
   approvals: ApprovalRequest[]
   budget: {modelCalls: number; toolRequests: number; toolRounds: number}
+  limits?: RunLimits
   phase: RunPhase
   projectContext?: {digest: string; entryIds: string[]; projectId: string; tokens: number}
   quarantined: boolean
@@ -101,6 +87,8 @@ export class RunExecutionError extends Error {
   }
 }
 export class RunStoppedError extends Error {}
+/** Contains only application-owned recovery guidance, never provider error text. */
+export class RunContinuationError extends Error {}
 export class ExecutionRequestError extends Error {}
 /** This owning call rejected before creating a new Run. Not evidence about other calls. */
 export class RunAdmissionRejectedError extends ExecutionRequestError {}
@@ -134,6 +122,7 @@ interface ApprovalState {
 export class RunContext {
   readonly approvals = new Map<string, ApprovalState>()
   readonly budget = {modelCalls: 0, toolRequests: 0, toolRounds: 0}
+  budgetExhaustion?: BudgetExhaustion
   cleanupDeadline?: number
   readonly cleanupErrors: string[] = []
   readonly controller = new AbortController()
@@ -170,7 +159,10 @@ export class RunContext {
     this.stopped = new Promise((resolve) => {
       this.resolveStop = resolve
     })
-    this.timer = setTimeout(() => this.requestStop('budget-exceeded'), Math.max(0, this.remaining()))
+    this.timer = setTimeout(
+      () => this.exhaust('elapsedMs', Math.ceil(this.elapsed()), 0),
+      Math.max(0, this.remaining()),
+    )
   }
 
   get signal(): AbortSignal {
@@ -260,7 +252,7 @@ export class RunContext {
   }
 
   check(): void {
-    if (this.remaining() <= 0 && !this.stopReason) this.requestStop('budget-exceeded')
+    if (this.remaining() <= 0 && !this.stopReason) this.exhaust('elapsedMs', Math.ceil(this.elapsed()), 0)
     if (this.stopReason || this.result) throw new RunStoppedError(this.stopReason ?? 'already-terminal')
   }
 
@@ -271,7 +263,7 @@ export class RunContext {
   consume(kind: keyof RunContext['budget'], count = 1): void {
     this.check()
     if (this.budget[kind] + count > this.limits[kind]) {
-      this.requestStop('budget-exceeded')
+      this.exhaust(kind, this.budget[kind], count)
       throw new RunStoppedError('budget-exceeded')
     }
 
@@ -290,6 +282,12 @@ export class RunContext {
     } catch {
       /* Optional observers cannot break execution. */
     }
+  }
+
+  exhaust(limitName: keyof RunLimits, consumed: number, requested: number, limit = this.limits[limitName]): void {
+    if (this.stopReason || this.result) return
+    this.budgetExhaustion = {consumed, limit, limitName, requested}
+    this.requestStop('budget-exceeded')
   }
 
   async ready(catalog: unknown, transcriptHighWater?: number): Promise<void> {
@@ -419,6 +417,7 @@ export class RunContext {
         : {}),
       ...projectContextSummary(this.journal.records(), this.id),
       budget: this.budget,
+      limits: this.limits,
       phase: this.phase,
       quarantined: Boolean(this.result) && !this.released,
       ...(this.result ? {result: this.result} : {}),
@@ -564,9 +563,7 @@ export class RunSupervisor {
     try {
       if (options.journalVersion === 3 && !options.prepareProjectContext)
         throw new Error('Journal v3 requires Project context preparation')
-      for (const [name, value] of Object.entries(limits))
-        if (!Number.isSafeInteger(value) || (name.endsWith('Ms') ? value <= 0 : value < 0))
-          throw new Error(`Invalid run limit: ${name}`)
+      parseRunLimits(limits)
       const opening = options.journal()
       try {
         journal = await until(opening, startedAt + limits.elapsedMs)
@@ -697,6 +694,7 @@ export class RunSupervisor {
     let declaredFailure = false
     let synchronized: unknown
     let cleanupStarted = false
+    let continuationFailure = false
     try {
       setValue(
         await context.wait(
@@ -708,6 +706,7 @@ export class RunSupervisor {
         ),
       )
     } catch (error) {
+      continuationFailure = error instanceof RunContinuationError
       reason = error instanceof Error ? error.message : 'execution-failed'
       if (error instanceof GraphDeclaredFailure) declaredFailure = true
       else context.requestStop(context.stopReason ?? 'runtime-failed')
@@ -759,7 +758,12 @@ export class RunSupervisor {
                   ? 'failed'
                   : 'completed',
       quiescence: unresolved.length === 0 && !context.operations.some((operation) => operation.status === 'unknown'),
-      reason: context.stopReason ?? reason,
+      reason:
+        context.budgetExhaustion && context.stopReason === 'budget-exceeded'
+          ? budgetReason(context.budgetExhaustion)
+          : continuationFailure && context.stopReason === 'runtime-failed'
+            ? reason
+            : (context.stopReason ?? reason),
       recording: {
         level: context.journal.level,
         mode: context.journal.mode,
@@ -899,6 +903,7 @@ export function recoveredRunSnapshot(
     ...projectContextSummary(run, id),
     approvals: [],
     budget: {modelCalls: 0, toolRequests: 0, toolRounds: 0},
+    limits: run.find((entry) => entry.kind === 'run-admitted')?.data.limits as unknown as RunLimits | undefined,
     phase: 'terminal',
     quarantined: !result.quiescence && !settled,
     result,

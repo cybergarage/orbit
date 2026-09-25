@@ -64,6 +64,7 @@ export interface ThreadMessage {
 export interface ThreadSnapshot {
   createdAt: string
   cwd: string
+  executionLimits?: import('./execution/limits.js').RunLimits
   file?: string
   id: string
   messages: ThreadMessage[]
@@ -154,6 +155,7 @@ export type ThreadEventHandler = (event: ThreadEvent) => void
 
 export interface ThreadAgent {
   close(): Promise<void>
+  getExecutionLimits?(): import('./execution/limits.js').RunLimits
   getGraphSnapshot?(id: string): GraphSnapshot | undefined
   getRun?(id: string): RunSnapshot | undefined
   /** Records new messages into its configured session and runs one turn. */
@@ -196,6 +198,8 @@ import type {WorkflowExpectation, WorkflowSubmission} from './selection/binding.
 import {parseWorkflowSubmission} from './selection/binding.js'
 
 export interface ThreadRunOptions {
+  continueFromRunId?: string
+  limits?: AgentInvokeOptions['limits']
   memory?: ProjectMemorySelection
   requestId?: string
   selection?: WorkflowSubmission
@@ -512,6 +516,8 @@ export class ThreadManager {
       thread.updatedAt = userMessage.timestamp
 
       const invokeOptions: Partial<AgentInvokeOptions> = {
+        continueFromRunId: options.continueFromRunId,
+        limits: options.limits,
         onEvent: (event) => this.handleAgentEvent(thread, run.id, event),
         onRunSnapshot: this.onRunSnapshot,
         requestId: options.requestId ?? run.id,
@@ -692,6 +698,7 @@ export class ThreadManager {
   private snapshot(thread: ManagedThread): ThreadSnapshot {
     const metadata = thread.session.getMetadata()
     return {
+      ...(thread.agent.getExecutionLimits ? {executionLimits: thread.agent.getExecutionLimits()} : {}),
       createdAt: thread.createdAt,
       cwd: metadata.cwd,
       ...(thread.session.getFile() === undefined ? {} : {file: thread.session.getFile()}),

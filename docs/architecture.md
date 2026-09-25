@@ -92,6 +92,14 @@ invocation performs the following sequence:
    one terminal journal summary. Return an immutable `RunResult`; uncertainty
    produces `incomplete` and retains affected resources for reconciliation.
 
+`execution/limits.ts` defines validated defaults and structured exhaustion decoding.
+Workspace, Agent and submission overrides feed the same Run limits. Agent records
+error results for batches stopped before dispatch. `session/budget-continuation.ts`
+checks explicit continuation and can append verified legacy nondispatch notices
+under the new Run's writer ownership. GUI/application surfaces expose limits,
+restore saved status and submit a new request with the previous Run ID; they do not
+replay operations or rewrite terminal results.
+
 `src/core/execution/` owns lifecycle, authorization, required storage and
 recovery. ThreadManager and application surfaces project its snapshots. Model
 iterations are sequential. Managed read/list/grep/glob calls may be batched;

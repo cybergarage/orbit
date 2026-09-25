@@ -129,10 +129,10 @@ describe('cross-contract execution races', () => {
       expect((await handle.finished).outcome).equal('budget-exceeded')
       expect(DEFAULT_RUN_LIMITS).includes({
         cleanupMs: 5000,
-        elapsedMs: 600_000,
-        modelCalls: 6,
-        toolRequests: 32,
-        toolRounds: 5,
+        elapsedMs: 3_600_000,
+        modelCalls: 101,
+        toolRequests: 1000,
+        toolRounds: 100,
       })
     } finally {
       clock.restore()
