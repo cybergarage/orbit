@@ -10,6 +10,7 @@ are not distributed with the repository.
 
 Use Node.js 22.16 or newer for the E2E host scripts, npm dependencies installed
 with `npm ci`, Docker Desktop running Linux containers, and Ollama on the Mac.
+`test:e2e:unit` also needs a local `python3` executable for the test-wrapper checks.
 The agent image uses pinned Node.js 22; the Orbit package's minimum Node version
 is unchanged. No cloud credentials or existing Orbit sessions are needed.
 
@@ -352,3 +353,13 @@ quality separately; a budget stop does not make a resolved patch unresolved.
 One attempt per condition is diagnostic evidence, not a model ranking or a
 statistically established improvement. Historical runs with different dependency
 images cannot isolate the effect of the new prompt.
+
+Verify preflight rejection and independent quality classification without model
+inference (requires the rebuilt Verified Docker image):
+
+```sh
+ORBIT_E2E_IMAGE=orbit-e2e:verified-improved npm run test:e2e:verified-checks
+```
+
+These controls cover a missing source import, failing added and modified tests,
+a baseline failure, and preservation of unwanted files for review.
