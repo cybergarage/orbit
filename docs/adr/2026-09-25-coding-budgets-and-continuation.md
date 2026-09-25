@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-09-25
 decision-date: 2026-09-25
-implementation-status: not-started
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-09-25
+implementation-commits:
+  - 7612eaedee8d4fbe9ba5ecd03a75b875e31449c6
 superseded-by: []
 ---
 
@@ -100,10 +101,22 @@ Retain finite Orbit limits rather than claiming unbounded service capacity.
 
 ## Implementation and Confirmation
 
-Implementation has not started. Require tests for more than five rounds, each
-counter, settings/API validation, budget-stop context continuity, conservative
-legacy recovery, immutable request replay, and GUI continuation controls. Run
-headers, build and complete tests sequentially; inspect formatter effects.
+Implemented in `7612eaedee8d4fbe9ba5ecd03a75b875e31449c6` and confirmed on
+2026-09-25. The accepted scope is complete: configurable defaults, exhaustion
+details, explicit continuation, verified append-only legacy recovery, GUI controls
+and restored saved-run status. Maintained execution, settings, GUI, integration,
+architecture and concept documentation describe the resulting behavior.
+
+`npm run headers:check`, `npm run build` and `npm test` passed sequentially;
+the complete suite passed 935 tests. Coverage includes more than five rounds,
+all three counters, settings/API validation, request identity, conservative
+legacy refusals, and a persistent application restart/continuation scenario that
+preserves the original transcript prefix. GUI component tests verify limit
+controls, status and eligibility. The existing MCP timeout assertion now follows
+the configured product default; test directories are isolated from other retained
+execution owners. Formatter changes, the final diff and documentation links were
+reviewed. No live provider task was used to benchmark the provisional limits.
+The reported user's original session was not modified during validation.
 
 ## Follow-up Work
 
