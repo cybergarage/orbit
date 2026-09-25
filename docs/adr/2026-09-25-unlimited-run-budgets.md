@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-09-25
 decision-date: 2026-09-25
-implementation-status: not-started
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-09-25
+implementation-commits:
+  - 16fd2501a1871570f03404286d329140ec5991e6
 superseded-by: []
 ---
 
@@ -97,12 +98,27 @@ numeric budgets rather than adopting either runtime wholesale.
 
 ## Implementation and Confirmation
 
-Implement the selected scope after acceptance. Confirm parser boundaries,
-execution beyond previous caps, finite exhaustion, cancellation and cleanup,
-unlimited admission without timer overflow, persisted numeric/unlimited reads,
-Graph/evaluation compatibility, settings/API exposure and GUI controls. Run
-headers, build and the complete test suite sequentially. Record the full
-implementation hash and actual evidence in a later finalization commit.
+Implemented in `16fd2501a1871570f03404286d329140ec5991e6` on 2026-09-25.
+The four aggregate defaults and public iteration options accept the JSON literal,
+with finite overrides preserved across settings, admission, Agent/Graph execution,
+persistence, evaluation and GUI controls. Unlimited admission remains cancellable;
+aborted pending admission is quarantined and a late journal open is closed.
+Maintained execution, settings, GUI, architecture and concept documents describe
+the current behavior and older-reader limitation.
+
+Confirmation on the implementation revision:
+
+- `npm run headers:check`, `npm run build` and `npm test` passed sequentially;
+  the complete suite passed 955 tests, including GUI loopback tests.
+- `npx tsc --project tsconfig.test.json --noEmit --pretty false` and
+  `git diff --check` passed.
+- Regression tests cover 110 Agent tool rounds, counters beyond 10,000 without
+  an aggregate timer, finite overrides, cancellation and shutdown, late admission
+  cleanup, numeric/unlimited transcript versions 1–3, Graph parent ceilings and
+  GUI unlimited/limited fields. Existing Graph and evaluation tests also passed.
+
+This confirms deterministic runtime behavior; it does not establish live model
+completion or multi-day endurance.
 
 ## Follow-up Work
 
