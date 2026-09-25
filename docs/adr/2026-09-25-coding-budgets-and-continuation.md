@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-25
-decision-date: null
+decision-date: 2026-09-25
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -117,3 +117,11 @@ outside scope. Preserve platform/fault-trial deferrals in earlier ADRs.
 - [Required journal](2026-09-07-required-execution-journal.md)
 - [Verified interrupted context](2026-09-14-verified-interrupted-tool-context.md)
 - [Execution](../execution.md), [GUI](../gui.md), [Settings](../settings.md)
+
+## Acceptance — 2026-09-25
+
+The author requested the researched changes be implemented. Review confirmed that
+finite configurable defaults, explicit continuation and a narrowly verified
+append-only legacy path address the reported failure without replaying commands
+or weakening operation authorization. This decision is accepted for that scope;
+implementation and validation evidence follow in a later commit.
