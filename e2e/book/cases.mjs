@@ -9,6 +9,17 @@ export const source = {
   revision: '4e9af157884ec4cfb64e464987dc8fd8e4d1007f',
 }
 export const caseIds = ['vibe', 'sdd', 'loop']
+
+// The book evaluation explicitly requests the model's advertised window on the
+// wire; a previous trial's loaded Ollama window must not become a hidden cap.
+export function bookContextWindow(metadata) {
+  const info = metadata.modelInfo
+  const architecture = info?.['general.architecture']
+  const window = typeof architecture === 'string' ? info[`${architecture}.context_length`] : undefined
+  if (!Number.isSafeInteger(window) || window <= 0) throw new Error(`Unknown model context capacity: ${metadata.model}`)
+  return window
+}
+
 const root = import.meta.dirname
 const read = (name) => fs.readFile(path.join(root, name), 'utf8')
 

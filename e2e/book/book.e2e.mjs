@@ -7,7 +7,7 @@ import path from 'node:path'
 // Set before dynamically importing host.mjs, which resolves its image at import.
 process.env.ORBIT_E2E_IMAGE ??= 'orbit-e2e:book-agent'
 const {command, docker, image, ollamaMetadata, repo, runAgent, writeJSON} = await import('../host.mjs')
-const {caseIds, checkFiles, makeCase, runtimePassed, source} = await import('./cases.mjs')
+const {bookContextWindow, caseIds, checkFiles, makeCase, runtimePassed, source} = await import('./cases.mjs')
 const {gradeBook} = await import('./grade.mjs')
 const {readElapsed, readRounds} = await import('../strategy.mjs')
 const selected = process.env.ORBIT_E2E_CASE ? [process.env.ORBIT_E2E_CASE] : caseIds
@@ -20,6 +20,7 @@ const rounds = readRounds(process.env.ORBIT_E2E_ROUNDS, 'unlimited')
 const timeoutMs = readElapsed(process.env.ORBIT_BOOK_ELAPSED_MS, 'unlimited')
 const root = path.join(repo, 'tmp/e2e/runs', new Date().toISOString().replaceAll(':', '-') + '-book')
 const results = []
+const contextWindows = new Map()
 
 describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)', function () {
   this.timeout(0)
@@ -27,7 +28,14 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
   before(async () => {
     await fs.mkdir(root, {recursive: true})
     const metadata = []
-    for (const model of models) metadata.push(await ollamaMetadata(model))
+    for (const model of models) {
+      const info = await ollamaMetadata(model)
+      const contextWindow = bookContextWindow(info)
+      contextWindows.set(model, contextWindow)
+      metadata.push({...info, requestedContextWindow: contextWindow})
+      console.log(`Model context: ${model} = ${contextWindow} tokens (review and implementation)`)
+    }
+
     await writeJSON(path.join(root, 'environment.json'), {
       agentImage: JSON.parse((await docker(['image', 'inspect', image])).stdout)[0].Id,
       graderImage: JSON.parse(
@@ -56,6 +64,7 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
                 directory: path.join(directory, 'review'),
                 files: c.files,
                 model,
+                numCtx: contextWindows.get(model),
                 prompt: c.prompt,
                 rounds,
                 strategy: 'book-sdd-review-v1',
@@ -77,7 +86,7 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
               directory: path.join(directory, 'implementation'),
               files: c.files,
               model,
-              numCtx: 32_768,
+              numCtx: contextWindows.get(model),
               prompt,
               rounds,
               strategy: `book-${id}-v1`,

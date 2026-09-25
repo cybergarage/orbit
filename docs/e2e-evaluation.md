@@ -401,7 +401,13 @@ with `ornith-1.5:9b`, run serially. Existing small-case defaults are unchanged.
 `ORBIT_E2E_ROUNDS` (default `unlimited`) select the matrix.
 `ORBIT_BOOK_ELAPSED_MS` defaults to `unlimited`; a positive millisecond value
 restores a finite deadline. Both settings apply to SDD review and implementation.
-Implementation context remains 32768. Unlimited rounds also remove the derived
+Review and implementation explicitly request the model context window discovered
+from Ollama `/api/show` metadata. There is no fixed 16K/32K book ceiling and no
+fallback for unknown capacity. The requested window is recorded in
+`environment.json` and each phase's `input/config.json`; the worker resolves it
+against provider capacity and records `output/context-policy.json`. The larger
+runtime allocation must fit the local Ollama host; a load failure is reported
+rather than silently reducing the window. Unlimited rounds also remove the derived
 model-call and tool-request ceilings; unlimited elapsed time disables the host
 execution timer. Cleanup, grader and container resource limits remain finite.
 Full diagnostic payload capture lasts at most 24 hours for an unlimited trial;

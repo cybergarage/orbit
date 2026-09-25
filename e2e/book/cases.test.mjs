@@ -6,9 +6,30 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import {caseIds, checkFiles, makeCase, runtimePassed} from './cases.mjs'
+import {bookContextWindow, caseIds, checkFiles, makeCase, runtimePassed} from './cases.mjs'
 
 describe('Book workflow fixtures (no inference or Docker)', () => {
+  it('uses discovered model capacity without a fixed book context ceiling', () => {
+    for (const window of [8192, 262_144, 1_048_576])
+      expect(
+        bookContextWindow({
+          model: 'fixture',
+          modelInfo: {'fixture.context_length': window, 'general.architecture': 'fixture'},
+        }),
+      ).to.equal(window)
+  })
+
+  it('rejects unknown or invalid capacity instead of silently using a fixed window', () => {
+    for (const window of [undefined, null, 0, -1, 1.5, '262144'])
+      expect(() =>
+        bookContextWindow({
+          model: 'fixture',
+          modelInfo: {'fixture.context_length': window, 'general.architecture': 'fixture'},
+        }),
+      ).to.throw('Unknown model context capacity')
+    expect(() => bookContextWindow({model: 'fixture'})).to.throw('Unknown model context capacity')
+  })
+
   it('preserves every vendored file at its recorded source hash', async () => {
     const manifest = JSON.parse(await fs.readFile(new URL('source.json', import.meta.url), 'utf8'))
     for (const [name, record] of Object.entries(manifest.files)) {

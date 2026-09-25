@@ -112,6 +112,7 @@ export async function ollamaMetadata(model) {
     details: show.details,
     digest: installed.digest,
     model,
+    modelInfo: show.model_info,
     ollama: await call('/api/version'),
     parameters: show.parameters,
     size: installed.size,
