@@ -8,16 +8,20 @@ import path from 'node:path'
 import {normalizePatch} from './grading.mjs'
 import {activeContainers, command, digest, docker, image, ollamaMetadata, repo, runAgent, writeJSON} from './host.mjs'
 import {evaluationPrompt, readRounds} from './strategy.mjs'
+import {validateSWECase, verifyPreparedSWECase} from './swe-case.mjs'
 
 const strategy = process.env.ORBIT_E2E_STRATEGY ?? 'baseline'
 const rounds = readRounds(process.env.ORBIT_SWE_ROUNDS, 50)
-const root = path.join(repo, 'tmp/e2e/swe')
+const caseFile = process.env.ORBIT_SWE_CASE
+const selected = caseFile ? validateSWECase(JSON.parse(await fs.readFile(path.resolve(caseFile), 'utf8'))) : null
+const root = selected ? path.join(repo, 'tmp/e2e/verified', selected.instance_id) : path.join(repo, 'tmp/e2e/swe')
 const python = process.env.ORBIT_SWE_PYTHON ?? path.join(repo, 'tmp/e2e/venv/bin/python')
-const instanceId = 'sympy__sympy-20590'
+const instanceId = selected?.instance_id ?? 'sympy__sympy-20590'
 const harnessCommit = '726c5461e2ef52d83cf1ea2107870a8bb3328d57'
 const officialImage =
+  selected?.image ??
   'swebench/sweb.eval.x86_64.sympy_1776_sympy-20590@sha256:3a282752833ce34730ee0621e22033501c993f45742775ca57f04c9ff27178a0'
-const evalImage = 'orbit-swebench/sweb.eval.x86_64.sympy_1776_sympy-20590:fixed'
+const evalImage = `orbit-swebench/sweb.eval.x86_64.${instanceId.replaceAll('__', '_1776_')}:fixed`
 const [action, argument] = process.argv.slice(2)
 await fs.mkdir(root, {recursive: true})
 
@@ -148,6 +152,7 @@ switch (action) {
   }
 
   case 'prepare': {
+    if (selected) await writeJSON(path.join(root, 'dataset.json'), selected)
     await command(python, [path.join(repo, 'e2e/prepare-swe.py')], {
       cwd: root,
       log: path.join(root, 'prepare.log'),
@@ -166,6 +171,7 @@ switch (action) {
     )
       throw new Error('Verify the current dataset with the reference patch first')
     const [instance] = JSON.parse(await fs.readFile(path.join(root, 'instance.json'), 'utf8'))
+    verifyPreparedSWECase(instance, selected, instanceId)
     const model = argument ?? 'ornith-1.5:9b'
     const metadata = await ollamaMetadata(model)
     const directory = path.join(root, `solve-${model.replaceAll(':', '-')}-${randomUUID()}`)
@@ -225,6 +231,7 @@ switch (action) {
       config: run.config,
       dataset: gold.dataset,
       elapsedMs: run.elapsedMs,
+      harnessSha256: digest(await fs.readFile(new URL(import.meta.url))),
       imageId: JSON.parse((await docker(['image', 'inspect', image])).stdout)[0].Id,
       metadata,
       metrics: run.metrics,
@@ -234,6 +241,7 @@ switch (action) {
       sourceArchiveSha256: digest(await fs.readFile(archive)),
       usage: run.usage,
       usageComplete: run.usageComplete,
+      workingTree: (await command('git', ['status', '--short'])).stdout,
     })
     console.log(
       JSON.stringify({

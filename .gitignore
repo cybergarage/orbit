@@ -19,3 +19,10 @@ PROMPT.md
 /examples/agent/.agent
 /examples/agent/workspace
 *.tgz
+
+# Local evaluation artifacts (keep harness code and pinned cases tracked)
+/e2e/results/
+/e2e/result/
+
+# Machine-local agent settings
+/.claude/settings.local.json

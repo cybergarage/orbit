@@ -6,6 +6,7 @@ import {recoveryObserved} from './cases.mjs'
 import {gradeCase, normalizePatch} from './grading.mjs'
 import {command} from './host.mjs'
 import {evaluationPrompt, readRounds, summarizeEvents} from './strategy.mjs'
+import {validateSWECase, verifyPreparedSWECase} from './swe-case.mjs'
 
 const entry = (exitCode) => ({
   message: {
@@ -37,7 +38,8 @@ describe('E2E host control (no model or Docker)', () => {
     const metrics = summarizeEvents([
       {type: 'model.request.started'},
       {data: {durationMs: 7, providerMetadata: {evalDurationNs: 2_000_000}}, type: 'model.response.completed'},
-      failure, failure,
+      failure,
+      failure,
       {type: 'model.request.started'},
     ])
     expect(metrics.modelCallsStarted).to.equal(2)
@@ -86,5 +88,31 @@ describe('E2E host control (no model or Docker)', () => {
     const failure = await command(process.execPath, ['-e', 'process.exit(1)'], {allowFailure: true})
     expect(failure.timedOut).to.equal(false)
     expect(failure.code).to.equal(1)
+  })
+
+  describe('Pinned SWE case isolation', () => {
+    const selected = {
+      base_commit: 'b'.repeat(40),
+      dataset: 'princeton-nlp/SWE-bench_Verified',
+      image: 'swebench/sweb.eval.x86_64.owner_1776_repo-1@sha256:' + 'c'.repeat(64),
+      instance_id: 'owner__repo-1',
+      revision: 'a'.repeat(40),
+      split: 'test',
+    }
+
+    it('rejects mutable image tags and images for a different problem', () => {
+      expect(validateSWECase(selected)).to.equal(selected)
+      expect(() => validateSWECase({...selected, image: selected.image.split('@')[0] + ':latest'})).to.throw()
+      expect(() => validateSWECase({...selected, instance_id: 'owner__repo-2'})).to.throw()
+      expect(() => validateSWECase({...selected, revision: 'main'})).to.throw()
+    })
+
+    it('rejects prepared source from a different instance or base commit before solving', () => {
+      expect(() => verifyPreparedSWECase(selected, selected, selected.instance_id)).not.to.throw()
+      expect(() =>
+        verifyPreparedSWECase({...selected, base_commit: 'd'.repeat(40)}, selected, selected.instance_id),
+      ).to.throw()
+      expect(() => verifyPreparedSWECase(selected, selected, 'owner__repo-2')).to.throw()
+    })
   })
 })

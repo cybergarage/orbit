@@ -2,8 +2,9 @@
 
 This opt-in developer harness measures an Orbit coding agent using real Ollama
 inference. It is separate from deterministic `npm test`. It does not establish a
-SWE-bench leaderboard score. See [the recorded experiment](../e2e/results/2026-09-25.md)
-for local results, failures, model identities and limitations.
+SWE-bench leaderboard score. Local experiment records under `e2e/results/`
+contain outcomes, failures, model identities and limitations; these artifacts
+are not distributed with the repository.
 
 ## Prerequisites and small cases
 
@@ -122,7 +123,11 @@ events, copied artifacts, grader logs and incremental `summary.json`.
 `tmp/e2e/swe/` holds pinned dataset metadata, private reference material, official
 reports and predictions. **Do not mount this parent directory into the agent.**
 These ignored files are local evidence: preserve them separately for a machine
-handoff. Compact dated results live under `e2e/results/`.
+handoff. Compact dated reports, JSON summaries and generated prediction patches
+also remain local under ignored `e2e/results/`. Git tracks the harness, Dockerfiles,
+pinned case manifests and operating instructions, not execution artifacts.
+Copy results separately when sharing evidence or moving to another machine; a
+fresh clone does not contain historical reports or submitted patches.
 
 Read `grade.json` / summary status for final outcomes. `resolved` requires both a
 completed Run and independent success; `unresolved` includes incorrect work and
@@ -189,4 +194,59 @@ A repeated failed call is a diagnostic count, not proof of an unproductive loop:
 rerunning a failing test after a partial fix can be appropriate. Inspect tool
 names, edits and test outputs before attributing that count to failed recovery.
 
-The measured SWE configuration is the original prompt, 50 iterations and thinking disabled. It completed in 41 tool calls and passed official grading in one trial. This selects a useful evaluation default, not a universal optimal budget. See [the follow-up results](../e2e/results/2026-09-25-recovery.md) for the unsuccessful recovery-prompt trials as well.
+The measured SWE configuration is the original prompt, 50 iterations and thinking disabled. It completed in 41 tool calls and passed official grading in one trial. This selects a useful evaluation default, not a universal optimal budget. The local report `e2e/results/2026-09-25-recovery.md` also records the unsuccessful recovery-prompt trials, when those artifacts have been retained.
+
+## Three pinned Verified problems
+
+`e2e/swebench/*.json` contains a preselected three-repository diagnostic sample.
+Set `ORBIT_SWE_CASE` to one manifest to isolate its dataset, gold report, solver
+workspaces and official grading under `tmp/e2e/verified/<instance_id>`. Omitting
+it retains the existing Lite problem and its separate directory. A manifest
+must specify Verified's immutable revision/base commit and a matching official
+image digest; mutable tags and mismatched prepared instances are rejected.
+
+Use the existing pinned host Python harness from the setup above. Build the
+solver image once; its Python dependencies support the three selected source
+trees without including reference patches or grading data:
+
+```sh
+docker build -f e2e/VerifiedAgent.Dockerfile -t orbit-e2e:verified .
+export ORBIT_SWE_CASE=e2e/swebench/django__django-15731.json
+npm run eval:swebench -- prepare
+npm run eval:swebench -- gold
+ORBIT_E2E_IMAGE=orbit-e2e:verified ORBIT_E2E_STRATEGY=baseline ORBIT_SWE_ROUNDS=50 ORBIT_SWE_THINK=false caffeinate -i npm run eval:swebench -- solve ornith-1.5:9b
+# Use the predictions path printed by solve, keeping ORBIT_SWE_CASE unchanged:
+npm run eval:swebench -- grade <predictions.jsonl>
+```
+
+Repeat with `pytest-dev__pytest-10051.json` and
+`sphinx-doc__sphinx-10323.json`. Run serially to avoid inference contention.
+Do not replace a problem after seeing an unsuccessful solution. The original
+prompt, 50 iterations, 900-second Run budget, context 32768 and thinking disabled
+are retained. No product runtime defaults change. The solver uses a source
+snapshot and a generic Python environment, not the official per-problem test
+environment; local test setup failures must be distinguished from official
+patch grading failures. Record image ID and `pip freeze` alongside results,
+since transitive Python dependencies are not fully locked by the Dockerfile.
+
+Saved batch predictions are standard JSONL. The example below requires a locally
+retained or separately copied `e2e/results/2026-09-25-verified-predictions.jsonl`;
+it is not present in a fresh clone. To regrade one saved prediction
+through this single-instance wrapper, extract its row without changing the patch:
+
+```sh
+python3 - <<'PYTHON'
+import json
+from pathlib import Path
+root = Path('tmp/e2e/verified/replay')
+root.mkdir(parents=True, exist_ok=True)
+for line in Path('e2e/results/2026-09-25-verified-predictions.jsonl').read_text().splitlines():
+    row = json.loads(line)
+    (root / (row['instance_id'] + '.jsonl')).write_text(line + '\n')
+PYTHON
+ORBIT_SWE_CASE=e2e/swebench/django__django-15731.json npm run eval:swebench -- grade tmp/e2e/verified/replay/django__django-15731.jsonl
+```
+
+Prepare the matching dataset first on a new machine. Change both the manifest
+and JSONL filename to regrade the other two problems. A replay is a new grading
+run of the existing patch, not a new model attempt.
