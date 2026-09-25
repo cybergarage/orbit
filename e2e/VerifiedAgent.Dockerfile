@@ -14,4 +14,5 @@ ENV PATH="/opt/evaluation-python/bin:$PATH"
 ENV PYTHONPATH="/workspace:/workspace/src:/workspace/tests"
 ENV PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV SHELLOPTS=pipefail
 USER node

@@ -6,11 +6,33 @@ import path from 'node:path'
 
 import {repo} from './host.mjs'
 import {checkDeliverable} from './quality.mjs'
-import {preflightRepository} from './repository-checks.mjs'
+import {preflightRepository, repositoryChecks} from './repository-checks.mjs'
 
 // Real Docker, no model: fail deliberately to validate the evaluation path.
 describe('Verified preflight and quality controls', function () {
   this.timeout(300_000)
+
+  it('keeps a piped failure visible through the real Orbit Bash tool', async () => {
+    const directory = await fs.mkdtemp(path.join(repo, 'tmp/e2e/pipefail-control-'))
+    const workspace = path.join(directory, 'source')
+    await fs.mkdir(workspace)
+    const code = `import assert from 'node:assert/strict';
+      import {createBashTool} from '/opt/orbit/dist/core/tools/builtins/bash.js';
+      const tool = createBashTool();
+      for (const command of [
+        "python3 -c 'print(123); raise SystemExit(7)' | tail -1",
+        "orbit-test --tail 20 -- python3 -c 'print(123); raise SystemExit(7)'"
+      ]) {
+        const result = await tool.execute({command}, {cwd: '/workspace', emitUpdate() {}, signal: new AbortController().signal});
+        assert.equal(result.details.exitCode, 7); assert.equal(result.isError, true);
+      }`
+    const report = await repositoryChecks({
+      directory: path.join(directory, 'report'),
+      steps: [{argv: ['node', '--input-type=module', '-e', code], name: 'bash-failure-controls'}],
+      workspace,
+    })
+    expect(report.passed, JSON.stringify(report.steps)).to.equal(true)
+  })
 
   it('rejects installed packages when the target source is missing', async () => {
     const directory = await fs.mkdtemp(path.join(repo, 'tmp/e2e/preflight-control-'))

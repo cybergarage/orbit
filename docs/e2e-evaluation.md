@@ -315,7 +315,7 @@ The raw official patch remains unchanged even when quality checks fail.
 Inspect an earlier attempt without modifying its files:
 
 ```sh
-ORBIT_E2E_IMAGE=orbit-e2e:verified-improved node e2e/quality.mjs \
+ORBIT_E2E_IMAGE=orbit-e2e:verified-guarded node e2e/quality.mjs \
   e2e/swebench/sphinx-doc__sphinx-10323.json \
   tmp/e2e/verified/sphinx-doc__sphinx-10323/<attempt>/agent \
   tmp/e2e/quality-replay/<unique-run>
@@ -338,8 +338,8 @@ Orbit's product prompt and execution limits are unchanged.
 
 ```sh
 # Rebuild the local and SWE base images first, as above.
-docker build -f e2e/VerifiedAgent.Dockerfile -t orbit-e2e:verified-improved .
-ORBIT_E2E_IMAGE=orbit-e2e:verified-improved \
+docker build -f e2e/VerifiedAgent.Dockerfile -t orbit-e2e:verified-guarded .
+ORBIT_E2E_IMAGE=orbit-e2e:verified-guarded \
 ORBIT_E2E_STRATEGY=verified-focused-v1 \
 ORBIT_SWE_CASE=e2e/swebench/django__django-15731.json \
 ORBIT_SWE_ROUNDS=50 npm run eval:swebench -- solve ornith-1.5:9b
@@ -358,8 +358,18 @@ Verify preflight rejection and independent quality classification without model
 inference (requires the rebuilt Verified Docker image):
 
 ```sh
-ORBIT_E2E_IMAGE=orbit-e2e:verified-improved npm run test:e2e:verified-checks
+ORBIT_E2E_IMAGE=orbit-e2e:verified-guarded npm run test:e2e:verified-checks
 ```
 
 These controls cover a missing source import, failing added and modified tests,
 a baseline failure, and preservation of unwanted files for review.
+
+The current Verified image also exports `SHELLOPTS=pipefail`. This preserves a
+failing test's status through a trailing `| tail` even when the model ignores
+`orbit-test`. The Docker controls exercise both paths through Orbit's actual
+Bash implementation. This setting belongs only to the evaluation image; it does
+not change the product's shell defaults. A later successful command can still
+mask a shell-list failure, so the helper and independent quality checks remain
+necessary. Some pipelines such as `grep | head` can also return nonzero after
+SIGPIPE; examine the recorded output rather than treating every nonzero status
+as a repository test failure.
