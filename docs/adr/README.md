@@ -290,6 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                        |
 | ---------- | ---------- | -------------- | ----------------------------------------------------------------------------------------------- |
+| 2026-09-25 | proposed   | not-started    | [Unlimited Run Budgets](2026-09-25-unlimited-run-budgets.md) |
 | 2026-09-25 | accepted   | completed      | [Coding Budgets and Explicit Continuation](2026-09-25-coding-budgets-and-continuation.md)       |
 | 2026-09-24 | accepted   | completed      | [Local Agent Plugins Client](2026-09-24-agent-plugins-client.md)                                |
 | 2026-09-24 | accepted   | completed      | [Offline Storage Reset](2026-09-24-offline-storage-reset.md)                                    |
