@@ -192,6 +192,16 @@ describe('E2E host control (no model or Docker)', () => {
         workspace: initial,
       })
       expect(noTests.status).to.equal('not-measured')
+      const missing = await checkDeliverable({
+        directory: path.join(root, 'missing-report'),
+        initial,
+        repository: 'django/django',
+        workspace: path.join(root, 'absent'),
+      })
+      expect(missing.status).to.equal('environment-error')
+      expect(JSON.parse(await fs.readFile(path.join(root, 'missing-report/quality.json'), 'utf8')).error).to.include(
+        'ENOENT',
+      )
       await fs.mkdir(path.join(workspace, 'tests'), {recursive: true})
       await fs.writeFile(path.join(workspace, 'tests/test_added.py'), 'assert False')
       await fs.mkdir(path.join(workspace, '.pytest_cache'))

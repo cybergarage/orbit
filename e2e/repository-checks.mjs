@@ -83,7 +83,7 @@ export async function preflightRepository({directory, repository, workspace}) {
   const profile = repositoryProfile(repository)
   const code =
     'import importlib,json,pathlib,sys; paths={n:str(pathlib.Path(importlib.import_module(n).__file__).resolve()) for n in sys.argv[1:]}; print(json.dumps(paths)); assert all(p.startswith("/workspace/") for p in paths.values()), "Imported installed package instead of target source"'
-  return repositoryChecks({
+  const report = await repositoryChecks({
     directory,
     steps: [
       {argv: ['python3', '-c', code, ...profile.modules], name: 'source-imports'},
@@ -92,6 +92,9 @@ export async function preflightRepository({directory, repository, workspace}) {
     ],
     workspace,
   })
+  report.status = report.passed ? 'passed' : 'environment-error'
+  await writeJSON(path.join(directory, 'report.json'), report)
+  return report
 }
 
 // A Git source archive omits setuptools-scm's generated version module.

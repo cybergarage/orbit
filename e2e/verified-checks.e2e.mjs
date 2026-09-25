@@ -22,6 +22,7 @@ describe('Verified preflight and quality controls', function () {
       workspace,
     })
     expect(report.passed).to.equal(false)
+    expect(report.status).to.equal('environment-error')
     expect(report.steps).to.have.length(1)
     expect(report.steps[0].stderr).to.include('Imported installed package instead of target source')
   })

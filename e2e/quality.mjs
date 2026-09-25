@@ -61,8 +61,7 @@ export function testCommand(repository, file) {
   return ['python3', '-m', 'pytest', '-p', 'no:cacheprovider', file, '-q']
 }
 
-export async function checkDeliverable({directory, initial, repository, version, workspace}) {
-  await fs.mkdir(directory, {recursive: true})
+async function measureDeliverable({directory, initial, repository, version, workspace}) {
   const changes = await inspectDeliverable(initial, workspace, repository)
   const issues = changes.filter(
     (change) => change.unwanted || change.kind !== 'file' || (change.isTest && change.status === 'deleted'),
@@ -118,6 +117,23 @@ export async function checkDeliverable({directory, initial, repository, version,
     report.status = 'environment-error'
   await writeJSON(path.join(directory, 'quality.json'), report)
   return report
+}
+
+export async function checkDeliverable(options) {
+  await fs.mkdir(options.directory, {recursive: true})
+  try {
+    return await measureDeliverable(options)
+  } catch (error) {
+    const report = {
+      error: String(error),
+      issues: [],
+      officialScore: 'independent',
+      status: 'environment-error',
+      tests: [],
+    }
+    await writeJSON(path.join(options.directory, 'quality.json'), report)
+    return report
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
