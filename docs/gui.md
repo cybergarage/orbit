@@ -1,10 +1,9 @@
 # Local GUI
 
 Orbit includes a local web interface for inspecting and running durable agent
-sessions. The initial interface deliberately excludes project management and
-focuses on three areas:
+sessions. The interface has three areas:
 
-- a left sidebar with **New Chat** and sessions from `~/.orbit/sessions/`;
+- a left sidebar with **New Chat**, a **Project** tree, and **Recent** sessions;
 - a center conversation pane with message history, a prompt composer, and run
   cancellation;
 - an optional log pane scoped to the selected session.
@@ -45,19 +44,23 @@ active runs and closes agents, MCP clients, session recorders, and log writers.
 ## Sessions and runs
 
 New Chat immediately creates a durable JSONL session under
-`~/.orbit/sessions/`. Recent sessions are listed newest first. Selecting one
+`~/.orbit/sessions/`. The top-level action creates an unassigned session.
+Recent lists unassigned sessions newest first; project conversations appear
+under their Project. Hosts without a project catalog list all sessions in Recent. Selecting one
 resumes its stored working directory, provider, model, system prompt, and
 conversation unless the caller explicitly supplies an override through the
 application API.
 
-Right-click a Recent session and choose **Delete session…** to permanently
+Right-click a session and choose **Delete session…** to permanently
 remove it after confirmation. Deleting the selected session clears the
 conversation and log pane. Active or quarantined sessions cannot be deleted. Orbit acknowledges a minimal
 deletion marker, removes logs, transcript and journal/key, then retains a
 completed marker to prevent reuse of the session ID. Partial deletion can be
 retried. See [Managed Execution](execution.md#recording-and-recovery).
 
-The same context menu provides **Copy session ID** and **Session details…**.
+The same context menu provides **Copy session ID**, **Session details…**, and,
+on project-enabled hosts, **Move to project…**. Each sidebar row exposes its
+actions through a **…** button on hover or keyboard focus.
 The selected conversation's top-bar **Session actions** button exposes the same
 commands for keyboard and pointer users without requiring right-click.
 **Copy session ID** writes the complete durable ID to the clipboard and confirms

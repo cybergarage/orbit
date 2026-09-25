@@ -10,28 +10,48 @@ qualification limits.
 
 ## GUI workflow
 
-Start `orbit gui` after building. Choose **Unassigned** or a Project in the
-sidebar. Under **Project settings**, enter a name and an optional absolute
-working directory, then choose **Create project**. A blank directory uses the
-GUI's startup directory. Two Projects may use the same directory.
+Start `orbit gui` after building. The sidebar orders **New Chat**, **Project**,
+and **Recent**. The top-level **New Chat** creates an unassigned conversation;
+**Recent** lists unassigned conversations newest first without duplicating
+conversations shown under Projects.
 
-**New Chat** in a Project creates a separate persisted conversation. Its cwd,
-workspace settings, context files and Skill catalog are resolved for that thread.
-Changing Project navigation leaves existing runs associated with their original
-threads. Resume retains the saved cwd and model. Changing a Project's default
-directory affects only future conversations.
+The **+** beside **Project** opens a creation dialog with a name and an optional
+absolute working directory. A blank directory uses the GUI's startup directory.
+Two Projects may use the same directory. Click a Project row to expand or
+collapse its conversations without changing the conversation currently open.
+Each expanded Project has its own paginated list and **Show more** action.
+Failed lists display a retry action rather than appearing empty.
 
-Use **Save changes** to rename or change the default directory. **Archive** hides
-the Project from the active list and blocks new Project work; existing runs finish.
-Select **Archived projects** to inspect or unarchive it. There is no hard Project
-deletion operation.
+Hover over a Project, or focus it with the keyboard, to expose its **New Chat**
+icon. This creates a separate persisted conversation in that Project and opens
+it in the conversation pane. Its cwd, workspace settings, context files and
+Skill catalog are resolved for that thread. Resume retains the saved cwd and
+model. Changing Project navigation leaves existing runs associated with their
+original threads.
 
-Open an idle conversation and expand **Move conversation** to attach it, move it,
-or return it to Unassigned. Its historical messages and recorded cwd remain.
-Source-derived memory rows in the old Project are retired instead of copied.
-Active or quarantined conversations cannot be moved. Missing/deleted sources are
-shown as unavailable. A creation reservation interrupted before membership commit
-is labeled incomplete under Unassigned, and cannot start a run until reconciled.
+Right-click a Project, or select its **…** button, for **New Chat**,
+**Project settings…**, and **Archive project**. Settings edit the name and default
+directory; changing the directory affects only future conversations. Archive
+hides the Project from the active list and blocks new Project work; existing
+runs finish. The **Project** heading's **…** menu switches between active and
+archived Projects. Archived Projects offer **Unarchive project**. There is no
+hard Project deletion operation.
+
+Right-click any conversation, or use its **…** button, and choose
+**Move to project…**. Select an active Project or **Unassigned** to attach, move,
+or detach that conversation. The action targets the selected menu row, even
+when another conversation is open. Moving the open conversation preserves its
+visible history and reopens its idle host thread for continued use. Its historical
+messages and recorded cwd remain. Source-derived memory rows in the old Project
+are retired instead of copied. Active or quarantined conversations cannot be
+moved. Missing/deleted sources are shown as unavailable. A creation reservation
+interrupted before membership commit is labeled incomplete under Recent and
+cannot start a run until reconciled; its retry action retains the original
+creation operation ID.
+
+Menus support arrow-key navigation and Escape. Settings and movement dialogs
+support keyboard focus traversal and Escape; pending writes prevent duplicate
+submission. Membership changes retain revision checks and retry operation IDs.
 
 ## Application integration
 

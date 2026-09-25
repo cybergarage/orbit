@@ -30,7 +30,10 @@ reservations, curated memory rows and idempotent operation results separately
 from transcripts. `ProjectService` coordinates registered session writers with
 those transactions; `OrbitApplicationService.createProjectThread` resolves a
 separate workspace runtime before publishing a committed thread. GUI routes and
-sidebar controls use that service. `ProjectMemoryService` validates registered sources and captures bounded context.
+sidebar controls use that service. The GUI sidebar component owns navigation
+menus and dialogs; its list model maintains independent Project/Recent pages
+and rejects stale responses without changing the selected conversation.
+`ProjectMemoryService` validates registered sources and captures bounded context.
 Managed Agent/Graph runs acknowledge a journal-v3 `project-context` record before
 effects and add its fixed user-role prefix to prepared requests, separately from
 canonical history and compaction. GUI memory controls expose edits, selection,
