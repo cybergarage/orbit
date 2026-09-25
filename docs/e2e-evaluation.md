@@ -456,3 +456,9 @@ a budget stop remains unresolved even if some artifacts work. Adding these
 cases does not establish successful model results; run and retain the matrix
 before making claims about workflow effectiveness. These test-local additions
 change no Orbit product APIs or runtime policies.
+
+Book workers derive an enabled context budget from model metadata and their
+configured `num_ctx`, recording `output/context-policy.json`. Completed tool
+rounds can be compacted during a single long task; original user inputs and the
+newest complete round remain verbatim. This is independent of unlimited Run
+budgets and does not increase the selected Ollama context window.

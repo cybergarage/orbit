@@ -185,6 +185,7 @@ export type {
 } from './processor/index.js'
 export * from './projects/index.js'
 export * from './selection/index.js'
+export {createModelContextPolicy} from './session/context-policy.js'
 export {
   createSessionInformation,
   encodeSessionEntry,

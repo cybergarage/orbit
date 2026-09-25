@@ -78,7 +78,8 @@ Ollama receives the resolved window and the prepared output cap on the wire.
 
 Disabled budgeting remains disabled and ordinary unbudgeted invocations do not
 perform metadata discovery. Discovery does not change transcript formats, enable
-within-turn compaction, or repair truncated output. Transport wrappers must not
+budgeting, or repair truncated output. Budgeted preparation supports within-turn
+compaction as described in the [input budget guide](context-compaction.md). Transport wrappers must not
 overwrite prepared `num_ctx` or `num_predict` after accounting; the E2E wrapper
 now exposes its configured context and lets prepared values take precedence.
 

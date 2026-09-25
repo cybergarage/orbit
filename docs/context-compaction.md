@@ -71,12 +71,23 @@ without `prepare` is rejected. Direct Model calls are not managed Agent runs.
 
 ## What remains in context
 
-Trusted instructions remain outside the summary. The latest user turn and its
-tool calls/results remain intact. Only older complete user turns can be replaced
-in input. Missing, duplicate or mismatched tool results refuse budgeted calls;
-a checkpoint never invents an operation result or approval. A single oversized
-latest turn stops even when older context was compacted. Split-turn and recursive
-chunk summarization are not implemented.
+Trusted instructions remain outside the summary. Original user inputs for the
+active Run remain verbatim, including multiple initial inputs and Graph stage
+inputs. Older turns are compacted first when that leaves enough room. Otherwise,
+completed tool rounds within the active turn can be summarized while the newest
+complete round remains verbatim. No call/result group may cross the boundary.
+Missing, duplicate or mismatched results refuse preparation. Canonical history
+is never deleted or overwritten, and a checkpoint is not permission to retry tools.
+A single oversized protected input, newest tool group, or summary source still
+stops safely; chunked summarization is not implemented.
+
+Within-turn checkpoints use projection version 3 and retain original user IDs.
+Save/reopen validation checks those references, exact current-Run user retention,
+source digests, linear history and complete tool groups on both sides. Existing
+projection versions 1 and 2 remain readable. Older Orbit binaries cannot read
+new projection-version-3 checkpoints, even in transcript v2; upgrade readers
+before enabling this feature. Verified interruption still requires transcript v3
+and the existing proof/synchronization contract.
 
 The summarizer is the configured Agent model, called without tools. It consumes
 the same Run's model-call allowance and obeys its cancellation, deadline and
@@ -203,3 +214,17 @@ context-window, content-filter, refusal and pause stops produce a typed
 same gate, even when a truncated response happens to contain valid JSON.
 Raw provider diagnostics remain available when enabled. A custom Model without
 termination metadata retains compatibility; it owns truthful completion signaling.
+
+## Capacity-derived profiles
+
+`await createModelContextPolicy(model, options)` returns a budgeted policy using
+provider metadata and runtime capacity. It fails if capacity is unknown. Defaults
+reserve up to 4096 output tokens (bounded by the model limit and one quarter of
+the window), 5% safety margin, and up to 2048 summary output tokens. Compaction
+starts at 65% of the remaining input budget and targets 40%. These are Orbit
+policy ratios, not claims that providers publish compaction thresholds. Options
+can set contextWindow, outputReserve, safetyMargin and cancellation signal.
+
+The book E2E worker uses this helper and saves its resolved profile in
+`output/context-policy.json`. Existing applications still opt into budgeting;
+existing v1 transcripts require explicit migration as described above.

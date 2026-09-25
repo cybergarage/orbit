@@ -225,3 +225,10 @@ application accounting ceiling. It is distinct from the model's declared maximum
 and from remaining input space after output reservation. Unknown capacity is not
 unlimited. See [Model context capacity](../model-context-capacity.md) for current
 provider discovery and budgeted preparation.
+
+### Retained current-turn instructions
+
+Original user messages from an active Run that remain verbatim when older tool
+rounds are summarized. They remain distinct from an untrusted checkpoint summary
+and from tool-operation permission. Current implementation uses validated user
+references in projection-version-3 checkpoints; see [Input budgets](../context-compaction.md).

@@ -288,3 +288,8 @@ and the exact-ID OpenAI specification catalog. Budgeted session preparation uses
 these limits before building requests and pins Ollama context on the wire.
 Unknown capacity remains explicit; disabled budgeting does not perform discovery.
 See [Model context capacity](model-context-capacity.md) for the public contract.
+
+Budgeted context preparation can compact completed rounds within an active Run.
+Projection-version-3 checkpoints retain exact current-Run user references and
+validate tool-group boundaries on save/reopen. Provider termination is checked
+before assistant history append or tool dispatch. See [Input budgets](context-compaction.md).

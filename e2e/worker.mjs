@@ -5,7 +5,15 @@ import fs from 'node:fs'
 import {Ollama} from 'ollama'
 
 import {OllamaAgent} from '../dist/core/models/adapters/ollama.js'
-import {Agent, DiagnosticEventBus, MemorySessionLogStore, Message, Session, State} from '../dist/index.js'
+import {
+  Agent,
+  createModelContextPolicy,
+  DiagnosticEventBus,
+  MemorySessionLogStore,
+  Message,
+  Session,
+  State,
+} from '../dist/index.js'
 
 const config = JSON.parse(fs.readFileSync('/input/config.json', 'utf8'))
 fs.cpSync('/fixture', '/workspace', {recursive: true, verbatimSymlinks: true})
@@ -33,7 +41,12 @@ const model = new OllamaAgent(
   {getContextWindow: () => config.options.num_ctx, getName: () => 'ollama'},
   {client},
 )
+const contextPolicy = config.strategy.startsWith('book-')
+  ? await createModelContextPolicy(model, {outputReserve: config.options.num_predict})
+  : undefined
+if (contextPolicy) fs.writeFileSync('/output/context-policy.json', JSON.stringify(contextPolicy, null, 2))
 const agent = new Agent({
+  contextPolicy,
   cwd: '/workspace',
   deps: {createModel: () => model},
   diagnostics,

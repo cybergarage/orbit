@@ -15,7 +15,14 @@ import {getToolCalls} from '../models/adapters/tools.js'
 import {resolveModelContextCapacity} from '../models/context-capacity.js'
 import {assertCompleteModelResponse} from '../models/termination.js'
 import {GptTokenizer} from '../tokenizer/index.js'
-import {persistedContextMessage, sourceDigest, validateSummary, validateToolGroups} from './compaction.js'
+import {
+  checkpointPrefix,
+  currentTurnUsers,
+  persistedContextMessage,
+  sourceDigest,
+  validateSummary,
+  validateToolGroups,
+} from './compaction.js'
 import {SessionContextBuilder} from './context-builder.js'
 
 export interface ContextProfile {
@@ -200,34 +207,54 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
     run.operations.some((operation) => operation.status === 'unknown')
   )
     throw new ContextBudgetError('unresolved-execution-prevents-compaction')
-  const protectedEntry = currentGraphVisit(run)
-    ? session.getEntries().find((entry) => entry.type === 'message' && entry.turnId === run.id)
-    : undefined
-  const cut =
+  const protectedEntry = session.getEntries().find((entry) => entry.type === 'message' && entry.turnId === run.id)
+  let cut =
     protectedEntry?.type === 'message'
       ? all.findIndex((message) => message.id === protectedEntry.message.id)
       : all.map((message) => message.type).lastIndexOf(MessageType.User)
   if (currentGraphVisit(run) && cut < 0) throw new ContextBudgetError('missing-protected-graph-turn')
   const previous = session.getCompaction()
   const previousCut = previous ? all.findIndex((message) => message.id === previous.firstRetainedId) : 0
-  const protectedRequest = prepareRequest(options, [
-    ...options.prefix,
-    ...(options.verifiedContext?.notices ?? []),
-    ...all.slice(Math.max(0, cut)),
-  ])
-  if (checkedEstimate(protectedRequest, options).tokens > budget)
-    throw new ContextBudgetError('protected-context-exceeds-budget')
+  let retained: Message[] = []
+  const protectedTokens = () =>
+    checkedEstimate(
+      prepareRequest(options, [
+        ...options.prefix,
+        ...(options.verifiedContext?.notices ?? []),
+        ...retained,
+        ...all.slice(Math.max(0, cut)),
+      ]),
+      options,
+    ).tokens
+  // Keep the newest complete tool round verbatim; only earlier closed groups are eligible.
+  const lastRound = all.map((message) => getToolCalls(message).length > 0).lastIndexOf(true)
+  if (
+    (cut <= previousCut || protectedTokens() > profile.target) &&
+    lastRound > Math.max(cut, previousCut) &&
+    all.slice(Math.max(0, cut), lastRound).some((message) => getToolCalls(message).length > 0)
+  ) {
+    cut = lastRound
+    retained = currentTurnUsers(session.getEntries(), all, cut)
+  }
+
+  if (protectedTokens() > budget) throw new ContextBudgetError('protected-context-exceeds-budget')
   if (cut <= previousCut) {
     if (before.tokens <= budget) return ordinary
     throw new ContextBudgetError('no-complete-turn-to-compact')
   }
+
+  // Verified projections can contain synthetic results; validate boundaries by ID, not offset.
+  const projected = options.verifiedContext?.all ?? all
+  const boundary = projected.findIndex((message) => message.id === all[cut]?.id)
+  validateToolGroups(projected.slice(0, boundary))
+  validateToolGroups(projected.slice(boundary))
 
   const originals = all.slice(0, cut).map((value) => persistedContextMessage(value))
   const head = session.getLastMessageId()
   const eligible = options.verifiedContext?.projectionIds.length
     ? all.slice(0, cut)
     : previous
-      ? context.messages.slice(0, 1 + cut - previousCut)
+      ? [checkpointPrefix(previous, all)[0], ...all.slice(previousCut, cut)]
       : all.slice(0, cut)
   const source = {
     messages: eligible.map((value) => persistedContextMessage(value)),
@@ -270,7 +297,8 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
       prefixEndId: all[cut - 1].id,
       previousId: previous?.id ?? null,
       profileRevision: profile.revision,
-      projectionVersion: options.verifiedContext?.projectionIds.length ? 2 : 1,
+      projectionVersion: retained.length > 0 ? 3 : options.verifiedContext?.projectionIds.length ? 2 : 1,
+      ...(retained.length > 0 ? {retainedUserIds: retained.map((message) => message.id)} : {}),
       ...(options.verifiedContext?.projectionIds.length ? {projectionIds: options.verifiedContext.projectionIds} : {}),
       provider: model.getProvider(),
       sessionId: session.getId(),
@@ -290,6 +318,7 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
       ...options.prefix,
       summaryMessage,
       ...(options.verifiedContext?.notices ?? []),
+      ...retained,
       ...all.slice(cut),
     ])
     const after = checkedEstimate(next, options)
@@ -342,4 +371,37 @@ function summaryUsage(message: Message): Record<string, number> | undefined {
     (entry): entry is [string, number] => Number.isSafeInteger(entry[1]) && (entry[1] as number) >= 0,
   )
   return entries.length > 0 ? Object.fromEntries(entries) : undefined
+}
+
+/** Derive conservative trigger/target counts from the selected model and runtime. */
+export async function createModelContextPolicy(
+  model: Model,
+  options: {contextWindow?: number; outputReserve?: number; safetyMargin?: number; signal?: AbortSignal} = {},
+): Promise<Extract<ContextPolicy, {mode: 'budgeted'}>> {
+  const capacity = await resolveModelContextCapacity(model, {
+    contextWindow: options.contextWindow,
+    signal: options.signal,
+  })
+  const window = capacity.effectiveContextWindow ?? capacity.maxInputTokens
+  if (window === null) throw new ContextBudgetError('unknown-model-context-capacity')
+  const outputReserve =
+    options.outputReserve ?? Math.min(4096, capacity.maxOutputTokens ?? 4096, Math.floor(window / 4))
+  if (capacity.maxOutputTokens !== null && outputReserve > capacity.maxOutputTokens)
+    throw new ContextBudgetError('output-reserve-exceeds-model-limit')
+  const safetyMargin = options.safetyMargin ?? Math.ceil(window * 0.05)
+  const budget = window - outputReserve - safetyMargin
+  const profile: ContextProfile = {
+    model: model.getModel(),
+    outputReserve,
+    provider: model.getProvider(),
+    revision: 'model-capacity-v1',
+    safetyMargin,
+    summaryOutput: Math.min(outputReserve, 2048),
+    target: Math.floor(budget * 0.4),
+    templateOverhead: 256,
+    trigger: Math.floor(budget * 0.65),
+    window,
+  }
+  validateContextProfile(profile, model)
+  return {mode: 'budgeted', profile}
 }
