@@ -8,6 +8,7 @@ import path from 'node:path'
 import {recoveryObserved} from './cases.mjs'
 import {gradeCase, normalizePatch} from './grading.mjs'
 import {command} from './host.mjs'
+import {checkDeliverable, inspectDeliverable, testCommand} from './quality.mjs'
 import {prepareRepositorySource, repositoryProfile} from './repository-checks.mjs'
 import {evaluationPrompt, readRounds, summarizeEvents} from './strategy.mjs'
 import {validateSWECase, verifyPreparedSWECase} from './swe-case.mjs'
@@ -163,6 +164,38 @@ describe('E2E host control (no model or Docker)', () => {
       )
       expect(result.code).to.equal(124)
       expect(JSON.parse(result.stdout.split('ORBIT_TEST_RESULT ')[1]).timedOut).to.equal(true)
+    } finally {
+      await fs.rm(root, {force: true, recursive: true})
+    }
+  })
+
+  it('finds added failing-test candidates and generated files without following symlinks', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-quality-'))
+    try {
+      const initial = path.join(root, 'initial')
+      const workspace = path.join(root, 'workspace')
+      await fs.mkdir(initial)
+      const noTests = await checkDeliverable({
+        directory: path.join(root, 'report'),
+        initial,
+        repository: 'django/django',
+        workspace: initial,
+      })
+      expect(noTests.status).to.equal('not-measured')
+      await fs.mkdir(path.join(workspace, 'tests'), {recursive: true})
+      await fs.writeFile(path.join(workspace, 'tests/test_added.py'), 'assert False')
+      await fs.mkdir(path.join(workspace, '.pytest_cache'))
+      await fs.writeFile(path.join(workspace, '.pytest_cache/README.md'), 'cache')
+      await fs.symlink('/missing/outside', path.join(workspace, 'external'))
+      const changes = await inspectDeliverable(initial, workspace, 'sphinx-doc/sphinx')
+      expect(changes.find((change) => change.path === 'tests/test_added.py')).to.include({
+        isTest: true,
+        status: 'added',
+      })
+      expect(changes.find((change) => change.path === '.pytest_cache/README.md').unwanted).to.equal(true)
+      expect(changes.find((change) => change.path === 'external').kind).to.equal('symlink')
+      expect(testCommand('django/django', 'tests/bulk_create/tests.py')[2]).to.equal('bulk_create.tests')
+      expect(() => testCommand('django/django', 'tests/../test_escape.py')).to.throw()
     } finally {
       await fs.rm(root, {force: true, recursive: true})
     }

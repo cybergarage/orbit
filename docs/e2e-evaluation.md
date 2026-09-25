@@ -292,3 +292,35 @@ combined output and a JSON result under `/output/test-runs`, outside the patch.
 Use its printed `ORBIT_TEST_RESULT` rather than piping a test command through
 `tail`. Orbit's general-purpose Bash tool remains unchanged. This wrapper is a
 convenience, not a security boundary or a claim that the model used it.
+
+## Independent deliverable quality
+
+After saving the raw JSONL prediction, Verified solving writes
+`quality/quality.json` without filtering or changing that prediction. The host
+compares the initial and final files, flags generated Python caches and changed
+symlinks, and selects changed public `tests/**/test*.py` or
+`testing/**/test*.py` files. It runs those files in a fresh network-disabled
+container. Existing test files also run on the initial source, so pre-existing
+failures are reported as `baseline-failure`, not silently attributed to the
+patch. Added test failures, deleted test files and unwanted generated files
+produce `quality-failed`. A run with no eligible tests is `not-measured`.
+Infrastructure failures and deadlines are `environment-error`.
+
+This is a separate diagnostic from official `resolved`: passing it does not
+prove the fix is correct, and agent-edited tests are not trusted grading tests.
+It does not discover every possible generated artifact or test naming convention.
+The raw official patch remains unchanged even when quality checks fail.
+
+Inspect an earlier attempt without modifying its files:
+
+```sh
+ORBIT_E2E_IMAGE=orbit-e2e:verified-improved node e2e/quality.mjs \
+  e2e/swebench/sphinx-doc__sphinx-10323.json \
+  tmp/e2e/verified/sphinx-doc__sphinx-10323/<attempt>/agent \
+  tmp/e2e/quality-replay/<unique-run>
+```
+
+On the saved September 25 baseline, this check detected Sphinx's failing added
+regression and six cache files despite official resolution. The corresponding
+original public test file passed in the corrected environment. Django's modified
+tests passed; pytest had no changed eligible tests and was marked `not-measured`.

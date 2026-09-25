@@ -17,6 +17,6 @@ for step in config['steps']:
                       'stdout': result.stdout[-40000:], 'stderr': result.stderr[-40000:]})
     except subprocess.TimeoutExpired:
         steps.append({**step, 'exitCode': None, 'timedOut': True})
-    if steps[-1]['exitCode'] != 0:
+    if steps[-1]['exitCode'] != 0 and not config.get('continueOnFailure'):
         break
 print(json.dumps({'steps': steps, 'passed': len(steps) == len(config['steps']) and all(s['exitCode'] == 0 for s in steps)}))

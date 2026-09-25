@@ -25,7 +25,7 @@ export function repositoryProfile(repository) {
   return profiles[repository]
 }
 
-export async function repositoryChecks({directory, steps, workspace}) {
+export async function repositoryChecks({continueOnFailure = false, directory, steps, workspace}) {
   await fs.mkdir(directory, {recursive: true})
   const name = `orbit-check-${randomUUID()}`
   activeContainers.add(name)
@@ -58,11 +58,14 @@ export async function repositoryChecks({directory, steps, workspace}) {
         'python3',
         image,
         '/repository-check.py',
-        JSON.stringify({steps}),
+        JSON.stringify({continueOnFailure, steps}),
       ],
       {allowFailure: true, log: path.join(directory, 'console.log'), timeoutMs: 300_000},
     )
-    report = execution.code === 0 && !execution.timedOut ? {...JSON.parse(execution.stdout), execution} : {execution, passed: false, status: 'environment-error'};
+    report =
+      execution.code === 0 && !execution.timedOut
+        ? {...JSON.parse(execution.stdout), execution}
+        : {execution, passed: false, status: 'environment-error'}
     report.imageId = JSON.parse((await docker(['image', 'inspect', image])).stdout)[0].Id
   } catch (error) {
     report = {error: String(error), passed: false, status: 'environment-error'}

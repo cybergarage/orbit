@@ -7,6 +7,7 @@ import path from 'node:path'
 
 import {normalizePatch} from './grading.mjs'
 import {activeContainers, command, digest, docker, image, ollamaMetadata, repo, runAgent, writeJSON} from './host.mjs'
+import {checkDeliverable} from './quality.mjs'
 import {preflightRepository, prepareRepositorySource} from './repository-checks.mjs'
 import {evaluationPrompt, readRounds} from './strategy.mjs'
 import {validateSWECase, verifyPreparedSWECase} from './swe-case.mjs'
@@ -247,6 +248,15 @@ switch (action) {
     }
     await fs.writeFile(path.join(directory, 'predictions.jsonl'), JSON.stringify(prediction) + '\n')
     await fs.writeFile(path.join(directory, 'patch.diff'), patch)
+    const quality = selected
+      ? await checkDeliverable({
+          directory: path.join(directory, 'quality'),
+          initial: path.join(runDirectory, 'initial'),
+          repository: instance.repo,
+          version: selected.version,
+          workspace: path.join(runDirectory, 'workspace'),
+        })
+      : undefined
     await writeJSON(path.join(directory, 'metadata.json'), {
       config: run.config,
       dataset: gold.dataset,
@@ -258,6 +268,7 @@ switch (action) {
       orbitCommit: (await command('git', ['rev-parse', 'HEAD'])).stdout.trim(),
       preflight,
       preparation,
+      quality,
       runStatus: run.status,
       runtimeOutcome: run.result?.runtime?.outcome,
       sourceArchiveSha256: digest(await fs.readFile(archive)),
