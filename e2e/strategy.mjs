@@ -22,6 +22,7 @@ export function evaluationPrompt(task, {strategy = strategyVersion, swe = false}
 }
 
 export function readRounds(value, fallback) {
+  if ((value ?? fallback) === 'unlimited') return 'unlimited'
   const rounds = value === undefined ? fallback : Number(value)
   if (!Number.isSafeInteger(rounds) || rounds < 1 || rounds > 100)
     throw new Error('Evaluation rounds must be an integer from 1 to 100')
@@ -73,4 +74,12 @@ export function summarizeEvents(events) {
   }
 
   return result
+}
+
+export function readElapsed(value, fallback) {
+  if ((value ?? fallback) === 'unlimited') return 'unlimited'
+  const elapsed = value === undefined ? fallback : Number(value)
+  if (!Number.isSafeInteger(elapsed) || elapsed < 1 || elapsed > 2_147_453_647)
+    throw new Error('Evaluation elapsed time must be a positive integer within the timer range or unlimited')
+  return elapsed
 }

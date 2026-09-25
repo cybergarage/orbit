@@ -25,11 +25,14 @@ export async function command(
     const startedAt = Date.now()
     let timeoutObservedAt
 
-    const timer = setTimeout(() => {
-      timedOut = true
-      timeoutObservedAt = Date.now()
-      child.kill('SIGKILL')
-    }, timeoutMs)
+    const timer =
+      timeoutMs === 'unlimited'
+        ? undefined
+        : setTimeout(() => {
+            timedOut = true
+            timeoutObservedAt = Date.now()
+            child.kill('SIGKILL')
+          }, timeoutMs)
     child.stdout.on('data', (data) => {
       stdout += data
       if (stdout.length > 16 * 1024 * 1024) child.kill('SIGKILL')
@@ -188,7 +191,7 @@ export async function runAgent({
     execution = await docker(['start', '-a', name], {
       allowFailure: true,
       log: path.join(directory, 'console.log'),
-      timeoutMs: timeoutMs + 30_000,
+      timeoutMs: timeoutMs === 'unlimited' ? 'unlimited' : timeoutMs + 30_000,
     })
     await docker(['stop', '--time', '5', name], {allowFailure: true})
     const state = JSON.parse((await docker(['inspect', name])).stdout)[0]

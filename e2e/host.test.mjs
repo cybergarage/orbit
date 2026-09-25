@@ -10,7 +10,7 @@ import {gradeCase, normalizePatch} from './grading.mjs'
 import {command} from './host.mjs'
 import {checkDeliverable, inspectDeliverable, testCommand} from './quality.mjs'
 import {prepareRepositorySource, repositoryProfile} from './repository-checks.mjs'
-import {evaluationPrompt, readRounds, summarizeEvents} from './strategy.mjs'
+import {evaluationPrompt, readElapsed, readRounds, summarizeEvents} from './strategy.mjs'
 import {validateSWECase, verifyPreparedSWECase} from './swe-case.mjs'
 
 const entry = (exitCode) => ({
@@ -29,8 +29,21 @@ describe('E2E host control (no model or Docker)', () => {
   it('rejects invalid budgets rather than disabling the limit', () => {
     expect(readRounds(undefined, 30)).to.equal(30)
     expect(readRounds('50', 30)).to.equal(50)
+    expect(readRounds('unlimited', 30)).to.equal('unlimited')
+    expect(readRounds(undefined, 'unlimited')).to.equal('unlimited')
     for (const value of ['0', '-1', 'NaN', 'Infinity', '1.5', '', '101'])
       expect(() => readRounds(value, 30)).to.throw('Evaluation rounds')
+  })
+
+  it('validates elapsed overrides and runs unlimited commands without a timer', async () => {
+    expect(readElapsed(undefined, 'unlimited')).to.equal('unlimited')
+    expect(readElapsed('900000', 'unlimited')).to.equal(900_000)
+    for (const value of ['0', '-1', 'Infinity', 'NaN', '1.5', '', '2147453648'])
+      expect(() => readElapsed(value, 'unlimited')).to.throw('Evaluation elapsed')
+    const result = await command(process.execPath, ['-e', 'setTimeout(()=>{},50)'], {timeoutMs: 'unlimited'})
+    expect(result.code).to.equal(0)
+    expect(result.timedOut).to.equal(false)
+    expect(result.timeoutMs).to.equal('unlimited')
   })
 
   it('preserves baseline instructions and refuses unknown strategies', () => {

@@ -12,7 +12,8 @@ fs.cpSync('/fixture', '/workspace', {recursive: true, verbatimSymlinks: true})
 const session = new Session({formatVersion: 2})
 const diagnostics = new DiagnosticEventBus({
   capture: 'full',
-  fullCaptureDurationMs: config.timeoutMs + 30_000,
+  // Full diagnostic payloads remain bounded independently of execution duration.
+  fullCaptureDurationMs: config.timeoutMs === 'unlimited' ? 86_400_000 : config.timeoutMs + 30_000,
   maxEvents: 20_000,
 })
 diagnostics.subscribe((event) => fs.appendFileSync('/output/events.jsonl', JSON.stringify(event) + '\n'))
@@ -33,8 +34,8 @@ const agent = new Agent({
     limits: {
       cleanupMs: 5000,
       elapsedMs: config.timeoutMs,
-      modelCalls: config.rounds + 1,
-      toolRequests: config.rounds * 8,
+      modelCalls: config.rounds === 'unlimited' ? 'unlimited' : config.rounds + 1,
+      toolRequests: config.rounds === 'unlimited' ? 'unlimited' : config.rounds * 8,
       toolRounds: config.rounds,
     },
     policy: {generation: 'isolated-e2e-v1', profile: 'unrestricted', roots: ['/workspace']},

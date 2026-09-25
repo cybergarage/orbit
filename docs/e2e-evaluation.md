@@ -384,7 +384,7 @@ its [pinned starter templates](../e2e/book/README.md):
 | --- | --- |
 | `vibe` | Starter and natural-language game prompt, without a game specification or test plan. |
 | `sdd` | First reviews `spec.md` with `test.md` deliberately absent. The host rejects changed or added review files. A fresh implementation Run receives the review, a frozen specification with the book's selected clarifications, and the common test plan. |
-| `loop` | Starter, `spec.md`, `test.md`, and `progress.md`; one bounded Run iterates implementation and verification and records progress. Specifications must remain unchanged. |
+| `loop` | Starter, `spec.md`, `test.md`, and `progress.md`; one Run iterates implementation and verification and records progress. Specifications must remain unchanged. |
 
 ```sh
 npm run test:e2e:book:unit
@@ -400,8 +400,14 @@ Node 24 and a separately locked Chromium/Playwright grader. It requires network
 access; trial dependencies are preinstalled. The default is one trial per style
 with `ornith-1.5:9b`, run serially. Existing small-case defaults are unchanged.
 `ORBIT_E2E_MODELS`, `ORBIT_E2E_REPETITIONS` (1–10), `ORBIT_E2E_CASE`, and
-`ORBIT_E2E_ROUNDS` (default 50) select the matrix. Each implementation gets 900
-seconds and context 32768; SDD additionally gets a 240-second, 12-round review.
+`ORBIT_E2E_ROUNDS` (default `unlimited`) select the matrix.
+`ORBIT_BOOK_ELAPSED_MS` defaults to `unlimited`; a positive millisecond value
+restores a finite deadline. Both settings apply to SDD review and implementation.
+Implementation context remains 32768. Unlimited rounds also remove the derived
+model-call and tool-request ceilings; unlimited elapsed time disables the host
+execution timer. Cleanup, grader and container resource limits remain finite.
+Full diagnostic payload capture lasts at most 24 hours for an unlimited trial;
+metadata continues afterward.
 The SDD review and implementation use separate Sessions, with the review answer
 explicitly carried forward. Compare their combined costs with the other styles.
 The shared host's generation settings, cleanup, and resource limits apply.
@@ -411,8 +417,7 @@ The shared host's generation settings, cleanup, and resource limits apply.
 This harness uses fixed, preselected review decisions instead of a person
 interactively selecting findings. The review is instructed to read only and its
 final workspace is checked; it does not implement Codex Plan mode or prove that
-no transient writes occurred. Loop iteration is inside a single budgeted Orbit
-Run, not an unbounded external retry loop. Browser work remains pending in the
+no transient writes occurred. Loop iteration is inside a single Orbit Run, without an external retry loop. Browser work remains pending in the
 agent's report. Unchanged progress or checked-off browser items in the supplied
 progress checklist fail the Loop checks; this is not a semantic audit of every
 claim in prose.

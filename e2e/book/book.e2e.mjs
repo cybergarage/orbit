@@ -9,14 +9,15 @@ process.env.ORBIT_E2E_IMAGE ??= 'orbit-e2e:book-agent'
 const {command, docker, image, ollamaMetadata, repo, runAgent, writeJSON} = await import('../host.mjs')
 const {caseIds, checkFiles, makeCase, runtimePassed, source} = await import('./cases.mjs')
 const {gradeBook} = await import('./grade.mjs')
-const {readRounds} = await import('../strategy.mjs')
+const {readElapsed, readRounds} = await import('../strategy.mjs')
 const selected = process.env.ORBIT_E2E_CASE ? [process.env.ORBIT_E2E_CASE] : caseIds
 if (selected.some((id) => !caseIds.includes(id))) throw new Error('Unknown book case')
 const repetitions = Number(process.env.ORBIT_E2E_REPETITIONS ?? 1)
 if (!Number.isInteger(repetitions) || repetitions < 1 || repetitions > 10)
   throw new Error('Repetitions must be between 1 and 10')
 const models = (process.env.ORBIT_E2E_MODELS ?? 'ornith-1.5:9b').split(',')
-const rounds = readRounds(process.env.ORBIT_E2E_ROUNDS, 50)
+const rounds = readRounds(process.env.ORBIT_E2E_ROUNDS, 'unlimited')
+const timeoutMs = readElapsed(process.env.ORBIT_BOOK_ELAPSED_MS, 'unlimited')
 const root = path.join(repo, 'tmp/e2e/runs', new Date().toISOString().replaceAll(':', '-') + '-book')
 const results = []
 
@@ -56,9 +57,9 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
                 files: c.files,
                 model,
                 prompt: c.prompt,
-                rounds: 12,
+                rounds,
                 strategy: 'book-sdd-review-v1',
-                timeoutMs: 240_000,
+                timeoutMs,
               })
               row.review = {elapsedMs: review.elapsedMs, status: review.status, usage: review.usage}
               row.status = 'unresolved'
@@ -80,7 +81,7 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
               prompt,
               rounds,
               strategy: `book-${id}-v1`,
-              timeoutMs: 900_000,
+              timeoutMs,
             })
             row.run = {
               elapsedMs: run.elapsedMs,
