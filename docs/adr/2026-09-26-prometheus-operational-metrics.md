@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-09-26
 decision-date: 2026-09-26
-implementation-status: not-started
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-09-26
+implementation-commits:
+  - 2751c185c807386376d2d2c0f0984f50e5c3c692
 superseded-by: []
 ---
 
@@ -168,23 +169,40 @@ Investigation date: 2026-09-26. No Codex or Pi behavior was executed.
 
 ## Implementation and Confirmation
 
-No implementation had started at acceptance. Introduce the small core observer
-contract and instrument final Run settlement and provider/tool completion at
-their owners. Implement an isolated Prometheus registry and a loopback
-metrics-only server; wire the persistent GUI command behind explicit settings.
-Keep the library path usable without starting an HTTP listener. Select and lock
-the client release only after checking Node.js and ESM compatibility.
+Implemented in `2751c185c807386376d2d2c0f0984f50e5c3c692` on
+2026-09-26. `PrometheusOperationalMetrics` owns an isolated registry and is
+injected into the service, ThreadManager, or Agent. Run admission and final
+settlement, provider attempts, and actual tool dispatch settlement supply the
+aggregate observations. The GUI starts a separate `127.0.0.1` listener only
+when `--metrics-port` is specified. The maintained contract and local scrape
+instructions are in [Prometheus metrics](../metrics.md).
 
-Tests should cover exactly-once terminal counting; completed, failed,
-cancelled, budget-exceeded, and incomplete outcomes; active-gauge cleanup;
-missing and reported token usage; duplicate snapshot emission; observer
-exceptions; two services in one process; loopback-only binding; disabled-by-
-default behavior; exposition headers and metric parsing; and shutdown. Run
-`headers:check`, `build`, targeted tests, the complete test suite, and package
-consumer checks as applicable. Inspect formatter output and unrelated working-
-tree changes. A same-Pod sidecar scrape may demonstrate the deployment route,
-but it does not qualify persistent storage, GUI remote access, or production
-Kubernetes operation.
+The exact dependency is `prom-client@15.1.3`. The replacement package
+`@prometheus-io/client@0.16.1` requires Node.js 22 or later, while Orbit
+supports Node.js 20. The selected predecessor supports Node.js 20 and passed
+the package consumer check. Revisit the replacement when Orbit's supported
+Node.js matrix permits it.
+
+Confirmation:
+
+- `npm run headers:check`, `npm run build`, and generated CLI documentation
+  passed.
+- `npm test` passed with 1,028 tests. After adding the final outcome-coverage
+  case, the six metrics tests passed separately; production code was unchanged
+  after the full suite.
+- `npm run test:package` passed, including the packaged example's consumer
+  smoke test.
+- Metrics tests cover exactly-once Run accounting, completed/failed/cancelled/
+  budget-exceeded/incomplete outcomes, active-gauge cleanup, model retries and
+  usage, undispatched denials, observer exceptions, registry isolation, HTTP
+  headers and route restrictions, and server shutdown.
+- The full-suite formatter changed two unrelated session files; those
+  formatting-only changes were reverted before the implementation commit.
+  Pre-existing E2E working-tree changes were not included.
+
+No same-Pod sidecar scrape or production Kubernetes deployment was run. The
+loopback endpoint does not establish remote GUI access, cluster-wide scrape
+access, or durable metrics storage.
 
 ## Follow-up Work
 
