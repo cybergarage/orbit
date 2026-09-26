@@ -31,6 +31,13 @@ export function isRecoverableContextFailure(error: unknown): boolean {
 }
 
 /** A missing Ollama response cannot have dispatched a tool call to Orbit. */
-export function isRetryableOllamaTransportFailure(error: unknown): boolean {
+export function isOllamaTransportFailure(error: unknown): error is TypeError {
   return error instanceof TypeError && error.message === 'fetch failed'
+}
+
+/** Repeating a request after a full headers timeout only repeats the long wait. */
+export function isRetryableOllamaTransportFailure(error: unknown): boolean {
+  if (!isOllamaTransportFailure(error)) return false
+  const {cause} = error
+  return !(cause && typeof cause === 'object' && 'code' in cause && cause.code === 'UND_ERR_HEADERS_TIMEOUT')
 }

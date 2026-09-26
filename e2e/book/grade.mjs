@@ -5,9 +5,19 @@ import path from 'node:path'
 
 import {activeContainers, docker} from '../host.mjs'
 
-export async function gradeBook(directory) {
+export async function gradeBook(directory, {image = process.env.ORBIT_BOOK_GRADER_IMAGE ?? 'orbit-e2e:book-grader'} = {}) {
   const name = `orbit-book-grade-${randomUUID()}`
   const marker = `BOOK-PASS-${randomUUID()}`
+  const inspected = await docker(['image', 'inspect', image], {allowFailure: true})
+  if (inspected.code !== 0)
+    return {
+      code: 125,
+      environmentError: `Grader image is unavailable: ${image}`,
+      passed: false,
+      stderr: inspected.stderr,
+      stdout: '',
+      timedOut: false,
+    }
   activeContainers.add(name)
   try {
     const result = await docker(
@@ -40,7 +50,7 @@ export async function gradeBook(directory) {
         `type=bind,src=${path.join(directory, 'workspace')},dst=/artifact,readonly`,
         '--env',
         `ORBIT_BOOK_MARKER=${marker}`,
-        process.env.ORBIT_BOOK_GRADER_IMAGE ?? 'orbit-e2e:book-grader',
+        image,
       ],
       {allowFailure: true, log: path.join(directory, 'grade.log'), timeoutMs: 180_000},
     )

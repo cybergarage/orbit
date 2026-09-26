@@ -423,6 +423,11 @@ explicitly carried forward. Compare their combined costs with the other styles.
 The shared host's generation settings, cleanup, and resource limits apply.
 `ORBIT_E2E_IMAGE` overrides `orbit-e2e:book-agent` and
 `ORBIT_BOOK_GRADER_IMAGE` overrides `orbit-e2e:book-grader`.
+The book run resolves both images to IDs at startup and uses those IDs for
+subsequent agent and grader containers. If an image is removed during a long
+trial, grading reports an environment error with checks marked `not-run`.
+Compaction and summary attempts, failures, durations, and token counts are
+recorded as metadata-only diagnostic events and summarized in run metrics.
 
 This harness uses fixed, preselected review decisions instead of a person
 interactively selecting findings. The review is instructed to read only and its

@@ -16,6 +16,7 @@ import type {
 
 import {
   Agent,
+  DiagnosticEventBus,
   MemorySessionLogStore,
   Message,
   MessageType,
@@ -87,6 +88,10 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
             expect([profile.summaryOutput, profile.outputReserve]).to.include(request.cap)
             if (mode === 'error') throw new Error('Summary fixture failure')
             if (mode === 'summary-transport-once' && summaries === 1) throw new TypeError('fetch failed')
+            if (mode === 'summary-headers-timeout')
+              throw new TypeError('fetch failed', {
+                cause: Object.assign(new Error('Headers timeout'), {code: 'UND_ERR_HEADERS_TIMEOUT'}),
+              })
             if (mode === 'chunk-second-error' && summaries === 2) throw new Error('Second summary failed')
             if (mode === 'tool')
               return new Message(MessageType.Assistant, {
@@ -149,6 +154,7 @@ async function execute(
   selected = policy,
   input = 'Continue with the latest request',
   maxCalls = 100,
+  diagnostics?: DiagnosticEventBus,
 ) {
   const store = new MemorySessionLogStore()
   const events: AgentEvent[] = []
@@ -156,6 +162,7 @@ async function execute(
     contextPolicy: selected,
     cwd: os.tmpdir(),
     deps: {createModel: () => model},
+    diagnostics,
     execution: {limits: {modelCalls: maxCalls}},
     logStore: store,
     settings: {model: 'fixture', provider: 'ollama', tools: {profile: 'none'}},
@@ -278,6 +285,32 @@ describe('budgeted context preparation', () => {
     const {result: limited} = await execute(limitedSession, limitedModel, policy, undefined, 2)
     expect(limited.outcome).to.equal('budget-exceeded')
     expect(limitedModel.requests).to.have.length(2)
+  })
+
+  it('records a summary timeout and stops without retrying or sending the unchanged context', async () => {
+    const session = new Session()
+    const model = fixtureModel(oldConversation(session), 'summary-headers-timeout')
+    const diagnostics = new DiagnosticEventBus()
+    const {result} = await execute(session, model, policy, undefined, 100, diagnostics)
+    expect(result.outcome).to.equal('failed')
+    expect(model.requests).to.have.length(1)
+    expect(session.getCompaction()).to.equal(undefined)
+    const events = diagnostics.list()
+    expect(events.map((event) => event.type)).to.include.members([
+      'context.compaction.started',
+      'context.compaction.failed',
+      'context.summary.started',
+      'context.summary.failed',
+    ])
+    expect(events.find((event) => event.type === 'context.summary.failed')?.data).to.include({
+      attempt: 1,
+      causeCode: 'UND_ERR_HEADERS_TIMEOUT',
+      reason: 'transport-failed',
+    })
+    expect(events.find((event) => event.type === 'context.compaction.failed')?.data).to.include({
+      fallback: false,
+      reason: 'summary-failed',
+    })
   })
 
   it('summarizes an oversized source in complete tool groups before saving one checkpoint', async () => {

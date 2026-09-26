@@ -14,7 +14,11 @@ import {currentGraphVisit} from '../execution/graph-state.js'
 import {Message, MessageType} from '../message/index.js'
 import {getToolCalls} from '../models/adapters/tools.js'
 import {resolveModelContextCapacity} from '../models/context-capacity.js'
-import {assertCompleteModelResponse, isRetryableOllamaTransportFailure} from '../models/termination.js'
+import {
+  assertCompleteModelResponse,
+  isOllamaTransportFailure,
+  isRetryableOllamaTransportFailure,
+} from '../models/termination.js'
 import {GptTokenizer} from '../tokenizer/index.js'
 import {
   checkpointPrefix,
@@ -167,6 +171,20 @@ function notify(options: PreparationOptions, event: ContextPreparationEvent): vo
   }
 }
 
+function diagnostic(
+  options: PreparationOptions,
+  type: string,
+  data: Record<string, unknown>,
+  level: 'error' | 'info' = 'info',
+): void {
+  options.modelOptions.diagnostics?.emit({
+    ...options.modelOptions.diagnosticContext,
+    data,
+    level,
+    type,
+  })
+}
+
 export async function prepareSessionContext(options: PreparationOptions): Promise<PreparedModelInvocation> {
   const {model, policy, run, session} = options
   const profile = structuredClone(policy.profile)
@@ -268,6 +286,8 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
       : all.slice(0, cut)
   let candidate: SessionCompactionEntry
   let next: PreparedModelInvocation
+  const compactionStartedAt = performance.now()
+  diagnostic(options, 'context.compaction.started', {beforeTokens: before.tokens})
   try {
     const {summary, usage} = await summarizeEligible(options, eligible, originals, previous?.summary ?? null)
     candidate = {
@@ -314,17 +334,25 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
     candidate.afterTokens = after.tokens
   } catch (error) {
     run.check()
-    if (
+    const reason = error instanceof ContextBudgetError ? error.code : 'summary-failed'
+    const fallback = !(
       options.recoveryRequest ||
       hasPendingEffects(run) ||
       before.tokens > budget ||
-      (error instanceof ContextBudgetError && error.code === 'compaction-input-exceeds-budget')
+      (error instanceof ContextBudgetError && error.code === 'compaction-input-exceeds-budget') ||
+      (model.getProvider() === 'ollama' && isOllamaTransportFailure(error))
     )
-      throw error
+    diagnostic(
+      options,
+      'context.compaction.failed',
+      {beforeTokens: before.tokens, durationMs: performance.now() - compactionStartedAt, fallback, reason},
+      'error',
+    )
+    if (!fallback) throw error
     notify(options, {
       beforeTokens: before.tokens,
       outcome: 'failed',
-      reason: error instanceof ContextBudgetError ? error.code : 'summary-failed',
+      reason,
     })
     return ordinary
   }
@@ -345,6 +373,11 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
   }
 
   run.check()
+  diagnostic(options, 'context.compaction.completed', {
+    afterTokens: candidate.afterTokens,
+    beforeTokens: before.tokens,
+    durationMs: performance.now() - compactionStartedAt,
+  })
   notify(options, {afterTokens: candidate.afterTokens, beforeTokens: before.tokens, outcome: 'compacted'})
   return next
 }
@@ -418,19 +451,42 @@ async function summarizeEligible(
     request: PreparedModelInvocation,
     allowedIds: Set<string>,
   ): Promise<{summary: ContextSummary; usage?: Record<string, number>}> => {
-    const invokeOnce = () => {
+    const invokeOnce = async (attempt: number) => {
+      const startedAt = performance.now()
       options.run.consume('modelCalls')
-      return options.run.wait('context-summary', request.invoke())
+      diagnostic(options, 'context.summary.started', {attempt})
+      try {
+        const response = await options.run.wait('context-summary', request.invoke())
+        diagnostic(options, 'context.summary.completed', {attempt, durationMs: performance.now() - startedAt})
+        return response
+      } catch (error) {
+        const cause = error instanceof Error ? error.cause : undefined
+        const causeCode = cause && typeof cause === 'object' && 'code' in cause ? cause.code : undefined
+        diagnostic(
+          options,
+          'context.summary.failed',
+          {
+            attempt,
+            ...(typeof causeCode === 'string' ? {causeCode} : {}),
+            durationMs: performance.now() - startedAt,
+            reason: isOllamaTransportFailure(error) ? 'transport-failed' : 'request-failed',
+          },
+          'error',
+        )
+        throw error
+      }
     }
+
     let response: Message
     try {
-      response = await invokeOnce()
+      response = await invokeOnce(1)
     } catch (error) {
       if (options.model.getProvider() !== 'ollama' || !isRetryableOllamaTransportFailure(error)) throw error
       options.run.check()
       // A failed fetch has no response to turn into assistant history; charge one retry to this Run.
-      response = await invokeOnce()
+      response = await invokeOnce(2)
     }
+
     options.run.check()
     assertCompleteModelResponse(response)
     if (getToolCalls(response).length > 0) throw new ContextBudgetError('summary-returned-tool-call')

@@ -36,6 +36,13 @@ reset();
 
 describe('Book independent grader controls (Docker, no inference)', function () {
   this.timeout(0)
+
+  it('reports a removed grader image as an environment error without running the grader', async () => {
+    const result = await gradeBook('/unused', {image: 'sha256:' + '0'.repeat(64)})
+    expect(result.code).to.equal(125)
+    expect(result.environmentError).to.include('Grader image is unavailable')
+    expect(result.passed).to.equal(false)
+  })
   for (const variant of ['good', 'starter', 'zero-tests', 'early-timer', 'reset-timer', 'fake-exit']) {
     it(`grades ${variant}`, async () => {
       await fs.mkdir(path.join(repo, 'tmp/e2e'), {recursive: true})

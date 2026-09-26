@@ -15,7 +15,11 @@ import {
   Session,
   State,
 } from '../../src/core/index.js'
-import {assertCompleteModelResponse} from '../../src/core/models/termination.js'
+import {
+  assertCompleteModelResponse,
+  isOllamaTransportFailure,
+  isRetryableOllamaTransportFailure,
+} from '../../src/core/models/termination.js'
 
 function response(stopReason?: string, calls = false) {
   return new Message(MessageType.Assistant, {
@@ -28,6 +32,15 @@ function response(stopReason?: string, calls = false) {
 }
 
 describe('model termination gate', () => {
+  it('does not repeat a full Ollama headers timeout', () => {
+    const timeout = new TypeError('fetch failed', {
+      cause: Object.assign(new Error('Headers timeout'), {code: 'UND_ERR_HEADERS_TIMEOUT'}),
+    })
+    expect(isOllamaTransportFailure(timeout)).to.equal(true)
+    expect(isRetryableOllamaTransportFailure(timeout)).to.equal(false)
+    expect(isRetryableOllamaTransportFailure(new TypeError('fetch failed'))).to.equal(true)
+    expect(isRetryableOllamaTransportFailure(new Error('fetch failed'))).to.equal(false)
+  })
   for (const stopReason of [
     'length',
     'max_tokens',

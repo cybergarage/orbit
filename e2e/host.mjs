@@ -121,6 +121,7 @@ export async function ollamaMetadata(model) {
 }
 
 export async function runAgent({
+  agentImage = image,
   directory,
   files,
   model,
@@ -186,7 +187,7 @@ export async function runAgent({
       `type=bind,src=${input},dst=/input,readonly`,
       '--mount',
       `type=bind,src=${initial},dst=/fixture,readonly`,
-      image,
+      agentImage,
     ])
     stage = 'runtime'
     execution = await docker(['start', '-a', name], {

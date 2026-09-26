@@ -22,6 +22,8 @@ const timeoutMs = readElapsed(process.env.ORBIT_BOOK_ELAPSED_MS, 'unlimited')
 const root = path.join(repo, 'tmp/e2e/runs', new Date().toISOString().replaceAll(':', '-') + '-book')
 const results = []
 const contextWindows = new Map()
+let agentImageId
+let graderImageId
 
 describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)', function () {
   this.timeout(0)
@@ -37,11 +39,13 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
       console.log(`Model context: ${model} = ${contextWindow} tokens (review and implementation)`)
     }
 
+    agentImageId = JSON.parse((await docker(['image', 'inspect', image])).stdout)[0].Id
+    graderImageId = JSON.parse(
+      (await docker(['image', 'inspect', process.env.ORBIT_BOOK_GRADER_IMAGE ?? 'orbit-e2e:book-grader'])).stdout,
+    )[0].Id
     await writeJSON(path.join(root, 'environment.json'), {
-      agentImage: JSON.parse((await docker(['image', 'inspect', image])).stdout)[0].Id,
-      graderImage: JSON.parse(
-        (await docker(['image', 'inspect', process.env.ORBIT_BOOK_GRADER_IMAGE ?? 'orbit-e2e:book-grader'])).stdout,
-      )[0].Id,
+      agentImage: agentImageId,
+      graderImage: graderImageId,
       models: metadata,
       node: process.version,
       orbitCommit: (await command('git', ['rev-parse', 'HEAD'])).stdout.trim(),
@@ -62,6 +66,7 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
             if (id === 'sdd') {
               const c = await makeCase(id)
               review = await runAgent({
+                agentImage: agentImageId,
                 directory: path.join(directory, 'review'),
                 files: c.files,
                 model,
@@ -84,6 +89,7 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
                 ? `Prior review (advisory):\n${review.result.answer}\n\nThe host adopted only the fixed decisions now recorded in spec.md and supplied test.md. Do not change these files.\n\n`
                 : '') + c.prompt
             const run = await runAgent({
+              agentImage: agentImageId,
               directory: path.join(directory, 'implementation'),
               files: c.files,
               model,
@@ -106,12 +112,17 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
             const {fileChecks, grade} = await checkFilesAndGrade(
               path.join(directory, 'implementation/workspace'),
               c,
-              () => gradeBook(path.join(directory, 'implementation')),
+              () => gradeBook(path.join(directory, 'implementation'), {image: graderImageId}),
             )
             row.fileChecks = fileChecks
             await writeJSON(path.join(directory, 'grade.json'), grade)
-            row.checks = grade.passed ? 'passed' : 'failed'
-            if (grade.timedOut || grade.code === 125) row.status = 'grading-error'
+            row.checks =
+              grade.environmentError || grade.timedOut || grade.code === 125
+                ? 'not-run'
+                : grade.passed
+                  ? 'passed'
+                  : 'failed'
+            if (grade.environmentError || grade.timedOut || grade.code === 125) row.status = 'grading-error'
             else if (caseResolved(run, grade, fileChecks)) row.status = 'resolved'
           } catch (error) {
             row.error = String(error)

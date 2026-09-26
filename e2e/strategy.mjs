@@ -32,6 +32,9 @@ export function readRounds(value, fallback, maximum = 100) {
 // Completed response timings are partial evidence when inference is interrupted.
 export function summarizeEvents(events) {
   const result = {
+    compactionsCompleted: 0,
+    compactionsFailed: 0,
+    compactionsStarted: 0,
     modelCallsCompleted: 0,
     modelCallsStarted: 0,
     modelWallMs: 0,
@@ -40,6 +43,9 @@ export function summarizeEvents(events) {
     ollamaPromptMs: 0,
     ollamaTotalMs: 0,
     repeatedFailedCalls: 0,
+    summaryAttempts: 0,
+    summaryFailures: 0,
+    summaryWallMs: 0,
     toolCalls: 0,
     toolErrors: 0,
     toolWallMs: 0,
@@ -47,6 +53,13 @@ export function summarizeEvents(events) {
   const failed = new Set()
   for (const event of events) {
     const data = event.data ?? {}
+    if (event.type === 'context.compaction.started') result.compactionsStarted++
+    if (event.type === 'context.compaction.completed') result.compactionsCompleted++
+    if (event.type === 'context.compaction.failed') result.compactionsFailed++
+    if (event.type === 'context.summary.started') result.summaryAttempts++
+    if (event.type === 'context.summary.failed') result.summaryFailures++
+    if (event.type === 'context.summary.completed' || event.type === 'context.summary.failed')
+      result.summaryWallMs += data.durationMs ?? 0
     if (event.type === 'model.request.started') result.modelCallsStarted++
     if (event.type === 'model.response.completed') {
       result.modelCallsCompleted++

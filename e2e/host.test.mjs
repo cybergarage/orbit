@@ -67,6 +67,12 @@ describe('E2E host control (no model or Docker)', () => {
     const failure = {data: {durationMs: 3, input: {path: 'a'}, isError: true, name: 'edit'}, type: 'tool.completed'}
     const metrics = summarizeEvents([
       {type: 'model.request.started'},
+      {type: 'context.compaction.started'},
+      {type: 'context.summary.started'},
+      {data: {durationMs: 4}, type: 'context.summary.failed'},
+      {type: 'context.summary.started'},
+      {data: {durationMs: 5}, type: 'context.summary.completed'},
+      {type: 'context.compaction.completed'},
       {data: {durationMs: 7, providerMetadata: {evalDurationNs: 2_000_000}}, type: 'model.response.completed'},
       failure,
       failure,
@@ -78,6 +84,11 @@ describe('E2E host control (no model or Docker)', () => {
     expect(metrics.modelWallMs).to.equal(7)
     expect(metrics.repeatedFailedCalls).to.equal(1)
     expect(metrics.toolErrors).to.equal(2)
+    expect(metrics.compactionsStarted).to.equal(1)
+    expect(metrics.compactionsCompleted).to.equal(1)
+    expect(metrics.summaryAttempts).to.equal(2)
+    expect(metrics.summaryFailures).to.equal(1)
+    expect(metrics.summaryWallMs).to.equal(9)
   })
 
   it('separates a runtime failure from a host deadline', async () => {

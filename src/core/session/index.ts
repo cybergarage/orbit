@@ -1,7 +1,6 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-export {createModelContextPolicy} from './context-policy.js'
 export {isMessageType, Message, MessageType, UserMessage} from '../message/index.js'
 export type {MessageOptions, MessagePayload} from '../message/index.js'
 export {encodeSessionEntry, parseSessionFile} from './codec.js'
@@ -9,6 +8,7 @@ export type {ParsedSessionFile} from './codec.js'
 export type {ContextSummary, SessionCompactionEntry, SummaryFact, SummaryTest} from './compaction.js'
 export {SessionContextBuilder} from './context-builder.js'
 export type {SessionModelContext} from './context-builder.js'
+export {createModelContextPolicy} from './context-policy.js'
 export {ContextBudgetError, estimateJSONRequest, validateContextProfile} from './context-policy.js'
 export type {
   ContextPolicy,
