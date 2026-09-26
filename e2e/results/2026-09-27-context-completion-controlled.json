@@ -1,0 +1,30 @@
+{
+  "date": "2026-09-27",
+  "evaluation": "controlled 2x2 diagnostic; one trial per condition",
+  "orbitCommit": "94a3a16d5e502ecec1adf69d03b886f4bdeb287c",
+  "dataset": {
+    "name": "princeton-nlp/SWE-bench_Verified",
+    "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+    "split": "test",
+    "instanceId": "pytest-dev__pytest-10356",
+    "repository": "pytest-dev/pytest",
+    "baseCommit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1"
+  },
+  "harness": {"version":"4.1.0","commit":"726c5461e2ef52d83cf1ea2107870a8bb3328d57","platform":"linux/amd64 under Docker emulation on Apple Silicon"},
+  "model": {"name":"ornith-1.5:9b","digest":"e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e","quantization":"Q4_K_M","parameters":"9.0B","ollama":"0.34.3","numCtx":32768,"numPredict":4096,"seed":42,"temperature":0.6,"topP":0.95},
+  "environment": {"dockerDesktopMemory":"4GB configured; daemon reported 4107141120 bytes","agentImageId":"sha256:ed48353ef872730f67ae451f78b4a90108b11691953a5077ab68a4d7101ed4e0","officialGraderImageId":"sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da","deadlineMs":900000},
+  "arms": [
+    {"condition":"baseline-context-off","strategy":"baseline","contextPolicy":"disabled","elapsedMs":349236,"modelCalls":23,"toolCalls":22,"toolErrors":1,"inputTokens":250722,"outputTokens":6822,"runStatus":"runtime-error","runtimeOutcome":"failed","patchBytes":1012,"officialStatus":"unresolved","officialTests":{"failToPassPassed":0,"failToPassTotal":1,"passToPassPassed":79,"passToPassTotal":79},"qualityStatus":"not-measured","prediction":"2026-09-27-context-completion-controlled-baseline-context-off-predictions.jsonl","workspace":"tmp/e2e/verified/pytest-dev__pytest-10356/solve-ornith-1.5-9b-042b1522-2d6f-4496-95e7-f93c6a817c2d"},
+    {"condition":"baseline-context-on","strategy":"baseline","contextPolicy":"budgeted","elapsedMs":911595,"modelCalls":36,"toolCalls":29,"toolErrors":8,"inputTokens":471903,"outputTokens":16777,"runStatus":"runtime-error","runtimeOutcome":"incomplete","patchBytes":941,"officialStatus":"unresolved","officialTests":{"failToPassPassed":0,"failToPassTotal":1,"passToPassPassed":0,"passToPassTotal":79,"failureCause":"TypeError: 'bool' object is not iterable while collecting testing/test_mark.py"},"qualityStatus":"not-measured","prediction":"2026-09-27-context-completion-controlled-baseline-context-on-predictions.jsonl","workspace":"tmp/e2e/verified/pytest-dev__pytest-10356/solve-ornith-1.5-9b-287bbb4c-0534-497e-a0f8-5f6836f40ad1"},
+    {"condition":"focused-context-off","strategy":"verified-focused-v1","contextPolicy":"disabled","elapsedMs":913140,"modelCalls":66,"toolCalls":66,"toolErrors":23,"inputTokens":1068829,"outputTokens":14962,"runStatus":"runtime-error","runtimeOutcome":"incomplete","patchBytes":5435,"officialStatus":"unresolved","officialTests":{"failToPassPassed":0,"failToPassTotal":1,"passToPassPassed":79,"passToPassTotal":79},"qualityStatus":"quality-failed","qualityIssues":[".pytest_cache/.gitignore",".pytest_cache/CACHEDIR.TAG",".pytest_cache/README.md",".pytest_cache/v/cache/lastfailed",".pytest_cache/v/cache/nodeids",".pytest_cache/v/cache/stepwise"],"prediction":"2026-09-27-context-completion-controlled-focused-context-off-predictions.jsonl","workspace":"tmp/e2e/verified/pytest-dev__pytest-10356/solve-ornith-1.5-9b-5de6bbef-3028-4762-9098-51d5b3aa118a"},
+    {"condition":"focused-context-on","strategy":"verified-focused-v1","contextPolicy":"budgeted","elapsedMs":933702,"modelCalls":79,"toolCalls":76,"toolErrors":27,"inputTokens":769620,"outputTokens":14572,"runStatus":"timeout","runtimeOutcome":"incomplete","patchBytes":1404,"officialStatus":"unresolved","officialTests":{"failToPassPassed":0,"failToPassTotal":1,"passToPassPassed":0,"passToPassTotal":79,"failureCause":"AttributeError: function object has no __mro__ while collecting testing/test_mark.py"},"qualityStatus":"not-measured","prediction":"2026-09-27-context-completion-controlled-focused-context-on-predictions.jsonl","workspace":"tmp/e2e/verified/pytest-dev__pytest-10356/solve-ornith-1.5-9b-3210811b-512b-41bb-8fb4-2ae6d2864636"}
+  ],
+  "conclusions": [
+    "0/4 official resolutions; testing/test_mark.py::test_mark_mro failed in all conditions.",
+    "The focused completion prompt did not yield normal completion or prevent exploration; the context-disabled focused run added six unwanted pytest cache files.",
+    "With budgeted context, input tokens were 471903 vs 250722 for baseline, and 769620 vs 1068829 for focused prompt. This did not improve official resolution; the context-enabled model patches caused test collection errors (TypeError in baseline; AttributeError in focused) that failed all 79 PASS_TO_PASS checks.",
+    "Run metadata reported zero summary attempts/failures in context-enabled runs despite summary requests in the event logs; compaction telemetry needs correction.",
+    "The agent containers remained near 110-130MiB of a 3.825GiB limit; no OOM was observed."
+  ],
+  "limitations": ["One attempt per condition is a diagnostic, not a statistical estimate.", "All four arms used the same Orbit commit, prompt conditions, model digest, generation settings, case, dataset/harness revisions, Docker image, and 900-second deadline.", "Raw official-format predictions are stored with this report; full conversations and evaluator logs remain in ignored tmp/e2e/verified/pytest-dev__pytest-10356/."]
+}
