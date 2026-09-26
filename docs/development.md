@@ -186,6 +186,13 @@ rewrite files, so review the resulting diff afterward. New TypeScript files
 must include the standard copyright and SPDX header; run
 `npm run headers:apply` to add missing headers.
 
+The `tests` GitHub Actions workflow runs package checks and the Ubuntu unit
+test matrix on every push. Use its manual `workflow_dispatch` trigger to run
+the separate Windows unit test matrix when investigating Windows behavior.
+Each job has a 30-minute timeout so a stalled test process does not occupy a
+runner for the platform's six-hour default limit. Windows test failures remain
+diagnostic until Windows support is verified.
+
 ### Managed execution surface fixtures
 
 After building, run these isolated fixtures from the repository root:
