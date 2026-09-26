@@ -290,6 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                        |
 | ---------- | ---------- | -------------- | ----------------------------------------------------------------------------------------------- |
+| 2026-09-26 | proposed   | not-started    | [Prometheus Operational Metrics](2026-09-26-prometheus-operational-metrics.md)                  |
 | 2026-09-25 | accepted | completed | [Long-Turn Context Recovery](2026-09-25-long-turn-context-recovery.md) |
 | 2026-09-25 | accepted   | completed      | [Model Context Capacity Discovery](2026-09-25-model-context-capacity.md) |
 | 2026-09-25 | accepted   | completed      | [Unlimited Run Budgets](2026-09-25-unlimited-run-budgets.md) |
