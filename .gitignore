@@ -20,8 +20,7 @@ PROMPT.md
 /examples/agent/workspace
 *.tgz
 
-# Local evaluation artifacts (keep harness code and pinned cases tracked)
-/e2e/results/
+# Local evaluation artifacts (curated reports and predictions live in e2e/results/)
 /e2e/result/
 
 # Machine-local agent settings

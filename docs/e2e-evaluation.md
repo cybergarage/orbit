@@ -2,9 +2,9 @@
 
 This opt-in developer harness measures an Orbit coding agent using real Ollama
 inference. It is separate from deterministic `npm test`. It does not establish a
-SWE-bench leaderboard score. Local experiment records under `e2e/results/`
-contain outcomes, failures, model identities and limitations; these artifacts
-are not distributed with the repository.
+SWE-bench leaderboard score. The [results index](../e2e/results/README.md)
+summarizes the dated local experiments and links to their tracked reports,
+machine-readable summaries and submitted patches.
 
 ## Prerequisites and small cases
 
@@ -126,11 +126,10 @@ events, copied artifacts, grader logs and incremental `summary.json`.
 `tmp/e2e/swe/` holds pinned dataset metadata, private reference material, official
 reports and predictions. **Do not mount this parent directory into the agent.**
 These ignored files are local evidence: preserve them separately for a machine
-handoff. Compact dated reports, JSON summaries and generated prediction patches
-also remain local under ignored `e2e/results/`. Git tracks the harness, Dockerfiles,
-pinned case manifests and operating instructions, not execution artifacts.
-Copy results separately when sharing evidence or moving to another machine; a
-fresh clone does not contain historical reports or submitted patches.
+handoff. Curated dated reports, JSON summaries and submitted prediction patches
+are tracked under [`e2e/results/`](../e2e/results/README.md). A fresh clone has
+those compact records, but not the full logs, workspaces, datasets or hidden
+grading material under `tmp/e2e/`.
 
 Read `grade.json` / summary status for final outcomes. `resolved` requires both a
 completed Run and independent success; `unresolved` includes incorrect work and
@@ -198,7 +197,12 @@ A repeated failed call is a diagnostic count, not proof of an unproductive loop:
 rerunning a failing test after a partial fix can be appropriate. Inspect tool
 names, edits and test outputs before attributing that count to failed recovery.
 
-The measured SWE configuration is the original prompt, 50 iterations and thinking disabled. It completed in 41 tool calls and passed official grading in one trial. This selects a useful evaluation default, not a universal optimal budget. The local report `e2e/results/2026-09-25-recovery.md` also records the unsuccessful recovery-prompt trials, when those artifacts have been retained.
+The measured SWE configuration used the original prompt, 50 iterations and
+thinking disabled. It completed in 41 tool calls and passed official grading in
+one trial. This historical configuration is not the current default: the SWE
+evaluation now has no round limit and retains the elapsed-time deadline. The
+[follow-up report](../e2e/results/2026-09-25-recovery.md) also records the
+unsuccessful recovery-prompt trials.
 
 ## Three pinned Verified problems
 
@@ -233,9 +237,8 @@ environment; local test setup failures must be distinguished from official
 patch grading failures. Record image ID and `pip freeze` alongside results,
 since transitive Python dependencies are not fully locked by the Dockerfile.
 
-Saved batch predictions are standard JSONL. The example below requires a locally
-retained or separately copied `e2e/results/2026-09-25-verified-predictions.jsonl`;
-it is not present in a fresh clone. To regrade one saved prediction
+Saved batch predictions are standard JSONL. The example below uses the tracked
+`e2e/results/2026-09-25-verified-predictions.jsonl`. To regrade one saved prediction
 through this single-instance wrapper, extract its row without changing the patch:
 
 ```sh
