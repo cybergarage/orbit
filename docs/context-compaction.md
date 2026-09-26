@@ -96,7 +96,8 @@ resource ownership. Its response must be JSON with version 1 and arrays named
 Each item contains nonempty `text` and `sourceIds` referring to original messages.
 Test items also require a target, a revision string (or null when unknown), and
 an outcome of passed, failed or unknown. At least one item is required. Tool calls
-in a summary response are rejected.
+in a summary response are rejected. A complete JSON code fence around the object
+is accepted, but surrounding prose and invalid evidence references are rejected.
 
 The checkpoint is labeled untrusted and projected as user-level context.
 Valid source references do not establish that every statement is true or that

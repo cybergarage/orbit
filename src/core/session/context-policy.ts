@@ -288,7 +288,7 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
     run.check()
     assertCompleteModelResponse(response)
     if (getToolCalls(response).length > 0) throw new ContextBudgetError('summary-returned-tool-call')
-    const summary: unknown = JSON.parse(response.content)
+    const summary: unknown = parseSummaryResponse(response.content)
     validateSummary(summary, new Set(originals.map((message) => message.id)))
     candidate = {
       afterTokens: 0,
@@ -361,6 +361,12 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
   run.check()
   notify(options, {afterTokens: candidate.afterTokens, beforeTokens: before.tokens, outcome: 'compacted'})
   return next
+}
+
+function parseSummaryResponse(content: string): unknown {
+  const trimmed = content.trim()
+  const fenced = /^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/.exec(trimmed)
+  return JSON.parse(fenced ? fenced[1] : trimmed)
 }
 
 function hasPendingEffects(run: RunContext): boolean {
