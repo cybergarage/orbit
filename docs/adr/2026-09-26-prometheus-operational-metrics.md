@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-26
-decision-date: null
+decision-date: 2026-09-26
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -19,7 +19,8 @@ the required execution journal and the local GUI security model intact.
 
 ## Decision
 
-**Proposal for author review; no implementation is authorized by this record.**
+The author accepted this proposal on 2026-09-26 and explicitly requested
+implementation. The accepted scope and limits are those stated below.
 
 Add an opt-in, process-local Prometheus metrics adapter. Instrument the common
 execution path at lifecycle boundaries, independently of diagnostic capture and
@@ -167,7 +168,7 @@ Investigation date: 2026-09-26. No Codex or Pi behavior was executed.
 
 ## Implementation and Confirmation
 
-No implementation has started. If accepted, introduce the small core observer
+No implementation had started at acceptance. Introduce the small core observer
 contract and instrument final Run settlement and provider/tool completion at
 their owners. Implement an isolated Prometheus registry and a loopback
 metrics-only server; wire the persistent GUI command behind explicit settings.
