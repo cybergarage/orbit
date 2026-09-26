@@ -21,11 +21,11 @@ export function evaluationPrompt(task, {strategy = strategyVersion, swe = false}
   return `${task}\n\nWorking procedure:\n- Work in /workspace. ${environment}\n- Read the relevant code before editing. Use focused searches and bounded reads instead of dumping entire large files.\n- If an exact-text edit fails, re-read the affected file and rebuild the edit from the current exact text, including quotes and whitespace. Do not repeat the unchanged failed operation. Check the resulting file after editing.\n- Follow any requested test-before-edit order. Reproduce the reported behavior, implement a minimal fix, and run focused tests for the changed behavior plus closely related regression tests. Preserve the exit status of test commands; do not hide it with a pipe to tail or a trailing echo.\n- Once those checks pass, summarize the changed files and actual test results and finish. Expand testing only to investigate a concrete failure or an affected dependency; do not keep adding unrelated tests. If blocked, report the blocker and stop rather than repeating the same attempt.\n- Do not claim that independent or hidden evaluation tests passed; they are run separately by the host.\n`
 }
 
-export function readRounds(value, fallback) {
+export function readRounds(value, fallback, maximum = 100) {
   if ((value ?? fallback) === 'unlimited') return 'unlimited'
   const rounds = value === undefined ? fallback : Number(value)
-  if (!Number.isSafeInteger(rounds) || rounds < 1 || rounds > 100)
-    throw new Error('Evaluation rounds must be an integer from 1 to 100')
+  if (!Number.isSafeInteger(rounds) || rounds < 1 || rounds > maximum)
+    throw new Error(`Evaluation rounds must be an integer from 1 to ${maximum}`)
   return rounds
 }
 

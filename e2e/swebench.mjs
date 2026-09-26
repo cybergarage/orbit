@@ -13,7 +13,7 @@ import {evaluationPrompt, readRounds} from './strategy.mjs'
 import {validateSWECase, verifyPreparedSWECase} from './swe-case.mjs'
 
 const strategy = process.env.ORBIT_E2E_STRATEGY ?? 'baseline'
-const rounds = readRounds(process.env.ORBIT_SWE_ROUNDS, 50)
+const rounds = readRounds(process.env.ORBIT_SWE_ROUNDS, 'unlimited', Number.MAX_SAFE_INTEGER)
 const caseFile = process.env.ORBIT_SWE_CASE
 const selected = caseFile ? validateSWECase(JSON.parse(await fs.readFile(path.resolve(caseFile), 'utf8'))) : null
 const root = selected ? path.join(repo, 'tmp/e2e/verified', selected.instance_id) : path.join(repo, 'tmp/e2e/swe')

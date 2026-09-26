@@ -29,8 +29,10 @@ describe('E2E host control (no model or Docker)', () => {
   it('rejects invalid budgets rather than disabling the limit', () => {
     expect(readRounds(undefined, 30)).to.equal(30)
     expect(readRounds('50', 30)).to.equal(50)
+    expect(readRounds('101', 30, Number.MAX_SAFE_INTEGER)).to.equal(101)
     expect(readRounds('unlimited', 30)).to.equal('unlimited')
     expect(readRounds(undefined, 'unlimited')).to.equal('unlimited')
+    expect(readRounds(undefined, 'unlimited', Number.MAX_SAFE_INTEGER)).to.equal('unlimited')
     for (const value of ['0', '-1', 'NaN', 'Infinity', '1.5', '', '101'])
       expect(() => readRounds(value, 30)).to.throw('Evaluation rounds')
   })

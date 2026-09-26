@@ -106,8 +106,10 @@ nor dataset records. The trusted host extracts the resulting diff into official
 JSONL fields `instance_id`, `model_name_or_path`, `model_patch`. A fresh official
 container applies and grades that patch. The evaluator report determines
 resolution; process exit zero alone is insufficient. The SWE solving budget is
-900 seconds/50 tool iterations (51 model calls), context 32768, thinking disabled by default (`ORBIT_SWE_THINK=true` enables it for a separately recorded experiment). Small cases use
-context 16384 and thinking disabled. Both use temperature 0.6, top-p 0.95,
+900 seconds with unlimited tool iterations and model calls by default, context
+32768, and thinking disabled by default.
+`ORBIT_SWE_THINK=true` enables thinking for a separately recorded experiment.
+Small cases use context 16384 and thinking disabled. Both use temperature 0.6, top-p 0.95,
 num_predict 4096 and seed 42. Settings are recorded for every trial.
 
 The agent network is available for the host Ollama connection. The prompt forbids
@@ -163,12 +165,13 @@ are test-host instructions; they contain no case solution, reference patch or
 hidden test information. Orbit's default runtime limits and product prompts are
 unchanged. Use `ORBIT_E2E_STRATEGY=baseline` to reproduce the original prompts.
 
-`ORBIT_E2E_ROUNDS` changes the small-case budget (default 12), while
-`ORBIT_SWE_ROUNDS` changes the one-problem budget (default 50). Values must be
-integers from 1 to 100. The host sets tool iterations, tool rounds and model-call
-allowance together; time limits remain unchanged. The instruction text does not
-include the selected budget, so a 30/50 comparison uses exactly the same prompt.
-Each run records its strategy and prompt hash.
+`ORBIT_E2E_ROUNDS` changes the small-case budget (default 12, maximum 100).
+SWE-bench has no default round or call-count ceiling. Set `ORBIT_SWE_ROUNDS` to a
+positive safe integer only when a finite comparison budget is desired. The host
+sets tool iterations, tool rounds and model-call allowance together; the
+900-second elapsed-time deadline and cleanup remain active. The instruction
+text does not include the selected budget, so a 30/50 comparison uses exactly
+the same prompt. Each run records its strategy and prompt hash.
 
 ```sh
 # Three repetitions per small case/model, improved instructions, original budget:
