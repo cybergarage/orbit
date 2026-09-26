@@ -46,6 +46,7 @@ export interface ExecutionPolicy {
 }
 export interface ManagedToolOptions {
   allowLegacyTools?: boolean
+  onToolSettled?: (outcome: 'completed' | 'failed') => void
   policy: ExecutionPolicy
 }
 
@@ -131,7 +132,7 @@ export async function executeManagedTool(
     variant: 'tool-call',
     version: 1,
   }
-  return executePrepared(run, descriptor, preparation, options.policy)
+  return executePrepared(run, descriptor, preparation, options.policy, false, options.onToolSettled)
 }
 
 export async function executePrepared(
@@ -140,6 +141,7 @@ export async function executePrepared(
   preparation: OperationPreparation,
   policy: ExecutionPolicy,
   deferPluginStartupFailure = false,
+  onToolSettled?: (outcome: 'completed' | 'failed') => void,
 ): Promise<ToolResult> {
   const operation = freezeJSON(copyJSON({...descriptor, preview: redactPreview(descriptor.preview)}))
   const digest = run.journal.digest(operation)
@@ -237,6 +239,21 @@ export async function executePrepared(
     reject = fail
   })
   run.track(`dispatch:${operation.id}`, execution)
+  if (operation.variant === 'tool-call' && onToolSettled) {
+    const observe = (outcome: 'completed' | 'failed') => {
+      try {
+        onToolSettled(outcome)
+      } catch {
+        // An optional observer cannot change execution or journal results.
+      }
+    }
+
+    execution.then(
+      (result) => observe(result.isError ? 'failed' : 'completed'),
+      () => observe('failed'),
+    )
+  }
+
   try {
     preparation.execute().then(resolve, reject)
   } catch (error) {

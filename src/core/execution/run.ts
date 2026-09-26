@@ -4,6 +4,7 @@
 import {randomUUID} from 'node:crypto'
 import {performance} from 'node:perf_hooks'
 
+import type {OperationalMetrics} from '../metrics.js'
 import type {ProjectContextSnapshot} from '../projects/memory-context.js'
 import type {SkillSelection} from '../skills/catalog.js'
 import type {ExecutionJournal, JournalKind, JournalLevel, JournalRecord} from './journal.js'
@@ -476,6 +477,11 @@ export class RunSupervisor {
   private readonly requests = new Map<string, {input: string; promise: Promise<RunHandle>}>()
   private readonly runs = new Map<string, {context: RunContext; handle: RunHandle}>()
 
+  constructor(
+    private readonly metrics?: OperationalMetrics,
+    private readonly onObserverFailure: () => void = () => {},
+  ) {}
+
   close(
     deadline = performance.now() + DEFAULT_RUN_LIMITS.cleanupMs,
   ): Promise<{incomplete: boolean; results: RunResult[]}> {
@@ -693,13 +699,26 @@ export class RunSupervisor {
         value: () => value,
       }
       this.runs.set(id, {context, handle})
+      const admittedAt = performance.now()
+      this.observeMetrics(() => this.metrics?.runAdmitted())
       const forward = () => context.requestStop('user')
       options.signal?.addEventListener('abort', forward, {once: true})
       if (options.signal?.aborted) forward()
       if (this.closed) context.requestStop('shutdown')
       handle.finished = this.execute(context, options, (result) => {
         value = result
-      }).finally(() => options.signal?.removeEventListener('abort', forward))
+      })
+        .then(
+          (result) => {
+            this.observeMetrics(() => this.metrics?.runSettled(result.outcome, performance.now() - admittedAt))
+            return result
+          },
+          (error: unknown) => {
+            this.observeMetrics(() => this.metrics?.runSettled('failed', performance.now() - admittedAt))
+            throw error
+          },
+        )
+        .finally(() => options.signal?.removeEventListener('abort', forward))
       return handle
     } finally {
       this.admitting = false
@@ -846,6 +865,18 @@ export class RunSupervisor {
     }
 
     return copyJSON(result)
+  }
+
+  private observeMetrics(observe: () => void): void {
+    try {
+      observe()
+    } catch {
+      try {
+        this.onObserverFailure()
+      } catch {
+        // Diagnostics are best effort too.
+      }
+    }
   }
 }
 

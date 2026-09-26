@@ -38,6 +38,10 @@ fixed loopback port when needed:
 ./bin/run.js gui --port 4100
 ```
 
+Use `--metrics-port 4101` to start a separate loopback Prometheus endpoint.
+It is disabled by default and exposes aggregate operational metrics, not
+session content. See [Prometheus metrics](metrics.md) for the metric contract.
+
 The GUI uses the same `--provider`, `--model`, provider credential-environment,
 Ollama host, and `--debug` flags as other agent commands. Explicit command
 options override workspace settings, which override provider defaults.

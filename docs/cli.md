@@ -115,7 +115,7 @@ USAGE
   $ orbit gui [--plugin <value>...] [--plugin-data-dir <value>] [--anthropic-api-key-env <value>]
     [--debug] [--execution-policy workspace-confirm|unrestricted] [--journal-level file-and-directory-sync|file-sync]
     [--lang en|ja] [--model <value>] [--ollama-host <value>] [--openai-api-key-env <value>] [--provider
-    anthropic|ollama|openai] [--skill-root <value>...] [--port <value>]
+    anthropic|ollama|openai] [--skill-root <value>...] [--metrics-port <value>] [--port <value>]
 
 FLAGS
   --anthropic-api-key-env=<value>  Environment variable name for the Anthropic API key
@@ -126,6 +126,7 @@ FLAGS
                                    <options: file-and-directory-sync|file-sync>
   --lang=<option>                  Output language
                                    <options: en|ja>
+  --metrics-port=<value>           Optional loopback port for Prometheus metrics
   --model=<value>                  Model name (overrides workspace setting and provider default)
   --ollama-host=<value>            Ollama host URL
   --openai-api-key-env=<value>     Environment variable name for the OpenAI API key

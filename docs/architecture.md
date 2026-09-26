@@ -211,6 +211,14 @@ through the shared supervisor, model calls and tool execution. A bounded result
 does not imply that noncooperative work stopped. Required recording failure is
 reported independently from the known execution outcome; observers are optional.
 
+`src/core/metrics.ts` provides an optional, per-service Prometheus registry.
+The shared Run supervisor counts final outcomes after terminal recording;
+Agent counts individual model attempts and dispatched tools. Fixed-label
+aggregate counters and durations are independent of diagnostic capture and
+session-log retention. `orbit gui --metrics-port` starts a separate loopback
+listener; embedded hosts may render the registry through their own server.
+See [Prometheus metrics](metrics.md).
+
 The GUI boundary is loopback-only and requires a startup capability token for
 assets, APIs, and event streams. Origin checks, request limits, and schema
 validation remain part of that boundary.

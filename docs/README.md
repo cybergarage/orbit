@@ -86,6 +86,7 @@ routing contract belongs in an ADR, and its implemented structure appears in
 - [Coding Tools](tools.md)
 - [Sessions](session.md)
 - [Session Logs](logging.md)
+- [Prometheus metrics](metrics.md): opt-in aggregate Run, model and tool observations.
 - [CLI Reference](cli.md): generated command usage, flags and examples.
 - [Interactive Commands](interactive.md)
 - [Local GUI](gui.md)

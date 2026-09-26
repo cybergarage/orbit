@@ -8,6 +8,7 @@ import type {AgentInvokeOptions, AgentOptions} from './agent.js'
 import type {ApprovalReply, RunHandle, RunSnapshot} from './execution/run.js'
 import type {SessionLoggerFactory} from './logs/index.js'
 import type {Message, MessagePayload, MessageType} from './message/index.js'
+import type {OperationalMetrics} from './metrics.js'
 import type {ModelToolCall, ProviderName, Role} from './models/index.js'
 import type {CompiledProcessorGraph, GraphJSON, GraphSnapshot, GraphValue} from './processor/index.js'
 import type {ContextPreparationEvent} from './session/context-policy.js'
@@ -182,6 +183,7 @@ export type ThreadAgentFactory = (options: AgentOptions) => ThreadAgent
 export interface ThreadManagerOptions {
   createAgent?: ThreadAgentFactory
   loggerFactory?: SessionLoggerFactory
+  metrics?: OperationalMetrics
   onEvent?: ThreadEventHandler
   onRunSnapshot?: (snapshot: RunSnapshot) => void
   sessionRepository?: SessionRepository
@@ -246,6 +248,7 @@ export class ThreadManager {
   private readonly createAgent: ThreadAgentFactory
   private readonly eventHandlers = new Set<ThreadEventHandler>()
   private readonly loggerFactory?: SessionLoggerFactory
+  private readonly metrics?: OperationalMetrics
   private readonly onRunSnapshot?: (snapshot: RunSnapshot) => void
   private readonly runThreads = new Map<string, string>()
   private readonly sessionRepository?: SessionRepository
@@ -260,6 +263,7 @@ export class ThreadManager {
     this.createAgent = options.createAgent ?? ((agentOptions) => new Agent(agentOptions))
     if (options.onEvent !== undefined) this.eventHandlers.add(options.onEvent)
     this.loggerFactory = options.loggerFactory
+    this.metrics = options.metrics
     this.sessionRepository = options.sessionRepository
   }
 
@@ -344,6 +348,7 @@ export class ThreadManager {
       ...(options.agent?.messages === undefined && metadata.systemPrompt !== undefined
         ? {messages: [new CoreMessage(CoreMessageType.Session, {content: metadata.systemPrompt})]}
         : {}),
+      metrics: this.metrics ?? options.agent?.metrics,
       state: new State(session),
       ...this.sessionLoggerOptions(id, options.agent),
     }
@@ -432,6 +437,7 @@ export class ThreadManager {
       ...(options.agent?.messages === undefined && metadata.systemPrompt !== undefined
         ? {messages: [new CoreMessage(CoreMessageType.Session, {content: metadata.systemPrompt})]}
         : {}),
+      metrics: this.metrics ?? options.agent?.metrics,
       state: new State(session),
       ...this.sessionLoggerOptions(id, options.agent),
     }

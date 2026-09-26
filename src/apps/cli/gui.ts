@@ -12,22 +12,25 @@ import {
   Message,
   MessageType,
   OrbitApplicationService,
+  PrometheusOperationalMetrics,
   Role,
   sessionsDir,
   SqliteProjectStore,
 } from '../../core/index.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
 import {startGuiServer} from '../gui/server.js'
+import {startMetricsServer} from '../metrics/server.js'
 import {productExtensions} from '../plugins.js'
 import {ensureStartupStorage} from '../storage-startup.js'
 
 export async function runGuiCommand(
-  options: AgentOptions & {port?: number; version?: string},
+  options: AgentOptions & {metricsPort?: number; port?: number; version?: string},
   deps: {storagePreflight?: typeof ensureStartupStorage} = {},
 ): Promise<void> {
   await (deps.storagePreflight ?? ensureStartupStorage)()
   const cwd = process.cwd()
   const resolved = await resolveWorkspaceAgentOptions(options, cwd)
+  const metrics = options.metricsPort === undefined ? undefined : new PrometheusOperationalMetrics()
   const projectStore = await SqliteProjectStore.open({file: path.join(path.dirname(sessionsDir()), 'projects.sqlite')})
   const service = await OrbitApplicationService.create({
     cwd,
@@ -36,6 +39,7 @@ export async function runGuiCommand(
       policy: {generation: 'product-v1', profile: resolved.executionPolicy ?? 'workspace-confirm', roots: [cwd]},
     },
     logLevel: resolved.debug ? 'debug' : 'info',
+    metrics,
     model: resolved.model,
     projectStore,
     provider: resolved.provider,
@@ -89,12 +93,28 @@ export async function runGuiCommand(
     await service.close()
     throw error
   })
+  const metricsServer =
+    options.metricsPort === undefined
+      ? undefined
+      : await startMetricsServer(metrics!, options.metricsPort).catch(async (error: unknown) => {
+          await server.close()
+          await service.close()
+          throw error
+        })
   try {
     process.stdout.write(`Orbit GUI: ${server.url}\n`)
+    if (metricsServer) process.stdout.write(`Orbit metrics: ${metricsServer.url}\n`)
     await waitForShutdown()
   } finally {
-    await server.close()
-    await service.close()
+    try {
+      await server.close()
+    } finally {
+      try {
+        await metricsServer?.close()
+      } finally {
+        await service.close()
+      }
+    }
   }
 }
 
@@ -102,6 +122,12 @@ export default class Gui extends Command {
   static description = 'Start the local Orbit graphical interface'
   static flags = {
     ...agentFlags,
+    'metrics-port': Flags.integer({
+      description: 'Optional loopback port for Prometheus metrics',
+      max: 65_535,
+      min: 1,
+      required: false,
+    }),
     port: Flags.integer({
       description: 'Loopback port (uses an available port by default)',
       min: 0,
@@ -112,7 +138,12 @@ export default class Gui extends Command {
   async run(): Promise<void> {
     const {flags} = await this.parse(Gui)
     try {
-      await runGuiCommand({...toAgentOptions(flags), port: flags.port, version: this.config.version})
+      await runGuiCommand({
+        ...toAgentOptions(flags),
+        metricsPort: flags['metrics-port'],
+        port: flags.port,
+        version: this.config.version,
+      })
     } catch (error) {
       this.error(error instanceof Error ? error.message : 'GUI startup failed.')
     }

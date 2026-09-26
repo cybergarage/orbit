@@ -15,6 +15,7 @@ import type {ApprovalReply, ApprovalRequest, RunContext, RunHandle, RunLimits, R
 import type {Logger} from './logger/index.js'
 import type {SessionLogStore} from './logs/index.js'
 import type {McpToolManager, McpToolManagerFactoryOptions} from './mcp.js'
+import type {OperationalMetrics} from './metrics.js'
 import type {
   Model,
   ModelInvokeOptions,
@@ -153,6 +154,7 @@ export interface AgentOptions {
   logger?: Logger
   logStore?: SessionLogStore
   messages?: Message[]
+  metrics?: OperationalMetrics
   model?: {
     name?: string
     provider?: ProviderName
@@ -177,7 +179,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   public readonly settings: WorkspaceSettings
   public readonly skillCatalog?: SkillCatalog
   public readonly state: State
-  readonly supervisor = new RunSupervisor()
+  readonly supervisor: RunSupervisor
   public readonly tools: AgentTool[]
   private closePromise?: Promise<void>
   private readonly cwd: string
@@ -187,6 +189,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   private readonly graphSnapshots = new Map<string, GraphSnapshot>()
   private readonly journals = new Map<string, Promise<ExecutionJournal>>()
   private readonly mcpFactory: NonNullable<NonNullable<AgentOptions['deps']>['createMcpToolManager']>
+  private readonly metrics?: OperationalMetrics
   private readonly model: Model
   private observerFailures = 0
   private readonly ownedLogStore?: SessionLogStore
@@ -198,6 +201,10 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   // Model, session, diagnostics, and tool profile dependencies are resolved at one construction boundary.
   // eslint-disable-next-line complexity
   constructor(options: AgentOptions = {}) {
+    this.metrics = options.metrics
+    this.supervisor = new RunSupervisor(this.metrics, () => {
+      this.observerFailures++
+    })
     const createModel = options.deps?.createModel ?? getModel
     this.plugins = options.plugins
     this.skillCatalog = options.plugins?.skillCatalog ?? options.skillCatalog
@@ -556,7 +563,11 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     if (!isExecutionLimit(maxToolIterations)) throw new Error('Invalid maxToolIterations')
     const run = options!.executionContext!
     const policy = options!.executionPolicy!
-    const managed = {allowLegacyTools: this.execution.allowLegacyTools, policy}
+    const managed = {
+      allowLegacyTools: this.execution.allowLegacyTools,
+      onToolSettled: (outcome: 'completed' | 'failed') => this.observeMetric(() => this.metrics?.toolCall(outcome)),
+      policy,
+    }
     const diagnostics = options?.diagnostics ?? this.diagnostics
     const turnStartedAt = performance.now()
     let terminalRecorded = false
@@ -797,24 +808,32 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
             const invoke = async (): Promise<Message> => {
               if (verifiedContext) await reverifyInterruptedContext(session, run)
               run.consume('modelCalls')
-              const response = await run.wait(
-                'model',
-                prepared
-                  ? prepared.invoke()
-                  : this.model.invoke(
-                      [
-                        ...this.messages,
-                        ...projectContextPrefix(options?.projectContext),
-                        ...skillPrefix(options?.activeSkills ?? []).map(
-                          (content) => new Message(MessageType.User, {content}),
-                        ),
-                        ...context.messages,
-                      ],
-                      iterationOptions,
-                    ),
-              )
-              assertCompleteModelResponse(response)
-              return response
+              try {
+                const response = await run.wait(
+                  'model',
+                  prepared
+                    ? prepared.invoke()
+                    : this.model.invoke(
+                        [
+                          ...this.messages,
+                          ...projectContextPrefix(options?.projectContext),
+                          ...skillPrefix(options?.activeSkills ?? []).map(
+                            (content) => new Message(MessageType.User, {content}),
+                          ),
+                          ...context.messages,
+                        ],
+                        iterationOptions,
+                      ),
+                )
+                assertCompleteModelResponse(response)
+                this.observeMetric(() =>
+                  this.metrics?.modelRequest('completed', modelResponseMetadata(response)?.usage),
+                )
+                return response
+              } catch (error) {
+                this.observeMetric(() => this.metrics?.modelRequest('failed'))
+                throw error
+              }
             }
 
             try {
@@ -1132,6 +1151,14 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   }
 
   // Session recording, tool iteration, and terminal-state handling intentionally share one lifecycle boundary.
+
+  private observeMetric(observe: () => void): void {
+    try {
+      observe()
+    } catch {
+      this.observerFailures++
+    }
+  }
 
   // Tool execution, error projection, and diagnostics share one lifecycle boundary.
   // eslint-disable-next-line complexity

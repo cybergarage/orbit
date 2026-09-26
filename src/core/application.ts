@@ -114,6 +114,7 @@ export interface OrbitApplicationServiceOptions {
   logger?: Logger
   logLevel?: LogLevel
   logStore?: SessionLogStore
+  metrics?: import('./metrics.js').OperationalMetrics
   model?: string
   plugins?: CoreAgentOptions['plugins']
   projectStore?: ProjectStore
@@ -226,6 +227,7 @@ export class OrbitApplicationService {
             skillCatalog: agentOptions.skillCatalog,
           })),
       loggerFactory: this.loggerFactory,
+      metrics: options.metrics,
       onEvent: (event) => this.handleThreadEvent(event),
       onRunSnapshot: (snapshot) => {
         for (const listener of this.runListeners) {
