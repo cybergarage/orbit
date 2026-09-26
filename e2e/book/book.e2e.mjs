@@ -7,7 +7,8 @@ import path from 'node:path'
 // Set before dynamically importing host.mjs, which resolves its image at import.
 process.env.ORBIT_E2E_IMAGE ??= 'orbit-e2e:book-agent'
 const {command, docker, image, ollamaMetadata, repo, runAgent, writeJSON} = await import('../host.mjs')
-const {bookContextWindow, caseIds, checkFiles, makeCase, runtimePassed, source} = await import('./cases.mjs')
+const {bookContextWindow, caseIds, caseResolved, checkFiles, checkFilesAndGrade, makeCase, runtimePassed, source} =
+  await import('./cases.mjs')
 const {gradeBook} = await import('./grade.mjs')
 const {readElapsed, readRounds} = await import('../strategy.mjs')
 const selected = process.env.ORBIT_E2E_CASE ? [process.env.ORBIT_E2E_CASE] : caseIds
@@ -102,12 +103,16 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
               usageComplete: run.usageComplete,
             }
             row.status = ['environment-error', 'timeout'].includes(run.status) ? run.status : 'unresolved'
-            await checkFiles(path.join(directory, 'implementation/workspace'), c)
-            const grade = await gradeBook(path.join(directory, 'implementation'))
+            const {fileChecks, grade} = await checkFilesAndGrade(
+              path.join(directory, 'implementation/workspace'),
+              c,
+              () => gradeBook(path.join(directory, 'implementation')),
+            )
+            row.fileChecks = fileChecks
             await writeJSON(path.join(directory, 'grade.json'), grade)
             row.checks = grade.passed ? 'passed' : 'failed'
             if (grade.timedOut || grade.code === 125) row.status = 'grading-error'
-            else if (grade.passed && runtimePassed(run)) row.status = 'resolved'
+            else if (caseResolved(run, grade, fileChecks)) row.status = 'resolved'
           } catch (error) {
             row.error = String(error)
           } finally {

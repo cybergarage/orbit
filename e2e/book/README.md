@@ -15,3 +15,7 @@ See [the operating guide](../../docs/e2e-evaluation.md#english-book-workflows).
 The grader uses a separately locked Playwright installation. Only the `grader`
 Docker target contains the browser checks. The `agent` target contains the
 starter dependencies and Orbit. Do not select the grader image as the solver.
+Each case records protected-file and progress checks in `fileChecks`, and the
+independent application grade in `checks` and `grade.json`. A failed Loop
+progress check does not suppress the application grade; both must pass, along
+with a completed Orbit run, for the case to be resolved.

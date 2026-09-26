@@ -6,7 +6,15 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import {bookContextWindow, caseIds, checkFiles, makeCase, runtimePassed} from './cases.mjs'
+import {
+  bookContextWindow,
+  caseIds,
+  caseResolved,
+  checkFiles,
+  checkFilesAndGrade,
+  makeCase,
+  runtimePassed,
+} from './cases.mjs'
 
 describe('Book workflow fixtures (no inference or Docker)', () => {
   it('uses discovered model capacity without a fixed book context ceiling', () => {
@@ -69,6 +77,36 @@ describe('Book workflow fixtures (no inference or Docker)', () => {
       }
 
       expect(String(error)).to.include('unperformed browser checks')
+    } finally {
+      await fs.rm(directory, {force: true, recursive: true})
+    }
+  })
+
+  it('grades Loop artifacts even when progress was not updated', async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-book-loop-grade-'))
+    try {
+      const c = await makeCase('loop')
+      for (const [name, content] of Object.entries(c.files)) {
+        await fs.mkdir(path.dirname(path.join(directory, name)), {recursive: true})
+        await fs.writeFile(path.join(directory, name), content)
+      }
+
+      let graded = false
+      const result = await checkFilesAndGrade(directory, c, async () => {
+        graded = true
+        return {passed: true}
+      })
+      expect(graded).to.equal(true)
+      expect(result.fileChecks).to.include({status: 'failed'})
+      expect(result.fileChecks.error).to.include('did not update progress.md')
+      expect(result.grade.passed).to.equal(true)
+      expect(
+        caseResolved(
+          {result: {runtime: {outcome: 'completed', quiescence: true}}, status: 'completed'},
+          result.grade,
+          result.fileChecks,
+        ),
+      ).to.equal(false)
     } finally {
       await fs.rm(directory, {force: true, recursive: true})
     }

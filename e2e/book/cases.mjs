@@ -103,6 +103,21 @@ export async function checkFiles(workspace, c, review = false) {
   }
 }
 
+export async function checkFilesAndGrade(workspace, c, grade) {
+  let fileChecks = {status: 'passed'}
+  try {
+    await checkFiles(workspace, c)
+  } catch (error) {
+    fileChecks = {error: String(error), status: 'failed'}
+  }
+
+  return {fileChecks, grade: await grade()}
+}
+
+export function caseResolved(run, grade, fileChecks) {
+  return fileChecks.status === 'passed' && grade.passed && runtimePassed(run)
+}
+
 export function runtimePassed(run) {
   return (
     run.status === 'completed' &&
