@@ -475,8 +475,13 @@ The summary's `checks` field reports the combined type-check, unit-test, build
 and browser verdict (`not-run`, `passed`, or `failed`). Earlier artifacts used
 `browser` for that combined verdict; failure there does not establish that the
 browser phase ran. Inspect `grade.log` to identify the failing phase.
+`run.status`, `fileChecks.status`, and `grading.status` report execution,
+protected-file checks, and independent grading separately. The top-level
+status preserves a failed Run's `runtime-error`, `timeout`, or
+`environment-error` even when grading also fails; `grading-error` applies when
+the Run completed but the grader could not produce a usable result.
 `resolved` requires both clean runtime completion and passing independent checks;
-a budget stop remains unresolved even if some artifacts work. Adding these
+a budget stop is reported as `runtime-error` even if some artifacts work. Adding these
 cases does not establish successful model results; run and retain the matrix
 before making claims about workflow effectiveness. These test-local additions
 change no Orbit product APIs or runtime policies.

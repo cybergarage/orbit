@@ -19,3 +19,5 @@ Each case records protected-file and progress checks in `fileChecks`, and the
 independent application grade in `checks` and `grade.json`. A failed Loop
 progress check does not suppress the application grade; both must pass, along
 with a completed Orbit run, for the case to be resolved.
+The summary also exposes `grading.status` and preserves `run.status` in the
+top-level status when the Orbit Run fails.

@@ -7,7 +7,7 @@ import path from 'node:path'
 // Set before dynamically importing host.mjs, which resolves its image at import.
 process.env.ORBIT_E2E_IMAGE ??= 'orbit-e2e:book-agent'
 const {command, docker, image, ollamaMetadata, repo, runAgent, writeJSON} = await import('../host.mjs')
-const {bookContextWindow, caseIds, caseResolved, checkFiles, checkFilesAndGrade, makeCase, runtimePassed, source} =
+const {bookContextWindow, bookResultStatus, caseIds, checkFiles, checkFilesAndGrade, makeCase, runtimePassed, source} =
   await import('./cases.mjs')
 const {gradeBook} = await import('./grade.mjs')
 const {readElapsed, readRounds} = await import('../strategy.mjs')
@@ -77,7 +77,7 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
                 timeoutMs,
               })
               row.review = {elapsedMs: review.elapsedMs, status: review.status, usage: review.usage}
-              row.status = 'unresolved'
+              row.status = review.status === 'completed' ? 'unresolved' : review.status
               if (!runtimePassed(review) || !review.result.answer?.trim())
                 throw new Error('Specification review did not complete')
               await checkFiles(path.join(directory, 'review/workspace'), c, true)
@@ -109,7 +109,7 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
               usage: run.usage,
               usageComplete: run.usageComplete,
             }
-            row.status = ['environment-error', 'timeout'].includes(run.status) ? run.status : 'unresolved'
+            row.status = run.status === 'completed' ? 'unresolved' : run.status
             const {fileChecks, grade} = await checkFilesAndGrade(
               path.join(directory, 'implementation/workspace'),
               c,
@@ -123,8 +123,8 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
                 : grade.passed
                   ? 'passed'
                   : 'failed'
-            if (grade.environmentError || grade.timedOut || grade.code === 125) row.status = 'grading-error'
-            else if (caseResolved(run, grade, fileChecks)) row.status = 'resolved'
+            row.grading = {status: row.checks === 'not-run' ? 'error' : row.checks}
+            row.status = bookResultStatus(run, grade, fileChecks)
           } catch (error) {
             row.error = String(error)
           } finally {

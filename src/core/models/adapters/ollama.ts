@@ -5,6 +5,7 @@ import type {Config, Message as OllamaMessage, Tool as OllamaTool, ToolCall as O
 
 import {performance} from 'node:perf_hooks'
 import {Ollama} from 'ollama'
+import {Agent as HttpAgent, fetch as undiciFetch} from 'undici'
 
 import type {Message} from '../../message/index.js'
 import type {ModelContextInfo} from '../context-capacity.js'
@@ -34,6 +35,19 @@ export interface OllamaModelSelectionOptions {
   requestedModel?: string
 }
 
+// Local generation can legitimately take longer than Node's five-minute
+// response-header wait. The Run's elapsed limit and cancellation own the wait.
+const ollamaDispatcher = new HttpAgent({bodyTimeout: 0, headersTimeout: 0})
+
+export const ollamaFetch: NonNullable<Config['fetch']> = (input, init) =>
+  undiciFetch(
+    input as Parameters<typeof undiciFetch>[0],
+    {
+      ...init,
+      dispatcher: ollamaDispatcher,
+    } as Parameters<typeof undiciFetch>[1],
+  ) as unknown as ReturnType<NonNullable<Config['fetch']>>
+
 export class OllamaAgent implements Model {
   private readonly abort = () => this.client.abort()
   private readonly client: Partial<Pick<Ollama, 'ps' | 'show'>> & Pick<Ollama, 'abort' | 'chat'>
@@ -45,7 +59,7 @@ export class OllamaAgent implements Model {
     options: OllamaAgentOptions = {},
   ) {
     this.hasInjectedClient = options.client !== undefined
-    this.client = options.client ?? new Ollama(createOllamaOptions(provider))
+    this.client = options.client ?? new Ollama({...createOllamaOptions(provider), fetch: ollamaFetch})
   }
 
   async getContextInfo(options: {signal?: AbortSignal} = {}): Promise<ModelContextInfo> {

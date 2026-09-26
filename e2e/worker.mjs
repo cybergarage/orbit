@@ -4,7 +4,7 @@
 import fs from 'node:fs'
 import {Ollama} from 'ollama'
 
-import {OllamaAgent} from '../dist/core/models/adapters/ollama.js'
+import {OllamaAgent, ollamaFetch} from '../dist/core/models/adapters/ollama.js'
 import {
   Agent,
   createModelContextPolicy,
@@ -25,7 +25,7 @@ const diagnostics = new DiagnosticEventBus({
   maxEvents: 20_000,
 })
 diagnostics.subscribe((event) => fs.appendFileSync('/output/events.jsonl', JSON.stringify(event) + '\n'))
-const sdk = new Ollama({host: config.ollamaHost})
+const sdk = new Ollama({fetch: ollamaFetch, host: config.ollamaHost})
 // Test-local transport configuration: exercise the real Orbit serializer and
 // response parser. Expose num_ctx so discovery sees the same runtime setting;
 // prepared output/context limits take precedence over test defaults.

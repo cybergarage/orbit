@@ -118,6 +118,12 @@ export function caseResolved(run, grade, fileChecks) {
   return fileChecks.status === 'passed' && grade.passed && runtimePassed(run)
 }
 
+export function bookResultStatus(run, grade, fileChecks) {
+  if (run.status !== 'completed') return run.status
+  if (grade.environmentError || grade.timedOut || grade.code === 125) return 'grading-error'
+  return caseResolved(run, grade, fileChecks) ? 'resolved' : 'unresolved'
+}
+
 export function runtimePassed(run) {
   return (
     run.status === 'completed' &&

@@ -8,6 +8,7 @@ import path from 'node:path'
 
 import {
   bookContextWindow,
+  bookResultStatus,
   caseIds,
   caseResolved,
   checkFiles,
@@ -183,5 +184,15 @@ describe('Book workflow fixtures (no inference or Docker)', () => {
     expect(runtimePassed({...run, status: 'timeout'})).to.equal(false)
     expect(runtimePassed({...run, result: {...run.result, closeError: 'Failed'}})).to.equal(false)
     expect(runtimePassed({...run, result: {runtime: {outcome: 'budget-exceeded', quiescence: true}}})).to.equal(false)
+  })
+
+  it('preserves runtime failures while recording file and grading outcomes separately', () => {
+    const run = {result: {runtime: {outcome: 'failed'}}, status: 'runtime-error'}
+    expect(bookResultStatus(run, {passed: false}, {status: 'failed'})).to.equal('runtime-error')
+    expect(bookResultStatus(run, {environmentError: true}, {status: 'failed'})).to.equal('runtime-error')
+    const completed = {result: {runtime: {outcome: 'completed', quiescence: true}}, status: 'completed'}
+    expect(bookResultStatus(completed, {environmentError: true}, {status: 'passed'})).to.equal('grading-error')
+    expect(bookResultStatus(completed, {passed: false}, {status: 'failed'})).to.equal('unresolved')
+    expect(bookResultStatus(completed, {passed: true}, {status: 'passed'})).to.equal('resolved')
   })
 })

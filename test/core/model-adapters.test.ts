@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {expect} from 'chai'
+import {createServer} from 'node:http'
 import {z} from 'zod'
 
 import {createProvider, Message, MessageType, tool} from '../../src/core/index.js'
@@ -13,6 +14,7 @@ import {
 } from '../../src/core/models/adapters/anthropic.js'
 import {
   createOllamaOptions,
+  ollamaFetch,
   toOllamaMessage,
   toOllamaModelToolCall,
   toOllamaTool,
@@ -258,5 +260,26 @@ describe('model adapter tools', () => {
     expect(createOllamaOptions(createProvider('ollama', {providers: {ollama: {host: 'http://localhost:11434'}}}))).to.deep.equal({
       host: 'http://localhost:11434',
     })
+  })
+
+  it('receives a delayed Ollama response through the scoped transport', async () => {
+    const server = createServer((_request, response) => {
+      setTimeout(() => response.end('ok'), 100)
+    })
+    try {
+      await new Promise<void>((resolve, reject) => {
+        server.once('error', reject)
+        server.listen(0, '127.0.0.1', resolve)
+      })
+      const address = server.address()
+      if (!address || typeof address === 'string') throw new Error('Expected a TCP address')
+      const response = await ollamaFetch(`http://127.0.0.1:${address.port}/`)
+      expect(await response.text()).to.equal('ok')
+    } finally {
+      server.closeAllConnections()
+      await new Promise<void>((resolve) => {
+        server.close(() => resolve())
+      })
+    }
   })
 })

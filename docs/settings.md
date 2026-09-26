@@ -205,6 +205,8 @@ For example, after building the source checkout:
 ```
 
 `example-model` must name a tool-capable model installed on that Ollama server.
+Ollama generation has no fixed response-header or response-body timeout; the Run
+elapsed limit and cancellation control long model requests.
 Connection flags also work when the launcher chooses the default command:
 interactive mode for a terminal, or `exec` for piped input. The values of
 `--execution-policy` and `--journal-level` are likewise kept with their flags;
