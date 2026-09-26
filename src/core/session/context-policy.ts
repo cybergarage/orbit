@@ -14,7 +14,7 @@ import {currentGraphVisit} from '../execution/graph-state.js'
 import {Message, MessageType} from '../message/index.js'
 import {getToolCalls} from '../models/adapters/tools.js'
 import {resolveModelContextCapacity} from '../models/context-capacity.js'
-import {assertCompleteModelResponse} from '../models/termination.js'
+import {assertCompleteModelResponse, isRetryableOllamaTransportFailure} from '../models/termination.js'
 import {GptTokenizer} from '../tokenizer/index.js'
 import {
   checkpointPrefix,
@@ -418,8 +418,19 @@ async function summarizeEligible(
     request: PreparedModelInvocation,
     allowedIds: Set<string>,
   ): Promise<{summary: ContextSummary; usage?: Record<string, number>}> => {
-    options.run.consume('modelCalls')
-    const response = await options.run.wait('context-summary', request.invoke())
+    const invokeOnce = () => {
+      options.run.consume('modelCalls')
+      return options.run.wait('context-summary', request.invoke())
+    }
+    let response: Message
+    try {
+      response = await invokeOnce()
+    } catch (error) {
+      if (options.model.getProvider() !== 'ollama' || !isRetryableOllamaTransportFailure(error)) throw error
+      options.run.check()
+      // A failed fetch has no response to turn into assistant history; charge one retry to this Run.
+      response = await invokeOnce()
+    }
     options.run.check()
     assertCompleteModelResponse(response)
     if (getToolCalls(response).length > 0) throw new ContextBudgetError('summary-returned-tool-call')

@@ -296,5 +296,5 @@ before assistant history append or tool dispatch. A classified context or
 truncation failure permits one regeneration only after a strictly smaller
 checkpoint is committed. Summary and retry consume the same Run budgets.
 For Ollama, a failed fetch with no response permits one retry of the same
-prepared request before any assistant message or tool call is committed.
+prepared generation or summary request, charged to the same Run.
 See [Input budgets](context-compaction.md).

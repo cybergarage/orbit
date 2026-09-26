@@ -86,6 +86,7 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
             expect(request.tools).to.deep.equal([])
             expect([profile.summaryOutput, profile.outputReserve]).to.include(request.cap)
             if (mode === 'error') throw new Error('Summary fixture failure')
+            if (mode === 'summary-transport-once' && summaries === 1) throw new TypeError('fetch failed')
             if (mode === 'chunk-second-error' && summaries === 2) throw new Error('Second summary failed')
             if (mode === 'tool')
               return new Message(MessageType.Assistant, {
@@ -142,13 +143,20 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
   }
 }
 
-async function execute(session: Session, model: Model, selected = policy, input = 'Continue with the latest request') {
+async function execute(
+  session: Session,
+  model: Model,
+  selected = policy,
+  input = 'Continue with the latest request',
+  maxCalls = 100,
+) {
   const store = new MemorySessionLogStore()
   const events: AgentEvent[] = []
   const agent = new Agent({
     contextPolicy: selected,
     cwd: os.tmpdir(),
     deps: {createModel: () => model},
+    execution: {limits: {modelCalls: maxCalls}},
     logStore: store,
     settings: {model: 'fixture', provider: 'ollama', tools: {profile: 'none'}},
     state: new State(session),
@@ -252,6 +260,24 @@ describe('budgeted context preparation', () => {
     const {result} = await execute(session, model)
     expect(result.outcome, JSON.stringify(result)).to.equal('completed')
     expect(session.getCompaction()?.summary.goals[0].sourceIds).to.deep.equal([id])
+  })
+
+  it('retries one lost Ollama summary response and charges the same Run budget', async () => {
+    const session = new Session()
+    const id = oldConversation(session)
+    const model = fixtureModel(id, 'summary-transport-once')
+    const {result} = await execute(session, model)
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    expect(
+      model.requests.filter((request) => String((request.messages as unknown[])[0]).startsWith('Summarize')),
+    ).to.have.length(2)
+    expect(session.getCompaction()?.summary.goals[0].sourceIds).to.deep.equal([id])
+
+    const limitedSession = new Session()
+    const limitedModel = fixtureModel(oldConversation(limitedSession), 'summary-transport-once')
+    const {result: limited} = await execute(limitedSession, limitedModel, policy, undefined, 2)
+    expect(limited.outcome).to.equal('budget-exceeded')
+    expect(limitedModel.requests).to.have.length(2)
   })
 
   it('summarizes an oversized source in complete tool groups before saving one checkpoint', async () => {
