@@ -3,12 +3,14 @@ status: accepted
 proposed-date: 2026-09-25
 decision-date: 2026-09-25
 implementation-status: completed
-implementation-completed-date: 2026-09-25
+implementation-completed-date: 2026-09-26
 implementation-commits:
   - b738be87592422aac2899f33a529c2a2fb63d50a
   - 24c3abc14b2f3ba2f2a2af6067d970e46bd861c8
   - 301a0aefe4035f2346bab47e5ef07d477e13aec3
   - f47fe3a910bbdf92a81af3015764a3acd74c68fb
+  - e1a8f9de6c6d5a282aeeff50b187713eccfaee6f
+  - a87e87977ff540a5f5980ba71e8f110facbc8410
 superseded-by: []
 ---
 
@@ -96,8 +98,8 @@ extends the previously recorded follow-up without changing those boundaries.
 
 Long turns can release context without losing original user instructions or
 splitting tool evidence. Summary generation costs extra calls and remains lossy;
-canonical evidence stays available. A giant single tool result, protected user
-input or summary source can still exceed capacity and stops safely. New version-3
+canonical evidence stays available. A giant single tool group or protected user
+input can still exceed capacity and stops safely. New version-3
 checkpoints are forward-incompatible with older readers. Pipefail changes shell
 pipeline status, including legitimate SIGPIPE cases; callers can handle expected
 nonzero status explicitly. No unlimited retry loop is introduced.
@@ -163,11 +165,20 @@ Maintained behavior is documented in the compaction, tools, architecture and E2E
 guides. The earlier whole-active-turn boundary is superseded only as described
 above; canonical history, verified interruption and migration requirements remain.
 
+The 2026-09-26 refinement commits added validation of complete JSON-fenced
+summaries and bounded summary batching. Deterministic tests cover a multi-batch
+source, intact tool groups, oversized individual groups and failure of a later
+batch without activating a partial checkpoint. `npm run headers:check`,
+`npm run build`, and `npm test` passed (1,016 tests) with loopback permission;
+the book fixture tests passed (9). The full suite initially encountered six
+GUI `listen EPERM` failures under the filesystem sandbox and passed when rerun
+with loopback permission. These checks do not establish real-model summary
+quality or book-task success after the refinement.
+
 ## Follow-up Work
 
 Representative live book trials and summary-quality assessment remain distinct
-from deterministic runtime validation. Chunked summarization of a single
-oversized source is not included. Automatic activation for existing stored
+from deterministic runtime validation. Automatic activation for existing stored
 sessions would require a separate migration/adoption decision.
 
 ## References
