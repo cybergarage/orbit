@@ -295,4 +295,6 @@ validate tool-group boundaries on save/reopen. Provider termination is checked
 before assistant history append or tool dispatch. A classified context or
 truncation failure permits one regeneration only after a strictly smaller
 checkpoint is committed. Summary and retry consume the same Run budgets.
+For Ollama, a failed fetch with no response permits one retry of the same
+prepared request before any assistant message or tool call is committed.
 See [Input budgets](context-compaction.md).

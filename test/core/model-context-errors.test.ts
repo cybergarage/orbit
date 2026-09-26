@@ -6,7 +6,12 @@ import {expect} from 'chai'
 
 import type {Model} from '../../src/core/index.js'
 
-import {ContextOverflowError, createProvider, IncompleteModelResponseError} from '../../src/core/index.js'
+import {
+  ContextOverflowError,
+  createProvider,
+  DiagnosticEventBus,
+  IncompleteModelResponseError,
+} from '../../src/core/index.js'
 import {AnthropicAgent} from '../../src/core/models/adapters/anthropic.js'
 import {OllamaAgent} from '../../src/core/models/adapters/ollama.js'
 import {OpenAIAgent} from '../../src/core/models/adapters/openai.js'
@@ -26,6 +31,17 @@ function model(provider: string, error: Error): Model {
 }
 
 describe('provider context error classification', () => {
+  it('records an Ollama fetch failure cause code for diagnosis', async () => {
+    const error = new TypeError('fetch failed', {
+      cause: Object.assign(new Error('socket closed'), {code: 'ECONNRESET'}),
+    })
+    const diagnostics = new DiagnosticEventBus()
+    await model('ollama', error)
+      .invoke([], {diagnostics})
+      .catch(() => {})
+    const failure = diagnostics.list().find((event) => event.type === 'model.response.failed')
+    expect(failure?.data).to.include({causeCode: 'ECONNRESET', error: 'fetch failed'})
+  })
   const cases = [
     [
       'openai',

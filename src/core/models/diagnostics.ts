@@ -40,11 +40,15 @@ export function emitModelFailure(
   metadata: {durationMs: number; model: string; provider: string},
   error: unknown,
 ): void {
+  const cause = error instanceof Error ? error.cause : undefined
+  const causeCode =
+    cause && typeof cause === 'object' && 'code' in cause && typeof cause.code === 'string' ? cause.code : undefined
   options?.diagnostics?.emit({
     ...options.diagnosticContext,
     data: {
       ...metadata,
       error: error instanceof Error ? error.message : String(error),
+      ...(causeCode ? {causeCode} : {}),
     },
     level: 'error',
     type: 'model.response.failed',

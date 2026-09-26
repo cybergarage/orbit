@@ -29,3 +29,8 @@ export function isRecoverableContextFailure(error: unknown): boolean {
       ['invalid-tool-arguments', 'length', 'max_tokens', 'model_context_window_exceeded'].includes(error.stopReason))
   )
 }
+
+/** A missing Ollama response cannot have dispatched a tool call to Orbit. */
+export function isRetryableOllamaTransportFailure(error: unknown): boolean {
+  return error instanceof TypeError && error.message === 'fetch failed'
+}

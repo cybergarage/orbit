@@ -81,6 +81,10 @@ async function trial(mode = 'length', history = true, maxCalls = 10) {
 
           ordinary++
           sizes.push(JSON.stringify(request).length)
+          if (mode === 'transport-always' || (mode === 'transport-once' && ordinary === 1))
+            throw new TypeError('fetch failed')
+          if (mode === 'type-other') throw new TypeError('Invalid provider response')
+          if (mode === 'transport-once') return new Message(MessageType.Assistant, {content: 'Completed after retry'})
           if (ordinary === 1 || mode === 'twice') {
             if (mode === 'generic') throw new Error('HTTP 500')
             if (mode === 'overflow') throw new ContextOverflowError('Input overflow')
@@ -155,7 +159,7 @@ describe('capacity-backed model regeneration', () => {
     })
   }
 
-  for (const mode of ['generic', 'filtered']) {
+  for (const mode of ['generic', 'filtered', 'type-other']) {
     it(`does not retry an unclassified ${mode} failure`, async () => {
       const f = await trial(mode)
       expect(f.result.outcome).to.equal('failed')
@@ -176,6 +180,23 @@ describe('capacity-backed model regeneration', () => {
     expect(f.result.outcome).to.equal('budget-exceeded')
     expect(f.ordinary).to.equal(1)
     expect(f.summaries).to.equal(1)
+  })
+
+  it('retries one lost Ollama response with the same input and Run budget', async () => {
+    const f = await trial('transport-once')
+    expect(f.result.outcome).to.equal('completed')
+    expect(f.ordinary).to.equal(2)
+    expect(f.sizes[1]).to.equal(f.sizes[0])
+    expect(f.summaries).to.equal(0)
+    expect(f.session.getCompaction()).to.equal(undefined)
+    expect((await trial('transport-once', true, 1)).result.outcome).to.equal('budget-exceeded')
+  })
+
+  it('stops after a second Ollama transport failure', async () => {
+    const f = await trial('transport-always')
+    expect(f.result.outcome).to.equal('failed')
+    expect(f.ordinary).to.equal(2)
+    expect(f.summaries).to.equal(0)
   })
 
   it('honors cancellation during recovery and does not save the summary', async () => {

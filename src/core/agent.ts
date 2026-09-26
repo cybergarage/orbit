@@ -59,7 +59,11 @@ import {
 } from './logs/index.js'
 import {createMcpToolManager} from './mcp.js'
 import {getModel, Message, MessageType} from './models/index.js'
-import {assertCompleteModelResponse, isRecoverableContextFailure} from './models/termination.js'
+import {
+  assertCompleteModelResponse,
+  isRecoverableContextFailure,
+  isRetryableOllamaTransportFailure,
+} from './models/termination.js'
 import {boundedGraphJSON, graphBinding} from './processor/graph-definition.js'
 import {
   bindGraphJournal,
@@ -817,13 +821,21 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
               // eslint-disable-next-line no-await-in-loop
               modelMessage = await invoke()
             } catch (error) {
-              if (!preparation || !prepared || !isRecoverableContextFailure(error)) throw error
-              // A recovery preparation must commit a strictly smaller checkpoint. No unchanged-input fallback.
-              // eslint-disable-next-line no-await-in-loop
-              prepared = await prepareSessionContext({...preparation, recoveryRequest: prepared.request})
-              // Exactly one retry for this generation; a second failure escapes to the Run terminal.
-              // eslint-disable-next-line no-await-in-loop
-              modelMessage = await invoke()
+              if (this.model.getProvider() === 'ollama' && isRetryableOllamaTransportFailure(error)) {
+                run.check()
+                // A lost response has no committed assistant message or dispatched tools.
+                // Charge the second request to the same Run and keep the prepared input unchanged.
+                // eslint-disable-next-line no-await-in-loop
+                modelMessage = await invoke()
+              } else {
+                if (!preparation || !prepared || !isRecoverableContextFailure(error)) throw error
+                // A recovery preparation must commit a strictly smaller checkpoint. No unchanged-input fallback.
+                // eslint-disable-next-line no-await-in-loop
+                prepared = await prepareSessionContext({...preparation, recoveryRequest: prepared.request})
+                // Exactly one retry for this generation; a second failure escapes to the Run terminal.
+                // eslint-disable-next-line no-await-in-loop
+                modelMessage = await invoke()
+              }
             }
           } catch (error) {
             if (diagnostics === undefined) {
