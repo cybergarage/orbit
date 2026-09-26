@@ -64,6 +64,7 @@ function oldConversation(session: Session): string {
 
 function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Record<string, unknown>>[]} {
   const requests: Readonly<Record<string, unknown>>[] = []
+  let summaries = 0
   return {
     getModel: () => 'fixture',
     getName: () => 'fixture',
@@ -81,9 +82,11 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
         async invoke() {
           requests.push(request)
           if (String(request.messages[0]).startsWith('Summarize')) {
+            summaries++
             expect(request.tools).to.deep.equal([])
             expect(request.cap).to.equal(profile.summaryOutput)
             if (mode === 'error') throw new Error('Summary fixture failure')
+            if (mode === 'chunk-second-error' && summaries === 2) throw new Error('Second summary failed')
             if (mode === 'tool')
               return new Message(MessageType.Assistant, {
                 payload: {toolCalls: [{id: 'bad', input: {command: 'false'}, name: 'bash'}]},
@@ -245,6 +248,70 @@ describe('budgeted context preparation', () => {
     expect(result.outcome, JSON.stringify(result)).to.equal('completed')
     expect(session.getCompaction()?.summary.goals[0].sourceIds).to.deep.equal([id])
   })
+
+  it('summarizes an oversized source in complete tool groups before saving one checkpoint', async () => {
+    const session = new Session()
+    const id = oldConversation(session)
+    const call = new Message(MessageType.Assistant, {
+      content: 'Tool call evidence ' + 'c'.repeat(4000),
+      payload: {toolCalls: [{id: 'chunk-call', input: {path: 'target'}, name: 'read'}]},
+    })
+    const result = new Message(MessageType.Tool, {
+      content: 'Tool result evidence ' + 'r'.repeat(4000),
+      payload: {name: 'read', output: 'r'.repeat(4000), toolCallId: 'chunk-call'},
+    })
+    session.appendMessages([call, result, new Message(MessageType.Assistant, {content: 'Later evidence ' + 'l'.repeat(7000)})])
+    const model = fixtureModel(id)
+    const {result: run} = await execute(session, model)
+    expect(run.outcome, JSON.stringify(run)).to.equal('completed')
+    const summaries = model.requests.filter((request) => String((request.messages as unknown[])[0]).startsWith('Summarize'))
+    expect(summaries.length).to.be.greaterThan(1)
+    expect(summaries.every((request) => JSON.stringify(request).length <= profile.window - profile.summaryOutput - profile.safetyMargin)).to.equal(true)
+    for (const request of summaries) {
+      const source = JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1]) as {
+        messages: Array<{id: string}>
+      }
+      expect(source.messages.some((message) => message.id === call.id)).to.equal(
+        source.messages.some((message) => message.id === result.id),
+      )
+    }
+
+    expect(session.getCompaction()?.summary.goals[0].sourceIds).to.deep.equal([id])
+    expect(session.getConversationMessages()).to.have.length(7)
+  })
+
+  it('refuses a single oversized tool group without activating an intermediate summary', async () => {
+    const session = new Session()
+    const id = oldConversation(session)
+    session.appendMessages([
+      new Message(MessageType.Assistant, {
+        content: 'x'.repeat(21_000),
+        payload: {toolCalls: [{id: 'huge-call', input: {}, name: 'read'}]},
+      }),
+      new Message(MessageType.Tool, {payload: {name: 'read', output: 'done', toolCallId: 'huge-call'}}),
+    ])
+    const model = fixtureModel(id)
+    const {result} = await execute(session, model)
+    expect(result.outcome).to.equal('failed')
+    expect(JSON.stringify(result)).to.contain('compaction-input-exceeds-budget')
+    expect(session.getCompaction()).to.equal(undefined)
+  })
+
+  it('does not activate a partial checkpoint after a later summary batch fails', async () => {
+    const session = new Session()
+    const id = oldConversation(session)
+    session.appendMessages([
+      new Message(MessageType.Assistant, {content: 'a'.repeat(8000)}),
+      new Message(MessageType.Assistant, {content: 'b'.repeat(8000)}),
+      new Message(MessageType.Assistant, {content: 'c'.repeat(8000)}),
+    ])
+    const model = fixtureModel(id, 'chunk-second-error')
+    const {result} = await execute(session, model)
+    expect(result.outcome).to.equal('failed')
+    expect(JSON.stringify(result)).to.contain('Second summary failed')
+    expect(session.getCompaction()).to.equal(undefined)
+  })
+
   for (const mode of ['error', 'tool', 'bad-id', 'empty', 'oversized', 'bad-test', 'truncated', 'fenced-prose', 'fenced-bad-id'])
     it('uses the fitting unchanged context after ' + mode, async () => {
       const session = new Session()

@@ -78,8 +78,11 @@ completed tool rounds within the active turn can be summarized while the newest
 complete round remains verbatim. No call/result group may cross the boundary.
 Missing, duplicate or mismatched results refuse preparation. Canonical history
 is never deleted or overwritten, and a checkpoint is not permission to retry tools.
-A single oversized protected input, newest tool group, or summary source still
-stops safely; chunked summarization is not implemented.
+A single oversized protected input, newest tool group, or eligible tool group
+still stops safely. When the complete summary source exceeds its input budget,
+Orbit summarizes consecutive batches without dividing a tool call from its
+results. It validates each intermediate summary, then saves only the final
+checkpoint after measuring the resulting ordinary request.
 
 Within-turn checkpoints use projection version 3 and retain original user IDs.
 Save/reopen validation checks those references, exact current-Run user retention,
@@ -98,6 +101,8 @@ Test items also require a target, a revision string (or null when unknown), and
 an outcome of passed, failed or unknown. At least one item is required. Tool calls
 in a summary response are rejected. A complete JSON code fence around the object
 is accepted, but surrounding prose and invalid evidence references are rejected.
+Each batch consumes a model call and the same Run budget. If a later batch
+fails, no intermediate checkpoint becomes active.
 
 The checkpoint is labeled untrusted and projected as user-level context.
 Valid source references do not establish that every statement is true or that
@@ -115,7 +120,7 @@ outcomes, not transcript bodies. Ink and GUI show the active mode and the latest
 compaction outcome; the application service records `context.prepared` diagnostics.
 The noninteractive CLI reports enabled budgeting and compaction outcomes on stderr.
 
-Unknown input size, protected-input overflow, an oversized summary request,
+Unknown input size, protected-input overflow, an oversized individual summary batch,
 cancellation, exhausted Run budgets, unresolved work and recording failures do
 not bypass the budget. With budgeting enabled, a recognized provider overflow,
 recoverable length stop, or Ollama truncated tool-argument response can trigger
