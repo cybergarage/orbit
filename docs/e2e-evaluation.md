@@ -165,20 +165,18 @@ hidden test information. Orbit's default runtime limits and product prompts are
 unchanged. Use `ORBIT_E2E_STRATEGY=baseline` to reproduce the original prompts.
 
 `ORBIT_E2E_ROUNDS` changes the small-case budget (default 12, maximum 100).
-SWE-bench has no default round or call-count ceiling. Set `ORBIT_SWE_ROUNDS` to a
-positive safe integer only when a finite comparison budget is desired. The host
-sets tool iterations, tool rounds and model-call allowance together; the
-900-second elapsed-time deadline and cleanup remain active. The instruction
-text does not include the selected budget, so a 30/50 comparison uses exactly
-the same prompt. Each run records its strategy and prompt hash.
+SWE-bench always runs with unlimited tool iterations, tool rounds and model
+calls; `ORBIT_SWE_ROUNDS` is no longer read. The 900-second elapsed-time
+deadline and cleanup remain active. Historical finite-budget results remain
+useful evidence, but cannot be reproduced with the current SWE-bench runner.
+Each run records its strategy and prompt hash.
 
 ```sh
 # Three repetitions per small case/model, improved instructions, original budget:
 caffeinate -i npm run test:e2e:ollama
 
-# Reproduce the recovery-strategy comparison explicitly; grade both predictions.
-ORBIT_E2E_STRATEGY=coding-recovery-v1 ORBIT_SWE_ROUNDS=30 ORBIT_SWE_THINK=false ORBIT_E2E_IMAGE=orbit-e2e:swe caffeinate -i npm run eval:swebench -- solve ornith-1.5:9b
-ORBIT_E2E_STRATEGY=coding-recovery-v1 ORBIT_SWE_ROUNDS=50 ORBIT_SWE_THINK=false ORBIT_E2E_IMAGE=orbit-e2e:swe caffeinate -i npm run eval:swebench -- solve ornith-1.5:9b
+# Run SWE-bench without an iteration ceiling and grade the printed prediction.
+ORBIT_E2E_STRATEGY=baseline ORBIT_SWE_THINK=false ORBIT_E2E_IMAGE=orbit-e2e:swe caffeinate -i npm run eval:swebench -- solve ornith-1.5:9b
 ```
 
 `metrics` records started/completed model calls, tool calls/errors, repeated failed
@@ -222,7 +220,7 @@ docker build -f e2e/VerifiedAgent.Dockerfile -t orbit-e2e:verified .
 export ORBIT_SWE_CASE=e2e/swebench/django__django-15731.json
 npm run eval:swebench -- prepare
 npm run eval:swebench -- gold
-ORBIT_E2E_IMAGE=orbit-e2e:verified ORBIT_E2E_STRATEGY=baseline ORBIT_SWE_ROUNDS=50 ORBIT_SWE_THINK=false caffeinate -i npm run eval:swebench -- solve ornith-1.5:9b
+ORBIT_E2E_IMAGE=orbit-e2e:verified ORBIT_E2E_STRATEGY=baseline ORBIT_SWE_THINK=false caffeinate -i npm run eval:swebench -- solve ornith-1.5:9b
 # Use the predictions path printed by solve, keeping ORBIT_SWE_CASE unchanged:
 npm run eval:swebench -- grade <predictions.jsonl>
 ```
@@ -348,7 +346,7 @@ docker build -f e2e/VerifiedAgent.Dockerfile -t orbit-e2e:verified-guarded .
 ORBIT_E2E_IMAGE=orbit-e2e:verified-guarded \
 ORBIT_E2E_STRATEGY=verified-focused-v1 \
 ORBIT_SWE_CASE=e2e/swebench/django__django-15731.json \
-ORBIT_SWE_ROUNDS=50 npm run eval:swebench -- solve ornith-1.5:9b
+npm run eval:swebench -- solve ornith-1.5:9b
 ```
 
 Use `verified-tests-v1` with the same image, case and generation settings for a

@@ -122,6 +122,7 @@ export async function ollamaMetadata(model) {
 
 export async function runAgent({
   agentImage = image,
+  contextPolicy = 'disabled',
   directory,
   files,
   model,
@@ -137,6 +138,7 @@ export async function runAgent({
   const input = path.join(directory, 'input')
   await fs.mkdir(input)
   const config = {
+    contextPolicy,
     model,
     ollamaHost: process.env.ORBIT_E2E_OLLAMA_HOST ?? 'http://host.docker.internal:11434',
     options: {num_ctx: numCtx, num_predict: 4096, seed: 42, temperature: 0.6, top_p: 0.95},

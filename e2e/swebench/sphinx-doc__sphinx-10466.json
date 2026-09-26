@@ -1,0 +1,12 @@
+{
+  "dataset": "princeton-nlp/SWE-bench_Verified",
+  "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+  "split": "test",
+  "instance_id": "sphinx-doc__sphinx-10466",
+  "repo": "sphinx-doc/sphinx",
+  "base_commit": "cab2d93076d0cca7c53fac885f927dde3e2a5fec",
+  "version": "5.0",
+  "alsoInLite": false,
+  "imageTag": "swebench/sweb.eval.x86_64.sphinx-doc_1776_sphinx-10466:latest",
+  "image": "swebench/sweb.eval.x86_64.sphinx-doc_1776_sphinx-10466@sha256:c02edca2a92a3353e0780dcd1b1a3ba2349245d7aa4e5fc6bc8f2a5327691452"
+}

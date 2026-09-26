@@ -9,11 +9,11 @@ import {normalizePatch} from './grading.mjs'
 import {activeContainers, command, digest, docker, image, ollamaMetadata, repo, runAgent, writeJSON} from './host.mjs'
 import {checkDeliverable} from './quality.mjs'
 import {preflightRepository, prepareRepositorySource} from './repository-checks.mjs'
-import {evaluationPrompt, readRounds} from './strategy.mjs'
+import {evaluationPrompt} from './strategy.mjs'
 import {validateSWECase, verifyPreparedSWECase} from './swe-case.mjs'
 
 const strategy = process.env.ORBIT_E2E_STRATEGY ?? 'baseline'
-const rounds = readRounds(process.env.ORBIT_SWE_ROUNDS, 'unlimited', Number.MAX_SAFE_INTEGER)
+const rounds = 'unlimited'
 const caseFile = process.env.ORBIT_SWE_CASE
 const selected = caseFile ? validateSWECase(JSON.parse(await fs.readFile(path.resolve(caseFile), 'utf8'))) : null
 const root = selected ? path.join(repo, 'tmp/e2e/verified', selected.instance_id) : path.join(repo, 'tmp/e2e/swe')
@@ -209,6 +209,7 @@ switch (action) {
     const metadata = await ollamaMetadata(model)
     const runDirectory = path.join(directory, 'agent')
     const run = await runAgent({
+      contextPolicy: process.env.ORBIT_E2E_CONTEXT_POLICY ?? 'disabled',
       directory: runDirectory,
       model,
       numCtx: 32_768,

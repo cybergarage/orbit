@@ -41,7 +41,7 @@ const model = new OllamaAgent(
   {getContextWindow: () => config.options.num_ctx, getName: () => 'ollama'},
   {client},
 )
-const contextPolicy = config.strategy.startsWith('book-')
+const contextPolicy = config.contextPolicy === 'budgeted' || config.strategy.startsWith('book-')
   ? await createModelContextPolicy(model, {outputReserve: config.options.num_predict})
   : undefined
 if (contextPolicy) fs.writeFileSync('/output/context-policy.json', JSON.stringify(contextPolicy, null, 2))

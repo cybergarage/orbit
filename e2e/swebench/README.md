@@ -17,6 +17,8 @@ Private dataset rows (including reference/test patches) stay in ignored
 `tmp/e2e/verified/<instance_id>/instance.json`, never in the solver image/mounts.
 
 See [the operating guide](../../docs/e2e-evaluation.md) for execution.
-The local report `e2e/results/2026-09-25-verified.md` records all planned outcomes
-when retained. Results and generated patches are ignored by Git and must be
-preserved separately; these manifests contain the inputs needed to rerun cases.
+Tracked reports, summaries and generated patches are indexed in
+[`e2e/results/`](../results/README.md); raw workspaces, logs and private dataset
+rows remain ignored under `tmp/e2e/`. The September 26 follow-up adds three
+instances from these same supported repository versions; they are diagnostic
+samples, not a representative Verified score.

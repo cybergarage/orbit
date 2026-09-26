@@ -25,6 +25,10 @@ Orbit success counts.
 | 2026-09-25 | Verified test: Django, pytest, Sphinx (3 instances) | `ornith-1.5:9b`, baseline, 50 rounds | 2/3 resolved | 0/3; budget exceeded | Django passed, pytest not measured, Sphinx failed in later checks | [Baseline report](2026-09-25-verified.md), [JSON](2026-09-25-verified.json), [predictions](2026-09-25-verified-predictions.jsonl) |
 | 2026-09-25 | Verified test: Django (control) | `ornith-1.5:9b`, test-runner instructions, 50 rounds | 1/1 resolved | 0/1; budget/host timeout | Passed; elapsed time not comparable | [Improvement report](2026-09-25-verified-improvements.md), [JSON](2026-09-25-verified-improvements.json), [prediction](2026-09-25-verified-tests-v1-predictions.jsonl) |
 | 2026-09-25 | Verified test: Django, pytest, Sphinx (same 3 instances) | `ornith-1.5:9b`, focused completion, 50 rounds | 2/3 resolved | 2/3 completed | Django passed; pytest and Sphinx failed | [Improvement report](2026-09-25-verified-improvements.md), [JSON](2026-09-25-verified-improvements.json), [predictions](2026-09-25-verified-focused-v1-predictions.jsonl) |
+| 2026-09-26 | Verified: Django 15732 | `ornith-1.5:9b`, no round cap, 900-second deadline | Unresolved; 0/1 FAIL_TO_PASS, 125/125 PASS_TO_PASS | Incomplete at deadline; 66 model calls | Not measured | [Additional report](2026-09-26-verified-additional.md), [JSON](2026-09-26-verified-additional.json), [prediction](2026-09-26-verified-additional-predictions.jsonl) |
+| 2026-09-26 | Verified: pytest 10356 | `ornith-1.5:9b`, no round cap, 900-second deadline | Unresolved; 0/1 FAIL_TO_PASS, 79/79 PASS_TO_PASS | Runtime error after 69 completed model calls; final tool arguments were incomplete JSON | Not measured | [Additional report](2026-09-26-verified-additional.md), [JSON](2026-09-26-verified-additional.json), [prediction](2026-09-26-verified-additional-predictions.jsonl) |
+| 2026-09-26 | Verified: Sphinx 10466 | `ornith-1.5:9b`, no round cap, 900-second deadline | Resolved; 1/1 FAIL_TO_PASS, 6/6 PASS_TO_PASS | Incomplete at deadline; 75 completed model calls | Failed local changed-test check; six `.pytest_cache` files included | [Additional report](2026-09-26-verified-additional.md), [JSON](2026-09-26-verified-additional.json), [prediction](2026-09-26-verified-additional-predictions.jsonl) |
+| 2026-09-27 | Verified: pytest 10356 (four-way diagnostic) | `ornith-1.5:9b`, baseline/focused completion × context disabled/budgeted | 0 resolved; 2 unresolved, 1 empty patch skipped, 1 grading error | 0/4 normal completion; two timeouts, two runtime errors | Only focused+context run used latest `f654787`; other arms used `0570913`; not a same-commit comparison | [Context/completion report](2026-09-27-context-completion.md), [JSON](2026-09-27-context-completion.json) |
 
 The Verified three-instance rows reuse the **same selected problems**, so their
 counts must not be added together. The three problems span different repositories
@@ -35,10 +39,16 @@ instance IDs and per-instance official checks. The Lite first-attempt timeout
 produced no patch, so the official harness did not run tests for that attempt.
 
 The graded rows above were measured with an older, explicitly configured 30- or
-50-round limit. The current SWE evaluation default has **no round limit** and
-retains the elapsed-time deadline; these rows are not measurements of that
-default. Host conditions, prompts, solver dependencies and sample sizes differ
-between rows. Fixed seeds do not make repeated runs identical.
+50-round limit. The current SWE evaluation has **no round limit**, and that
+limit can no longer be enabled through configuration; the elapsed-time deadline
+remains active. These rows are not measurements of the current runner. Host
+conditions, prompts, solver dependencies and sample sizes differ between rows.
+Fixed seeds do not make repeated runs identical.
+
+The September 26 follow-up deliberately set `ORBIT_SWE_ROUNDS=1` for all three
+solves. The current runner ignores this removed setting and recorded
+`rounds: unlimited` in each Session. Runs continued until a normal completion,
+a runtime error or the separate 900-second elapsed-time budget.
 
 ## Small coding cases
 

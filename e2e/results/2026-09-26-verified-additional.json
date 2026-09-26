@@ -1,0 +1,189 @@
+{
+  "date": "2026-09-26",
+  "kind": "local diagnostic; not a leaderboard score",
+  "dataset": {
+    "name": "princeton-nlp/SWE-bench_Verified",
+    "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+    "split": "test"
+  },
+  "harness": {
+    "version": "4.1.0",
+    "commit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57"
+  },
+  "solverImage": "sha256:a7d1f5a227c14f638d59a56ee170c045523faffb26e0a21e6136858c2af15818",
+  "model": {
+    "name": "ornith-1.5:9b",
+    "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+    "quantization": "Q4_K_M",
+    "options": {
+      "num_ctx": 32768,
+      "num_predict": 4096,
+      "seed": 42,
+      "temperature": 0.6,
+      "top_p": 0.95
+    },
+    "thinking": false
+  },
+  "orbitCommit": "39a0cdfe24785af81c53b31fd8b17b047142396a",
+  "rounds": "unlimited",
+  "ignoredRoundsOverride": "ORBIT_SWE_ROUNDS=1",
+  "elapsedDeadlineMs": 900000,
+  "cases": [
+    {
+      "instanceId": "django__django-15732",
+      "repo": "django/django",
+      "baseCommit": "ce69e34bd646558bb44ea92cecfd98b345a0b3e0",
+      "officialImageDigest": "sha256:83ea0f1ce2aab3468ec104b3788afcfa76bb81ae31db2107e9cf73d284e5fb5e",
+      "referenceControl": "passed",
+      "runStatus": "runtime-error",
+      "runtimeOutcome": "incomplete",
+      "elapsedMs": 941260,
+      "metrics": {
+        "modelCallsCompleted": 66,
+        "modelCallsStarted": 66,
+        "modelWallMs": 917618.1125019998,
+        "ollamaEvalMs": 876556.693998,
+        "ollamaLoadMs": 200.126371,
+        "ollamaPromptMs": 36194.232998000014,
+        "ollamaTotalMs": 917105.535413,
+        "repeatedFailedCalls": 0,
+        "toolCalls": 65,
+        "toolErrors": 21,
+        "toolWallMs": 4152.560416999953
+      },
+      "usage": {
+        "inputTokens": 905723,
+        "outputTokens": 16955
+      },
+      "usageComplete": false,
+      "patchBytes": 914,
+      "quality": {
+        "status": "not-measured",
+        "failedTests": [],
+        "unwantedPaths": []
+      },
+      "officialStatus": "unresolved",
+      "testCounts": {
+        "FAIL_TO_PASS": {
+          "passed": 0,
+          "failed": 1
+        },
+        "PASS_TO_PASS": {
+          "passed": 125,
+          "failed": 0
+        }
+      },
+      "predictionFile": "2026-09-26-verified-additional-predictions.jsonl#django__django-15732",
+      "predictionSha256": "f215caffa88956b30c4f1a1391c58366fe8056117d59b5d1f0ffcff118165f72",
+      "predictionRecordSha256": "f215caffa88956b30c4f1a1391c58366fe8056117d59b5d1f0ffcff118165f72"
+    },
+    {
+      "instanceId": "pytest-dev__pytest-10356",
+      "repo": "pytest-dev/pytest",
+      "baseCommit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1",
+      "officialImageDigest": "sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+      "referenceControl": "passed",
+      "runStatus": "runtime-error",
+      "runtimeOutcome": "failed",
+      "elapsedMs": 678994,
+      "metrics": {
+        "modelCallsCompleted": 69,
+        "modelCallsStarted": 70,
+        "modelWallMs": 661145.3297169995,
+        "ollamaEvalMs": 598357.177997,
+        "ollamaLoadMs": 4862.961291999996,
+        "ollamaPromptMs": 52287.941999,
+        "ollamaTotalMs": 660574.406291,
+        "repeatedFailedCalls": 0,
+        "toolCalls": 69,
+        "toolErrors": 17,
+        "toolWallMs": 4723.478919000236
+      },
+      "usage": {
+        "inputTokens": 1376272,
+        "outputTokens": 11840
+      },
+      "usageComplete": false,
+      "patchBytes": 2225,
+      "quality": {
+        "status": "not-measured",
+        "failedTests": [],
+        "unwantedPaths": []
+      },
+      "officialStatus": "unresolved",
+      "testCounts": {
+        "FAIL_TO_PASS": {
+          "passed": 0,
+          "failed": 1
+        },
+        "PASS_TO_PASS": {
+          "passed": 79,
+          "failed": 0
+        }
+      },
+      "predictionFile": "2026-09-26-verified-additional-predictions.jsonl#pytest-dev__pytest-10356",
+      "predictionSha256": "d9f79ab6aced4cd6cc1b551835be5607c9d3ec1b5c0ea793f519519626815303",
+      "predictionRecordSha256": "d9f79ab6aced4cd6cc1b551835be5607c9d3ec1b5c0ea793f519519626815303"
+    },
+    {
+      "instanceId": "sphinx-doc__sphinx-10466",
+      "repo": "sphinx-doc/sphinx",
+      "baseCommit": "cab2d93076d0cca7c53fac885f927dde3e2a5fec",
+      "officialImageDigest": "sha256:c02edca2a92a3353e0780dcd1b1a3ba2349245d7aa4e5fc6bc8f2a5327691452",
+      "referenceControl": "passed",
+      "runStatus": "timeout",
+      "runtimeOutcome": "incomplete",
+      "elapsedMs": 936643,
+      "metrics": {
+        "modelCallsCompleted": 75,
+        "modelCallsStarted": 76,
+        "modelWallMs": 812276.674163,
+        "ollamaEvalMs": 484951.9579999999,
+        "ollamaLoadMs": 37018.355792999995,
+        "ollamaPromptMs": 284066.574999,
+        "ollamaTotalMs": 811785.6337489998,
+        "repeatedFailedCalls": 1,
+        "toolCalls": 75,
+        "toolErrors": 20,
+        "toolWallMs": 11481.448170000076
+      },
+      "usage": {
+        "inputTokens": 1345563,
+        "outputTokens": 10273
+      },
+      "usageComplete": false,
+      "patchBytes": 8221,
+      "quality": {
+        "status": "quality-failed",
+        "failedTests": [
+          {
+            "path": "tests/test_build_gettext.py",
+            "status": "candidate-test-failure"
+          }
+        ],
+        "unwantedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/lastfailed",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ]
+      },
+      "officialStatus": "resolved",
+      "testCounts": {
+        "FAIL_TO_PASS": {
+          "passed": 1,
+          "failed": 0
+        },
+        "PASS_TO_PASS": {
+          "passed": 6,
+          "failed": 0
+        }
+      },
+      "predictionFile": "2026-09-26-verified-additional-predictions.jsonl#sphinx-doc__sphinx-10466",
+      "predictionSha256": "b4ce4d0422da447d75f1a197244152a28977353ce3be86d2642739d56f2cf974",
+      "predictionRecordSha256": "b4ce4d0422da447d75f1a197244152a28977353ce3be86d2642739d56f2cf974"
+    }
+  ]
+}
