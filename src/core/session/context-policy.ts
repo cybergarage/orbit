@@ -9,8 +9,8 @@ import type {ContextSummary, SessionCompactionEntry} from './compaction.js'
 import type {Session} from './session.js'
 import type {VerifiedModelContext} from './verified-context.js'
 
-import {currentGraphVisit} from '../execution/graph-state.js'
 import {IncompleteModelResponseError} from '../errors/index.js'
+import {currentGraphVisit} from '../execution/graph-state.js'
 import {Message, MessageType} from '../message/index.js'
 import {getToolCalls} from '../models/adapters/tools.js'
 import {resolveModelContextCapacity} from '../models/context-capacity.js'
@@ -364,14 +364,13 @@ function summaryRequest(
   options: PreparationOptions,
   messages: Message[],
   previous: ContextSummary | null,
-  allowedIds: Set<string>,
-  outputLimit = options.policy.profile.summaryOutput,
+  request: {allowedIds: Set<string>; outputLimit?: number},
 ): PreparedModelInvocation {
   const prompt = new Message(MessageType.User, {
     content:
       SUMMARY_INSTRUCTIONS +
       '\nORIGINAL_SOURCE_IDS: ' +
-      JSON.stringify([...allowedIds]) +
+      JSON.stringify([...request.allowedIds]) +
       '\nSOURCE: ' +
       JSON.stringify({
         messages: messages.map((value) => persistedContextMessage(value)),
@@ -379,7 +378,7 @@ function summaryRequest(
         ...(options.verifiedContext?.projectionIds.length ? {interruption: INTERRUPTION_NOTICE} : {}),
       }),
   })
-  return prepareRequest(options, [prompt], true, outputLimit)
+  return prepareRequest(options, [prompt], true, request.outputLimit)
 }
 
 function summarySourceIds(summary: ContextSummary): string[] {
@@ -429,7 +428,7 @@ async function summarizeEligible(
     return {summary, usage: summaryUsage(response)}
   }
 
-  const oneShot = summaryRequest(options, eligible, previous, originalIds)
+  const oneShot = summaryRequest(options, eligible, previous, {allowedIds: originalIds})
   const groups = completeSummaryGroups(eligible)
   let maxBatchGroups = groups.length
   if (checkedEstimate(oneShot, options).tokens <= inputLimit) {
@@ -455,7 +454,7 @@ async function summarizeEligible(
         ...(accumulated ? summarySourceIds(accumulated) : []),
         ...batch.map((message) => message.id).filter((id) => originalIds.has(id)),
       ])
-      const request = summaryRequest(options, batch, accumulated, ids)
+      const request = summaryRequest(options, batch, accumulated, {allowedIds: ids})
       if (checkedEstimate(request, options).tokens <= inputLimit) {
         chosen = {end, ids, request}
         low = end + 1
@@ -463,10 +462,10 @@ async function summarizeEligible(
     }
 
     if (!chosen) throw new ContextBudgetError('compaction-input-exceeds-budget')
-    // Each batch depends on the validated summary of the preceding batch.
-    // eslint-disable-next-line no-await-in-loop
     let response: {summary: ContextSummary; usage?: Record<string, number>}
     try {
+      // Each batch depends on the validated summary of the preceding batch.
+      // eslint-disable-next-line no-await-in-loop
       response = await invoke(chosen.request, chosen.ids)
     } catch (error) {
       if (!isSummaryLengthError(error)) throw error
@@ -474,16 +473,23 @@ async function summarizeEligible(
         maxBatchGroups = Math.max(1, Math.floor((chosen.end - cursor) / 2))
         continue
       }
+
       const expandedLimit = options.policy.profile.outputReserve
       if (expandedLimit <= options.policy.profile.summaryOutput) throw error
-      const expanded = summaryRequest(options, groups[cursor], accumulated, chosen.ids, expandedLimit)
+      const expanded = summaryRequest(options, groups[cursor], accumulated, {
+        allowedIds: chosen.ids,
+        outputLimit: expandedLimit,
+      })
       if (
         checkedEstimate(expanded, options).tokens >
         options.policy.profile.window - expandedLimit - options.policy.profile.safetyMargin
       )
         throw error
+      // The expanded request uses the same complete source group.
+      // eslint-disable-next-line no-await-in-loop
       response = await invoke(expanded, chosen.ids)
     }
+
     accumulated = response.summary
     const nextUsage = response.usage
     if (nextUsage)
