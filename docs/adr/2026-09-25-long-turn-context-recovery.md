@@ -73,6 +73,25 @@ This extends the original pipeline decision to the observed trailing-command
 case; it does not infer a test verdict from output text. Book summaries label the
 combined independent checks as checks, not as a browser-only verdict.
 
+### Bounded summary batching refinement (2026-09-26)
+
+Accepted under the author's request to repair the full-context book failures.
+When the entire eligible summary source exceeds the summary input budget, split
+it at complete tool-group boundaries and summarize consecutive batches. Feed
+each validated intermediate summary into the next batch; keep intermediate
+summaries in memory and activate only one final checkpoint after the ordinary
+request is measured to fit. Every batch uses the same model, output cap, Run
+budget, cancellation and source-ID validation. A single oversized group, an
+invalid intermediate summary or an unfit final projection stops safely. The
+canonical transcript and checkpoint format remain unchanged.
+
+The 2026-09-25 book retest at model context 262,144 reached
+`compaction-input-exceeds-budget` in SDD after 293 model calls. The earlier
+pinned Codex and Pi comparisons support bounded compaction and single recovery
+after an actual reduction; neither provides a reason to split a tool call from
+its results or to persist unverified intermediate summaries. This refinement
+extends the previously recorded follow-up without changing those boundaries.
+
 ## Consequences
 
 Long turns can release context without losing original user instructions or
