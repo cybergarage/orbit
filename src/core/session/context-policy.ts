@@ -429,17 +429,18 @@ async function summarizeEligible(
   }
 
   const oneShot = summaryRequest(options, eligible, previous, {allowedIds: originalIds})
-  const groups = completeSummaryGroups(eligible)
-  let maxBatchGroups = groups.length
+  let splitAfterLength = false
   if (checkedEstimate(oneShot, options).tokens <= inputLimit) {
     try {
       return await invoke(oneShot, originalIds)
     } catch (error) {
       if (!isSummaryLengthError(error)) throw error
-      maxBatchGroups = Math.max(1, Math.floor(groups.length / 2))
+      splitAfterLength = true
     }
   }
 
+  const groups = completeSummaryGroups(eligible)
+  let maxBatchGroups = splitAfterLength ? Math.max(1, Math.floor(groups.length / 2)) : groups.length
   let cursor = 0
   let accumulated = previous
   let usage: Record<string, number> | undefined
