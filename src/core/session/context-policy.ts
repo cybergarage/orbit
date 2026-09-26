@@ -10,6 +10,7 @@ import type {Session} from './session.js'
 import type {VerifiedModelContext} from './verified-context.js'
 
 import {currentGraphVisit} from '../execution/graph-state.js'
+import {IncompleteModelResponseError} from '../errors/index.js'
 import {Message, MessageType} from '../message/index.js'
 import {getToolCalls} from '../models/adapters/tools.js'
 import {resolveModelContextCapacity} from '../models/context-capacity.js'
@@ -144,11 +145,16 @@ function checkedEstimate(
   return estimate
 }
 
-function prepareRequest(options: PreparationOptions, messages: Message[], summary = false): PreparedModelInvocation {
+function prepareRequest(
+  options: PreparationOptions,
+  messages: Message[],
+  summary = false,
+  summaryOutput = options.policy.profile.summaryOutput,
+): PreparedModelInvocation {
   if (!options.model.prepare) throw new ContextBudgetError('model-does-not-support-budgeted-input')
   return options.model.prepare(messages, {
     ...options.modelOptions,
-    maxOutputTokens: summary ? options.policy.profile.summaryOutput : options.policy.profile.outputReserve,
+    maxOutputTokens: summary ? summaryOutput : options.policy.profile.outputReserve,
     ...(summary ? {tools: []} : {}),
   })
 }
@@ -359,6 +365,7 @@ function summaryRequest(
   messages: Message[],
   previous: ContextSummary | null,
   allowedIds: Set<string>,
+  outputLimit = options.policy.profile.summaryOutput,
 ): PreparedModelInvocation {
   const prompt = new Message(MessageType.User, {
     content:
@@ -372,7 +379,7 @@ function summaryRequest(
         ...(options.verifiedContext?.projectionIds.length ? {interruption: INTERRUPTION_NOTICE} : {}),
       }),
   })
-  return prepareRequest(options, [prompt], true)
+  return prepareRequest(options, [prompt], true, outputLimit)
 }
 
 function summarySourceIds(summary: ContextSummary): string[] {
@@ -423,15 +430,23 @@ async function summarizeEligible(
   }
 
   const oneShot = summaryRequest(options, eligible, previous, originalIds)
-  if (checkedEstimate(oneShot, options).tokens <= inputLimit) return invoke(oneShot, originalIds)
-
   const groups = completeSummaryGroups(eligible)
+  let maxBatchGroups = groups.length
+  if (checkedEstimate(oneShot, options).tokens <= inputLimit) {
+    try {
+      return await invoke(oneShot, originalIds)
+    } catch (error) {
+      if (!isSummaryLengthError(error)) throw error
+      maxBatchGroups = Math.max(1, Math.floor(groups.length / 2))
+    }
+  }
+
   let cursor = 0
   let accumulated = previous
   let usage: Record<string, number> | undefined
   while (cursor < groups.length) {
     let low = cursor + 1
-    let high = groups.length
+    let high = Math.min(groups.length, cursor + maxBatchGroups)
     let chosen: undefined | {end: number; ids: Set<string>; request: PreparedModelInvocation}
     while (low <= high) {
       const end = Math.floor((low + high) / 2)
@@ -450,7 +465,25 @@ async function summarizeEligible(
     if (!chosen) throw new ContextBudgetError('compaction-input-exceeds-budget')
     // Each batch depends on the validated summary of the preceding batch.
     // eslint-disable-next-line no-await-in-loop
-    const response = await invoke(chosen.request, chosen.ids)
+    let response: {summary: ContextSummary; usage?: Record<string, number>}
+    try {
+      response = await invoke(chosen.request, chosen.ids)
+    } catch (error) {
+      if (!isSummaryLengthError(error)) throw error
+      if (chosen.end > cursor + 1) {
+        maxBatchGroups = Math.max(1, Math.floor((chosen.end - cursor) / 2))
+        continue
+      }
+      const expandedLimit = options.policy.profile.outputReserve
+      if (expandedLimit <= options.policy.profile.summaryOutput) throw error
+      const expanded = summaryRequest(options, groups[cursor], accumulated, chosen.ids, expandedLimit)
+      if (
+        checkedEstimate(expanded, options).tokens >
+        options.policy.profile.window - expandedLimit - options.policy.profile.safetyMargin
+      )
+        throw error
+      response = await invoke(expanded, chosen.ids)
+    }
     accumulated = response.summary
     const nextUsage = response.usage
     if (nextUsage)
@@ -463,6 +496,10 @@ async function summarizeEligible(
   if (!accumulated) throw new ContextBudgetError('compaction-input-exceeds-budget')
   validateSummary(accumulated, originalIds)
   return {summary: accumulated, ...(usage ? {usage} : {})}
+}
+
+function isSummaryLengthError(error: unknown): boolean {
+  return error instanceof IncompleteModelResponseError && ['length', 'max_tokens'].includes(error.stopReason)
 }
 
 function hasPendingEffects(run: RunContext): boolean {

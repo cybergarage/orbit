@@ -48,7 +48,10 @@ must be nonnegative safe integers, reserves must be positive, and
 `0 < target < trigger <= input budget`. At or above `trigger`, Orbit attempts
 one compaction for that model iteration. The new request must fit `target` and
 be smaller than the old request. A summary also has its own input budget within
-the same model window and uses `summaryOutput` as its output cap.
+the same model window and initially uses `summaryOutput` as its output cap. If
+the model stops a summary at that cap, Orbit retries smaller groups of complete
+tool exchanges. A single group can use up to `outputReserve` when the expanded
+request fits. Only a complete, validated final summary becomes a checkpoint.
 
 `estimateJSONRequest` tokenizes the entire frozen JSON request and adds the
 explicit `templateOverhead` assumption. This includes serialized instructions,

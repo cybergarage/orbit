@@ -84,7 +84,7 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
           if (String(request.messages[0]).startsWith('Summarize')) {
             summaries++
             expect(request.tools).to.deep.equal([])
-            expect(request.cap).to.equal(profile.summaryOutput)
+            expect([profile.summaryOutput, profile.outputReserve]).to.include(request.cap)
             if (mode === 'error') throw new Error('Summary fixture failure')
             if (mode === 'chunk-second-error' && summaries === 2) throw new Error('Second summary failed')
             if (mode === 'tool')
@@ -119,9 +119,14 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
             const content = ['fenced', 'fenced-bad-id', 'fenced-prose'].includes(mode)
               ? '```json\n' + JSON.stringify(summary) + '\n```' + (mode === 'fenced-prose' ? '\nUnverified text' : '')
               : JSON.stringify(summary)
+            const source = JSON.parse(String(request.messages[0]).split('\nSOURCE: ')[1]) as {messages: unknown[]}
+            const truncated =
+              mode === 'truncated' ||
+              (mode === 'length-sensitive' && source.messages.length > 1) ||
+              (mode === 'cap-sensitive' && request.cap === profile.summaryOutput)
             return new Message(MessageType.Assistant, {
               content,
-              ...(mode === 'truncated'
+              ...(truncated
                 ? {payload: {response: {durationMs: 1, model: 'fixture', provider: 'ollama', stopReason: 'length'}}}
                 : {}),
             })
@@ -260,13 +265,23 @@ describe('budgeted context preparation', () => {
       content: 'Tool result evidence ' + 'r'.repeat(4000),
       payload: {name: 'read', output: 'r'.repeat(4000), toolCallId: 'chunk-call'},
     })
-    session.appendMessages([call, result, new Message(MessageType.Assistant, {content: 'Later evidence ' + 'l'.repeat(7000)})])
+    session.appendMessages([
+      call,
+      result,
+      new Message(MessageType.Assistant, {content: 'Later evidence ' + 'l'.repeat(7000)}),
+    ])
     const model = fixtureModel(id)
     const {result: run} = await execute(session, model)
     expect(run.outcome, JSON.stringify(run)).to.equal('completed')
-    const summaries = model.requests.filter((request) => String((request.messages as unknown[])[0]).startsWith('Summarize'))
+    const summaries = model.requests.filter((request) =>
+      String((request.messages as unknown[])[0]).startsWith('Summarize'),
+    )
     expect(summaries.length).to.be.greaterThan(1)
-    expect(summaries.every((request) => JSON.stringify(request).length <= profile.window - profile.summaryOutput - profile.safetyMargin)).to.equal(true)
+    expect(
+      summaries.every(
+        (request) => JSON.stringify(request).length <= profile.window - profile.summaryOutput - profile.safetyMargin,
+      ),
+    ).to.equal(true)
     for (const request of summaries) {
       const source = JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1]) as {
         messages: Array<{id: string}>
@@ -279,6 +294,19 @@ describe('budgeted context preparation', () => {
     expect(session.getCompaction()?.summary.goals[0].sourceIds).to.deep.equal([id])
     expect(session.getConversationMessages()).to.have.length(7)
   })
+
+  for (const mode of ['length-sensitive', 'cap-sensitive'])
+    it('recovers a length-limited summary with ' + mode, async () => {
+      const session = new Session()
+      const id = oldConversation(session)
+      const model = fixtureModel(id, mode)
+      const {result} = await execute(session, model)
+      expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+      expect(session.getCompaction()?.summary.goals[0].sourceIds).to.deep.equal([id])
+      expect(
+        model.requests.filter((request) => String((request.messages as unknown[])[0]).startsWith('Summarize')).length,
+      ).to.be.greaterThan(1)
+    })
 
   it('refuses a single oversized tool group without activating an intermediate summary', async () => {
     const session = new Session()
@@ -312,14 +340,25 @@ describe('budgeted context preparation', () => {
     expect(session.getCompaction()).to.equal(undefined)
   })
 
-  for (const mode of ['error', 'tool', 'bad-id', 'empty', 'oversized', 'bad-test', 'truncated', 'fenced-prose', 'fenced-bad-id'])
+  for (const mode of [
+    'error',
+    'tool',
+    'bad-id',
+    'empty',
+    'oversized',
+    'bad-test',
+    'truncated',
+    'fenced-prose',
+    'fenced-bad-id',
+  ])
     it('uses the fitting unchanged context after ' + mode, async () => {
       const session = new Session()
       const model = fixtureModel(oldConversation(session), mode)
       const {events, result} = await execute(session, model)
       expect(result.outcome, JSON.stringify(result)).to.equal('completed')
       expect(session.getCompaction()).to.equal(undefined)
-      expect(model.requests).to.have.length(2)
+      if (mode === 'truncated') expect(model.requests.length).to.be.greaterThan(2)
+      else expect(model.requests).to.have.length(2)
       expect(events.some((event) => event.type === 'context-prepared' && event.outcome === 'failed')).to.equal(true)
     })
 
