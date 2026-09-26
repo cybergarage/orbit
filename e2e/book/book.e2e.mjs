@@ -100,6 +100,7 @@ describe('Book workflows (real Orbit/Ollama, isolated game/browser containers)',
               timeoutMs,
             })
             row.run = {
+              agentSourceSha256: run.agentSourceSha256,
               elapsedMs: run.elapsedMs,
               metrics: run.metrics,
               outcome: run.result?.runtime?.outcome,

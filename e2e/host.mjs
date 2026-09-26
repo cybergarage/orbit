@@ -6,6 +6,7 @@ import {createHash, randomUUID} from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
+import {sourceFingerprint} from './source-fingerprint.mjs'
 import {summarizeEvents} from './strategy.mjs'
 
 export const repo = path.resolve(import.meta.dirname, '..')
@@ -75,6 +76,17 @@ export const docker = (args, options) => command('docker', args, options)
 export const writeJSON = (file, data) => fs.writeFile(file, JSON.stringify(data, null, 2) + '\n')
 export const digest = (data) => createHash('sha256').update(data).digest('hex')
 
+export async function verifyAgentImageSources(agentImage = image) {
+  const expected = await sourceFingerprint(repo)
+  const result = await docker(
+    ['run', '--rm', '--entrypoint', 'node', agentImage, '/opt/orbit/e2e/source-fingerprint.mjs'],
+    {allowFailure: true},
+  )
+  if (result.code !== 0 || result.stdout.trim() !== expected)
+    throw new Error(`Agent image ${agentImage} does not match the current Orbit sources; rebuild the image before evaluation.`)
+  return expected
+}
+
 export async function cleanup() {
   for (const name of activeContainers) {
     await docker(['rm', '-f', name], {allowFailure: true}).catch(() => {})
@@ -134,6 +146,7 @@ export async function runAgent({
   timeoutMs = 240_000,
   workspace,
 }) {
+  const agentSourceSha256 = await verifyAgentImageSources(agentImage)
   await fs.mkdir(directory, {recursive: true})
   const input = path.join(directory, 'input')
   await fs.mkdir(input)
@@ -234,6 +247,7 @@ export async function runAgent({
         ? 'runtime-error'
         : 'completed'
   const record = {
+    agentSourceSha256,
     config,
     elapsedMs: Date.now() - start,
     error,

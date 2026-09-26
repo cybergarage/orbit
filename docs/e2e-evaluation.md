@@ -38,6 +38,13 @@ Case IDs are `read`, `single-file`, `test-repair`, and `multi-file`.
 (default `http://host.docker.internal:11434`). `ORBIT_E2E_IMAGE` selects a built
 agent image. Do not expose Ollama publicly to run these tests.
 
+Before an agent run, the host compares a fingerprint of the current Orbit source,
+package manifests and worker against the files baked into the selected image.
+Rebuild the local image after source changes; for Verified, rebuild the SWE base
+image and then the Verified image. A mismatch stops the run before inference, so
+stale binaries cannot silently produce misleading context-summary metrics. The
+matching fingerprint is saved as `agentSourceSha256` in each run record.
+
 Each trial receives a new container, workspace and in-memory Session. Only the
 fixture and run configuration are mounted read-only. Orbit and tools execute as
 the image's non-root user. The container has limited CPU, memory and process

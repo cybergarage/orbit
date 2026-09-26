@@ -63,6 +63,7 @@ describe('Ollama coding E2E (real models, Docker)', function () {
           const checked = await gradeCase(directory, c, run)
           const {grade} = checked
           const row = {
+            agentSourceSha256: run.agentSourceSha256,
             artifactPassed: checked.passed,
             caseId: c.id,
             directory: path.basename(directory),

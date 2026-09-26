@@ -10,6 +10,7 @@ import {gradeCase, normalizePatch} from './grading.mjs'
 import {command} from './host.mjs'
 import {checkDeliverable, inspectDeliverable, testCommand} from './quality.mjs'
 import {prepareRepositorySource, repositoryProfile} from './repository-checks.mjs'
+import {sourceFingerprint} from './source-fingerprint.mjs'
 import {evaluationPrompt, readElapsed, readRounds, summarizeEvents} from './strategy.mjs'
 import {validateSWECase, verifyPreparedSWECase} from './swe-case.mjs'
 
@@ -26,6 +27,30 @@ const entry = (exitCode) => ({
   type: 'message',
 })
 describe('E2E host control (no model or Docker)', () => {
+  it('changes the agent source fingerprint when the source changes', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-fingerprint-'))
+    try {
+      for (const file of [
+        'bin/build-gui.mjs',
+        'e2e/source-fingerprint.mjs',
+        'e2e/worker.mjs',
+        'package-lock.json',
+        'package.json',
+        'src/core/agent.ts',
+        'tsconfig.json',
+      ]) {
+        await fs.mkdir(path.dirname(path.join(root, file)), {recursive: true})
+        await fs.writeFile(path.join(root, file), 'initial')
+      }
+
+      const before = await sourceFingerprint(root)
+      await fs.writeFile(path.join(root, 'src/core/agent.ts'), 'changed')
+      expect(await sourceFingerprint(root)).not.to.equal(before)
+    } finally {
+      await fs.rm(root, {force: true, recursive: true})
+    }
+  })
+
   it('rejects invalid budgets rather than disabling the limit', () => {
     expect(readRounds(undefined, 30)).to.equal(30)
     expect(readRounds('50', 30)).to.equal(50)

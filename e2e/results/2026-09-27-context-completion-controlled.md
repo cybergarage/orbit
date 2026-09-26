@@ -22,3 +22,7 @@ This is one trial per condition on one issue, so it is diagnostic rather than a 
 ## Orbit follow-up
 
 The direct evaluation findings are that the model's context-enabled partial patches broke test collection and that the summary-attempt counters do not reflect summary requests. The former is a generated-patch quality failure; it does not by itself show an Orbit runtime defect. The telemetry mismatch is an Orbit measurement issue to investigate. The completion instructions need an additional check that enforces the verified finish condition; their current text alone does not stop exploration. These runs reached the model and official harness, and their patches were unresolved rather than environment failures.
+
+### Measurement follow-up (2026-09-27)
+
+The solver image above was created at `2026-09-26T14:16:42Z`, before the context diagnostic events were added to Orbit. Direct inspection of that image found no `context.summary.started` emission in its bundled context policy. The zero summary counters in this report therefore indicate missing instrumentation in the evaluated image, not zero summary activity. They cannot be used to estimate summary cost. The E2E host now checks a fingerprint of the bundled Orbit sources before a run, and records it with the run. A new image and fresh measurements are needed for quantitative comparison; the historical result is unchanged.

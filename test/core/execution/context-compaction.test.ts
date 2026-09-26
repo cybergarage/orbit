@@ -224,10 +224,17 @@ describe('budgeted context preparation', () => {
       return original(messages, options)
     }
 
-    const {result} = await execute(session, model)
+    const diagnostics = new DiagnosticEventBus()
+    const {result} = await execute(session, model, policy, undefined, 100, diagnostics)
     expect(result.outcome).to.equal('completed')
     expect(windows.length).to.be.greaterThan(1)
     expect(windows.every((window) => window === 12_000)).to.equal(true)
+    expect(diagnostics.list().map((event) => event.type)).to.include.members([
+      'context.compaction.started',
+      'context.summary.started',
+      'context.summary.completed',
+      'context.compaction.completed',
+    ])
   })
 
   it('refuses an output reserve beyond discovered provider limits before dispatch', async () => {

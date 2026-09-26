@@ -259,6 +259,7 @@ switch (action) {
         })
       : undefined
     await writeJSON(path.join(directory, 'metadata.json'), {
+      agentSourceSha256: run.agentSourceSha256,
       config: run.config,
       dataset: gold.dataset,
       elapsedMs: run.elapsedMs,

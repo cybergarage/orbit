@@ -7,6 +7,7 @@ COPY src ./src
 COPY bin/build-gui.mjs ./bin/build-gui.mjs
 RUN npm run build
 COPY e2e/worker.mjs ./e2e/worker.mjs
+COPY e2e/source-fingerprint.mjs ./e2e/source-fingerprint.mjs
 COPY e2e/book/entry.mjs ./e2e/book/entry.mjs
 WORKDIR /opt/book
 COPY e2e/book/fixture/package*.json ./
