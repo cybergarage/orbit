@@ -1,0 +1,348 @@
+{
+  "date": "2026-09-27",
+  "evaluation": "SWE-bench Verified context and completion 2x2 rerun; one attempt per condition",
+  "orbitCommit": "584c24bdde277d361873ccdaab76334b12ab122a",
+  "workingTree": "clean at run time",
+  "agentSourceSha256": "51ebb19c7b864f395a22e812a908e3239b5db357ceb5fa54ad2d352e8f594321",
+  "dataset": {
+    "dataset": "princeton-nlp/SWE-bench_Verified",
+    "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+    "split": "test",
+    "instance_id": "pytest-dev__pytest-10356",
+    "repo": "pytest-dev/pytest",
+    "base_commit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1"
+  },
+  "harness": {
+    "version": "4.1.0",
+    "commit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+    "platform": "linux/amd64 under Docker emulation on Apple Silicon"
+  },
+  "model": {
+    "name": "ornith-1.5:9b",
+    "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+    "parameters": "9.0B",
+    "quantization": "Q4_K_M",
+    "ollama": "0.34.3",
+    "numCtx": 32768,
+    "numPredict": 4096,
+    "seed": 42,
+    "temperature": 0.6,
+    "topP": 0.95
+  },
+  "environment": {
+    "dockerDesktopMemoryBytes": 4107141120,
+    "agentImageId": "sha256:8d2a22b33347f73df732af4b84c9353a807d44b15fbbc3b4309b85973e14800c",
+    "officialGraderImageId": "sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+    "deadlineMs": 900000
+  },
+  "arms": [
+    {
+      "id": "baseline-context-off",
+      "strategy": "baseline",
+      "contextPolicy": "disabled",
+      "orbitCommit": "584c24bdde277d361873ccdaab76334b12ab122a",
+      "agentSourceSha256": "51ebb19c7b864f395a22e812a908e3239b5db357ceb5fa54ad2d352e8f594321",
+      "agentImageId": "sha256:8d2a22b33347f73df732af4b84c9353a807d44b15fbbc3b4309b85973e14800c",
+      "elapsedMs": 779165,
+      "runStatus": "runtime-error",
+      "runtimeOutcome": "failed",
+      "patchBytes": 9926,
+      "metrics": {
+        "compactionsCompleted": 0,
+        "compactionsFailed": 0,
+        "compactionsStarted": 0,
+        "modelCallsCompleted": 54,
+        "modelCallsStarted": 54,
+        "modelWallMs": 766954.9770170001,
+        "ollamaEvalMs": 713937.688999,
+        "ollamaLoadMs": 4607.326455999997,
+        "ollamaPromptMs": 44294.69199800001,
+        "ollamaTotalMs": 766700.938291,
+        "repeatedFailedCalls": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryWallMs": 0,
+        "toolCalls": 53,
+        "toolErrors": 22,
+        "toolWallMs": 10648.889174999867
+      },
+      "usage": {
+        "inputTokens": 952003,
+        "outputTokens": 14402
+      },
+      "qualityStatus": "quality-failed",
+      "qualityIssues": [
+        {
+          "isTest": false,
+          "kind": "file",
+          "path": ".pytest_cache/.gitignore",
+          "status": "added",
+          "unwanted": true
+        },
+        {
+          "isTest": false,
+          "kind": "file",
+          "path": ".pytest_cache/CACHEDIR.TAG",
+          "status": "added",
+          "unwanted": true
+        },
+        {
+          "isTest": false,
+          "kind": "file",
+          "path": ".pytest_cache/README.md",
+          "status": "added",
+          "unwanted": true
+        },
+        {
+          "isTest": false,
+          "kind": "file",
+          "path": ".pytest_cache/v/cache/lastfailed",
+          "status": "added",
+          "unwanted": true
+        },
+        {
+          "isTest": false,
+          "kind": "file",
+          "path": ".pytest_cache/v/cache/nodeids",
+          "status": "added",
+          "unwanted": true
+        },
+        {
+          "isTest": false,
+          "kind": "file",
+          "path": ".pytest_cache/v/cache/stepwise",
+          "status": "added",
+          "unwanted": true
+        }
+      ],
+      "officialStatus": "grading-error",
+      "gradingDisposition": "evaluated-or-error",
+      "gradeRunId": "orbit-prediction-1225ba76-21cf-45ce-8504-561f74c4606f",
+      "officialTests": null,
+      "gradeError": "Official patch application failed because the patch attempted to add .pytest_cache files already present in the grader image.",
+      "prediction": "2026-09-27-context-completion-rerun-baseline-context-off-predictions.jsonl",
+      "workspace": "solve-ornith-1.5-9b-82a0dc7e-25a7-44df-a389-2f993a6fedb0"
+    },
+    {
+      "id": "baseline-context-on",
+      "strategy": "baseline",
+      "contextPolicy": "budgeted",
+      "orbitCommit": "584c24bdde277d361873ccdaab76334b12ab122a",
+      "agentSourceSha256": "51ebb19c7b864f395a22e812a908e3239b5db357ceb5fa54ad2d352e8f594321",
+      "agentImageId": "sha256:8d2a22b33347f73df732af4b84c9353a807d44b15fbbc3b4309b85973e14800c",
+      "elapsedMs": 917125,
+      "runStatus": "runtime-error",
+      "runtimeOutcome": "incomplete",
+      "patchBytes": 2507,
+      "metrics": {
+        "compactionsCompleted": 0,
+        "compactionsFailed": 0,
+        "compactionsStarted": 1,
+        "modelCallsCompleted": 30,
+        "modelCallsStarted": 30,
+        "modelWallMs": 913953.853585,
+        "ollamaEvalMs": 718115.135998,
+        "ollamaLoadMs": 2902.6154969999993,
+        "ollamaPromptMs": 189841.37300000002,
+        "ollamaTotalMs": 913751.0805810002,
+        "repeatedFailedCalls": 0,
+        "summaryAttempts": 11,
+        "summaryFailures": 1,
+        "summaryWallMs": 749038.4753000003,
+        "toolCalls": 19,
+        "toolErrors": 5,
+        "toolWallMs": 1400.2069609999944
+      },
+      "usage": {
+        "inputTokens": 297489,
+        "outputTokens": 16382
+      },
+      "qualityStatus": "quality-failed",
+      "qualityIssues": [
+        {
+          "isTest": false,
+          "kind": "file",
+          "path": ".pytest_cache/.gitignore",
+          "status": "added",
+          "unwanted": true
+        },
+        {
+          "isTest": false,
+          "kind": "file",
+          "path": ".pytest_cache/CACHEDIR.TAG",
+          "status": "added",
+          "unwanted": true
+        },
+        {
+          "isTest": false,
+          "kind": "file",
+          "path": ".pytest_cache/README.md",
+          "status": "added",
+          "unwanted": true
+        },
+        {
+          "isTest": false,
+          "kind": "file",
+          "path": ".pytest_cache/v/cache/lastfailed",
+          "status": "added",
+          "unwanted": true
+        },
+        {
+          "isTest": false,
+          "kind": "file",
+          "path": ".pytest_cache/v/cache/nodeids",
+          "status": "added",
+          "unwanted": true
+        },
+        {
+          "isTest": false,
+          "kind": "file",
+          "path": ".pytest_cache/v/cache/stepwise",
+          "status": "added",
+          "unwanted": true
+        }
+      ],
+      "officialStatus": "unresolved",
+      "gradingDisposition": "evaluated-or-error",
+      "gradeRunId": "orbit-prediction-6b6c299a-56d9-49d2-ae21-09f79a10df23",
+      "officialTests": {
+        "FAIL_TO_PASS": {
+          "passed": 0,
+          "failed": 1
+        },
+        "PASS_TO_PASS": {
+          "passed": 79,
+          "failed": 0
+        },
+        "FAIL_TO_FAIL": {
+          "passed": 0,
+          "failed": 0
+        },
+        "PASS_TO_FAIL": {
+          "passed": 0,
+          "failed": 0
+        }
+      },
+      "gradeError": null,
+      "prediction": "2026-09-27-context-completion-rerun-baseline-context-on-predictions.jsonl",
+      "workspace": "solve-ornith-1.5-9b-608cad5e-e9bf-4871-891c-9e84ac159c7a"
+    },
+    {
+      "id": "focused-context-off",
+      "strategy": "verified-focused-v1",
+      "contextPolicy": "disabled",
+      "orbitCommit": "584c24bdde277d361873ccdaab76334b12ab122a",
+      "agentSourceSha256": "51ebb19c7b864f395a22e812a908e3239b5db357ceb5fa54ad2d352e8f594321",
+      "agentImageId": "sha256:8d2a22b33347f73df732af4b84c9353a807d44b15fbbc3b4309b85973e14800c",
+      "elapsedMs": 450337,
+      "runStatus": "runtime-error",
+      "runtimeOutcome": "failed",
+      "patchBytes": 0,
+      "metrics": {
+        "compactionsCompleted": 0,
+        "compactionsFailed": 0,
+        "compactionsStarted": 0,
+        "modelCallsCompleted": 58,
+        "modelCallsStarted": 59,
+        "modelWallMs": 439004.1477830001,
+        "ollamaEvalMs": 367405.3500000001,
+        "ollamaLoadMs": 1721.6449200000002,
+        "ollamaPromptMs": 65367.205997999976,
+        "ollamaTotalMs": 438771.26483099995,
+        "repeatedFailedCalls": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryWallMs": 0,
+        "toolCalls": 58,
+        "toolErrors": 6,
+        "toolWallMs": 3078.7184629999174
+      },
+      "usage": {
+        "inputTokens": 1013394,
+        "outputTokens": 7855
+      },
+      "qualityStatus": "not-measured",
+      "qualityIssues": [],
+      "officialStatus": "unresolved",
+      "gradingDisposition": "skipped-empty-patch",
+      "gradeRunId": "orbit-prediction-95ef3ddd-95cc-4be0-93cf-290d512b9d95",
+      "officialTests": null,
+      "gradeError": null,
+      "prediction": "2026-09-27-context-completion-rerun-focused-context-off-predictions.jsonl",
+      "workspace": "solve-ornith-1.5-9b-27f233d2-85ca-454f-8328-bfe574417f01"
+    },
+    {
+      "id": "focused-context-on",
+      "strategy": "verified-focused-v1",
+      "contextPolicy": "budgeted",
+      "orbitCommit": "584c24bdde277d361873ccdaab76334b12ab122a",
+      "agentSourceSha256": "51ebb19c7b864f395a22e812a908e3239b5db357ceb5fa54ad2d352e8f594321",
+      "agentImageId": "sha256:8d2a22b33347f73df732af4b84c9353a807d44b15fbbc3b4309b85973e14800c",
+      "elapsedMs": 935718,
+      "runStatus": "timeout",
+      "runtimeOutcome": "incomplete",
+      "patchBytes": 781,
+      "metrics": {
+        "compactionsCompleted": 0,
+        "compactionsFailed": 5,
+        "compactionsStarted": 6,
+        "modelCallsCompleted": 46,
+        "modelCallsStarted": 47,
+        "modelWallMs": 849305.521049,
+        "ollamaEvalMs": 736702.5159969999,
+        "ollamaLoadMs": 148.56316599999997,
+        "ollamaPromptMs": 103119.66799999999,
+        "ollamaTotalMs": 849084.207748,
+        "repeatedFailedCalls": 1,
+        "summaryAttempts": 6,
+        "summaryFailures": 1,
+        "summaryWallMs": 597581.976855,
+        "toolCalls": 41,
+        "toolErrors": 16,
+        "toolWallMs": 3405.9570460000223
+      },
+      "usage": {
+        "inputTokens": 593538,
+        "outputTokens": 15614
+      },
+      "qualityStatus": "not-measured",
+      "qualityIssues": [],
+      "officialStatus": "unresolved",
+      "gradingDisposition": "evaluated-or-error",
+      "gradeRunId": "orbit-prediction-4888df0a-2eba-4139-b358-0d3ed300e2d0",
+      "officialTests": {
+        "FAIL_TO_PASS": {
+          "passed": 0,
+          "failed": 1
+        },
+        "PASS_TO_PASS": {
+          "passed": 79,
+          "failed": 0
+        },
+        "FAIL_TO_FAIL": {
+          "passed": 0,
+          "failed": 0
+        },
+        "PASS_TO_FAIL": {
+          "passed": 0,
+          "failed": 0
+        }
+      },
+      "gradeError": null,
+      "prediction": "2026-09-27-context-completion-rerun-focused-context-on-predictions.jsonl",
+      "workspace": "solve-ornith-1.5-9b-8ba86ea1-64ad-4081-8658-d4ce55b45b17"
+    }
+  ],
+  "findings": [
+    "Summary event counting matched observed activity in the enabled-context runs: 11 requests (10 completed, 1 request failure) for baseline, and 6 (5 completed, 1 request failure) for focused completion.",
+    "Context compaction completed zero times in either enabled-context run. The focused run recorded 5 failed compactions; compaction failure causes were not fully classified by summary diagnostics.",
+    "Natural-language focused completion did not produce a completed Orbit run: without context it ended with an empty patch; with context it reached the deadline.",
+    "No prediction resolved the target. Both patches that were graded completed with 79/79 PASS_TO_PASS and failed the target test. One patch had an official patch-application error because it included pre-existing .pytest_cache files; one empty patch was skipped by the harness."
+  ],
+  "limitations": [
+    "One trial per condition is diagnostic, not a statistically reliable comparison.",
+    "A preflight attempt using the Node-only base image was stopped before model execution; it is excluded from the four conditions.",
+    "On the context-enabled runs, summaryFailures counts model request failures. Compaction failures caused by unusable summary content are surfaced separately as compaction failures and need more detailed reason telemetry.",
+    "Full workspaces, logs and events remain under ignored tmp/e2e/verified/pytest-dev__pytest-10356/."
+  ]
+}
