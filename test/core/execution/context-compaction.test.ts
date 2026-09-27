@@ -100,7 +100,9 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
             const summary = {
               changedPaths: [],
               facts: [],
-              goals: [{sourceIds: [mode === 'bad-id' || mode === 'bad-id-loop' ? 'invented' : id], text: 'Repair the target'}],
+              goals: [
+                {sourceIds: [mode === 'bad-id' || mode === 'bad-id-loop' ? 'invented' : id], text: 'Repair the target'},
+              ],
               tests: [
                 {
                   outcome: 'failed',
@@ -382,6 +384,41 @@ describe('budgeted context preparation', () => {
       ).to.be.greaterThan(1)
     })
 
+  it('expands a truncated full summary before splitting its source into batches', async () => {
+    const session = new Session()
+    const id = oldConversation(session)
+    session.appendMessages([
+      new Message(MessageType.Assistant, {content: 'Additional investigation evidence'}),
+      new Message(MessageType.Assistant, {content: 'Unfinished repair'}),
+    ])
+    const model = fixtureModel(id, 'cap-sensitive')
+    const diagnostics = new DiagnosticEventBus()
+    const {result} = await execute(session, model, policy, undefined, 100, diagnostics)
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    const summaries = model.requests.filter((request) =>
+      String((request.messages as unknown[])[0]).startsWith('Summarize'),
+    )
+    expect(summaries).to.have.length(2)
+    expect(summaries.map((request) => request.cap)).to.deep.equal([profile.summaryOutput, profile.outputReserve])
+    const sources = summaries.map((request) =>
+      JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1]),
+    )
+    expect(sources[1]).to.deep.equal(sources[0])
+    expect(session.getCompaction()?.summary.goals[0].sourceIds).to.deep.equal([id])
+    expect(diagnostics.list().find((event) => event.type === 'context.summary.truncated')?.data).to.include({
+      outputLimit: profile.summaryOutput,
+      phase: 'full',
+      reason: 'length',
+      sourceMessages: 4,
+    })
+    expect(
+      diagnostics
+        .list()
+        .filter((event) => event.type === 'context.summary.started')
+        .map((event) => event.data?.phase),
+    ).to.deep.equal(['full', 'expanded'])
+  })
+
   it('refuses a single oversized tool group without activating an intermediate summary', async () => {
     const session = new Session()
     const id = oldConversation(session)
@@ -397,6 +434,59 @@ describe('budgeted context preparation', () => {
     expect(result.outcome).to.equal('failed')
     expect(JSON.stringify(result)).to.contain('compaction-input-exceeds-budget')
     expect(session.getCompaction()).to.equal(undefined)
+  })
+
+  it('does not invoke an expanded summary whose input exceeds the smaller budget', async () => {
+    const session = new Session()
+    const model = fixtureModel(oldConversation(session), 'cap-sensitive')
+    const selected: ContextPolicy = {
+      ...policy,
+      estimator(request) {
+        const isExpanded =
+          String((request.messages as unknown[])[0]).startsWith('Summarize') && request.cap === profile.outputReserve
+        const tokens = isExpanded ? profile.window : JSON.stringify(request).length
+        return {
+          components: {json: tokens},
+          kind: 'estimated',
+          model: profile.model,
+          provider: profile.provider,
+          revision: 'expanded-budget-fixture',
+          tokens,
+        }
+      },
+    }
+    const {result} = await execute(session, model, selected)
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    const summaries = model.requests.filter((request) =>
+      String((request.messages as unknown[])[0]).startsWith('Summarize'),
+    )
+    expect(summaries.length).to.be.greaterThan(1)
+    expect(summaries.every((request) => request.cap === profile.summaryOutput)).to.equal(true)
+    expect(session.getCompaction()).to.equal(undefined)
+  })
+
+  it('expands each length-limited batch without discarding accumulated evidence', async () => {
+    const session = new Session()
+    const id = oldConversation(session)
+    session.appendMessages([
+      new Message(MessageType.Assistant, {content: 'a'.repeat(8000)}),
+      new Message(MessageType.Assistant, {content: 'b'.repeat(8000)}),
+      new Message(MessageType.Assistant, {content: 'c'.repeat(8000)}),
+    ])
+    const model = fixtureModel(id, 'cap-sensitive')
+    const diagnostics = new DiagnosticEventBus()
+    const {result} = await execute(session, model, policy, undefined, 100, diagnostics)
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    const phases = diagnostics.list().filter((event) => event.type === 'context.summary.started')
+    expect(phases.length).to.be.greaterThan(2)
+    for (let index = 0; index < phases.length; index += 2) {
+      expect(phases[index].data?.phase).to.equal('batch')
+      expect(phases[index + 1].data?.phase).to.equal('expanded')
+      expect(phases[index].data?.sourceMessages).to.equal(phases[index + 1].data?.sourceMessages)
+    }
+
+    expect(session.getCompaction()?.summary.goals[0].sourceIds).to.deep.equal([id])
+    expect(session.getConversationMessages()).to.have.length(7)
   })
 
   it('does not activate a partial checkpoint after a later summary batch fails', async () => {

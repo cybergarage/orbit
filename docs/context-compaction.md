@@ -49,9 +49,19 @@ must be nonnegative safe integers, reserves must be positive, and
 one compaction for that model iteration. The new request must fit `target` and
 be smaller than the old request. A summary also has its own input budget within
 the same model window and initially uses `summaryOutput` as its output cap. If
-the model stops a summary at that cap, Orbit retries smaller groups of complete
-tool exchanges. A single group can use up to `outputReserve` when the expanded
-request fits. Only a complete, validated final summary becomes a checkpoint.
+the model stops a summary at that cap, Orbit first retries the same source with
+up to `outputReserve` output tokens when the expanded request fits its input
+budget. If it still stops at the output cap, Orbit retries smaller groups of
+complete tool exchanges. The same recovery applies to each batch. Summary
+instructions request concise JSON within the selected output budget and
+consolidate repeated facts without discarding unfinished work or test evidence.
+Only a complete, validated final summary becomes a checkpoint.
+
+The `context.summary.started` diagnostics identify the request phase (`full`,
+`batch` or `expanded`), source message count and output limit. A
+`context.summary.truncated` event records an output-length stop separately from
+a transport failure. Completed request events indicate a response was received;
+only `context.compaction.completed` confirms a validated checkpoint was saved.
 
 `estimateJSONRequest` tokenizes the entire frozen JSON request and adds the
 explicit `templateOverhead` assumption. This includes serialized instructions,

@@ -20,3 +20,39 @@ The model was `ornith-1.5:9b`, digest `e5df7dcdd8a263994df62d610317e07be0d6af23f
 These runs give two concrete Orbit improvement areas to pursue: make context summarization stop or fall back predictably when requests are slow or fail, and make completion an enforceable run-state transition. The comparison does not establish that either recent change caused the observed outcomes. A next evaluation should vary one factor at a time and repeat each condition.
 
 Full machine-readable metrics: [JSON](2026-09-27-real-model-reevaluation.json). Official-format submitted patches: [focused v1](2026-09-27-real-model-v1-predictions.jsonl), [focused v2](2026-09-27-real-model-v2-predictions.jsonl). Full logs and solver workspaces remain under ignored `tmp/e2e/verified/pytest-dev__pytest-10356/`.
+
+## Summary recovery follow-up — 2026-09-28
+
+Inspecting the saved model responses confirmed that the first two summary
+requests stopped with `length`, each consuming the full 2,048 output tokens.
+The second request already used a smaller source. The subsequent three
+responses stopped normally. Thus the six requests were not six transport
+retries: output exhaustion caused progressively smaller, sequential batches.
+The summary-completed counter means a response was received, not that a
+checkpoint was validated or saved.
+
+The local correction in `src/core/session/context-policy.ts` tries the existing
+`outputReserve` for the same source after output exhaustion, before splitting
+it into smaller batches. It applies to full-source and batch requests only
+when the expanded request still fits the window. The prompt requests concise
+JSON, consolidation of duplicate facts and completion within the selected
+output budget. Request diagnostics now record phase, source message count,
+output limit and output-length stops.
+
+This is a local recovery-order correction within the existing compaction
+contract. It changes no public API, persistent format, execution-round limit,
+source-evidence validation, latest-turn protection or checkpoint activation
+rule, so no new ADR is needed. Deterministic regression tests verify recovery
+on the same evidence before splitting and rejection of an expanded request
+that cannot fit. The prior cancellation and partial-checkpoint checks remain
+part of validation. A real-model rerun is still needed to measure time savings
+and resolution rate; this implementation does not establish either outcome.
+
+Validation: `headers:check` and `build` passed. `npm test` passed formatting and
+linting (warnings only), then reported 1,026 passes and nine failures: eight
+loopback `listen EPERM` failures and one recovery-fixture timeout. A permitted
+rerun of the affected files plus both context-compaction suites passed all
+110 tests, including the three new regression cases and the previously timed-out
+fixture. The two compaction suites contain 48 passing tests. The leftover
+timed-out fixture and its Mocha parent were explicitly stopped after recording
+their results. Unrelated import-order changes made by the linter were removed.
