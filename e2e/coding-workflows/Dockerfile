@@ -8,22 +8,22 @@ COPY bin/build-gui.mjs ./bin/build-gui.mjs
 RUN npm run build
 COPY e2e/worker.mjs ./e2e/worker.mjs
 COPY e2e/source-fingerprint.mjs ./e2e/source-fingerprint.mjs
-COPY e2e/book/entry.mjs ./e2e/book/entry.mjs
-WORKDIR /opt/book
-COPY e2e/book/fixture/package*.json ./
+COPY e2e/coding-workflows/entry.mjs ./e2e/coding-workflows/entry.mjs
+WORKDIR /opt/coding-workflows
+COPY e2e/coding-workflows/fixture/package*.json ./
 RUN npm ci
 RUN mkdir /workspace /output && chown node:node /workspace /output
 USER node
 WORKDIR /workspace
-CMD ["node", "/opt/orbit/e2e/book/entry.mjs"]
+CMD ["node", "/opt/orbit/e2e/coding-workflows/entry.mjs"]
 
 FROM agent AS grader
 USER root
 WORKDIR /opt/browser
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/browser/browsers
-COPY e2e/book/browser/package*.json ./
+COPY e2e/coding-workflows/browser/package*.json ./
 RUN npm ci && npx playwright install --with-deps chromium
-COPY e2e/book/browser/grade.mjs ./grade.mjs
+COPY e2e/coding-workflows/browser/grade.mjs ./grade.mjs
 USER node
 WORKDIR /workspace
 ENTRYPOINT ["node", "/opt/browser/grade.mjs"]

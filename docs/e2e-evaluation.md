@@ -390,11 +390,11 @@ necessary. Some pipelines such as `grep | head` can return nonzero after SIGPIPE
 examine the recorded output rather than treating every nonzero status as a
 repository test failure. See [Bash semantics](tools.md#bash).
 
-## English book workflows
+## Coding workflow evaluation
 
-The opt-in book suite runs the same 16-card memory game through three Orbit
-workflows, based on the English edition of *AI Coding Agent Fundamentals* and
-its [pinned starter templates](../e2e/book/README.md):
+The opt-in coding workflow suite runs the same 16-card memory game through
+three Orbit workflows, based on the English edition of *AI Coding Agent Fundamentals* and
+its [pinned starter templates](../e2e/coding-workflows/README.md):
 
 | Case | Inputs and execution |
 | --- | --- |
@@ -403,12 +403,12 @@ its [pinned starter templates](../e2e/book/README.md):
 | `loop` | Starter, `spec.md`, `test.md`, and `progress.md`; one Run iterates implementation and verification and records progress. Specifications must remain unchanged. |
 
 ```sh
-npm run test:e2e:book:unit
-npm run e2e:book:build
-npm run test:e2e:book:graders
-ORBIT_E2E_MODELS=ornith-1.5:9b npm run test:e2e:book
+npm run test:e2e:coding-workflows:unit
+npm run e2e:coding-workflows:build
+npm run test:e2e:coding-workflows:graders
+ORBIT_E2E_MODELS=ornith-1.5:9b npm run test:e2e:coding-workflows
 # Select just one workflow:
-ORBIT_E2E_CASE=sdd ORBIT_E2E_REPETITIONS=1 npm run test:e2e:book
+ORBIT_E2E_CASE=sdd ORBIT_E2E_REPETITIONS=1 npm run test:e2e:coding-workflows
 ```
 
 The build installs the upstream locked TypeScript/Vite/Vitest stack on pinned
@@ -417,10 +417,11 @@ access; trial dependencies are preinstalled. The default is one trial per style
 with `ornith-1.5:9b`, run serially. Existing small-case defaults are unchanged.
 `ORBIT_E2E_MODELS`, `ORBIT_E2E_REPETITIONS` (1–10), `ORBIT_E2E_CASE`, and
 `ORBIT_E2E_ROUNDS` (default `unlimited`) select the matrix.
-`ORBIT_BOOK_ELAPSED_MS` defaults to `unlimited`; a positive millisecond value
-restores a finite deadline. Both settings apply to SDD review and implementation.
+`ORBIT_CODING_WORKFLOWS_ELAPSED_MS` defaults to `unlimited`; a positive
+millisecond value restores a finite deadline. Both settings apply to SDD review
+and implementation.
 Review and implementation explicitly request the model context window discovered
-from Ollama `/api/show` metadata. There is no fixed 16K/32K book ceiling and no
+from Ollama `/api/show` metadata. There is no fixed 16K/32K context ceiling and no
 fallback for unknown capacity. The requested window is recorded in
 `environment.json` and each phase's `input/config.json`; the worker resolves it
 against provider capacity and records `output/context-policy.json`. The larger
@@ -433,9 +434,9 @@ metadata continues afterward.
 The SDD review and implementation use separate Sessions, with the review answer
 explicitly carried forward. Compare their combined costs with the other styles.
 The shared host's generation settings, cleanup, and resource limits apply.
-`ORBIT_E2E_IMAGE` overrides `orbit-e2e:book-agent` and
-`ORBIT_BOOK_GRADER_IMAGE` overrides `orbit-e2e:book-grader`.
-The book run resolves both images to IDs at startup and uses those IDs for
+`ORBIT_E2E_IMAGE` overrides `orbit-e2e:coding-workflows-agent` and
+`ORBIT_CODING_WORKFLOWS_GRADER_IMAGE` overrides `orbit-e2e:coding-workflows-grader`.
+Each trial resolves both images to IDs at startup and uses those IDs for
 subsequent agent and grader containers. If an image is removed during a long
 trial, grading reports an environment error with checks marked `not-run`.
 Compaction and summary attempts, failures, durations, and token counts are
@@ -453,7 +454,7 @@ A shared observation contract adds `data-testid` hooks for cards, reset, move
 count, and completion, plus card state and visible-symbol attributes. These
 requirements and a nonzero-test requirement are supplied equally to all three
 styles. They make the evaluation reproducible but add constraints beyond the
-book's original Vibe prompt. They do not prescribe internal TypeScript APIs.
+original Vibe prompt from the source book. They do not prescribe internal TypeScript APIs.
 
 After each implementation the host checks frozen files and runs a fresh,
 network-disabled grader container. It invokes the installed type checker,
@@ -475,7 +476,7 @@ successful process exit. A separate random completion marker prevents exit code
 zero alone from passing. Generated code executes only inside the disposable
 containers, never in the host process.
 
-Evidence is saved under `tmp/e2e/runs/<timestamp>-book/`: pinned template origin,
+Evidence is saved under `tmp/e2e/runs/<timestamp>-coding-workflows/`: pinned template origin,
 image IDs, model metadata, prompts, per-phase usage/events, workspace snapshots,
 independent grader logs, and an incremental summary with all planned trials.
 The summary's `checks` field reports the combined type-check, unit-test, build

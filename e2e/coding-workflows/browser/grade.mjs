@@ -14,7 +14,7 @@ for (const entry of await fs.readdir('/artifact')) {
     await fs.cp(`/artifact/${entry}`, `/workspace/${entry}`, {recursive: true, verbatimSymlinks: true})
 }
 
-await fs.symlink('/opt/book/node_modules', '/workspace/node_modules')
+await fs.symlink('/opt/coding-workflows/node_modules', '/workspace/node_modules')
 const execute = (args) =>
   new Promise((resolve, reject) => {
     const child = spawn('node', args, {stdio: 'inherit'})
@@ -23,9 +23,9 @@ const execute = (args) =>
       code === 0 ? resolve() : reject(new Error(`Check failed (${code}): ${args.join(' ')}`)),
     )
   })
-await execute(['/opt/book/node_modules/typescript/bin/tsc', '--noEmit'])
+await execute(['/opt/coding-workflows/node_modules/typescript/bin/tsc', '--noEmit'])
 await execute([
-  '/opt/book/node_modules/vitest/vitest.mjs',
+  '/opt/coding-workflows/node_modules/vitest/vitest.mjs',
   'run',
   '--passWithNoTests=false',
   '--reporter=json',
@@ -33,10 +33,10 @@ await execute([
 ])
 const tests = JSON.parse(await fs.readFile('/workspace/test-result.json', 'utf8'))
 assert.ok(tests.numPassedTests > 0 && tests.numFailedTests === 0 && tests.success, 'At least one test must pass')
-await execute(['/opt/book/node_modules/vite/bin/vite.js', 'build'])
+await execute(['/opt/coding-workflows/node_modules/vite/bin/vite.js', 'build'])
 const server = spawn(
   'node',
-  ['/opt/book/node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4173', '--strictPort'],
+  ['/opt/coding-workflows/node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4173', '--strictPort'],
   {stdio: 'inherit'},
 )
 let browser
@@ -161,7 +161,7 @@ try {
   assert.ok(resetTimerChecked, 'Reset timer coverage was not exercised')
   assert.deepEqual(errors, [])
   console.log(JSON.stringify({browserPassed: true, mismatchChecked, resetTimerChecked, tests: tests.numPassedTests}))
-  console.log(process.env.ORBIT_BOOK_MARKER)
+  console.log(process.env.ORBIT_CODING_WORKFLOWS_MARKER)
 } finally {
   await browser?.close()
   server.kill('SIGKILL')

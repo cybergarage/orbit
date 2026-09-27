@@ -6,7 +6,7 @@ import path from 'node:path'
 
 import {repo} from '../host.mjs'
 import {makeCase} from './cases.mjs'
-import {gradeBook} from './grade.mjs'
+import {gradeCodingWorkflow} from './grade.mjs'
 
 // Test-owned controls, never provided to the solving agent.
 const control = `
@@ -34,11 +34,11 @@ document.querySelector('[data-testid="reset"]').onclick=reset;
 reset();
 `
 
-describe('Book independent grader controls (Docker, no inference)', function () {
+describe('Coding workflow grader controls (Docker, no inference)', function () {
   this.timeout(0)
 
   it('reports a removed grader image as an environment error without running the grader', async () => {
-    const result = await gradeBook('/unused', {image: 'sha256:' + '0'.repeat(64)})
+    const result = await gradeCodingWorkflow('/unused', {image: 'sha256:' + '0'.repeat(64)})
     expect(result.code).to.equal(125)
     expect(result.environmentError).to.include('Grader image is unavailable')
     expect(result.passed).to.equal(false)
@@ -46,7 +46,7 @@ describe('Book independent grader controls (Docker, no inference)', function () 
   for (const variant of ['good', 'starter', 'zero-tests', 'early-timer', 'reset-timer', 'fake-exit']) {
     it(`grades ${variant}`, async () => {
       await fs.mkdir(path.join(repo, 'tmp/e2e'), {recursive: true})
-      const directory = await fs.mkdtemp(path.join(repo, 'tmp/e2e/book-control-'))
+      const directory = await fs.mkdtemp(path.join(repo, 'tmp/e2e/coding-workflows-control-'))
       const c = await makeCase('vibe')
       const files = {...c.files}
       if (variant !== 'starter') {
@@ -70,7 +70,7 @@ describe('Book independent grader controls (Docker, no inference)', function () 
         await fs.writeFile(file, content)
       }
 
-      const result = await gradeBook(directory)
+      const result = await gradeCodingWorkflow(directory)
       expect(result.timedOut, result.stderr).to.equal(false)
       expect(result.passed, result.stdout + result.stderr).to.equal(variant === 'good')
       const reasons = {
@@ -78,7 +78,7 @@ describe('Book independent grader controls (Docker, no inference)', function () 
         'fake-exit': 'test-result.json',
         'reset-timer': 'Reset must cancel the previous mismatch timer',
         starter: 'Expected 16 cards',
-        'zero-tests': 'Check failed (1): /opt/book/node_modules/vitest/vitest.mjs',
+        'zero-tests': 'Check failed (1): /opt/coding-workflows/node_modules/vitest/vitest.mjs',
       }
       if (variant !== 'good') expect(result.stdout + result.stderr).to.include(reasons[variant])
     })

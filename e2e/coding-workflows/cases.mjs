@@ -10,9 +10,9 @@ export const source = {
 }
 export const caseIds = ['vibe', 'sdd', 'loop']
 
-// The book evaluation explicitly requests the model's advertised window on the
+// The coding workflow evaluation explicitly requests the model's advertised window on the
 // wire; a previous trial's loaded Ollama window must not become a hidden cap.
-export function bookContextWindow(metadata) {
+export function workflowContextWindow(metadata) {
   const info = metadata.modelInfo
   const architecture = info?.['general.architecture']
   const window = typeof architecture === 'string' ? info[`${architecture}.context_length`] : undefined
@@ -38,7 +38,7 @@ Read AGENTS.md explicitly. Browser checks are performed separately by the host;
 report them as pending, never as personally verified.`
 
 export async function makeCase(id, {implementation = false} = {}) {
-  if (!caseIds.includes(id)) throw new Error(`Unknown book case: ${id}`)
+  if (!caseIds.includes(id)) throw new Error(`Unknown coding workflow case: ${id}`)
   const files = {}
   for (const name of [
     'package.json',
@@ -118,7 +118,7 @@ export function caseResolved(run, grade, fileChecks) {
   return fileChecks.status === 'passed' && grade.passed && runtimePassed(run)
 }
 
-export function bookResultStatus(run, grade, fileChecks) {
+export function workflowResultStatus(run, grade, fileChecks) {
   if (run.status !== 'completed') return run.status
   if (grade.environmentError || grade.timedOut || grade.code === 125) return 'grading-error'
   return caseResolved(run, grade, fileChecks) ? 'resolved' : 'unresolved'

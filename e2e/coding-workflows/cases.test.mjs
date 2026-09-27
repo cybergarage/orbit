@@ -7,8 +7,8 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {
-  bookContextWindow,
-  bookResultStatus,
+  workflowContextWindow,
+  workflowResultStatus,
   caseIds,
   caseResolved,
   checkFiles,
@@ -17,11 +17,11 @@ import {
   runtimePassed,
 } from './cases.mjs'
 
-describe('Book workflow fixtures (no inference or Docker)', () => {
-  it('uses discovered model capacity without a fixed book context ceiling', () => {
+describe('Coding workflow fixtures (no inference or Docker)', () => {
+  it('uses discovered model capacity without a fixed workflow context ceiling', () => {
     for (const window of [8192, 262_144, 1_048_576])
       expect(
-        bookContextWindow({
+        workflowContextWindow({
           model: 'fixture',
           modelInfo: {'fixture.context_length': window, 'general.architecture': 'fixture'},
         }),
@@ -31,12 +31,12 @@ describe('Book workflow fixtures (no inference or Docker)', () => {
   it('rejects unknown or invalid capacity instead of silently using a fixed window', () => {
     for (const window of [undefined, null, 0, -1, 1.5, '262144'])
       expect(() =>
-        bookContextWindow({
+        workflowContextWindow({
           model: 'fixture',
           modelInfo: {'fixture.context_length': window, 'general.architecture': 'fixture'},
         }),
       ).to.throw('Unknown model context capacity')
-    expect(() => bookContextWindow({model: 'fixture'})).to.throw('Unknown model context capacity')
+    expect(() => workflowContextWindow({model: 'fixture'})).to.throw('Unknown model context capacity')
   })
 
   it('preserves every vendored file at its recorded source hash', async () => {
@@ -48,7 +48,7 @@ describe('Book workflow fixtures (no inference or Docker)', () => {
   })
 
   it('requires updated Loop progress and rejects checked-off browser claims', async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-book-loop-'))
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-coding-workflows-loop-'))
     try {
       const c = await makeCase('loop')
       for (const [name, content] of Object.entries(c.files)) {
@@ -84,7 +84,7 @@ describe('Book workflow fixtures (no inference or Docker)', () => {
   })
 
   it('grades Loop artifacts even when progress was not updated', async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-book-loop-grade-'))
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-coding-workflows-loop-grade-'))
     try {
       const c = await makeCase('loop')
       for (const [name, content] of Object.entries(c.files)) {
@@ -145,7 +145,7 @@ describe('Book workflow fixtures (no inference or Docker)', () => {
   })
 
   it('rejects changed review files, extra artifacts and modified frozen specifications', async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-book-unit-'))
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-coding-workflows-unit-'))
     try {
       const c = await makeCase('sdd')
       for (const [name, content] of Object.entries(c.files)) {
@@ -188,11 +188,11 @@ describe('Book workflow fixtures (no inference or Docker)', () => {
 
   it('preserves runtime failures while recording file and grading outcomes separately', () => {
     const run = {result: {runtime: {outcome: 'failed'}}, status: 'runtime-error'}
-    expect(bookResultStatus(run, {passed: false}, {status: 'failed'})).to.equal('runtime-error')
-    expect(bookResultStatus(run, {environmentError: true}, {status: 'failed'})).to.equal('runtime-error')
+    expect(workflowResultStatus(run, {passed: false}, {status: 'failed'})).to.equal('runtime-error')
+    expect(workflowResultStatus(run, {environmentError: true}, {status: 'failed'})).to.equal('runtime-error')
     const completed = {result: {runtime: {outcome: 'completed', quiescence: true}}, status: 'completed'}
-    expect(bookResultStatus(completed, {environmentError: true}, {status: 'passed'})).to.equal('grading-error')
-    expect(bookResultStatus(completed, {passed: false}, {status: 'failed'})).to.equal('unresolved')
-    expect(bookResultStatus(completed, {passed: true}, {status: 'passed'})).to.equal('resolved')
+    expect(workflowResultStatus(completed, {environmentError: true}, {status: 'passed'})).to.equal('grading-error')
+    expect(workflowResultStatus(completed, {passed: false}, {status: 'failed'})).to.equal('unresolved')
+    expect(workflowResultStatus(completed, {passed: true}, {status: 'passed'})).to.equal('resolved')
   })
 })

@@ -11,5 +11,5 @@
 !e2e/source-fingerprint.mjs
 !e2e/Dockerfile
 !e2e/orbit-test.py
-!e2e/book
-!e2e/book/**
+!e2e/coding-workflows
+!e2e/coding-workflows/**

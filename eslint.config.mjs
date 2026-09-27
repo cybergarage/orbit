@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url'
 const gitignorePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.gitignore')
 
 export default [
-  {ignores: ['e2e/book/fixture/**']},
+  {ignores: ['e2e/coding-workflows/fixture/**']},
   includeIgnoreFile(gitignorePath),
   ...oclif,
   prettier,

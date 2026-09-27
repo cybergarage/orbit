@@ -5,9 +5,9 @@ import path from 'node:path'
 
 import {activeContainers, docker} from '../host.mjs'
 
-export async function gradeBook(directory, {image = process.env.ORBIT_BOOK_GRADER_IMAGE ?? 'orbit-e2e:book-grader'} = {}) {
-  const name = `orbit-book-grade-${randomUUID()}`
-  const marker = `BOOK-PASS-${randomUUID()}`
+export async function gradeCodingWorkflow(directory, {image = process.env.ORBIT_CODING_WORKFLOWS_GRADER_IMAGE ?? 'orbit-e2e:coding-workflows-grader'} = {}) {
+  const name = `orbit-coding-workflows-grade-${randomUUID()}`
+  const marker = `CODING-WORKFLOWS-PASS-${randomUUID()}`
   const inspected = await docker(['image', 'inspect', image], {allowFailure: true})
   if (inspected.code !== 0)
     return {
@@ -49,7 +49,7 @@ export async function gradeBook(directory, {image = process.env.ORBIT_BOOK_GRADE
         '--mount',
         `type=bind,src=${path.join(directory, 'workspace')},dst=/artifact,readonly`,
         '--env',
-        `ORBIT_BOOK_MARKER=${marker}`,
+        `ORBIT_CODING_WORKFLOWS_MARKER=${marker}`,
         image,
       ],
       {allowFailure: true, log: path.join(directory, 'grade.log'), timeoutMs: 180_000},
