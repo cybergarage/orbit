@@ -1,0 +1,166 @@
+{
+  "date": "2026-09-27",
+  "purpose": "Real-model diagnostic reevaluation of the latest context-summary and completion behavior changes.",
+  "comparisonLimit": "This is not a controlled prompt-only comparison: v1 uses verified-focused-v1 with budgeted context; v2 uses verified-focused-v2 with context disabled. Each condition ran once.",
+  "orbitCommit": "66610dc5090ef7bf4bd374e416d509a0d421ce66",
+  "agentSourceSha256": "05de70fc813e9a65cc8c11ce484a5d8549f8af960b5caa193d1759369edee031",
+  "imageId": "sha256:dec9d0a0d4f268219dad2fb60cc5b100bd97204b7b34ced94ffdef294c4658ce",
+  "dataset": {
+    "dataset": "princeton-nlp/SWE-bench_Verified",
+    "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+    "split": "test",
+    "instance_id": "pytest-dev__pytest-10356",
+    "repo": "pytest-dev/pytest",
+    "base_commit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1"
+  },
+  "harness": {
+    "version": "4.1.0",
+    "commit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+    "graderImage": "sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da"
+  },
+  "environment": {
+    "host": "macOS Apple Silicon ARM64",
+    "dockerMemoryBytes": 4107141120,
+    "evaluationArchitecture": "linux/amd64 emulation",
+    "ollamaVersion": "0.34.3"
+  },
+  "model": {
+    "name": "ornith-1.5:9b",
+    "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+    "parameterSize": "9.0B",
+    "quantization": "Q4_K_M",
+    "contextLength": 32768,
+    "outputLimit": 4096,
+    "seed": 42,
+    "temperature": 0.6,
+    "topP": 0.95,
+    "think": false
+  },
+  "runs": {
+    "v1": {
+      "strategy": "verified-focused-v1",
+      "contextPolicy": "budgeted",
+      "runId": null,
+      "elapsedMs": 925923,
+      "timeoutMs": 900000,
+      "runStatus": "runtime-error",
+      "runtimeOutcome": "incomplete",
+      "modelCalls": 41,
+      "toolCalls": 35,
+      "toolErrors": 8,
+      "repeatedFailedCalls": 2,
+      "usage": {
+        "inputTokens": 402954,
+        "outputTokens": 17058
+      },
+      "usageComplete": false,
+      "summaryAttempts": 6,
+      "summaryFailures": 1,
+      "summaryValidationFailures": 0,
+      "summaryWallMs": 568783.8195499999,
+      "compactionsStarted": 1,
+      "compactionsCompleted": 0,
+      "compactionsFailed": 0,
+      "compactionsSkipped": 0,
+      "patchBytes": 1370,
+      "excludedGeneratedPaths": [],
+      "qualityStatus": "not-measured",
+      "official": {
+        "runId": "1a9c6fed-da7d-4ad7-92cc-d94087ccfbb6",
+        "patch_exists": true,
+        "patch_successfully_applied": true,
+        "resolved": false,
+        "testCounts": {
+          "FAIL_TO_PASS": {
+            "passed": 0,
+            "failed": 1
+          },
+          "PASS_TO_PASS": {
+            "passed": 73,
+            "failed": 6
+          },
+          "FAIL_TO_FAIL": {
+            "passed": 0,
+            "failed": 0
+          },
+          "PASS_TO_FAIL": {
+            "passed": 0,
+            "failed": 0
+          }
+        }
+      },
+      "runDirectory": "tmp/e2e/verified/pytest-dev__pytest-10356/solve-ornith-1.5-9b-6db6fa29-5e35-4f64-b2d8-9d92e3285a49"
+    },
+    "v2": {
+      "strategy": "verified-focused-v2",
+      "contextPolicy": "disabled",
+      "runId": null,
+      "elapsedMs": 922134,
+      "timeoutMs": 900000,
+      "runStatus": "runtime-error",
+      "runtimeOutcome": "incomplete",
+      "modelCalls": 82,
+      "toolCalls": 81,
+      "toolErrors": 35,
+      "repeatedFailedCalls": 2,
+      "usage": {
+        "inputTokens": 1544420,
+        "outputTokens": 17539
+      },
+      "usageComplete": false,
+      "summaryAttempts": 0,
+      "summaryFailures": 0,
+      "summaryValidationFailures": 0,
+      "summaryWallMs": 0,
+      "compactionsStarted": 0,
+      "compactionsCompleted": 0,
+      "compactionsFailed": 0,
+      "compactionsSkipped": 0,
+      "patchBytes": 2141,
+      "excludedGeneratedPaths": [],
+      "qualityStatus": "not-measured",
+      "official": {
+        "runId": "91d94e49-c847-4fbf-8663-50fe36663e7a",
+        "patch_exists": true,
+        "patch_successfully_applied": true,
+        "resolved": false,
+        "testCounts": {
+          "FAIL_TO_PASS": {
+            "passed": 0,
+            "failed": 1
+          },
+          "PASS_TO_PASS": {
+            "passed": 0,
+            "failed": 79
+          },
+          "FAIL_TO_FAIL": {
+            "passed": 0,
+            "failed": 0
+          },
+          "PASS_TO_FAIL": {
+            "passed": 0,
+            "failed": 0
+          }
+        }
+      },
+      "runDirectory": "tmp/e2e/verified/pytest-dev__pytest-10356/solve-ornith-1.5-9b-9180dd64-00d6-444a-895a-2cce3a00fc4a"
+    }
+  },
+  "findings": [
+    "Neither condition ended normally or resolved the target test.",
+    "With budgeted context, summary requests consumed about 9.5 minutes; no compaction completed before the 900-second run deadline.",
+    "With context disabled, the agent made 82 model calls and 81 tool calls, including 35 tool errors; the stronger natural-language completion instruction did not cause a normal finish.",
+    "The context-enabled patch retained 73/79 PASS_TO_PASS tests but failed the target and six existing tests. The context-disabled patch failed collection with TypeError: got None instead of Mark.",
+    "Both official grading runs applied the patch and ran in the pinned harness, so these were unresolved model outputs rather than evaluation-environment failures."
+  ],
+  "limitations": [
+    "One run per condition; no estimate of repeatability.",
+    "Context policy and completion prompt both differ, preventing causal attribution.",
+    "Independent patch-quality checks were not measured.",
+    "Token usage is incomplete for both runs."
+  ],
+  "artifacts": {
+    "v1": "2026-09-27-real-model-v1-predictions.jsonl",
+    "v2": "2026-09-27-real-model-v2-predictions.jsonl"
+  }
+}
