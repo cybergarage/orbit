@@ -6,7 +6,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {recoveryObserved} from './cases.mjs'
-import {gradeCase, normalizePatch} from './grading.mjs'
+import {excludeGeneratedPatch, gradeCase, normalizePatch} from './grading.mjs'
 import {command} from './host.mjs'
 import {checkDeliverable, inspectDeliverable, testCommand} from './quality.mjs'
 import {prepareRepositorySource, repositoryProfile} from './repository-checks.mjs'
@@ -81,7 +81,10 @@ describe('E2E host control (no model or Docker)', () => {
   it('isolates stopping instructions from the Verified test-runner control', () => {
     const control = evaluationPrompt('Fix issue.', {strategy: 'verified-tests-v1', swe: true})
     const focused = evaluationPrompt('Fix issue.', {strategy: 'verified-focused-v1', swe: true})
+    const explicit = evaluationPrompt('Fix issue.', {strategy: 'verified-focused-v2', swe: true})
     expect(focused.startsWith(control)).to.equal(true)
+    expect(explicit.startsWith(focused)).to.equal(true)
+    expect(explicit).to.include('very next response a final answer with no tool calls')
     expect(control).to.include('orbit-test')
     expect(control).not.to.include('Completion criteria:')
     expect(focused).to.include('Completion criteria:')
@@ -98,6 +101,8 @@ describe('E2E host control (no model or Docker)', () => {
       {type: 'context.summary.started'},
       {data: {durationMs: 5}, type: 'context.summary.completed'},
       {type: 'context.compaction.completed'},
+      {data: {reason: 'summary-invalid-json'}, type: 'context.compaction.failed'},
+      {data: {reason: 'summary-invalid-json'}, type: 'context.compaction.skipped'},
       {data: {durationMs: 7, providerMetadata: {evalDurationNs: 2_000_000}}, type: 'model.response.completed'},
       failure,
       failure,
@@ -111,8 +116,12 @@ describe('E2E host control (no model or Docker)', () => {
     expect(metrics.toolErrors).to.equal(2)
     expect(metrics.compactionsStarted).to.equal(1)
     expect(metrics.compactionsCompleted).to.equal(1)
+    expect(metrics.compactionsFailed).to.equal(1)
+    expect(metrics.compactionsSkipped).to.equal(1)
+    expect(metrics.compactionFailureReasons).to.deep.equal({'summary-invalid-json': 1})
     expect(metrics.summaryAttempts).to.equal(2)
     expect(metrics.summaryFailures).to.equal(1)
+    expect(metrics.summaryValidationFailures).to.equal(1)
     expect(metrics.summaryWallMs).to.equal(9)
   })
 
@@ -128,6 +137,22 @@ describe('E2E host control (no model or Docker)', () => {
     expect(normalizePatch(patch)).to.equal(
       'diff --git a/x b/x\n--- a/x\n+++ b/x\n+literal a/initial/ and b/workspace/\n',
     )
+  })
+
+  it('excludes generated test artifacts from the submitted patch while keeping source edits', () => {
+    const patch =
+      'diff --git a/.pytest_cache/README.md b/.pytest_cache/README.md\nnew file mode 100644\n+cache\n' +
+      'diff --git a/src/mark.py b/src/mark.py\n--- a/src/mark.py\n+++ b/src/mark.py\n+fix\n' +
+      'diff --git a/testing/test_mark.py b/testing/test_mark.py\n--- a/testing/test_mark.py\n+++ b/testing/test_mark.py\n+test\n'
+    const filtered = excludeGeneratedPatch(patch)
+    expect(filtered.excludedPaths).to.deep.equal(['.pytest_cache/README.md'])
+    expect(filtered.patch).to.include('diff --git a/src/mark.py b/src/mark.py')
+    expect(filtered.patch).to.include('diff --git a/testing/test_mark.py b/testing/test_mark.py')
+    expect(filtered.patch).not.to.include('.pytest_cache')
+    expect(
+      excludeGeneratedPatch('diff --git "a/path with space/.pytest_cache/README.md" "b/path with space/.pytest_cache/README.md"\n+cache\n')
+        .patch,
+    ).to.equal('')
   })
 
   it('requires an observed failed test before a successful rerun', () => {

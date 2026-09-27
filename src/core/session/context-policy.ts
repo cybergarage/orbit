@@ -185,6 +185,10 @@ function diagnostic(
   })
 }
 
+// A malformed summary from this model need not be regenerated on every tool
+// round while the unchanged request still fits. Retry at the hard budget.
+const validationFailures = new WeakMap<RunContext, string>()
+
 export async function prepareSessionContext(options: PreparationOptions): Promise<PreparedModelInvocation> {
   const {model, policy, run, session} = options
   const profile = structuredClone(policy.profile)
@@ -235,6 +239,15 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
     run.operations.some((operation) => operation.status === 'unknown')
   )
     throw new ContextBudgetError('unresolved-execution-prevents-compaction')
+  const previousValidationFailure = validationFailures.get(run)
+  if (previousValidationFailure && !options.recoveryRequest && before.tokens <= budget) {
+    diagnostic(options, 'context.compaction.skipped', {
+      beforeTokens: before.tokens,
+      reason: previousValidationFailure,
+    })
+    return ordinary
+  }
+
   const protectedEntry = session.getEntries().find((entry) => entry.type === 'message' && entry.turnId === run.id)
   let cut =
     protectedEntry?.type === 'message'
@@ -335,6 +348,7 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
   } catch (error) {
     run.check()
     const reason = error instanceof ContextBudgetError ? error.code : 'summary-failed'
+    if (reason.startsWith('summary-invalid-')) validationFailures.set(run, reason)
     const fallback = !(
       options.recoveryRequest ||
       hasPendingEffects(run) ||
@@ -378,6 +392,7 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
     beforeTokens: before.tokens,
     durationMs: performance.now() - compactionStartedAt,
   })
+  validationFailures.delete(run)
   notify(options, {afterTokens: candidate.afterTokens, beforeTokens: before.tokens, outcome: 'compacted'})
   return next
 }
@@ -490,8 +505,22 @@ async function summarizeEligible(
     options.run.check()
     assertCompleteModelResponse(response)
     if (getToolCalls(response).length > 0) throw new ContextBudgetError('summary-returned-tool-call')
-    const summary: unknown = parseSummaryResponse(response.content)
-    validateSummary(summary, allowedIds)
+    let summary: unknown
+    try {
+      summary = parseSummaryResponse(response.content)
+    } catch (error) {
+      if (error instanceof SyntaxError) throw new ContextBudgetError('summary-invalid-json')
+      throw error
+    }
+
+    try {
+      validateSummary(summary, allowedIds)
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Summary refers to unknown source evidence')
+        throw new ContextBudgetError('summary-invalid-evidence')
+      throw new ContextBudgetError('summary-invalid-format')
+    }
+
     return {summary, usage: summaryUsage(response)}
   }
 

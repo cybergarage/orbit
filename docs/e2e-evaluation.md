@@ -307,8 +307,10 @@ convenience, not a security boundary or a claim that the model used it.
 
 ## Independent deliverable quality
 
-After saving the raw JSONL prediction, Verified solving writes
-`quality/quality.json` without filtering or changing that prediction. The host
+Before saving the official JSONL prediction, Verified solving excludes known
+generated Python caches from the diff and records their paths in
+`excludedGeneratedPaths`. The original workspace is retained. Verified solving
+then writes `quality/quality.json` against that original workspace. The host
 compares the initial and final files, flags generated Python caches and changed
 symlinks, and selects changed public `tests/**/test*.py` or
 `testing/**/test*.py` files. It runs those files in a fresh network-disabled
@@ -321,7 +323,8 @@ Infrastructure failures and deadlines are `environment-error`.
 This is a separate diagnostic from official `resolved`: passing it does not
 prove the fix is correct, and agent-edited tests are not trusted grading tests.
 It does not discover every possible generated artifact or test naming convention.
-The raw official patch remains unchanged even when quality checks fail.
+Quality checks do not rewrite the submitted patch. They still report generated
+files that were excluded from submission.
 
 Inspect an earlier attempt without modifying its files:
 
@@ -344,7 +347,11 @@ tests passed; pytest had no changed eligible tests and was marked `not-measured`
 `ORBIT_E2E_STRATEGY=verified-focused-v1` adds completion criteria to that exact
 control: finish after a focused regression and the affected existing test module
 pass, expand only for a concrete related failure, and report unresolved failures.
-Both are opt-in SWE evaluation strategies; `baseline` remains the default and
+`verified-focused-v2` keeps those criteria and explicitly asks for the next
+response to be final, without further tool calls, after the focused checks finish.
+This remains a prompt-level experiment; normal completion still requires the
+model to return a response without tool calls.
+These are opt-in SWE evaluation strategies; `baseline` remains the default and
 Orbit's product prompt and execution limits are unchanged.
 
 ```sh

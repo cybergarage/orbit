@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import {normalizePatch} from './grading.mjs'
+import {excludeGeneratedPatch, normalizePatch} from './grading.mjs'
 import {activeContainers, command, digest, docker, image, ollamaMetadata, repo, runAgent, writeJSON} from './host.mjs'
 import {checkDeliverable} from './quality.mjs'
 import {preflightRepository, prepareRepositorySource} from './repository-checks.mjs'
@@ -241,7 +241,7 @@ switch (action) {
       {allowFailure: true, cwd: runDirectory},
     )
     if (![0, 1].includes(diff.code)) throw new Error(`Patch extraction failed: ${diff.stderr}`)
-    const patch = normalizePatch(diff.stdout)
+    const {excludedPaths: excludedGeneratedPaths, patch} = excludeGeneratedPatch(normalizePatch(diff.stdout))
     const prediction = {
       instance_id: instanceId,
       model_name_or_path: `orbit-${model.replaceAll(':', '-')}`,
@@ -263,6 +263,7 @@ switch (action) {
       config: run.config,
       dataset: gold.dataset,
       elapsedMs: run.elapsedMs,
+      excludedGeneratedPaths,
       harnessSha256: digest(await fs.readFile(new URL(import.meta.url))),
       imageId: JSON.parse((await docker(['image', 'inspect', image])).stdout)[0].Id,
       metadata,

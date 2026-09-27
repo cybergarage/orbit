@@ -117,6 +117,10 @@ quality and cost trials remain separate work.
 
 On an invalid or failed summary, Orbit may use the unchanged original input only
 when it still fits the ordinary budget and the Run remains active with capacity.
+Malformed JSON, invalid summary fields, and unknown source IDs have distinct
+diagnostic reasons. After one such validation failure, the same Run skips further
+summary attempts while its ordinary request fits the budget. It retries at the
+hard budget; if the summary still fails, the Run cannot safely continue.
 It emits a `context-prepared` event with outcome `failed`. Successful compaction
 emits outcome `compacted` with before/after estimates. Events carry counts and
 outcomes, not transcript bodies. Ink and GUI show the active mode and the latest

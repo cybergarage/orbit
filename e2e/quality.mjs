@@ -33,14 +33,17 @@ export async function inspectDeliverable(initial, workspace, repository) {
     const kind = after.get(name)?.kind ?? before.get(name).kind
     const status = before.has(name) ? (after.has(name) ? 'modified' : 'deleted') : 'added'
     const isTest = /^(tests|testing)\/(.*\/)?test[^/]*\.py$/.test(name)
-    const unwanted =
-      /(^|\/)(\.pytest_cache|__pycache__|\.hypothesis|\.DS_Store|\.coverage|htmlcov|.*\.egg-info)(\/|$)|\.(pyc|pyo)$/.test(
-        name,
-      )
+    const unwanted = isGeneratedArtifact(name)
     changes.push({isTest, kind, path: name, status, unwanted})
   }
 
   return changes
+}
+
+export function isGeneratedArtifact(name) {
+  return /(^|\/)(\.pytest_cache|__pycache__|\.hypothesis|\.DS_Store|\.coverage|htmlcov|.*\.egg-info)(\/|$)|\.(pyc|pyo)$/.test(
+    name,
+  )
 }
 
 export function testCommand(repository, file) {

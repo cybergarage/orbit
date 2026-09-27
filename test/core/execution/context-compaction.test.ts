@@ -100,7 +100,7 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
             const summary = {
               changedPaths: [],
               facts: [],
-              goals: [{sourceIds: [mode === 'bad-id' ? 'invented' : id], text: 'Repair the target'}],
+              goals: [{sourceIds: [mode === 'bad-id' || mode === 'bad-id-loop' ? 'invented' : id], text: 'Repair the target'}],
               tests: [
                 {
                   outcome: 'failed',
@@ -139,6 +139,13 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
           }
 
           expect(request.cap).to.equal(profile.outputReserve)
+          if (
+            mode === 'bad-id-loop' &&
+            requests.filter((item) => !String((item.messages as unknown[])[0]).startsWith('Summarize')).length === 1
+          )
+            return new Message(MessageType.Assistant, {
+              payload: {toolCalls: [{id: 'read-once', input: {path: 'missing.txt'}, name: 'read'}]},
+            })
           return new Message(MessageType.Assistant, {content: 'Continue repair'})
         },
         request,
@@ -155,6 +162,7 @@ async function execute(
   input = 'Continue with the latest request',
   maxCalls = 100,
   diagnostics?: DiagnosticEventBus,
+  toolProfile: 'coding' | 'none' = 'none',
 ) {
   const store = new MemorySessionLogStore()
   const events: AgentEvent[] = []
@@ -165,9 +173,9 @@ async function execute(
     diagnostics,
     execution: {limits: {modelCalls: maxCalls}},
     logStore: store,
-    settings: {model: 'fixture', provider: 'ollama', tools: {profile: 'none'}},
+    settings: {model: 'fixture', provider: 'ollama', tools: {profile: toolProfile}},
     state: new State(session),
-    toolProfile: 'none',
+    toolProfile,
   })
   try {
     const result = await (
@@ -420,13 +428,38 @@ describe('budgeted context preparation', () => {
     it('uses the fitting unchanged context after ' + mode, async () => {
       const session = new Session()
       const model = fixtureModel(oldConversation(session), mode)
-      const {events, result} = await execute(session, model)
+      const diagnostics = new DiagnosticEventBus()
+      const {events, result} = await execute(session, model, policy, undefined, 100, diagnostics)
       expect(result.outcome, JSON.stringify(result)).to.equal('completed')
       expect(session.getCompaction()).to.equal(undefined)
       if (mode === 'truncated') expect(model.requests.length).to.be.greaterThan(2)
       else expect(model.requests).to.have.length(2)
       expect(events.some((event) => event.type === 'context-prepared' && event.outcome === 'failed')).to.equal(true)
+      const expectedReason =
+        mode === 'bad-id' || mode === 'fenced-bad-id'
+          ? 'summary-invalid-evidence'
+          : mode === 'fenced-prose'
+            ? 'summary-invalid-json'
+            : mode === 'empty' || mode === 'bad-test'
+              ? 'summary-invalid-format'
+              : undefined
+      if (expectedReason)
+        expect(diagnostics.list().find((event) => event.type === 'context.compaction.failed')?.data).to.include({
+          reason: expectedReason,
+        })
     })
+
+  it('does not regenerate a malformed summary on every tool round while the request fits', async () => {
+    const session = new Session()
+    const model = fixtureModel(oldConversation(session), 'bad-id-loop')
+    const diagnostics = new DiagnosticEventBus()
+    const {result} = await execute(session, model, policy, undefined, 100, diagnostics, 'coding')
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    expect(
+      model.requests.filter((request) => String((request.messages as unknown[])[0]).startsWith('Summarize')),
+    ).to.have.length(1)
+    expect(diagnostics.list().some((event) => event.type === 'context.compaction.skipped')).to.equal(true)
+  })
 
   it('refuses unknown estimation before sending requests', async () => {
     const session = new Session()

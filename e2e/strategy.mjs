@@ -5,13 +5,20 @@ export const strategyVersion = 'coding-recovery-v1'
 
 export function evaluationPrompt(task, {strategy = strategyVersion, swe = false} = {}) {
   if (strategy === 'baseline') return task
-  if (['verified-focused-v1', 'verified-tests-v1'].includes(strategy)) {
+  if (['verified-focused-v1', 'verified-focused-v2', 'verified-tests-v1'].includes(strategy)) {
     if (!swe) throw new Error('Verified strategies require a SWE repository')
     const testing =
       '\n\nEvaluation environment:\n- Work in /workspace. This is a source snapshot without Git history. python3 uses the prepared repository source and dependencies.\n- Run focused public tests with orbit-test --timeout 120 --tail 12000 -- <test argv>. It preserves exit status and saves full logs outside the patch. Use python3 -m pytest -p no:cacheprovider <existing-test-path> -q for pytest/Sphinx; use python3 tests/runtests.py <existing-test-module> --settings=test_sqlite --parallel=1 for Django. Inspect actual paths before choosing a test.\n- Check ORBIT_TEST_RESULT: a nonzero exit code is a failure even if some tests passed. Do not pipe tests through tail, ignore failures, or leave generated caches in the patch. Check any tests you add.\n'
     const stopping =
       '\nCompletion criteria:\n- After implementing the minimal fix, run a focused regression for the reported behavior and the affected existing test module. When those checks pass, summarize the actual changes and test results and finish.\n- Expand testing only for a concrete observed failure related to the change. Do not guess unrelated test names or expand to the whole repository after relevant checks pass. If a failure persists, report it accurately instead of claiming success.\n- Official hidden tests run later; do not attempt to access them or claim they passed.\n'
-    return task + testing + (strategy === 'verified-focused-v1' ? stopping : '')
+    const explicitFinish =
+      '- Once the focused checks finish, make your very next response a final answer with no tool calls. State the files changed, the exact tests run, and any failures. Do not start another investigation after the checks finish.\n'
+    return (
+      task +
+      testing +
+      (strategy === 'verified-tests-v1' ? '' : stopping) +
+      (strategy === 'verified-focused-v2' ? explicitFinish : '')
+    )
   }
 
   if (strategy !== strategyVersion) throw new Error(`Unknown evaluation strategy: ${strategy}`)
@@ -32,8 +39,10 @@ export function readRounds(value, fallback, maximum = 100) {
 // Completed response timings are partial evidence when inference is interrupted.
 export function summarizeEvents(events) {
   const result = {
+    compactionFailureReasons: {},
     compactionsCompleted: 0,
     compactionsFailed: 0,
+    compactionsSkipped: 0,
     compactionsStarted: 0,
     modelCallsCompleted: 0,
     modelCallsStarted: 0,
@@ -45,6 +54,7 @@ export function summarizeEvents(events) {
     repeatedFailedCalls: 0,
     summaryAttempts: 0,
     summaryFailures: 0,
+    summaryValidationFailures: 0,
     summaryWallMs: 0,
     toolCalls: 0,
     toolErrors: 0,
@@ -54,8 +64,15 @@ export function summarizeEvents(events) {
   for (const event of events) {
     const data = event.data ?? {}
     if (event.type === 'context.compaction.started') result.compactionsStarted++
+    if (event.type === 'context.compaction.skipped') result.compactionsSkipped++
     if (event.type === 'context.compaction.completed') result.compactionsCompleted++
-    if (event.type === 'context.compaction.failed') result.compactionsFailed++
+    if (event.type === 'context.compaction.failed') {
+      result.compactionsFailed++
+      const reason = data.reason ?? 'unknown'
+      result.compactionFailureReasons[reason] = (result.compactionFailureReasons[reason] ?? 0) + 1
+      if (String(reason).startsWith('summary-invalid-')) result.summaryValidationFailures++
+    }
+
     if (event.type === 'context.summary.started') result.summaryAttempts++
     if (event.type === 'context.summary.failed') result.summaryFailures++
     if (event.type === 'context.summary.completed' || event.type === 'context.summary.failed')

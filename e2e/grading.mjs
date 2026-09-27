@@ -5,6 +5,7 @@ import path from 'node:path'
 
 import {recoveryObserved} from './cases.mjs'
 import {gradeWorkspace} from './host.mjs'
+import {isGeneratedArtifact} from './quality.mjs'
 
 export function normalizePatch(patch) {
   return patch
@@ -18,6 +19,20 @@ export function normalizePatch(patch) {
         .replaceAll('b/initial/', 'b/')
     })
     .join('\n')
+}
+
+export function excludeGeneratedPatch(patch) {
+  const sections = patch.split(/(?=^diff --git )/m)
+  const excludedPaths = []
+  const kept = sections.filter((section) => {
+    const header = section.split('\n', 1)[0]
+    const match = /^diff --git (?:a\/(.+?) b\/\1|"a\/(.+?)" "b\/\2")$/.exec(header)
+    const name = match?.[1] ?? match?.[2]
+    if (!name || !isGeneratedArtifact(name)) return true
+    excludedPaths.push(name)
+    return false
+  })
+  return {excludedPaths, patch: kept.join('')}
 }
 
 export async function gradeCase(directory, c, run) {
