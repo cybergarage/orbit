@@ -1,0 +1,219 @@
+{
+  "date": "2026-09-28",
+  "purpose": "Compare the budgeted context trigger at 65% and 80% using the same real-model SWE-bench Verified task.",
+  "productionDefaultChanged": false,
+  "experimentCommit": "470ed63da47dca510fbae7f19236f8ff7e4deecf",
+  "orbitImplementationCommit": "d142e48e9968d72335c5115eb56b25360ab2c7c0",
+  "comparisonBaseline": {
+    "date": "2026-09-28",
+    "orbitCommit": "d142e48e9968d72335c5115eb56b25360ab2c7c0",
+    "triggerRatio": 0.65,
+    "triggerTokensApprox": 17571,
+    "summaryAttempts": 3,
+    "summaryFailures": 1,
+    "summaryWallMs": 379615.482172,
+    "compactionsStarted": 2,
+    "compactionsCompleted": 1,
+    "modelCallsCompleted": 106,
+    "patchBytes": 0,
+    "officialStatus": "unresolved",
+    "gradingDisposition": "skipped-empty-patch"
+  },
+  "dataset": {
+    "dataset": "princeton-nlp/SWE-bench_Verified",
+    "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+    "split": "test",
+    "instanceId": "pytest-dev__pytest-10356",
+    "repo": "pytest-dev/pytest",
+    "baseCommit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1"
+  },
+  "harness": {
+    "version": "4.1.0",
+    "commit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+    "graderImageDigest": "sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+    "runId": "orbit-prediction-d4684d36-9a3c-44c1-8cb4-feeb17d02fb2",
+    "processExit": 0,
+    "officialStatus": "unresolved",
+    "resolved": "0/1",
+    "FAIL_TO_PASS": "0/1",
+    "PASS_TO_PASS": "0/79",
+    "patchApplied": true,
+    "errorInstances": 0
+  },
+  "model": {
+    "name": "ornith-1.5:9b",
+    "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+    "quantization": "Q4_K_M",
+    "contextLength": 32768,
+    "outputLimit": 4096,
+    "seed": 42,
+    "temperature": 0.6,
+    "topP": 0.95,
+    "think": false
+  },
+  "settings": {
+    "strategy": "verified-focused-v1",
+    "contextPolicy": "budgeted",
+    "contextTriggerRatio": 0.8,
+    "configuredTriggerTokens": 21626,
+    "timeoutMs": 900000,
+    "rounds": "unlimited",
+    "promptSha256": "be4f8872ca96bce5f4aa9f05dc581e7ddad7ab67b3611768e90011aade660b89"
+  },
+  "environment": {
+    "host": "macOS Apple Silicon ARM64",
+    "dockerMemoryBytes": 4107141120,
+    "evaluationPlatform": "linux/amd64 emulation",
+    "ollamaVersion": "0.34.3",
+    "agentImageId": "sha256:1ebaf2ba22a7ed443ab2f4986a2811c575ceb608a1fb79555aae5c2091c0d8d2"
+  },
+  "run": {
+    "elapsedMs": 910630,
+    "status": "runtime-error",
+    "outcome": "incomplete",
+    "modelCallsCompleted": 51,
+    "toolCalls": 47,
+    "toolErrors": 13,
+    "inputTokens": 592126,
+    "outputTokens": 15616,
+    "usageComplete": false,
+    "patchBytes": 950,
+    "summaryAttempts": 3,
+    "summaryFailures": 0,
+    "summaryValidationFailures": 1,
+    "summaryWallMs": 343928.11094499996,
+    "compactionsStarted": 1,
+    "compactionsCompleted": 0,
+    "compactionsFailed": 1,
+    "compactionsSkipped": 3,
+    "compactionFailureReasons": {
+      "summary-invalid-json": 1
+    },
+    "qualityStatus": "not-measured",
+    "preflightPassed": true
+  },
+  "contextEvents": [
+    {
+      "type": "context.compaction.started",
+      "iteration": 44,
+      "timestamp": "2026-09-28T04:59:48.962Z",
+      "data": {
+        "beforeTokens": 22047
+      }
+    },
+    {
+      "type": "context.summary.started",
+      "iteration": 44,
+      "timestamp": "2026-09-28T04:59:49.010Z",
+      "data": {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "sourceMessages": 45
+      }
+    },
+    {
+      "type": "context.summary.completed",
+      "iteration": 44,
+      "timestamp": "2026-09-28T05:01:54.413Z",
+      "data": {
+        "attempt": 1,
+        "durationMs": 125402.51626399998
+      }
+    },
+    {
+      "type": "context.summary.started",
+      "iteration": 44,
+      "timestamp": "2026-09-28T05:01:54.462Z",
+      "data": {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "sourceMessages": 34
+      }
+    },
+    {
+      "type": "context.summary.completed",
+      "iteration": 44,
+      "timestamp": "2026-09-28T05:03:58.218Z",
+      "data": {
+        "attempt": 1,
+        "durationMs": 123755.72443100007
+      }
+    },
+    {
+      "type": "context.summary.started",
+      "iteration": 44,
+      "timestamp": "2026-09-28T05:03:58.234Z",
+      "data": {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "sourceMessages": 8
+      }
+    },
+    {
+      "type": "context.summary.completed",
+      "iteration": 44,
+      "timestamp": "2026-09-28T05:05:33.003Z",
+      "data": {
+        "attempt": 1,
+        "durationMs": 94769.87024999992
+      }
+    },
+    {
+      "type": "context.compaction.failed",
+      "iteration": 44,
+      "timestamp": "2026-09-28T05:05:33.006Z",
+      "data": {
+        "beforeTokens": 22047,
+        "durationMs": 344042.64281999995,
+        "fallback": true,
+        "reason": "summary-invalid-json"
+      }
+    },
+    {
+      "type": "context.compaction.skipped",
+      "iteration": 45,
+      "timestamp": "2026-09-28T05:05:36.048Z",
+      "data": {
+        "beforeTokens": 22789,
+        "reason": "summary-invalid-json"
+      }
+    },
+    {
+      "type": "context.compaction.skipped",
+      "iteration": 46,
+      "timestamp": "2026-09-28T05:07:49.268Z",
+      "data": {
+        "beforeTokens": 25657,
+        "reason": "summary-invalid-json"
+      }
+    },
+    {
+      "type": "context.compaction.skipped",
+      "iteration": 47,
+      "timestamp": "2026-09-28T05:07:52.198Z",
+      "data": {
+        "beforeTokens": 25802,
+        "reason": "summary-invalid-json"
+      }
+    }
+  ],
+  "observed": {
+    "firstCompactionBeforeTokens": 22047,
+    "firstCompactionCompleted": false,
+    "firstCompactionDurationMs": 344042.64282,
+    "firstCompactionSummaryBatches": 3,
+    "firstCompactionFailureReason": "summary-invalid-json",
+    "laterSkippedCompactions": 3,
+    "patchSha256": "cefa4ea5ec3d0e3134cfa0e18ed8753b3fd0d2cdf2bffbb3c4b9756a37891482",
+    "predictionSha256": "3cae0d45572c522cdb65494c63dcbf7043e8fd49de33b7292db49269b784a046"
+  },
+  "limitations": [
+    "One real-model run per trigger condition; no statistical inference is justified.",
+    "The Orbit run ended with a runtime error at the 900-second budget; official grading ran successfully and found the patch unresolved.",
+    "Agent token usage is marked incomplete by the runner; full solver state remains in ignored tmp/e2e."
+  ],
+  "prediction": "2026-09-28-context-trigger-interval-predictions.jsonl"
+}
