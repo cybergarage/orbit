@@ -594,3 +594,34 @@ behavioral correctness. The core tests separately verify runtime provenance and
 persistent/reopened journal binding. Model-consumer scores from the fixed-history
 replay remain separate; that replay assumes known legacy-fixture provenance and
 does not retroactively authenticate its old Session records.
+
+### Live reopened projection diagnostic
+
+The short diagnostic below separates real tool acknowledgements from model
+prose. A fixed setup model executes two real built-in writes in a persistent
+Session. The setup model's filler forces a later checkpoint; it is not a coding
+ability measurement. After closing and reopening, real Ollama performs summary
+and consumer requests, with tools disabled and a diagnostic-only 3,500/2,500
+trigger/target. This exercises the actual core provenance/projection path even
+when a long solver trial cannot activate a checkpoint.
+
+Run it after other Ollama evaluations have completed, using the current verified
+agent image. Use a fresh output directory:
+
+```sh
+mkdir -p tmp/e2e/observations-live-new
+docker run --rm --name orbit-observations-live --user node \
+  -v "$PWD/e2e/observations-live.mjs:/opt/orbit/e2e/observations-live.mjs:ro" \
+  -v "$PWD/tmp/e2e/observations-live-new:/output" \
+  orbit-e2e:observations node /opt/orbit/e2e/observations-live.mjs
+npm run eval:core-observations -- \
+  --result tmp/e2e/observations-live-new/observations-live/result.json \
+  --events tmp/e2e/observations-live-new/observations-live/events.jsonl \
+  --output tmp/e2e/observations-live-new/check.json
+```
+
+The actual model stage has a 300-second Run deadline. The diagnostic may still
+produce `not-exercised` if the model summary fails validation; record this
+separately from a failed source-correspondence check. This is neither a reference
+patch check nor an official SWE-bench solve. The forced thresholds are not a
+production tuning recommendation.
