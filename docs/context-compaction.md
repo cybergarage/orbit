@@ -86,6 +86,11 @@ uses its structured-output configuration, and Ollama uses `format: "json"`.
 Orbit still parses and validates every response against the versioned summary
 shape and original source IDs before it can save a checkpoint. A provider's
 format constraint does not replace that validation.
+The summary prompt prioritizes confirmed edit/write results, the latest observed
+test outcomes, and remaining work. Later tool evidence supersedes older plans
+and checkpoint claims; a failed test does not imply that an edit was undone.
+These instructions improve evidence retention, but shape/source-ID validation
+does not prove that generated prose faithfully describes the source.
 
 ## What remains in context
 

@@ -240,8 +240,11 @@ describe('budgeted context preparation', () => {
     expect(result.outcome).to.equal('completed')
     expect(windows.length).to.be.greaterThan(1)
     expect(windows.every((window) => window === 12_000)).to.equal(true)
-    expect(model.requests.filter((request) => String((request.messages as unknown[])[0]).startsWith('Summarize')))
-      .to.satisfy((requests: Readonly<Record<string, unknown>>[]) => requests.every((request) => request.responseFormat === 'json'))
+    expect(
+      model.requests.filter((request) => String((request.messages as unknown[])[0]).startsWith('Summarize')),
+    ).to.satisfy((requests: Readonly<Record<string, unknown>>[]) =>
+      requests.every((request) => request.responseFormat === 'json'),
+    )
     expect(diagnostics.list().map((event) => event.type)).to.include.members([
       'context.compaction.started',
       'context.summary.started',
@@ -278,6 +281,93 @@ describe('budgeted context preparation', () => {
     expect(messages).to.have.length(3)
     expect(messages[1].content).to.equal('Continue with the latest request')
     expect(events.some((event) => event.type === 'context-prepared' && event.outcome === 'compacted')).to.equal(true)
+  })
+
+  it('carries confirmed edits and failed tests into a work-state checkpoint', async () => {
+    const session = new Session()
+    const id = oldConversation(session)
+    session.appendMessages([
+      new Message(MessageType.Assistant, {
+        payload: {toolCalls: [{id: 'earlier-test', input: {command: 'pytest tests/test_marks.py'}, name: 'bash'}]},
+      }),
+      new Message(MessageType.Tool, {
+        payload: {isError: false, name: 'bash', output: '1 passed', toolCallId: 'earlier-test'},
+      }),
+    ])
+    const [editCall, editResult, testCall, testResult] = session.appendMessages([
+      new Message(MessageType.Assistant, {
+        payload: {toolCalls: [{id: 'saved-edit', input: {path: 'src/marks.py'}, name: 'edit'}]},
+      }),
+      new Message(MessageType.Tool, {
+        payload: {
+          isError: false,
+          name: 'edit',
+          output: 'Updated src/marks.py',
+          toolCallId: 'saved-edit',
+        },
+      }),
+      new Message(MessageType.Assistant, {
+        payload: {toolCalls: [{id: 'failed-test', input: {command: 'pytest tests/test_marks.py'}, name: 'bash'}]},
+      }),
+      new Message(MessageType.Tool, {
+        payload: {
+          isError: true,
+          name: 'bash',
+          output: 'TypeError: unhashable type: dict; exit code 4',
+          toolCallId: 'failed-test',
+        },
+      }),
+    ])
+    const model = fixtureModel(id)
+    let summaryPrompt = ''
+    const prepare = model.prepare!.bind(model)
+    model.prepare = (messages, options) => {
+      const prepared = prepare(messages, options)
+      if (!messages[0].content.startsWith('Summarize')) return prepared
+      const prompt = messages[0].content
+      summaryPrompt = prompt
+      const source = JSON.parse(prompt.split('\nSOURCE: ')[1]) as {messages: Array<{id: string}>}
+      expect(source.messages.map((message) => message.id)).to.include.members([
+        editCall.id,
+        editResult.id,
+        testCall.id,
+        testResult.id,
+      ])
+      return {
+        ...prepared,
+        async invoke() {
+          return new Message(MessageType.Assistant, {
+            content: JSON.stringify({
+              changedPaths: [{sourceIds: [editResult.id], text: 'Saved src/marks.py'}],
+              facts: [],
+              goals: [],
+              tests: [
+                {
+                  outcome: 'failed',
+                  revision: null,
+                  sourceIds: [testResult.id],
+                  target: 'tests/test_marks.py',
+                  text: 'Collection TypeError',
+                },
+              ],
+              uncertainties: [],
+              unfinished: [{sourceIds: [testResult.id], text: 'Repair collection failure and retest saved edit'}],
+              version: 1,
+            }),
+          })
+        },
+      }
+    }
+
+    const {result} = await execute(session, model, {...policy, profile: {...profile, target: 2500, trigger: 3000}})
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    expect(summaryPrompt).to.contain('Successful edit/write tool results confirm saved changes')
+    expect(summaryPrompt).to.contain('A failed test does not undo a successful edit')
+    const checkpoint = session.getCompaction()!
+    expect(checkpoint.summary.changedPaths[0].sourceIds).to.deep.equal([editResult.id])
+    expect(checkpoint.summary.tests[0]).to.include({outcome: 'failed', revision: null})
+    expect(checkpoint.summary.unfinished[0].text).to.contain('retest saved edit')
+    expect(session.getConversationMessages().some((message) => message.id === editResult.id)).to.equal(true)
   })
 
   it('accepts a complete JSON-fenced summary after validating its evidence', async () => {
@@ -617,7 +707,7 @@ describe('budgeted context preparation', () => {
     const model = fixtureModel(oldConversation(session), 'error')
     const {result} = await execute(session, model, {
       ...policy,
-      profile: {...profile, outputReserve: 2000, summaryOutput: 100, window: 6000},
+      profile: {...profile, outputReserve: 4500, summaryOutput: 100, window: 8000},
     } as ContextPolicy)
     expect(result.outcome).not.to.equal('completed')
     expect(model.requests).to.have.length(1)
