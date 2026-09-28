@@ -104,7 +104,8 @@ try {
         'Report the acknowledged saved operations. Do not perform actions or claim tests passed; no behavioral verification occurred.',
     }),
   ])
-  result = {answer: handle.value()?.content ?? '', runtime: await handle.finished}
+  const runtime = await handle.finished
+  result = {answer: handle.value()?.content ?? '', runtime}
 } finally {
   await agent.close()
   fs.writeFileSync(`${root}/result.json`, JSON.stringify({...result, entries: reopened.getEntries()}, null, 2))
