@@ -367,8 +367,8 @@ describe('budgeted context preparation', () => {
     expect(summaryPrompt).to.contain('Passing tests prove only the assertions actually exercised')
     const review = summaryPrompt.split('\nFINAL_REVIEW: ')[1]
     expect(review).to.contain('A passing empty test proves execution only')
-    expect(review).to.contain('Preserve each latest test command/filter outcome')
-    expect(review).to.contain('Successful edit/write results mean saved changes')
+    expect(review).to.contain('Keep separate test items for each command/filter and its own outcome')
+    expect(review).to.contain('Copy changed paths exactly from successful edit/write results')
     expect(summaryPrompt.indexOf('\nFINAL_REVIEW: ')).to.be.greaterThan(summaryPrompt.indexOf('\nSOURCE: '))
     const checkpoint = session.getCompaction()!
     expect(checkpoint.summary.changedPaths[0].sourceIds).to.deep.equal([editResult.id])
