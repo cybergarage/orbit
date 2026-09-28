@@ -63,6 +63,7 @@ This is a focused solver-history diagnostic, not a SWE-bench solve or grade.
 | Date | Model / condition | Observed result | Evidence |
 | --- | --- | --- | --- |
 | 2026-09-28 | `ornith-1.5:9b`, same stale checkpoint and confirmed edits, before / initial fix / final prompt refinement | Saved-state contradiction reproduced before, removed after final refinement; latest bar-selection failure retained. Unsupported inference that both markers passed remains. All outputs were valid JSON/schema/evidence. | [Report](2026-09-28-context-work-state-replay.md), [JSON](2026-09-28-context-work-state-replay.json) |
+| 2026-09-28 | `ornith-1.5:9b`, independent fixed-case semantic grader, before/current prompts | Both fail overall; current preserves saved edit and latest test/work, but falsely claims both markers were verified. JSON/source IDs valid in both. | [Report](2026-09-28-context-semantic-evaluation.md), [JSON](2026-09-28-context-semantic-evaluation.json) |
 
 ## Small coding cases
 
