@@ -3,6 +3,14 @@
 
 export const strategyVersion = 'coding-recovery-v1'
 
+export function readContextTriggerRatio(value) {
+  if (value === undefined || value === '') return undefined
+  const ratio = Number(value)
+  if (!Number.isFinite(ratio) || ratio <= 0.65 || ratio >= 0.95)
+    throw new Error('Context trigger ratio must be greater than 0.65 and less than 0.95')
+  return ratio
+}
+
 export function evaluationPrompt(task, {strategy = strategyVersion, swe = false} = {}) {
   if (strategy === 'baseline') return task
   if (['verified-focused-v1', 'verified-focused-v2', 'verified-tests-v1'].includes(strategy)) {

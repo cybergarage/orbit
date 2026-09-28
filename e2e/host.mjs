@@ -7,7 +7,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import {sourceFingerprint} from './source-fingerprint.mjs'
-import {summarizeEvents} from './strategy.mjs'
+import {readContextTriggerRatio, summarizeEvents} from './strategy.mjs'
 
 export const repo = path.resolve(import.meta.dirname, '..')
 export const image = process.env.ORBIT_E2E_IMAGE ?? 'orbit-e2e:local'
@@ -152,6 +152,7 @@ export async function runAgent({
   await fs.mkdir(input)
   const config = {
     contextPolicy,
+    contextTriggerRatio: readContextTriggerRatio(process.env.ORBIT_E2E_CONTEXT_TRIGGER_RATIO),
     model,
     ollamaHost: process.env.ORBIT_E2E_OLLAMA_HOST ?? 'http://host.docker.internal:11434',
     options: {num_ctx: numCtx, num_predict: 4096, seed: 42, temperature: 0.6, top_p: 0.95},

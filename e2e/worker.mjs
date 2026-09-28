@@ -41,9 +41,16 @@ const model = new OllamaAgent(
   {getContextWindow: () => config.options.num_ctx, getName: () => 'ollama'},
   {client},
 )
-const contextPolicy = config.contextPolicy === 'budgeted' || config.strategy.startsWith('book-')
-  ? await createModelContextPolicy(model, {outputReserve: config.options.num_predict})
-  : undefined
+const contextPolicy =
+  config.contextPolicy === 'budgeted' || config.strategy.startsWith('book-')
+    ? await createModelContextPolicy(model, {outputReserve: config.options.num_predict})
+    : undefined
+if (contextPolicy && config.contextTriggerRatio !== undefined) {
+  const {outputReserve, safetyMargin, window} = contextPolicy.profile
+  const inputBudget = window - outputReserve - safetyMargin
+  contextPolicy.profile.trigger = Math.floor(inputBudget * config.contextTriggerRatio)
+  contextPolicy.profile.target = Math.min(contextPolicy.profile.target, contextPolicy.profile.trigger - 1)
+}
 if (contextPolicy) fs.writeFileSync('/output/context-policy.json', JSON.stringify(contextPolicy, null, 2))
 const agent = new Agent({
   contextPolicy,

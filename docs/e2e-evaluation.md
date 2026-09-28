@@ -354,6 +354,16 @@ model to return a response without tool calls.
 These are opt-in SWE evaluation strategies; `baseline` remains the default and
 Orbit's product prompt and execution limits are unchanged.
 
+For a context compaction interval diagnostic, set
+`ORBIT_E2E_CONTEXT_TRIGGER_RATIO` to a ratio strictly greater than the default
+0.65 and below 0.95. The ratio is applied to the derived input budget only in the
+isolated E2E worker; it does not change Orbit's defaults or persisted profile.
+For example, compare the default run with a run at 0.80 while holding the model,
+problem, strategy and generation settings fixed. The worker records the derived
+profile in `context-policy.json` for each attempt. Higher trigger ratios leave
+less headroom before the hard input budget and are diagnostic conditions, not
+recommended product settings.
+
 ```sh
 # Rebuild the local and SWE base images first, as above.
 docker build -f e2e/VerifiedAgent.Dockerfile -t orbit-e2e:verified-guarded .

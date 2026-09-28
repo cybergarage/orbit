@@ -11,7 +11,7 @@ import {command} from './host.mjs'
 import {checkDeliverable, inspectDeliverable, testCommand} from './quality.mjs'
 import {prepareRepositorySource, repositoryProfile} from './repository-checks.mjs'
 import {sourceFingerprint} from './source-fingerprint.mjs'
-import {evaluationPrompt, readElapsed, readRounds, summarizeEvents} from './strategy.mjs'
+import {evaluationPrompt, readContextTriggerRatio, readElapsed, readRounds, summarizeEvents} from './strategy.mjs'
 import {validateSWECase, verifyPreparedSWECase} from './swe-case.mjs'
 
 const entry = (exitCode) => ({
@@ -60,6 +60,13 @@ describe('E2E host control (no model or Docker)', () => {
     expect(readRounds(undefined, 'unlimited', Number.MAX_SAFE_INTEGER)).to.equal('unlimited')
     for (const value of ['0', '-1', 'NaN', 'Infinity', '1.5', '', '101'])
       expect(() => readRounds(value, 30)).to.throw('Evaluation rounds')
+  })
+
+  it('accepts only diagnostic compaction trigger ratios above the product default', () => {
+    expect(readContextTriggerRatio(undefined)).to.equal(undefined)
+    expect(readContextTriggerRatio('0.8')).to.equal(0.8)
+    for (const value of ['0.65', '0.95', 'NaN', 'Infinity', '0', '1'])
+      expect(() => readContextTriggerRatio(value)).to.throw('Context trigger ratio')
   })
 
   it('validates elapsed overrides and runs unlimited commands without a timer', async () => {
@@ -149,10 +156,7 @@ describe('E2E host control (no model or Docker)', () => {
     expect(filtered.patch).to.include('diff --git a/src/mark.py b/src/mark.py')
     expect(filtered.patch).to.include('diff --git a/testing/test_mark.py b/testing/test_mark.py')
     expect(filtered.patch).not.to.include('.pytest_cache')
-    expect(
-      excludeGeneratedPatch('diff --git "a/path with space/.pytest_cache/README.md" "b/path with space/.pytest_cache/README.md"\n+cache\n')
-        .patch,
-    ).to.equal('')
+    expect(excludeGeneratedPatch('diff --git "a/path with space/.pytest_cache/README.md" "b/path with space/.pytest_cache/README.md"\n+cache\n').patch).to.equal('')
   })
 
   it('requires an observed failed test before a successful rerun', () => {
