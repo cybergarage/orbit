@@ -56,6 +56,14 @@ solves. The current runner ignores this removed setting and recorded
 `rounds: unlimited` in each Session. Runs continued until a normal completion,
 a runtime error or the separate 900-second elapsed-time budget.
 
+## Context summary replay
+
+This is a focused solver-history diagnostic, not a SWE-bench solve or grade.
+
+| Date | Model / condition | Observed result | Evidence |
+| --- | --- | --- | --- |
+| 2026-09-28 | `ornith-1.5:9b`, same stale checkpoint and confirmed edits, before / initial fix / final prompt refinement | Saved-state contradiction reproduced before, removed after final refinement; latest bar-selection failure retained. Unsupported inference that both markers passed remains. All outputs were valid JSON/schema/evidence. | [Report](2026-09-28-context-work-state-replay.md), [JSON](2026-09-28-context-work-state-replay.json) |
+
 ## Small coding cases
 
 These are Orbit's four local fixtures, **not SWE-bench instances**. Each model ran
