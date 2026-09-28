@@ -67,6 +67,7 @@ This is a focused solver-history diagnostic, not a SWE-bench solve or grade.
 | 2026-09-29 | `ornith-1.5:9b`, four test-evidence instruction variants; same fixed source/grader | No overall improvement accepted; candidates introduced other errors or missing IDs. Runtime prompt changes restored. | [Follow-up](2026-09-28-context-test-evidence-followup.md), [JSON](2026-09-28-context-test-evidence-followup.json) |
 | 2026-09-28 | `ornith-1.5:9b`, independent fixed-case semantic grader, before/current prompts | Both fail overall; current preserves saved edit and latest test/work, but falsely claims both markers were verified. JSON/source IDs valid in both. | [Report](2026-09-28-context-semantic-evaluation.md), [JSON](2026-09-28-context-semantic-evaluation.json) |
 | 2026-09-29 | `ornith-1.5:9b`, frozen checkpoint with / without structured observations, three repetitions each | Stale saved-state checkpoint: 0/3 → 3/3; overclaimed-verification checkpoint: 0/3 → 0/3. All answers retain unverified behavior; no new SWE-bench grade. | [Report](2026-09-29-context-observations.md), [JSON](2026-09-29-context-observations.json) |
+| 2026-09-29 | `ornith-1.5:9b`, latest core `7f979eb`, fixed consumer replay and separate direct-record checks | Stale checkpoint 0/3 → 3/3; overclaim checkpoint 0/3 → 0/3. Core suite 1,050 passing; model interpretation remains imperfect. | [Report](2026-09-29-core-observations-replay.md), [JSON](2026-09-29-core-observations-replay.json) |
 
 ## Small coding cases
 
