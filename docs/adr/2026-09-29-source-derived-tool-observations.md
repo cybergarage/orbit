@@ -2,9 +2,17 @@
 status: accepted
 proposed-date: 2026-09-29
 decision-date: 2026-09-29
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-09-29
+implementation-commits:
+  - ee3c5f500bcd21268c39e7828666364df12e6557
+  - 291f9f0a80d80e37cf8fbc35875d583d0cb4714c
+  - 7f979ebf9169c48f8bb52b701eeb4fe9ffe6d9f2
+  - 0267ae630cca97ff569c9728ba36e4165f8114bf
+  - fa1992a8a661edd86d023f32f7a059ce797fa8be
+  - 912e2109c05c866a11f349315881f4dab1636edb
+  - fcc69cb1a08ef01a3208e646c7bc69322c566933
+  - 4244fee4f346a7b7c3f82166b90bbc8359375ebc
 superseded-by: []
 ---
 
@@ -183,44 +191,85 @@ These comparisons inform design; they do not prove Orbit's safety or performance
 | Keep refining summary instructions             | Low integration cost, but prior trials failed overall and cannot guarantee preserved facts. Keep summaries for prose, not canonical observations. |
 | Send all original history indefinitely         | Avoids projection loss but does not fit bounded context; the model can still misinterpret facts.                                                  |
 | Persist a second observation ledger            | Simple direct lookup, but duplicates truth and introduces synchronization/recovery obligations. Not selected.                                     |
-| Derive a separate view with runtime provenance | Selected proposal: retains canonical source and permits deterministic consumption; requires provenance, compatibility and budget work.            |
+| Derive a separate view with runtime provenance | Selected: retains canonical source and permits deterministic consumption; requires provenance, compatibility and budget work.                     |
 | Infer tests/edits from arbitrary Bash output   | Broad apparent coverage but confuses process output with trustworthy state and behavioral verification. Rejected.                                 |
 
 ## Implementation and Confirmation
 
-Core implementation is **in progress**. The author explicitly approved this ADR
-and requested implementation with staged commits on 2026-09-29.
-The evaluation-only prototype and result commits are not ADR implementation
-commits. Implement after acceptance in the following phases, committing each:
+The accepted core scope is implemented. The author explicitly approved this
+ADR on 2026-09-29 before implementation commit `ee3c5f5`.
 
-1. Capture and validate built-in result provenance with existing execution
-   binding. Test custom/MCP names, reused IDs, chained groups, duplicates,
-   cancellation after dispatch, missing acknowledgement and reopened records.
-2. Derive observations and integrate the measured checkpoint view. Test reedit,
-   failed later saves, stale tests, external changes remaining unknown, source
-   digest/order, retained user inputs, overflow/omissions and Session isolation.
-3. Update maintained architecture/concepts and E2E instructions; extend the
-   diagnostic to inspect deterministic views directly, retaining separate
-   model-consumer scores. Verify format compatibility before writing new metadata.
-4. Repeat both frozen-checkpoint trials with the real model. Then rerun one
-   ARM64-compatible official SWE-bench problem with isolated solver/grader
-   environments and reference-patch grading control. Report environment errors,
-   execution errors and unresolved problems separately; no gold/hidden grading
-   information goes to the solver.
+Runtime-only adapter/result bindings are captured in
+`src/core/tools/observation-provenance.ts` and attached only after a managed
+operation acknowledgement. `src/core/session/tool-observations.ts` derives the
+view from canonical request/result groups and validates matching journal
+intent/result digests. `src/core/session/context-policy.ts` measures and projects
+the separate untrusted fragment, preserves mandatory saves, bounds command
+retention and rechecks evidence before invocation. No new public observation
+API, duplicate persistent ledger or iteration cap was introduced.
 
-Pass conditions are exact preservation/provenance, bounded measured input and
-safe lifecycle behavior, not necessarily model-consumer or SWE-bench success.
-Run `headers:check`, `build`, `test`, affected E2E host tests and independent
-observation tests. Acknowledge runtime source facts through diagnostics without
-claiming that a model's answer verifies them. ADR completion needs actual core
-commits, maintained documentation and these confirmation records.
+| Implemented scope                                                 | Commit                                     |
+| ----------------------------------------------------------------- | ------------------------------------------ |
+| Capture provenance bound to completed operations                  | `ee3c5f500bcd21268c39e7828666364df12e6557` |
+| Derive and budget checkpoint observations; update maintained docs | `291f9f0a80d80e37cf8fbc35875d583d0cb4714c` |
+| Add independent diagnostic correspondence checker                 | `7f979ebf9169c48f8bb52b701eeb4fe9ffe6d9f2` |
+| Add live persistent/reopened diagnostic                           | `0267ae630cca97ff569c9728ba36e4165f8114bf` |
+| Correct internal Ollama adapter import in diagnostic              | `fa1992a8a661edd86d023f32f7a059ce797fa8be` |
+| Exclude opaque proofs from summary-model source serialization     | `912e2109c05c866a11f349315881f4dab1636edb` |
+| Use supported provider identity in persisted diagnostic fixture   | `fcc69cb1a08ef01a3208e646c7bc69322c566933` |
+| Capture diagnostic answer after completion                        | `4244fee4f346a7b7c3f82166b90bbc8359375ebc` |
+
+The opaque-proof serialization correction stays within this decision: it omits
+runtime-only metadata from a copied summary source, preserving canonical bytes,
+request/result facts, source digest and separately projected observations. It
+changes no public/provider contract, persistent schema or authorization rule.
+
+Confirmation at core revision `912e210`:
+
+- `headers:check`, `build` and the full `npm test` passed: **1,050 tests**.
+  The focused observation/compaction/long-turn suite passed **62 tests**,
+  including 12 observation cases. Existing execution and interrupted-context
+  tests continue to cover cancellation, nondispatch and missing acknowledgements.
+- Observation tests cover actual save acknowledgements, chained groups/reused
+  call IDs, tampered request/result rejection, custom names not authenticating
+  built-in semantics, Session isolation, legacy ambiguity, later failed saves,
+  shell changes leaving current revision/behavior unknown, protected inputs,
+  command omission, mandatory overflow and durable reopening.
+- The transcript codec is byte-identical to the pre-implementation codec.
+  Additive metadata survives version-2 write/read/reopen without a schema change.
+  This demonstrates the unchanged-reader roundtrip, not execution of an external
+  older released Orbit binary or every possible third-party writer.
+- E2E host checks passed 19 tests; the prototype extractor passed 18, direct
+  checker 4, and semantic-summary evaluator 11. Direct correspondence checks
+  are separate from model-answer grading and do not independently authenticate
+  journal HMACs.
+- [Frozen-checkpoint real-model replay](../../e2e/results/2026-09-29-core-observations-replay.md)
+  retains the controlled result: stale-save checkpoint 0/3 → 3/3, but the second
+  checkpoint remains 0/3 in both conditions. This does not establish general
+  reliability or a solve-rate gain.
+- [Live reopened projection](../../e2e/results/2026-09-29-core-observations-live.md)
+  completed real-model compaction in 38.84 seconds and retained both actual
+  one-byte save acknowledgements. The independent source-correspondence check
+  passed (one view, two records); estimated input fell 10,066 → 1,140 tokens.
+  Setup uses a fixed model for actual writes; compaction/consumer use Ornith.
+- [Official Verified diagnostic](../../e2e/results/2026-09-29-core-observations-swe.md)
+  records the reference control and initial/latest implementation attempts,
+  independent patch grading and activation status. Benchmark resolution is
+  not an implementation completion requirement.
+
+Maintained behavior is documented in `docs/context-compaction.md`,
+`docs/architecture.md`, `docs/concepts/agent-runtime.md`, the glossary and the
+E2E guide. Core facts, model interpretations and official patch scores remain
+separate. Curated results exclude raw journals, keys and private host paths.
 
 ## Follow-up Work
 
-The author approved the provenance/persistence and context behavior on
-2026-09-29. During implementation, resolve envelope schema details
-within this scope and demonstrate old-reader/writer behavior. If that requires
-an incompatible format or broader API, revise the proposal before that change.
+The core scope is complete; model-consumer accuracy and summary reliability
+remain separate. Both official attempts were unresolved (target 0/1, regression
+79/79), and neither activated a checkpoint. Prioritize complete, nonempty
+schema-constrained summary output/recovery; do not weaken evidence validation
+or interpret an absent projection as a passing trial. External older released
+binaries and third-party Session writers were not executed in this confirmation.
 
 Broader test adapters, public observation APIs, filesystem/revision attestation,
 custom/MCP adapter registration, full benchmark evaluation and training are not
