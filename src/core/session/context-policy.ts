@@ -474,7 +474,17 @@ function summaryRequest(
       JSON.stringify([...request.allowedIds]) +
       '\nSOURCE: ' +
       JSON.stringify({
-        messages: messages.map((value) => persistedContextMessage(value)),
+        messages: messages.map((value) => {
+          const message = persistedContextMessage(value)
+          if (message.type === MessageType.Tool && message.payload && typeof message.payload === 'object') {
+            // Opaque execution proofs are runtime evidence, not summary-model input.
+            const payload = {...(message.payload as Record<string, unknown>)}
+            delete payload.observation
+            return {...message, payload}
+          }
+
+          return message
+        }),
         previous,
         ...(options.verifiedContext?.projectionIds.length ? {interruption: INTERRUPTION_NOTICE} : {}),
       }),

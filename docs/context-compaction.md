@@ -296,3 +296,9 @@ refuses compaction/preparation with `observation-context-exceeds-budget`.
 unknown-result and omission counts, and total estimated request tokens. Model
 answers may still misinterpret the records; evaluators should inspect these
 records directly. Persistent evidence is rechecked before provider invocation.
+
+Runtime provenance digests remain in the canonical transcript and journal
+validation path. Summary-model source serialization omits that opaque envelope
+metadata; it still includes the original tool request/result and message IDs.
+This keeps execution proofs out of the summary token budget without changing
+source digests, persisted bytes, or the separately derived observation view.

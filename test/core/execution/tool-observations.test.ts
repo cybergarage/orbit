@@ -93,6 +93,12 @@ async function budgetedFixture(persistent: boolean, overflow = false) {
         async invoke() {
           requests.push(messages)
           if (messages[0].content.startsWith('Summarize')) {
+            const source = JSON.parse(messages[0].content.split('\nSOURCE: ')[1])
+            expect(
+              source.messages
+                .filter((m: {type: string}) => m.type === 'tool')
+                .every((m: {payload: Record<string, unknown>}) => !('observation' in m.payload)),
+            ).to.equal(true)
             const ids = JSON.parse(messages[0].content.split('ORIGINAL_SOURCE_IDS: ')[1].split('\nSOURCE:')[0])
             return new Message('assistant', {
               content: JSON.stringify({

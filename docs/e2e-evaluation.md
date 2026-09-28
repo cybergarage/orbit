@@ -610,10 +610,11 @@ agent image. Use a fresh output directory:
 
 ```sh
 mkdir -p tmp/e2e/observations-live-new
-docker run --rm --name orbit-observations-live --user node \
+docker run --name orbit-observations-live --user node \
   -v "$PWD/e2e/observations-live.mjs:/opt/orbit/e2e/observations-live.mjs:ro" \
-  -v "$PWD/tmp/e2e/observations-live-new:/output" \
   orbit-e2e:observations node /opt/orbit/e2e/observations-live.mjs
+docker cp orbit-observations-live:/output/. tmp/e2e/observations-live-new/
+docker rm orbit-observations-live
 npm run eval:core-observations -- \
   --result tmp/e2e/observations-live-new/observations-live/result.json \
   --events tmp/e2e/observations-live-new/observations-live/events.jsonl \
