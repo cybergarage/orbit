@@ -81,6 +81,11 @@ an SDK failure.
 Anthropic `max_tokens`, and Ollama `options.num_predict`. A custom Model must
 implement this prepared-request and cap contract before budgeted use; an adapter
 without `prepare` is rejected. Direct Model calls are not managed Agent runs.
+Summary invocations also request JSON output: OpenAI uses JSON mode, Anthropic
+uses its structured-output configuration, and Ollama uses `format: "json"`.
+Orbit still parses and validates every response against the versioned summary
+shape and original source IDs before it can save a checkpoint. A provider's
+format constraint does not replace that validation.
 
 ## What remains in context
 

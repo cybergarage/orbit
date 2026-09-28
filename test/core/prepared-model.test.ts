@@ -70,6 +70,7 @@ describe('prepared provider requests', () => {
       const message = new Message(MessageType.User, {content: 'original'})
       const prepared = model.prepare!([message], {
         maxOutputTokens: 123,
+        responseFormat: 'json',
         tools: [
           {
             description: 'Read fixture',
@@ -86,9 +87,21 @@ describe('prepared provider requests', () => {
       if (provider === 'ollama') expect(sent).not.to.equal(prepared.request)
       else expect(sent).to.equal(prepared.request)
       expect(JSON.stringify(sent)).to.equal(counted)
-      if (provider === 'openai') expect(prepared.request.max_completion_tokens).to.equal(123)
-      if (provider === 'anthropic') expect(prepared.request.max_tokens).to.equal(123)
-      if (provider === 'ollama') expect(prepared.request.options).to.deep.equal({num_predict: 123})
+      if (provider === 'openai') {
+        expect(prepared.request.max_completion_tokens).to.equal(123)
+        expect(prepared.request.response_format).to.deep.equal({type: 'json_object'})
+      }
+
+      if (provider === 'anthropic') {
+        expect(prepared.request.max_tokens).to.equal(123)
+        expect(prepared.request.output_config).to.deep.equal({format: {schema: {type: 'object'}, type: 'json_schema'}})
+      }
+
+      if (provider === 'ollama') {
+        expect(prepared.request.options).to.deep.equal({num_predict: 123})
+        expect(prepared.request.format).to.equal('json')
+      }
+
       expect(() => model.prepare!([], {maxOutputTokens: 0})).to.throw('output cap')
     })
 

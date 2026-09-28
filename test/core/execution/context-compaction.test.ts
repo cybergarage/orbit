@@ -77,6 +77,7 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
       const request = freezeModelRequest({
         cap: options?.maxOutputTokens,
         messages: messages.map((message) => message.content),
+        responseFormat: options?.responseFormat,
         tools: options?.tools ?? [],
       })
       return {
@@ -239,6 +240,8 @@ describe('budgeted context preparation', () => {
     expect(result.outcome).to.equal('completed')
     expect(windows.length).to.be.greaterThan(1)
     expect(windows.every((window) => window === 12_000)).to.equal(true)
+    expect(model.requests.filter((request) => String((request.messages as unknown[])[0]).startsWith('Summarize')))
+      .to.satisfy((requests: Readonly<Record<string, unknown>>[]) => requests.every((request) => request.responseFormat === 'json'))
     expect(diagnostics.list().map((event) => event.type)).to.include.members([
       'context.compaction.started',
       'context.summary.started',

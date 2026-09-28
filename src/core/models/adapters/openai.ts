@@ -77,6 +77,9 @@ export class OpenAIAgent implements Model {
         model: this.model,
         // Provider wire field.
         // eslint-disable-next-line camelcase
+        ...(options?.responseFormat === 'json' ? {response_format: {type: 'json_object' as const}} : {}),
+        // Provider wire field.
+        // eslint-disable-next-line camelcase
         ...(options?.maxOutputTokens === undefined ? {} : {max_completion_tokens: options.maxOutputTokens}),
         ...(options?.tools && options.tools.length > 0 ? {tools: options.tools.map((tool) => toOpenAITool(tool))} : {}),
       },

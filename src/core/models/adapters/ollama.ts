@@ -139,6 +139,7 @@ export class OllamaAgent implements Model {
         messages: messages.map((message) => toOllamaMessage(message)),
         model: this.model,
         stream: false as const,
+        ...(options?.responseFormat === 'json' ? {format: 'json'} : {}),
         // Provider wire field.
 
         ...(options?.maxOutputTokens === undefined && contextWindow === undefined

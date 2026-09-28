@@ -86,6 +86,8 @@ export interface ModelInvokeOptions extends OperatorOptions {
   diagnostics?: DiagnosticEventBus
   maxOutputTokens?: number
   maxToolIterations?: ExecutionLimit
+  /** Request JSON output when the provider adapter supports constrained formatting. */
+  responseFormat?: 'json'
   signal?: AbortSignal
   tools?: ModelToolSpec[]
 }

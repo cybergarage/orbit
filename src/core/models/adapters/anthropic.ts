@@ -92,6 +92,13 @@ export class AnthropicAgent implements Model {
         max_tokens: options?.maxOutputTokens ?? 8096,
         messages: chatMessages.map((message) => toAnthropicMessage(message)),
         model: this.model,
+        // Provider wire field.
+        ...(options?.responseFormat === 'json'
+          ? {
+              // eslint-disable-next-line camelcase
+              output_config: {format: {schema: {type: 'object'}, type: 'json_schema' as const}},
+            }
+          : {}),
         ...(systemPrompt ? {system: systemPrompt} : {}),
         ...(options?.tools && options.tools.length > 0
           ? {tools: options.tools.map((tool) => toAnthropicTool(tool))}
