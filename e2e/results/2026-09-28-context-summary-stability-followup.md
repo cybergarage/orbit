@@ -24,4 +24,31 @@ The official-format submissions are preserved byte-for-byte in the linked JSONL 
 
 ## Next investigation
 
-Do not tune the trigger interval from this three-run sequence: the 65% results changed both implementation and context batch behavior, and the 80% arm yielded no patch. First identify the 21 tool errors from the latest run and determine why the patch broke baseline tests; then rerun the same 65% condition after any localized fix. Retain the summary timing and validation metrics so context stability remains separately observable from task success.
+Do not tune the trigger interval from this three-run sequence: the 65% results changed both implementation and context batch behavior, and the 80% arm yielded no patch. The classification below identifies the 21 tool errors and the collection failure behind the baseline-test failures. Validate semantic preservation of confirmed edits before rerunning the same 65% condition after a localized improvement. Retain the summary timing and validation metrics so context stability remains separately observable from task success.
+
+## Tool-error classification follow-up
+
+All 21 tool errors in the latest run were `bash` commands returning nonzero status. There were no tool timeouts, truncated tool outputs, invalid tool arguments, failed edits, or dispatch/transport failures in this set. Nine occurred before compaction and twelve after it. The observed exit handling matches `createBashTool` and `resolveShell` in `src/core/tools/builtins/bash.ts`: Bash uses `-e -o pipefail`, and a nonzero exit is returned as `isError`. These failures do not establish a Bash runtime defect.
+
+| Category | Count | Error numbers | Interpretation |
+| --- | ---: | --- | --- |
+| Expected initial bug reproduction | 1 | 1 | Assertion failed because `bar` was missing. This is useful diagnostic evidence. |
+| Incorrect generated test path | 1 | 2 | `/tmp/repro/repro/` duplicated the directory name. |
+| Output filter found no match | 3 | 3, 15, 16 | `grep` returned 1; filtered output obscured the underlying pytest result. |
+| Candidate patch caused collection errors | 4 | 4–7 | First attempted to hash `Mark`; next key included a dictionary. Both caused `TypeError`. |
+| No tests selected | 8 | 8–14, 17 | `-m bar` deselected the only test, pytest returned 5, and errexit stopped subsequent commands. |
+| Incorrect generated diagnostic code | 4 | 18–21 | Wrong constructor arguments, nonexistent module attribute, then integer IDs treated as Mark objects. |
+
+[The classification JSON](2026-09-28-tool-error-classification.json) preserves each error number, iteration, timestamp, message ID, exit code, phase, and observation. The model repeatedly piped tests through `grep`/`tail` rather than using the instructed `orbit-test` wrapper. Under `-e -o pipefail`, even `echo RC=$?` or `echo RC=${PIPESTATUS[0]}` after a failing command was skipped. This accounts for the repeated output-inspection failures; silently weakening Bash failure handling would hide test failures rather than repair the model's test strategy.
+
+### Patch damage and checkpoint fidelity
+
+The model successfully saved three edits at iterations 15, 21 and 25. All three preceded compaction. Read-back commands and collection traces confirm the workspace had changed. The final submitted patch uses `type(obj).__mro__` rather than the class object's MRO, so the custom `bar` selection still found no tests. Its deduplication key converts kwargs items to a tuple but still embeds potentially unhashable argument values. Official grading aborted collection with `TypeError: unhashable type: 'list'` in `_add`. The harness marked the target and all 79 PASS_TO_PASS tests failed; these are collection failures, not 79 independently observed assertion regressions.
+
+The completed checkpoint nevertheless says the edit was "never saved to disk" and "No fix was implemented or saved". Its cited successful edit message at iteration 15 contradicts that claim, and later successful edits were also present in the compressed source. The summary also records the incomplete MRO interpretation as a fact. This is a semantic fidelity defect in the generated summary even though JSON parsing and schema validation succeeded. The logs do not prove this defect caused the incorrect patch: the submitted edits already existed before compaction. It could impair recovery from the existing failure; that needs a controlled test.
+
+### Recommended next step after classification
+
+Prioritize a deterministic replay of this saved-edit/failed-test history to check whether compaction preserves the latest confirmed file state, failed test evidence and remaining work. Use the observed contradictory checkpoint as a regression fixture before changing summary generation. Then compare the real model on the same history and, after a localized improvement, rerun the 65% SWE-bench condition. Evaluate semantic fidelity separately from JSON validity and elapsed time. Keep Bash's nonzero exit reporting: the observed commands failed for identifiable target-code or diagnostic reasons.
+
+This follow-up inspected stored solver and official grading evidence and the current Bash source. It did not execute a new model run, modify runtime behavior, or claim a demonstrated cause from the before/after sequence. The result JSONL remains unchanged.
