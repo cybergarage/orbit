@@ -105,3 +105,11 @@ callbacks or let arbitrary nodes bypass persistence and cancellation.
 ## Context after a cancelled call
 
 Current Orbit implementation offers an explicit verified-nondispatch input policy. A new user turn can use a derived error-form response only when required evidence uniquely establishes that a missing call was not dispatched in a cancelled, settled Run. Canonical transcript, actual operations and cancellation remain unchanged. Input derivation is not operation permission, external reconciliation or Graph continuation. Synchronized provenance and retained evidence are required at model use, independently of budgeting. A failed evidence close retains cleanup responsibility; only confirmed settlement permits ownership release. See [the feature guide](../interrupted-context.md).
+
+Budgeted checkpoint inputs also include a deterministic tool-observation view
+separate from summary prose. Recognized origin requires runtime adapter identity
+and matching journal intent/result evidence. Saves acknowledge operations;
+commands report process status with unknown behavioral coverage and workspace
+revision. Neither changes permissions nor proves task completion. The view is
+reconstructed from canonical history rather than maintained as a second ledger.
+See [source-derived observations](../context-compaction.md#source-derived-tool-observations).

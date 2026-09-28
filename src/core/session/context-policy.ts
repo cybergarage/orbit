@@ -11,6 +11,7 @@ import type {VerifiedModelContext} from './verified-context.js'
 
 import {IncompleteModelResponseError} from '../errors/index.js'
 import {currentGraphVisit} from '../execution/graph-state.js'
+import {canonicalJSON} from '../execution/journal.js'
 import {Message, MessageType} from '../message/index.js'
 import {getToolCalls} from '../models/adapters/tools.js'
 import {resolveModelContextCapacity} from '../models/context-capacity.js'
@@ -29,6 +30,7 @@ import {
   validateToolGroups,
 } from './compaction.js'
 import {SessionContextBuilder} from './context-builder.js'
+import {collectToolObservations, observationMessage, selectObservationView} from './tool-observations.js'
 
 export interface ContextProfile {
   model: string
@@ -231,7 +233,45 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
   const sourceRevision = sourceDigest(all.map((value) => persistedContextMessage(value)))
   validateToolGroups(options.verifiedContext?.all ?? all)
   const context = options.verifiedContext ?? new SessionContextBuilder().build(session)
-  const ordinary = prepareRequest(options, [...options.prefix, ...context.messages])
+  const withObservations = async (messages: Message[], cut: number, ceiling: number, allowCompaction = false) => {
+    const full = await collectToolObservations(session, run, all.slice(0, cut))
+    if (full.records.length === 0 && full.unknownResults === 0) return prepareRequest(options, messages)
+    const view = selectObservationView(full)
+    const prepare = () =>
+      prepareRequest(options, [
+        ...messages.slice(0, options.prefix.length + 1),
+        observationMessage(view),
+        ...messages.slice(options.prefix.length + 1),
+      ])
+    let prepared = prepare()
+    while (
+      checkedEstimate(prepared, options).tokens > ceiling &&
+      view.records.some((record) => record.kind === 'command')
+    ) {
+      const index = view.records.findIndex((record) => record.kind === 'command')
+      view.records.splice(index, 1)
+      view.omittedRecords++
+      prepared = prepare()
+    }
+
+    if (!allowCompaction && checkedEstimate(prepared, options).tokens > ceiling)
+      throw new ContextBudgetError('observation-context-exceeds-budget')
+    diagnostic(options, 'context.observations.prepared', {tokens: checkedEstimate(prepared, options).tokens, view})
+    return {
+      ...prepared,
+      async invoke() {
+        const current = await collectToolObservations(session, run, all.slice(0, cut))
+        if (canonicalJSON(current) !== canonicalJSON(full)) throw new ContextBudgetError('observation-source-changed')
+        return prepared.invoke()
+      },
+    }
+  }
+
+  const activeCheckpoint = session.getCompaction()
+  const activeCut = activeCheckpoint ? all.findIndex((message) => message.id === activeCheckpoint.firstRetainedId) : 0
+  const ordinary = activeCheckpoint
+    ? await withObservations([...options.prefix, ...context.messages], activeCut, budget, true)
+    : prepareRequest(options, [...options.prefix, ...context.messages])
   const before = checkedEstimate(ordinary, options)
   if (!options.recoveryRequest && before.tokens < profile.trigger) return ordinary
   if (
@@ -303,6 +343,16 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
   const compactionStartedAt = performance.now()
   diagnostic(options, 'context.compaction.started', {beforeTokens: before.tokens})
   try {
+    const minimum = selectObservationView(await collectToolObservations(session, run, all.slice(0, cut)))
+    minimum.records = minimum.records.filter((record) => record.kind === 'file-write')
+    if (
+      minimum.records.length > 0 &&
+      checkedEstimate(
+        prepareRequest(options, [...options.prefix, observationMessage(minimum), ...retained, ...all.slice(cut)]),
+        options,
+      ).tokens > profile.target
+    )
+      throw new ContextBudgetError('observation-context-exceeds-budget')
     const {summary, usage} = await summarizeEligible(options, eligible, originals, previous?.summary ?? null)
     candidate = {
       afterTokens: 0,
@@ -332,13 +382,11 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
       id: candidate.id,
       timestamp: candidate.timestamp,
     })
-    next = prepareRequest(options, [
-      ...options.prefix,
-      summaryMessage,
-      ...(options.verifiedContext?.notices ?? []),
-      ...retained,
-      ...all.slice(cut),
-    ])
+    next = await withObservations(
+      [...options.prefix, summaryMessage, ...(options.verifiedContext?.notices ?? []), ...retained, ...all.slice(cut)],
+      cut,
+      profile.target,
+    )
     const after = checkedEstimate(next, options)
     const recoveryCeiling = options.recoveryRequest
       ? checkedEstimate({request: options.recoveryRequest}, options).tokens
@@ -354,7 +402,8 @@ export async function prepareSessionContext(options: PreparationOptions): Promis
       options.recoveryRequest ||
       hasPendingEffects(run) ||
       before.tokens > budget ||
-      (error instanceof ContextBudgetError && error.code === 'compaction-input-exceeds-budget') ||
+      (error instanceof ContextBudgetError &&
+        ['compaction-input-exceeds-budget', 'observation-context-exceeds-budget'].includes(error.code)) ||
       (model.getProvider() === 'ollama' && isOllamaTransportFailure(error))
     )
     diagnostic(

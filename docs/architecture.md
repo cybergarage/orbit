@@ -306,3 +306,15 @@ checkpoint is committed. Summary and retry consume the same Run budgets.
 For Ollama, a failed fetch with no response permits one retry of the same
 prepared generation or summary request, charged to the same Run.
 See [Input budgets](context-compaction.md).
+
+### Source-derived tool observations
+
+`tools/observation-provenance.ts` tracks built-in adapter identity in runtime
+memory and binds completed managed results to existing execution journal digests.
+`session/tool-observations.ts` validates the optional result-envelope provenance,
+correlates complete call groups and derives acknowledged save/command records.
+`session/context-policy.ts` projects a measured, bounded untrusted view beside
+checkpoint prose and revalidates evidence before invocation. Canonical transcript
+messages and journal records remain the source; no duplicate ledger is persisted.
+Legacy or mismatched provenance does not acquire recognized built-in semantics.
+See [the feature contract](context-compaction.md#source-derived-tool-observations).

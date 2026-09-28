@@ -267,3 +267,32 @@ can set contextWindow, outputReserve, safetyMargin and cancellation signal.
 The book E2E worker uses this helper and saves its resolved profile in
 `output/context-policy.json`. Existing applications still opt into budgeting;
 existing v1 transcripts require explicit migration as described above.
+
+## Source-derived tool observations
+
+When a budgeted request uses a checkpoint, Orbit adds a separate untrusted JSON
+view of acknowledged built-in edit/write and Bash results in the checkpoint's
+canonical prefix. The summary does not produce or modify these records. Runtime
+provenance binds the actual dispatched adapter, call group, Run and operation to
+existing journal intent/result digests. Imported or legacy results without a
+matching binding remain unrecognized; a custom tool named `edit` does not gain
+built-in semantics. No second persistent observation ledger or new transcript
+version is introduced.
+
+The view preserves latest successful saves and later failed saves by path,
+with source IDs and result digests. A saved-at-operation flag is not a claim
+about current contents: later shell commands or external edits can change them.
+Generic commands retain process exit, timeout and output truncation, with at most
+1,024 characters each of stdout and stderr. Their tested revision and behavioral
+coverage remain unknown. A request without an acknowledgement is not a confirmed
+operation and does not authorize replay.
+
+All projected data counts toward the prepared input budget. Up to three recent
+prefix commands are included; oldest commands are omitted first when required,
+with explicit counts. Required latest-save records and protected context are
+never silently removed to make input fit. An infeasible mandatory projection
+refuses compaction/preparation with `observation-context-exceeds-budget`.
+`context.observations.prepared` diagnostics expose the deterministic view,
+unknown-result and omission counts, and total estimated request tokens. Model
+answers may still misinterpret the records; evaluators should inspect these
+records directly. Persistent evidence is rechecked before provider invocation.

@@ -86,6 +86,7 @@ export async function collectToolObservations(
         !recognized ||
         provenance.version !== 1 ||
         calls.length !== 1 ||
+        canonicalJSON(calls[0].input) !== canonicalJSON(payload.input) ||
         completed.has(key) ||
         provenance.groupId !== parent?.id ||
         provenance.callId !== payload.toolCallId ||
@@ -93,6 +94,8 @@ export async function collectToolObservations(
         entry?.type !== 'message' ||
         entry.turnId !== provenance.runId ||
         intents.length !== 1 ||
+        intents[0].data.effect !== (payload.name === 'bash' ? 'command' : 'write') ||
+        intents[0].data.variant !== 'tool-call' ||
         results.length !== 1 ||
         results[0].sequence <= intents[0].sequence ||
         provenance.inputDigest !== run.journal.digest(payload.input) ||

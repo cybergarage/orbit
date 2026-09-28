@@ -2,7 +2,7 @@
 status: accepted
 proposed-date: 2026-09-29
 decision-date: 2026-09-29
-implementation-status: not-started
+implementation-status: in-progress
 implementation-completed-date: null
 implementation-commits: []
 superseded-by: []
@@ -188,7 +188,7 @@ These comparisons inform design; they do not prove Orbit's safety or performance
 
 ## Implementation and Confirmation
 
-Core implementation is **not started**. The author explicitly approved this ADR
+Core implementation is **in progress**. The author explicitly approved this ADR
 and requested implementation with staged commits on 2026-09-29.
 The evaluation-only prototype and result commits are not ADR implementation
 commits. Implement after acceptance in the following phases, committing each:

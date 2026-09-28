@@ -232,3 +232,11 @@ Original user messages from an active Run that remain verbatim when older tool
 rounds are summarized. They remain distinct from an untrusted checkpoint summary
 and from tool-operation permission. Current implementation uses validated user
 references in projection-version-3 checkpoints; see [Input budgets](../context-compaction.md).
+
+## Tool observation
+
+A source-derived record of an acknowledged built-in operation, recognized through
+runtime provenance and journal evidence. It preserves saved-at-operation or
+command-process facts independently of a model summary. It is not current
+workspace attestation, behavioral verification or operation authorization.
+See [Input budgets and compaction](../context-compaction.md#source-derived-tool-observations).
