@@ -267,18 +267,3 @@ can set contextWindow, outputReserve, safetyMargin and cancellation signal.
 The book E2E worker uses this helper and saves its resolved profile in
 `output/context-policy.json`. Existing applications still opt into budgeting;
 existing v1 transcripts require explicit migration as described above.
-
-## Test evidence in summaries
-
-The summarizer is instructed to distinguish observed command outcomes from
-verified behavior. A passing exit code or test name alone does not prove the
-reported feature; an empty passing test demonstrates execution only. When the
-source does not show the relevant assertions being exercised, the prompt asks
-for the observed outcome to be retained and behavioral verification to remain
-pending. This also applies to unsupported claims inherited from earlier
-checkpoints. A final review instruction after the serialized source asks the
-model to reconcile these claims against raw tool results before returning JSON.
-These instructions guide model output; structural/evidence-ID
-validation does not independently prove semantic truth. The fixed-case
-[semantic diagnostic](e2e-evaluation.md#fixed-context-summary-semantic-diagnostic)
-checks the observed failure separately.
