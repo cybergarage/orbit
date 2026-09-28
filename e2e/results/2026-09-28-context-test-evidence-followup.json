@@ -395,6 +395,416 @@
       },
       "fixtureSha256": "d8aa000761611e781edfcecfe32821a65d2eff0deef6c3e0b91a6370ba2e874b",
       "manualReview": "Candidate removes the recognized unsupported-success claim but omits later passing/deselected runs and leaves an earlier collection error as its only test. Pending behavioral verification is confused with no test having run. This is not accepted as a faithful summary. The grader remains unchanged."
+    },
+    {
+      "rows": [
+        {
+          "condition": "baseline",
+          "elapsedMs": 112582,
+          "doneReason": "stop",
+          "inputTokens": 18587,
+          "outputTokens": 1473,
+          "promptSha256": "d9221990942073d87c367b34e98c4fde739bdb61b02ef3a0d4c2b01882b8be71",
+          "jsonValid": true,
+          "semanticGrade": {
+            "status": "fail",
+            "checks": {
+              "savedEdit": {
+                "status": "pass",
+                "reason": "Saved edit must be cited and retained without contradictory unsaved claims.",
+                "items": [
+                  {
+                    "text": "Edit applied to /workspace/src/_pytest/mark/structures.py: get_unpacked_marks() now merges marks across the object's MRO with a hashable dedup key (sorted kwargs items), using the object's own pytestmark first. The edit was confirmed saved on disk (bytes 21508).",
+                    "sourceIds": [
+                      "01a0e6c2-c1df-745a-89cc-d0f1eed79d0f",
+                      "01a0e6c2-3eca-74b1-93dc-a0f470bf7928"
+                    ]
+                  }
+                ]
+              },
+              "latestTestAndRemainingWork": {
+                "status": "pass",
+                "reason": "The latest bar-only selection ran zero tests; retain that observation and remaining verification.",
+                "items": [
+                  {
+                    "text": "Reproduction (TestDings(Foo, Bar) with foo/bar marks) passed with both markers; -m foo selected the test.",
+                    "target": "test_markers_check2.py (external /tmp/repro)",
+                    "revision": null,
+                    "outcome": "passed",
+                    "sourceIds": [
+                      "01a0e6c2-e97d-73dd-81cd-83473f823155",
+                      "01a0e6c3-216c-70b4-ae6c-3f4e48f69822"
+                    ]
+                  },
+                  {
+                    "text": "-m bar only: TestDings::test_dings was deselected, so the fix did not make bar a selectable/collecting marker on the inherited class.",
+                    "target": "test_markers_check2.py (external /tmp/repro)",
+                    "revision": null,
+                    "outcome": "failed",
+                    "sourceIds": [
+                      "01a0e6c2-e97d-73dd-81cd-83473f823155",
+                      "01a0e6c3-21fe-7029-acab-4ce7a0bcdfdf"
+                    ]
+                  },
+                  {
+                    "text": "Verify -m bar and -m 'foo and bar' behavior on a class that itself carries both markers, and run the affected existing mark test module to ensure no regression.",
+                    "sourceIds": [
+                      "01a0e6c3-21fe-7029-acab-4ce7a0bcdfdf",
+                      "01a0e6c0-9180-72ce-b812-4d2742e6d7b9"
+                    ]
+                  }
+                ]
+              },
+              "noUnsupportedSuccess": {
+                "status": "fail",
+                "reason": "The fixed public test has no assertion proving both markers; process success is insufficient.",
+                "items": [
+                  {
+                    "text": "Reproduction (TestDings(Foo, Bar) with foo/bar marks) passed with both markers; -m foo selected the test.",
+                    "target": "test_markers_check2.py (external /tmp/repro)",
+                    "revision": null,
+                    "outcome": "passed",
+                    "sourceIds": [
+                      "01a0e6c2-e97d-73dd-81cd-83473f823155",
+                      "01a0e6c3-216c-70b4-ae6c-3f4e48f69822"
+                    ]
+                  }
+                ]
+              }
+            },
+            "scope": "fixed-work-state-English-claims-v1"
+          },
+          "unknownSourceIds": [],
+          "generatedSummary": {
+            "version": 1,
+            "goals": [
+              {
+                "text": "Fix pytest losing inherited @pytest.mark on a class inheriting from two base classes (Foo, Bar) each with a distinct marker, so both markers are collected.",
+                "sourceIds": [
+                  "01a0e6bf-0f1c-7136-8a3f-2c6f10b1667a",
+                  "01a0e6bf-4ad2-76af-928a-b5a689c6be97"
+                ]
+              },
+              {
+                "text": "Make the MRO-merging dedup key in get_unpacked_marks() hashable so it does not raise TypeError on unhashable Mark.",
+                "sourceIds": [
+                  "01a0e6c1-9f1d-707b-8b96-e52ad8b951b7",
+                  "01a0e6c1-9f27-77cc-8b0d-5263bb76acdb"
+                ]
+              }
+            ],
+            "facts": [
+              {
+                "text": "Bug: class inheriting from two base classes each with a distinct @pytest.mark loses one marker because pytestmark is resolved via MRO (last wins).",
+                "sourceIds": [
+                  "01a0e6bf-0f1c-7136-8a3f-2c6f10b1667a",
+                  "01a0e6c0-7aed-7128-aae5-f5daa3854be7"
+                ]
+              },
+              {
+                "text": "get_unpacked_marks() reads obj.pytestmark via getattr (follows MRO) and populates own_markers; Mark is unhashable (kwargs is a dict).",
+                "sourceIds": [
+                  "01a0e6bf-4adf-766d-94b3-ed0857a35e63",
+                  "01a0e6bf-746d-75a3-818a-09288955c826",
+                  "01a0e6c1-89c5-7119-9900-85adb2ddb74a"
+                ]
+              },
+              {
+                "text": "Real pytest collection of TestDings(Foo, Bar) exposed only the foo mark; -m bar selected nothing, confirming the bug.",
+                "sourceIds": [
+                  "01a0e6c0-7aed-7128-aae5-f5daa3854be7",
+                  "01a0e6c0-9176-751a-8a61-82f5e7590c01"
+                ]
+              },
+              {
+                "text": "Existing tests test_mark_decorator_baseclasses_merged and test_mark_decorator_subclass_does_not_propagate_to_base must not be broken by the fix.",
+                "sourceIds": [
+                  "01a0e6c0-9180-72ce-b812-4d2742e6d7b9",
+                  "01a0e6c0-b6e1-76a8-99c3-b04e2786feda"
+                ]
+              }
+            ],
+            "changedPaths": [
+              {
+                "text": "Edit applied to /workspace/src/_pytest/mark/structures.py: get_unpacked_marks() now merges marks across the object's MRO with a hashable dedup key (sorted kwargs items), using the object's own pytestmark first. The edit was confirmed saved on disk (bytes 21508).",
+                "sourceIds": [
+                  "01a0e6c2-c1df-745a-89cc-d0f1eed79d0f",
+                  "01a0e6c2-3eca-74b1-93dc-a0f470bf7928"
+                ]
+              }
+            ],
+            "tests": [
+              {
+                "text": "Reproduction (TestDings(Foo, Bar) with foo/bar marks) passed with both markers; -m foo selected the test.",
+                "target": "test_markers_check2.py (external /tmp/repro)",
+                "revision": null,
+                "outcome": "passed",
+                "sourceIds": [
+                  "01a0e6c2-e97d-73dd-81cd-83473f823155",
+                  "01a0e6c3-216c-70b4-ae6c-3f4e48f69822"
+                ]
+              },
+              {
+                "text": "-m bar only: TestDings::test_dings was deselected, so the fix did not make bar a selectable/collecting marker on the inherited class.",
+                "target": "test_markers_check2.py (external /tmp/repro)",
+                "revision": null,
+                "outcome": "failed",
+                "sourceIds": [
+                  "01a0e6c2-e97d-73dd-81cd-83473f823155",
+                  "01a0e6c3-21fe-7029-acab-4ce7a0bcdfdf"
+                ]
+              }
+            ],
+            "unfinished": [
+              {
+                "text": "Verify -m bar and -m 'foo and bar' behavior on a class that itself carries both markers, and run the affected existing mark test module to ensure no regression.",
+                "sourceIds": [
+                  "01a0e6c3-21fe-7029-acab-4ce7a0bcdfdf",
+                  "01a0e6c0-9180-72ce-b812-4d2742e6d7b9"
+                ]
+              },
+              {
+                "text": "Add a focused regression test in the pytest suite for MRO-merged markers and confirm existing base/subclass marker tests still pass.",
+                "sourceIds": [
+                  "01a0e6c0-9180-72ce-b812-4d2742e6d7b9",
+                  "01a0e6c0-b6e1-76a8-99c3-b04e2786feda"
+                ]
+              }
+            ],
+            "uncertainties": [
+              {
+                "text": "Whether merging marks across the MRO is the minimal/correct fix and whether it risks marker duplication or ordering regressions.",
+                "sourceIds": [
+                  "01a0e6bf-746d-75a3-818a-09288955c826",
+                  "01a0e6c0-9180-72ce-b812-4d2742e6d7b9"
+                ]
+              },
+              {
+                "text": "Whether the intended fix should also change own_markers population in python.py or only get_unpacked_marks().",
+                "sourceIds": [
+                  "01a0e6bf-881e-707d-b38c-39eb4ea84ca5",
+                  "01a0e6bf-7479-75f8-a5a6-eb3d1d2d5149"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "condition": "candidate",
+          "elapsedMs": 124339,
+          "doneReason": "stop",
+          "inputTokens": 18719,
+          "outputTokens": 1709,
+          "promptSha256": "c9dbd835d913af76921cf53e66683660318721b3253ddb4513977318b144c435",
+          "jsonValid": true,
+          "semanticGrade": {
+            "status": "fail",
+            "checks": {
+              "savedEdit": {
+                "status": "fail",
+                "reason": "Saved edit must be cited and retained without contradictory unsaved claims.",
+                "items": [
+                  {
+                    "text": "Applied (unsaved) MRO-merging edit to get_unpacked_marks() in src/_pytest/mark/structures.py; first version used a Set[Mark] dedup key which raised TypeError because Mark is unhashable, then updated to a hashable key of (name, args, sorted kwargs items).",
+                    "sourceIds": [
+                      "01a0e6c1-4960-77d9-93cb-f493d2fa8252",
+                      "01a0e6c2-c1df-745a-89cc-d0f1eed79d0f"
+                    ]
+                  },
+                  {
+                    "text": "External reproduction (TestDings(Foo, Bar) with foo/bar marks) failed with the first unsaved edit because TestDings.pytestmark returned only ['foo']; the bar assertion failed.",
+                    "target": "test_markers_check.py (external /tmp/repro)",
+                    "revision": null,
+                    "outcome": "failed",
+                    "sourceIds": [
+                      "01a0e6c0-2232-73bc-8ccd-46633c0d782b"
+                    ]
+                  },
+                  {
+                    "text": "External reproduction collected TestDings::test_dings; with the first unsaved edit it raised TypeError: unhashable type: 'dict' during collection. After the hashable-key fix: no-marker run passed, -m foo passed, and -m bar alone reported 1 deselected (test matched -m bar but was deselected by the command's own -m bar filter).",
+                    "target": "test_markers_check2.py (external /tmp/repro)",
+                    "revision": null,
+                    "outcome": "failed",
+                    "sourceIds": [
+                      "01a0e6c1-89c5-7119-9900-85adb2ddb74a",
+                      "01a0e6c2-e97d-73dd-81cd-83473f823155",
+                      "01a0e6c3-21fe-7029-acab-4ce7a0bcdfdf"
+                    ]
+                  },
+                  {
+                    "text": "The fix is applied but not saved to disk (only edit-tool outputs confirm the in-memory change); a real pytest-suite regression test remains, plus verifying existing merged-propagation tests still pass.",
+                    "sourceIds": [
+                      "01a0e6c2-e97d-73dd-81cd-83473f823155",
+                      "01a0e6c3-216c-70b4-ae6c-3f4e48f69822"
+                    ]
+                  }
+                ]
+              },
+              "latestTestAndRemainingWork": {
+                "status": "fail",
+                "reason": "The latest bar-only selection ran zero tests; retain that observation and remaining verification.",
+                "items": [
+                  {
+                    "text": "External reproduction collected TestDings::test_dings; with the first unsaved edit it raised TypeError: unhashable type: 'dict' during collection. After the hashable-key fix: no-marker run passed, -m foo passed, and -m bar alone reported 1 deselected (test matched -m bar but was deselected by the command's own -m bar filter).",
+                    "target": "test_markers_check2.py (external /tmp/repro)",
+                    "revision": null,
+                    "outcome": "failed",
+                    "sourceIds": [
+                      "01a0e6c1-89c5-7119-9900-85adb2ddb74a",
+                      "01a0e6c2-e97d-73dd-81cd-83473f823155",
+                      "01a0e6c3-21fe-7029-acab-4ce7a0bcdfdf"
+                    ]
+                  }
+                ]
+              },
+              "noUnsupportedSuccess": {
+                "status": "pass",
+                "reason": "The fixed public test has no assertion proving both markers; process success is insufficient.",
+                "items": []
+              }
+            },
+            "scope": "fixed-work-state-English-claims-v1"
+          },
+          "unknownSourceIds": [],
+          "generatedSummary": {
+            "version": 1,
+            "goals": [
+              {
+                "text": "Fix missing pytest marks on a class inheriting from two base classes each with a distinct @pytest.mark, so both inherited markers are collected instead of only the first per MRO.",
+                "sourceIds": [
+                  "01a0e6bf-0f1c-7136-8a3f-2c6f10b1667a",
+                  "01a0e6bf-4ad2-76af-928a-b5a689c6be97"
+                ]
+              },
+              {
+                "text": "Fix the TypeError introduced by MRO-merging in get_unpacked_marks by making the dedup key hashable (kwargs is an unhashable dict).",
+                "sourceIds": [
+                  "01a0e6c1-9f1d-707b-8b96-e52ad8b951b7",
+                  "01a0e6c1-9f27-77cc-8b0d-5263bb76acdb"
+                ]
+              }
+            ],
+            "facts": [
+              {
+                "text": "Bug: a class inheriting from two base classes Foo and Bar, each with a distinct @pytest.mark, loses one marker because pytestmark is resolved via MRO (last wins).",
+                "sourceIds": [
+                  "01a0e6bf-0f1c-7136-8a3f-2c6f10b1667a",
+                  "01a0e6c0-7aed-7128-aae5-f5daa3854be7"
+                ]
+              },
+              {
+                "text": "get_unpacked_marks() reads obj.pytestmark via getattr (follows MRO, collapses overlapping base marks) and populates own_markers; Mark is unhashable (kwargs is a dict).",
+                "sourceIds": [
+                  "01a0e6bf-4adf-766d-94b3-ed0857a35e63",
+                  "01a0e6bf-746d-75a3-818a-09288955c826",
+                  "01a0e6c1-89c5-7119-9900-85adb2ddb74a"
+                ]
+              },
+              {
+                "text": "Existing tests test_mark_decorator_baseclasses_merged and test_mark_decorator_subclass_does_not_propagate_to_base must not be broken by the fix.",
+                "sourceIds": [
+                  "01a0e6c0-9180-72ce-b812-4d2742e6d7b9",
+                  "01a0e6c0-b6e1-76a8-99c3-b04e2786feda"
+                ]
+              }
+            ],
+            "changedPaths": [
+              {
+                "text": "Applied (unsaved) MRO-merging edit to get_unpacked_marks() in src/_pytest/mark/structures.py; first version used a Set[Mark] dedup key which raised TypeError because Mark is unhashable, then updated to a hashable key of (name, args, sorted kwargs items).",
+                "sourceIds": [
+                  "01a0e6c1-4960-77d9-93cb-f493d2fa8252",
+                  "01a0e6c2-c1df-745a-89cc-d0f1eed79d0f"
+                ]
+              }
+            ],
+            "tests": [
+              {
+                "text": "External reproduction (TestDings(Foo, Bar) with foo/bar marks) failed with the first unsaved edit because TestDings.pytestmark returned only ['foo']; the bar assertion failed.",
+                "target": "test_markers_check.py (external /tmp/repro)",
+                "revision": null,
+                "outcome": "failed",
+                "sourceIds": [
+                  "01a0e6c0-2232-73bc-8ccd-46633c0d782b"
+                ]
+              },
+              {
+                "text": "External reproduction collected TestDings::test_dings; with the first unsaved edit it raised TypeError: unhashable type: 'dict' during collection. After the hashable-key fix: no-marker run passed, -m foo passed, and -m bar alone reported 1 deselected (test matched -m bar but was deselected by the command's own -m bar filter).",
+                "target": "test_markers_check2.py (external /tmp/repro)",
+                "revision": null,
+                "outcome": "failed",
+                "sourceIds": [
+                  "01a0e6c1-89c5-7119-9900-85adb2ddb74a",
+                  "01a0e6c2-e97d-73dd-81cd-83473f823155",
+                  "01a0e6c3-21fe-7029-acab-4ce7a0bcdfdf"
+                ]
+              }
+            ],
+            "unfinished": [
+              {
+                "text": "The fix is applied but not saved to disk (only edit-tool outputs confirm the in-memory change); a real pytest-suite regression test remains, plus verifying existing merged-propagation tests still pass.",
+                "sourceIds": [
+                  "01a0e6c2-e97d-73dd-81cd-83473f823155",
+                  "01a0e6c3-216c-70b4-ae6c-3f4e48f69822"
+                ]
+              },
+              {
+                "text": "Verify the fix does not break test_mark_decorator_baseclasses_merged and test_mark_decorator_subclass_does_not_propagate_to_base, and confirm -m 'foo and bar' selects the test.",
+                "sourceIds": [
+                  "01a0e6c0-9180-72ce-b812-4d2742e6d7b9",
+                  "01a0e6c0-b6e1-76a8-99c3-b04e2786feda"
+                ]
+              }
+            ],
+            "uncertainties": [
+              {
+                "text": "Whether merging marks across the MRO in get_unpacked_marks() is the minimal, correct fix, or whether it risks marker duplication/ordering regressions for existing tests.",
+                "sourceIds": [
+                  "01a0e6bf-746d-75a3-818a-09288955c826",
+                  "01a0e6c0-9180-72ce-b812-4d2742e6d7b9"
+                ]
+              },
+              {
+                "text": "Whether the intended fix should also change own_markers population in python.py or only get_unpacked_marks().",
+                "sourceIds": [
+                  "01a0e6bf-881e-707d-b38c-39eb4ea84ca5",
+                  "01a0e6bf-7479-75f8-a5a6-eb3d1d2d5149"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "sourceSha256": "71465512afd9a8aa52d09a1b730879152fbf97f1e442dd48d9fee0c6d7a8b791",
+      "baselineRef": "1a6953598808318401443574a2fcab1661f268b5",
+      "model": {
+        "name": "ornith-1.5:9b",
+        "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": [
+            "qwen35"
+          ],
+          "parameter_size": "9.0B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 4096
+        }
+      },
+      "ollama": {
+        "version": "0.34.4"
+      },
+      "options": {
+        "num_ctx": 32768,
+        "num_predict": 2048,
+        "seed": 42,
+        "temperature": 0.6,
+        "top_p": 0.95
+      },
+      "fixtureSha256": "d8aa000761611e781edfcecfe32821a65d2eff0deef6c3e0b91a6370ba2e874b",
+      "candidateRef": "598f2b836b4ddd4692444c7f7465fc63f75fedb3",
+      "manualReview": "Rejected: no recognized unsupported behavioral-success claim, but saved edits are again described as unsaved and remaining bar-selection verification lacks the latest source evidence. It also repeats an unsupported explanation of deselection."
     }
   ]
 }

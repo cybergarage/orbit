@@ -9,3 +9,9 @@ The same committed source fixture and unchanged grader were replayed once per co
 Source review does not accept the candidate as faithful: it removed the recognized unsupported-success statement, but omitted later passing/deselected test runs and left an earlier collection error as the only test. It also confused incomplete behavioral verification with no test having run. The grader was not loosened to turn this into pass. Original outputs, exact prompt hashes, fixture/source hashes, model digest and evidence are preserved in [JSON](2026-09-28-context-test-evidence-followup.json). Requests/responses remain in ignored `tmp/e2e/context-test-evidence-20260928/`.
 
 This is a fixed-history diagnostic, not a SWE-bench solve or a general semantic-accuracy estimate. The next iteration must preserve actual observations even when assertion coverage is unknown.
+
+## Second attempt and budget correction
+
+Adding more preservation instructions made one narrow and full-suite budget test fail before any model request. The 3,423-character instruction exceeded the synthetic 8,000-character window. This draft was not committed. Instructions were consolidated to 2,766 characters without changing budgets or the grader; commit `598f2b8` passed 47 narrow tests, 11 semantic tests, headers/build and 1,038 full-suite tests.
+
+The second live comparison still rejected the candidate: baseline `1a69535` failed unsupported success again (112.6 s); candidate `598f2b8` passed that check but failed saved-edit and latest-test/remaining-work checks (124.3 s). It called confirmed saved edits unsaved and repeated a misleading explanation of deselection. Both complete JSON outputs had valid source IDs. This candidate is not treated as a successful overall improvement. The next trial restores the earlier main instructions and adds a concise review after the serialized source, so raw observations can override the stale checkpoint before the model returns its draft.
