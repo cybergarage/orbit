@@ -125,7 +125,9 @@
     "e2e:coding-workflows:build": "docker build -f e2e/coding-workflows/Dockerfile --target agent -t orbit-e2e:coding-workflows-agent . && docker build -f e2e/coding-workflows/Dockerfile --target grader -t orbit-e2e:coding-workflows-grader .",
     "test:e2e:coding-workflows": "mocha --no-config --no-package --forbid-only e2e/coding-workflows/coding-workflows.e2e.mjs",
     "test:e2e:coding-workflows:unit": "mocha --no-config --no-package --forbid-only e2e/coding-workflows/cases.test.mjs",
-    "test:e2e:coding-workflows:graders": "mocha --no-config --no-package --forbid-only e2e/coding-workflows/graders.e2e.mjs"
+    "test:e2e:coding-workflows:graders": "mocha --no-config --no-package --forbid-only e2e/coding-workflows/graders.e2e.mjs",
+    "test:e2e:observations": "python3 -B -m unittest discover -s e2e -p context_observations_test.py",
+    "eval:context-observations": "python3 -B e2e/context-observations-replay.py"
   },
   "types": "dist/index.d.ts",
   "prettier": "@oclif/prettier-config",

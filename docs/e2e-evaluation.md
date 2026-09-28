@@ -537,3 +537,39 @@ The grader cannot prove the correctness of every statement. Review ambiguous
 claims against original tool outputs; compare fixed inputs/settings and retain
 failed attempts. Repeated runs overwrite this default output directory; pass
 `-- --output tmp/e2e/<unique-run>` to preserve each run.
+
+## Structured observation prototype
+
+`npm run test:e2e:observations` validates an evaluation-only extraction and
+consumer-grading path. `npm run eval:context-observations -- --output tmp/e2e/<unique-run>` compares the same faulty checkpoint with and without a
+bounded source-derived observation view, three repetitions per condition by
+default. It is a downstream interpretation diagnostic, not a new summarizer or
+SWE-bench solver. The baseline lacks observations that the checkpoint omitted;
+this deliberately tests information preservation, not equal-size prompts.
+
+Only results linked to a specific parent message and call ID become observations;
+reused call IDs cannot match results from another call group. The trace must be
+known to originate from the built-in tools; names alone do not authenticate a
+custom or MCP tool. Confirmed writes retain result paths, source IDs and ordering.
+The view retains the latest result and latest successful write per path, plus the
+last three commands. It reports omissions and refuses an oversized view instead
+of silently truncating it. A write is saved at that operation, not guaranteed to
+be the current file state. Shell changes and external changes remain unknown.
+The original ledger preserves all observed operations; cancelled requests without
+results produce none. Each source is extracted independently, without global state.
+
+Arbitrary Bash stdout remains quoted data, not a parsed test verdict. The optional
+`orbit-test --pytest-junit -- <pytest argv>` captures JUnit testcase counts and a
+report hash outside the target workspace while preserving the command exit code.
+Counts do not prove assertion coverage; that field remains `unknown`. A zero-test
+report plus a nonzero command exit is not a pass. Deselection totals are not
+provided by this adapter. Missing, inconsistent or oversized reports are recorded
+as unavailable, without replacing a timeout/failure exit code. The flag applies
+only to the evaluation runner; it changes no Orbit public tool contract.
+
+The consumer model receives the faulty checkpoint and, for the added-observation
+condition, only the deterministic view. Expected values and grading rules are
+never supplied to it. The fixed consumer grader checks the observed saved path,
+latest bar-only selection, and absence of an unsupported verified-behavior claim.
+It checks source IDs and completion separately. This is still one English history,
+not a general semantic truth verifier, integrity proof or release benchmark.
