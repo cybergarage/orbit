@@ -1,0 +1,93 @@
+{
+  "date": "2026-09-28",
+  "dataset": "princeton-nlp/SWE-bench_Verified",
+  "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+  "split": "test",
+  "instanceId": "pytest-dev__pytest-10356",
+  "baseCommit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1",
+  "harness": {
+    "version": "4.1.0",
+    "commit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57"
+  },
+  "model": {
+    "name": "ornith-1.5:9b",
+    "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+    "quantization": "Q4_K_M",
+    "ollama": "0.34.3",
+    "options": {
+      "num_ctx": 32768,
+      "num_predict": 4096,
+      "seed": 42,
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "think": false
+    }
+  },
+  "runs": [
+    {
+      "triggerRatio": 0.8,
+      "orbitCommit": "55d74e35d52bf0e19b821f9eb31c0a3185657dcd",
+      "prediction": "2026-09-28-context-json-80-predictions.jsonl",
+      "elapsedMs": 935759,
+      "patchBytes": 0,
+      "summaryAttempts": 5,
+      "summaryFailures": 1,
+      "summaryValidationFailures": 0,
+      "summaryWallMs": 477546,
+      "compactionsCompleted": 0,
+      "modelCallsCompleted": 49,
+      "usageComplete": false,
+      "agentStatus": "timeout",
+      "official": "empty-patch-skipped-no-tests"
+    },
+    {
+      "triggerRatio": 0.65,
+      "orbitCommit": "55d74e35d52bf0e19b821f9eb31c0a3185657dcd",
+      "prediction": "2026-09-28-context-json-65-predictions.jsonl",
+      "elapsedMs": 935743,
+      "patchBytes": 1361,
+      "summaryAttempts": 6,
+      "summaryFailures": 1,
+      "summaryValidationFailures": 0,
+      "summaryWallMs": 675099,
+      "compactionsCompleted": 0,
+      "modelCallsCompleted": 38,
+      "usageComplete": false,
+      "agentStatus": "timeout",
+      "official": "unresolved-target-failed-passToPass-79-of-79"
+    },
+    {
+      "triggerRatio": 0.65,
+      "orbitCommit": "02ff86ad0b0883f592df277a2c3059383f6573ef",
+      "prediction": "2026-09-28-context-batched-65-predictions.jsonl",
+      "elapsedMs": 902865,
+      "patchBytes": 1675,
+      "summaryAttempts": 5,
+      "summaryFailures": 0,
+      "summaryValidationFailures": 0,
+      "summaryWallMs": 500744,
+      "compactionsCompleted": 1,
+      "compactedTokens": {
+        "before": 17842,
+        "after": 4588
+      },
+      "modelCallsCompleted": 49,
+      "toolErrors": 21,
+      "repeatedFailedCalls": 3,
+      "usage": {
+        "inputTokens": 459114,
+        "outputTokens": 16955,
+        "complete": false
+      },
+      "agentStatus": "runtime-error-budget-exceeded",
+      "official": "unresolved-target-failed-passToPass-0-of-79"
+    }
+  ],
+  "environment": {
+    "host": "macOS ARM64",
+    "dockerMemoryBytes": 4107141120,
+    "graderImage": "sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+    "solverDeadlineMs": 900000
+  },
+  "conclusion": "JSON constraint avoided invalid JSON/summary validation failures. Quarter-sized batches allowed one compaction to complete in the latest 65% run, but 900-second solver deadline remained insufficient and the generated patch failed target and baseline tests. Diagnostic sample only."
+}
