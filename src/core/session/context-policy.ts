@@ -561,18 +561,18 @@ async function summarizeEligible(
   }
 
   const oneShot = summaryRequest(options, eligible, previous, {allowedIds: originalIds})
-  let splitAfterLength = false
   if (checkedEstimate(oneShot, options).tokens <= inputLimit) {
     try {
       return await invokeSource(oneShot, eligible, previous, originalIds, 'full')
     } catch (error) {
       if (!isSummaryLengthError(error)) throw error
-      splitAfterLength = true
     }
   }
 
   const groups = completeSummaryGroups(eligible)
-  let maxBatchGroups = splitAfterLength ? Math.max(1, Math.floor(groups.length / 2)) : groups.length
+  // The input budget does not predict summary output length. Start with several
+  // small batches instead of spending a full generation on an oversized summary.
+  let maxBatchGroups = Math.max(1, Math.ceil(groups.length / 4))
   let cursor = 0
   let accumulated = previous
   let usage: Record<string, number> | undefined

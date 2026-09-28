@@ -387,6 +387,28 @@ describe('budgeted context preparation', () => {
       ).to.be.greaterThan(1)
     })
 
+  it('starts output-limited history in quarter-sized complete-message batches', async () => {
+    const session = new Session()
+    session.appendMessages(
+      Array.from({length: 4}, (_, index) => [
+        new Message(MessageType.User, {content: `Investigate case ${index} ` + 'u'.repeat(600)}),
+        new Message(MessageType.Assistant, {content: `Evidence for case ${index} ` + 'a'.repeat(600)}),
+      ]).flat(),
+    )
+    const model = fixtureModel('unused', 'length-sensitive')
+    const {result} = await execute(session, model)
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    const summaries = model.requests.filter((request) =>
+      String((request.messages as unknown[])[0]).startsWith('Summarize'),
+    )
+    const sources = summaries.map((request) =>
+      JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1]) as {messages: unknown[]},
+    )
+    expect(sources[0].messages).to.have.length(8)
+    expect(sources[1].messages).to.have.length(8)
+    expect(sources[2].messages.length).to.be.at.most(2)
+  })
+
   it('expands a truncated full summary before splitting its source into batches', async () => {
     const session = new Session()
     const id = oldConversation(session)
