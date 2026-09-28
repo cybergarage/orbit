@@ -509,3 +509,29 @@ configured `num_ctx`, recording `output/context-policy.json`. Completed tool
 rounds can be compacted during a single long task; original user inputs and the
 newest complete round remain verbatim. This is independent of unlimited Run
 budgets and does not increase the selected Ollama context window.
+
+## Fixed context-summary semantic diagnostic
+
+`npm run test:e2e:summary` tests the independent Python grader without model calls.
+`npm run eval:context-summary` replays the committed public solver-history fixture
+against localhost Ollama (`ornith-1.5:9b`), comparing the prompt at `4eb5701`
+with the current commit. Use `-- --candidate-ref <commit>` to pin the candidate.
+This diagnostic does not run a SWE-bench solver or official harness.
+
+The fixture separates `source` from grader-only `expected` values. Only source
+messages, a previous untrusted checkpoint and source IDs enter the model prompt;
+expected answers and grading rules do not. The grader checks retained saved
+edits, the latest bar-only selection failure and remaining verification, and
+unsupported claims that an empty passing test proved both markers. These are
+conservative English claim checks for this one scenario, not a general truth
+verifier. Explicit contradictions and omitted required evidence fail;
+unrecognized or negated wording requires review. A `needs-review` result never
+counts as a pass. Quotes and negation are deliberately reviewed conservatively.
+
+The output directory records requests/responses, source and prompt hashes,
+model metadata, token/timing metrics and `semanticGrade` per condition. Shape,
+source-ID validity, output truncation and semantic results remain separate.
+The grader cannot prove the correctness of every statement. Review ambiguous
+claims against original tool outputs; compare fixed inputs/settings and retain
+failed attempts. Repeated runs overwrite this default output directory; pass
+`-- --output tmp/e2e/<unique-run>` to preserve each run.

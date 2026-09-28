@@ -118,6 +118,8 @@
     "test:e2e:unit": "mocha --no-config --no-package --forbid-only e2e/host.test.mjs",
     "e2e:build": "docker build -f e2e/Dockerfile -t orbit-e2e:local .",
     "eval:swebench": "node e2e/swebench.mjs",
+    "test:e2e:summary": "python3 -B -m unittest discover -s e2e -p context_summary_semantics_test.py",
+    "eval:context-summary": "python3 -B e2e/context-summary-work-state-replay.py --fixture e2e/fixtures/context-work-state.json --output tmp/e2e/context-summary-semantic",
     "test:e2e:verified-checks": "mocha --no-config --no-package --forbid-only e2e/verified-checks.e2e.mjs",
     "test:e2e:graders": "mocha --no-config --no-package --forbid-only e2e/graders.e2e.mjs",
     "e2e:coding-workflows:build": "docker build -f e2e/coding-workflows/Dockerfile --target agent -t orbit-e2e:coding-workflows-agent . && docker build -f e2e/coding-workflows/Dockerfile --target grader -t orbit-e2e:coding-workflows-grader .",
