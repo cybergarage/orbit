@@ -1,0 +1,213 @@
+{
+  "date": "2026-09-28",
+  "purpose": "Real-model reevaluation of context-summary output-exhaustion recovery.",
+  "orbitCommit": "d142e48e9968d72335c5115eb56b25360ab2c7c0",
+  "comparisonBaseline": {
+    "date": "2026-09-27",
+    "orbitCommit": "66610dc5090ef7bf4bd374e416d509a0d421ce66",
+    "strategy": "verified-focused-v1",
+    "contextPolicy": "budgeted",
+    "summaryAttempts": 6,
+    "summaryFailures": 1,
+    "summaryWallMs": 568783.81955,
+    "compactionsCompleted": 0,
+    "modelCallsCompleted": 41,
+    "patchBytes": 1370,
+    "officialStatus": "unresolved",
+    "officialResults": {
+      "FAIL_TO_PASS": "0/1",
+      "PASS_TO_PASS": "73/79"
+    }
+  },
+  "environment": {
+    "host": "macOS Apple Silicon ARM64",
+    "dockerMemoryBytes": 4107141120,
+    "evaluationPlatform": "linux/amd64 emulation",
+    "ollamaVersion": "0.34.3",
+    "agentImageId": "sha256:5772a69879847c541ed503162c2934cb10499b2b2979c54fdbfd27bd56cfb678"
+  },
+  "dataset": {
+    "dataset": "princeton-nlp/SWE-bench_Verified",
+    "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+    "split": "test",
+    "instance_id": "pytest-dev__pytest-10356",
+    "repo": "pytest-dev/pytest",
+    "base_commit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1"
+  },
+  "harness": {
+    "version": "4.1.0",
+    "commit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+    "graderImage": "sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+    "gradeRunId": "orbit-prediction-2aecc65e-3691-4f16-80ad-5510a1537009",
+    "officialStatus": "unresolved",
+    "disposition": "skipped-empty-patch",
+    "emptyPatchInstances": [
+      "pytest-dev__pytest-10356"
+    ],
+    "processExit": 0,
+    "reportFile": null
+  },
+  "model": {
+    "name": "ornith-1.5:9b",
+    "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+    "parameterSize": "9.0B",
+    "quantization": "Q4_K_M",
+    "contextLength": 32768,
+    "outputLimit": 4096,
+    "seed": 42,
+    "temperature": 0.6,
+    "topP": 0.95,
+    "think": false
+  },
+  "settings": {
+    "strategy": "verified-focused-v1",
+    "contextPolicy": "budgeted",
+    "timeoutMs": 900000,
+    "rounds": "unlimited",
+    "promptSha256": "be4f8872ca96bce5f4aa9f05dc581e7ddad7ab67b3611768e90011aade660b89"
+  },
+  "run": {
+    "elapsedMs": 912349,
+    "turnDurationMs": 900128.984325,
+    "status": "runtime-error",
+    "outcome": "incomplete",
+    "modelCallsCompleted": 106,
+    "toolCalls": 103,
+    "toolErrors": 18,
+    "inputTokens": 1170665,
+    "outputTokens": 15308,
+    "usageComplete": false,
+    "patchBytes": 0,
+    "qualityStatus": "not-measured",
+    "preflightPassed": true,
+    "metrics": {
+      "compactionFailureReasons": {},
+      "compactionsCompleted": 1,
+      "compactionsFailed": 0,
+      "compactionsSkipped": 0,
+      "compactionsStarted": 2,
+      "modelCallsCompleted": 106,
+      "modelCallsStarted": 106,
+      "modelWallMs": 907219.3229560002,
+      "ollamaEvalMs": 669697.3479979995,
+      "ollamaLoadMs": 3475.5153760000007,
+      "ollamaPromptMs": 227030.08599900018,
+      "ollamaTotalMs": 906900.479206,
+      "repeatedFailedCalls": 9,
+      "summaryAttempts": 3,
+      "summaryFailures": 1,
+      "summaryValidationFailures": 0,
+      "summaryWallMs": 379615.482172,
+      "toolCalls": 103,
+      "toolErrors": 18,
+      "toolWallMs": 1968.3844160001318
+    }
+  },
+  "contextEvents": [
+    {
+      "type": "context.compaction.started",
+      "iteration": 35,
+      "timestamp": "2026-09-27T23:38:53.337Z",
+      "data": {
+        "beforeTokens": 17723
+      }
+    },
+    {
+      "type": "context.summary.started",
+      "iteration": 35,
+      "timestamp": "2026-09-27T23:38:53.378Z",
+      "data": {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "sourceMessages": 41
+      }
+    },
+    {
+      "type": "context.summary.completed",
+      "iteration": 35,
+      "timestamp": "2026-09-27T23:41:12.209Z",
+      "data": {
+        "attempt": 1,
+        "durationMs": 138831.038522
+      }
+    },
+    {
+      "type": "context.summary.started",
+      "iteration": 35,
+      "timestamp": "2026-09-27T23:41:12.254Z",
+      "data": {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "sourceMessages": 28
+      }
+    },
+    {
+      "type": "context.summary.completed",
+      "iteration": 35,
+      "timestamp": "2026-09-27T23:43:01.471Z",
+      "data": {
+        "attempt": 1,
+        "durationMs": 109215.801966
+      }
+    },
+    {
+      "type": "context.compaction.completed",
+      "iteration": 35,
+      "timestamp": "2026-09-27T23:43:01.498Z",
+      "data": {
+        "afterTokens": 4459,
+        "beforeTokens": 17723,
+        "durationMs": 248160.63740399998
+      }
+    },
+    {
+      "type": "context.compaction.started",
+      "iteration": 103,
+      "timestamp": "2026-09-27T23:47:59.065Z",
+      "data": {
+        "beforeTokens": 17618
+      }
+    },
+    {
+      "type": "context.summary.started",
+      "iteration": 103,
+      "timestamp": "2026-09-27T23:47:59.101Z",
+      "data": {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "sourceMessages": 53
+      }
+    },
+    {
+      "type": "context.summary.failed",
+      "iteration": 103,
+      "timestamp": "2026-09-27T23:50:10.670Z",
+      "data": {
+        "attempt": 1,
+        "durationMs": 131568.64168400003,
+        "reason": "request-failed"
+      }
+    }
+  ],
+  "observed": {
+    "firstCompactionBeforeTokens": 17723,
+    "firstCompactionAfterTokens": 4459,
+    "firstCompactionDurationMs": 248160.637404,
+    "firstCompactionSummaryRequests": 2,
+    "firstCompactionCompleted": true,
+    "secondCompactionStarted": true,
+    "secondCompactionCompleted": false,
+    "secondCompactionSummaryRequestMs": 131568.641684,
+    "deadlineInterruptedSecondCompaction": true,
+    "predictionSha256": "a8c9ad5d5c7bbd75a86cc09252f4222404b5cfbe8733c6e81e2234e94d37601b"
+  },
+  "limitations": [
+    "One real-model run; time savings and patch quality need repeated trials.",
+    "The agent reached the deadline during its second compaction and produced an empty patch, so the official harness skipped test execution.",
+    "Reported first-compaction latency measures Orbit preparation and model requests; host scheduling and local Ollama conditions may vary."
+  ],
+  "prediction": "2026-09-28-context-summary-reevaluation-predictions.jsonl"
+}
