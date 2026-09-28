@@ -30,7 +30,7 @@ let round = 0
 const setupModel = {
   getModel: () => 'fixed-observation-setup',
   getName: () => 'fixed-observation-setup',
-  getProvider: () => 'fixture',
+  getProvider: () => 'ollama',
   async invoke() {
     round++
     return round <= 2
