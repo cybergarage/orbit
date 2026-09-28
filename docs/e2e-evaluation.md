@@ -403,14 +403,14 @@ repository test failure. See [Bash semantics](tools.md#bash).
 ## Coding workflow evaluation
 
 The opt-in coding workflow suite runs the same 16-card memory game through
-three Orbit workflows, based on the English edition of *AI Coding Agent Fundamentals* and
+three Orbit workflows, based on the English edition of _AI Coding Agent Fundamentals_ and
 its [pinned starter templates](../e2e/coding-workflows/README.md):
 
-| Case | Inputs and execution |
-| --- | --- |
-| `vibe` | Starter and natural-language game prompt, without a game specification or test plan. |
-| `sdd` | First reviews `spec.md` with `test.md` deliberately absent. The host rejects changed or added review files. A fresh implementation Run receives the review, a frozen specification with the book's selected clarifications, and the common test plan. |
-| `loop` | Starter, `spec.md`, `test.md`, and `progress.md`; one Run iterates implementation and verification and records progress. Specifications must remain unchanged. |
+| Case   | Inputs and execution                                                                                                                                                                                                                                  |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vibe` | Starter and natural-language game prompt, without a game specification or test plan.                                                                                                                                                                  |
+| `sdd`  | First reviews `spec.md` with `test.md` deliberately absent. The host rejects changed or added review files. A fresh implementation Run receives the review, a frozen specification with the book's selected clarifications, and the common test plan. |
+| `loop` | Starter, `spec.md`, `test.md`, and `progress.md`; one Run iterates implementation and verification and records progress. Specifications must remain unchanged.                                                                                        |
 
 ```sh
 npm run test:e2e:coding-workflows:unit
@@ -605,14 +605,15 @@ and consumer requests, with tools disabled and a diagnostic-only 3,500/2,500
 trigger/target. This exercises the actual core provenance/projection path even
 when a long solver trial cannot activate a checkpoint.
 
-Run it after other Ollama evaluations have completed, using the current verified
-agent image. Use a fresh output directory:
+Run it after other Ollama evaluations have completed. Build the current local
+agent image and use a fresh output directory:
 
 ```sh
+docker build -f e2e/Dockerfile -t orbit-e2e:local .
 mkdir -p tmp/e2e/observations-live-new
 docker run --name orbit-observations-live --user node \
   -v "$PWD/e2e/observations-live.mjs:/opt/orbit/e2e/observations-live.mjs:ro" \
-  orbit-e2e:observations node /opt/orbit/e2e/observations-live.mjs
+  orbit-e2e:local node /opt/orbit/e2e/observations-live.mjs
 docker cp orbit-observations-live:/output/. tmp/e2e/observations-live-new/
 docker rm orbit-observations-live
 npm run eval:core-observations -- \

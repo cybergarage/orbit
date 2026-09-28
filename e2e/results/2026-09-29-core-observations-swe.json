@@ -1,0 +1,614 @@
+{
+  "date": "2026-09-29",
+  "scope": "one-Verified-instance-runtime-observation-integration",
+  "environment": {
+    "host": "macOS ARM64",
+    "dockerMemoryBytes": 4107141120,
+    "dockerVersion": "29.8.0",
+    "dockerArchitecture": "aarch64",
+    "solverPlatform": "linux/arm64",
+    "officialPlatform": "linux/amd64 emulation",
+    "ollamaLocation": "host macOS, via host.docker.internal"
+  },
+  "reference": {
+    "status": "resolved",
+    "runId": "orbit-gold-2460df6d-5cf2-4673-b1be-8e56152a58f2",
+    "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+    "harnessVersion": "4.1.0",
+    "evaluationPlatform": "linux/amd64 (Docker emulation on ARM64)",
+    "imageReference": "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+    "imageId": "sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+    "imageDigests": [
+      "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+      "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da"
+    ],
+    "predictionsSha256": null,
+    "processExit": 0,
+    "gradingDisposition": "evaluated-or-error",
+    "patchApplied": true,
+    "tests": {
+      "FAIL_TO_PASS": {
+        "success": 1,
+        "failure": 0
+      },
+      "PASS_TO_PASS": {
+        "success": 79,
+        "failure": 0
+      },
+      "FAIL_TO_FAIL": {
+        "success": 0,
+        "failure": 0
+      },
+      "PASS_TO_FAIL": {
+        "success": 0,
+        "failure": 0
+      }
+    }
+  },
+  "runs": [
+    {
+      "condition": "initial-observation-integration",
+      "coreSourceCommit": "7f979ebf9169c48f8bb52b701eeb4fe9ffe6d9f2",
+      "metadataOrbitCommit": "fa1992a8a661edd86d023f32f7a059ce797fa8be",
+      "sourceFingerprint": "a3b9b11d544ee8a9823e841eca31ce6e8303a77c033bb2c70f0bbba8b82dd457",
+      "imageId": "sha256:28b91b98485c504c1a82442337e9f0a698348f5811725b5fe7771108832246c6",
+      "dataset": {
+        "dataset": "princeton-nlp/SWE-bench_Verified",
+        "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+        "split": "test",
+        "instance_id": "pytest-dev__pytest-10356",
+        "repo": "pytest-dev/pytest",
+        "base_commit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1"
+      },
+      "model": {
+        "model": "ornith-1.5:9b",
+        "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": ["qwen35"],
+          "parameter_size": "9.0B",
+          "quantization_level": "Q4_K_M"
+        },
+        "ollama": {
+          "version": "0.34.4"
+        },
+        "templateSha256": "f55f52930aa8bf44ab5cb85f99370fcc3c56e9a85640b812086d5330bce5d86b"
+      },
+      "config": {
+        "contextPolicy": "budgeted",
+        "options": {
+          "num_ctx": 32768,
+          "num_predict": 4096,
+          "seed": 42,
+          "temperature": 0.6,
+          "top_p": 0.95
+        },
+        "promptSha256": "c43618edd4b7fcf336cbfd36dd7639abece932f9a932c540520649808eca329b",
+        "rounds": "unlimited",
+        "strategy": "coding-recovery-v1",
+        "think": false,
+        "timeoutMs": 900000
+      },
+      "contextProfile": {
+        "mode": "budgeted",
+        "profile": {
+          "model": "ornith-1.5:9b",
+          "outputReserve": 4096,
+          "provider": "ollama",
+          "revision": "model-capacity-v1",
+          "safetyMargin": 1639,
+          "summaryOutput": 2048,
+          "target": 10813,
+          "templateOverhead": 256,
+          "trigger": 17571,
+          "window": 32768
+        }
+      },
+      "elapsedMs": 748976,
+      "runStatus": "runtime-error",
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true,
+        "unresolved": [],
+        "cleanupErrors": []
+      },
+      "metrics": {
+        "compactionFailureReasons": {
+          "summary-invalid-format": 2
+        },
+        "compactionsCompleted": 0,
+        "compactionsFailed": 2,
+        "compactionsSkipped": 15,
+        "compactionsStarted": 2,
+        "modelCallsCompleted": 33,
+        "modelCallsStarted": 33,
+        "modelWallMs": 745231.9172160001,
+        "ollamaEvalMs": 545708.695,
+        "ollamaLoadMs": 116.806957,
+        "ollamaPromptMs": 195153.34,
+        "ollamaTotalMs": 745046.603168,
+        "repeatedFailedCalls": 0,
+        "summaryAttempts": 5,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 2,
+        "summaryWallMs": 423826.03073900007,
+        "toolCalls": 28,
+        "toolErrors": 4,
+        "toolWallMs": 1921.1824589999587
+      },
+      "usage": {
+        "inputTokens": 537506,
+        "outputTokens": 11807
+      },
+      "usageComplete": false,
+      "preflightPassed": true,
+      "quality": {
+        "status": "quality-failed",
+        "issues": [
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/.gitignore",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/CACHEDIR.TAG",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/README.md",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/nodeids",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/stepwise",
+            "status": "added",
+            "unwanted": true
+          }
+        ],
+        "tests": [
+          {
+            "candidateExitCode": 0,
+            "path": "testing/test_mro_marks_debug.py",
+            "status": "passed"
+          }
+        ]
+      },
+      "excludedGeneratedPaths": [
+        ".pytest_cache/.gitignore",
+        ".pytest_cache/CACHEDIR.TAG",
+        ".pytest_cache/README.md",
+        ".pytest_cache/v/cache/nodeids",
+        ".pytest_cache/v/cache/stepwise"
+      ],
+      "patchBytes": 2076,
+      "prediction": "2026-09-29-core-observations-before-predictions.jsonl",
+      "officialGrade": {
+        "status": "unresolved",
+        "runId": "orbit-prediction-aa4bc763-603e-4c6d-93bc-82df4d7a696a",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "evaluationPlatform": "linux/amd64 (Docker emulation on ARM64)",
+        "imageReference": "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+        "imageId": "sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+        "imageDigests": [
+          "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+          "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da"
+        ],
+        "predictionsSha256": "626c446f710ee142b0b33e2d645bd24cfc33248749e21b9e9317a6bca3ea7008",
+        "processExit": 0,
+        "gradingDisposition": "evaluated-or-error",
+        "patchApplied": true,
+        "tests": {
+          "FAIL_TO_PASS": {
+            "success": 0,
+            "failure": 1
+          },
+          "PASS_TO_PASS": {
+            "success": 79,
+            "failure": 0
+          },
+          "FAIL_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          },
+          "PASS_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          }
+        }
+      },
+      "directObservations": {
+        "scope": "runtime-diagnostic-source-correspondence-v1",
+        "status": "not-exercised",
+        "viewCount": 0,
+        "recordCount": 0,
+        "rows": [],
+        "limitations": [
+          "Checks correspondence with controlled runtime artifacts, not journal cryptographic authentication.",
+          "Does not grade model answers, current workspace state or behavioral correctness."
+        ]
+      },
+      "summaryOutputShapes": [
+        {
+          "parseableJson": true,
+          "rootKeys": [
+            "version",
+            "goals",
+            "facts",
+            "structural",
+            "testing",
+            "incomplete",
+            "uncertainties",
+            "changedPaths"
+          ],
+          "arraySizes": {
+            "goals": 2,
+            "facts": 3,
+            "incomplete": 2,
+            "uncertainties": 1,
+            "changedPaths": 0
+          }
+        },
+        {
+          "parseableJson": true,
+          "rootKeys": ["version", "goals", "facts", "changedPaths", "tests", "unfinished", "uncertainties"],
+          "arraySizes": {
+            "goals": 1,
+            "facts": 2,
+            "changedPaths": 0,
+            "tests": 0,
+            "unfinished": 1,
+            "uncertainties": 1
+          }
+        },
+        {
+          "parseableJson": true,
+          "rootKeys": ["version", "goals", "facts", "changedPaths", "tests", "unfinished", "uncertainties"],
+          "arraySizes": {
+            "goals": 1,
+            "facts": 5,
+            "changedPaths": 0,
+            "tests": 0,
+            "unfinished": 3,
+            "uncertainties": 1
+          }
+        },
+        {
+          "parseableJson": false
+        },
+        {
+          "parseableJson": true,
+          "rootKeys": ["version", "goals", "facts", "changedPaths", "tests", "unfinished", "uncertainties"],
+          "arraySizes": {
+            "goals": 5,
+            "facts": 10,
+            "changedPaths": 0,
+            "tests": 0,
+            "unfinished": 3,
+            "uncertainties": 1
+          }
+        }
+      ],
+      "compactions": [
+        {
+          "beforeTokens": 17605,
+          "durationMs": 58582.18744300002,
+          "fallback": true,
+          "reason": "summary-invalid-format"
+        },
+        {
+          "beforeTokens": 27449,
+          "durationMs": 365348.05641900003,
+          "fallback": false,
+          "reason": "summary-invalid-format"
+        }
+      ]
+    },
+    {
+      "condition": "proof-free-summary-input",
+      "coreSourceCommit": "912e2109c05c866a11f349315881f4dab1636edb",
+      "metadataOrbitCommit": "7f11877e7a97a24efd6e811dbb8b25704cd0b29c",
+      "sourceFingerprint": "587025f0ed156f16d7bdec42947567980b48e9f4234cb579663a4cdd6883b8d4",
+      "imageId": "sha256:08310ecc429bf8d949f0675f1debbad755d2691e0566a79c29f20031a860679c",
+      "dataset": {
+        "dataset": "princeton-nlp/SWE-bench_Verified",
+        "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+        "split": "test",
+        "instance_id": "pytest-dev__pytest-10356",
+        "repo": "pytest-dev/pytest",
+        "base_commit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1"
+      },
+      "model": {
+        "model": "ornith-1.5:9b",
+        "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": ["qwen35"],
+          "parameter_size": "9.0B",
+          "quantization_level": "Q4_K_M"
+        },
+        "ollama": {
+          "version": "0.34.4"
+        },
+        "templateSha256": "f55f52930aa8bf44ab5cb85f99370fcc3c56e9a85640b812086d5330bce5d86b"
+      },
+      "config": {
+        "contextPolicy": "budgeted",
+        "options": {
+          "num_ctx": 32768,
+          "num_predict": 4096,
+          "seed": 42,
+          "temperature": 0.6,
+          "top_p": 0.95
+        },
+        "promptSha256": "c43618edd4b7fcf336cbfd36dd7639abece932f9a932c540520649808eca329b",
+        "rounds": "unlimited",
+        "strategy": "coding-recovery-v1",
+        "think": false,
+        "timeoutMs": 900000
+      },
+      "contextProfile": {
+        "mode": "budgeted",
+        "profile": {
+          "model": "ornith-1.5:9b",
+          "outputReserve": 4096,
+          "provider": "ollama",
+          "revision": "model-capacity-v1",
+          "safetyMargin": 1639,
+          "summaryOutput": 2048,
+          "target": 10813,
+          "templateOverhead": 256,
+          "trigger": 17571,
+          "window": 32768
+        }
+      },
+      "elapsedMs": 853273,
+      "runStatus": "runtime-error",
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true,
+        "unresolved": [],
+        "cleanupErrors": []
+      },
+      "metrics": {
+        "compactionFailureReasons": {
+          "summary-invalid-format": 2
+        },
+        "compactionsCompleted": 0,
+        "compactionsFailed": 2,
+        "compactionsSkipped": 18,
+        "compactionsStarted": 2,
+        "modelCallsCompleted": 40,
+        "modelCallsStarted": 40,
+        "modelWallMs": 841337.5474249998,
+        "ollamaEvalMs": 658068.273999,
+        "ollamaLoadMs": 138.30603900000003,
+        "ollamaPromptMs": 178530.683997,
+        "ollamaTotalMs": 841188.1610030001,
+        "repeatedFailedCalls": 0,
+        "summaryAttempts": 3,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 2,
+        "summaryWallMs": 339085.3904469999,
+        "toolCalls": 37,
+        "toolErrors": 7,
+        "toolWallMs": 10168.322463999972
+      },
+      "usage": {
+        "inputTokens": 706020,
+        "outputTokens": 14086
+      },
+      "usageComplete": false,
+      "preflightPassed": true,
+      "quality": {
+        "status": "quality-failed",
+        "issues": [
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".hypothesis/examples/d9241720af7d0585/1dd6f7b457ad880d",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".hypothesis/examples/d9241720af7d0585/7089cef4b92d73cc",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".hypothesis/examples/d9241720af7d0585/8a204175e90d9a4e",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".hypothesis/examples/d9241720af7d0585/d87f50bde86c023e",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".hypothesis/unicode_data/14.0.0/charmap.json.gz",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/.gitignore",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/CACHEDIR.TAG",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/README.md",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/nodeids",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/stepwise",
+            "status": "added",
+            "unwanted": true
+          }
+        ],
+        "tests": []
+      },
+      "excludedGeneratedPaths": [
+        ".hypothesis/examples/d9241720af7d0585/1dd6f7b457ad880d",
+        ".hypothesis/examples/d9241720af7d0585/7089cef4b92d73cc",
+        ".hypothesis/examples/d9241720af7d0585/8a204175e90d9a4e",
+        ".hypothesis/examples/d9241720af7d0585/d87f50bde86c023e",
+        ".hypothesis/unicode_data/14.0.0/charmap.json.gz",
+        ".pytest_cache/.gitignore",
+        ".pytest_cache/CACHEDIR.TAG",
+        ".pytest_cache/README.md",
+        ".pytest_cache/v/cache/nodeids",
+        ".pytest_cache/v/cache/stepwise"
+      ],
+      "patchBytes": 1551,
+      "prediction": "2026-09-29-core-observations-fixed-predictions.jsonl",
+      "officialGrade": {
+        "status": "unresolved",
+        "runId": "orbit-prediction-96098580-b169-4e88-998f-276d65ccf806",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "evaluationPlatform": "linux/amd64 (Docker emulation on ARM64)",
+        "imageReference": "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+        "imageId": "sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+        "imageDigests": [
+          "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+          "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da"
+        ],
+        "predictionsSha256": "1d1c1a4b17a1dd5e50c3b8ec42740b4426ef630715c8b57fd5a30a9c4990f85f",
+        "processExit": 0,
+        "gradingDisposition": "evaluated-or-error",
+        "patchApplied": true,
+        "tests": {
+          "FAIL_TO_PASS": {
+            "success": 0,
+            "failure": 1
+          },
+          "PASS_TO_PASS": {
+            "success": 79,
+            "failure": 0
+          },
+          "FAIL_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          },
+          "PASS_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          }
+        }
+      },
+      "directObservations": {
+        "scope": "runtime-diagnostic-source-correspondence-v1",
+        "status": "not-exercised",
+        "viewCount": 0,
+        "recordCount": 0,
+        "rows": [],
+        "limitations": [
+          "Checks correspondence with controlled runtime artifacts, not journal cryptographic authentication.",
+          "Does not grade model answers, current workspace state or behavioral correctness."
+        ]
+      },
+      "summaryOutputShapes": [
+        {
+          "parseableJson": true,
+          "rootKeys": ["version", "goals", "facts", "changedPaths", "tests", "unfinished", "uncertainties"],
+          "arraySizes": {
+            "goals": 0,
+            "facts": 0,
+            "changedPaths": 0,
+            "tests": 0,
+            "unfinished": 0,
+            "uncertainties": 0
+          }
+        },
+        {
+          "parseableJson": false
+        },
+        {
+          "parseableJson": true,
+          "rootKeys": ["version", "goals", "facts", "changedPaths", "tests", "unfinished"],
+          "arraySizes": {
+            "goals": 8,
+            "facts": 2,
+            "changedPaths": 1,
+            "tests": 0,
+            "unfinished": 2
+          }
+        }
+      ],
+      "compactions": [
+        {
+          "beforeTokens": 18055,
+          "durationMs": 92050.434709,
+          "fallback": true,
+          "reason": "summary-invalid-format"
+        },
+        {
+          "beforeTokens": 27662,
+          "durationMs": 247170.40940400003,
+          "fallback": false,
+          "reason": "summary-invalid-format"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Repeated diagnostics on the same instance, not independent benchmark cases or a representative pass rate.",
+    "Solver runs native Linux ARM64; official pinned x86_64 grading image runs under emulation.",
+    "No successful checkpoint means projected observations were not exercised, not that they passed.",
+    "Process exit codes do not establish behavioral verification or current workspace revision.",
+    "Usage marked incomplete is partial reported model usage, not an exact total.",
+    "Recorded historical commits and source fingerprints are separate from documentation-only checkout changes.",
+    "No reference patch or hidden grading tests supplied to the solver."
+  ]
+}
