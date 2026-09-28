@@ -391,5 +391,324 @@
     "One request per condition, English fixed-case claim matching only; no estimate of general semantic accuracy.",
     "Needs-review is not a pass. Explicit reviewed patterns do not validate arbitrary prose.",
     "Direct summary replay does not produce a SWE-bench patch or official score."
-  ]
+  ],
+  "sweRun": {
+    "solveDirectory": "tmp/e2e/verified/pytest-dev__pytest-10356/solve-ornith-1.5-9b-19454ca3-0b9d-454f-94b5-118a861e0a31",
+    "orbitCommit": "b48e590508e92e0e0250b394caa8c8aabfc57988",
+    "workingTree": "",
+    "agentSourceSha256": "fc469f97a0eb4acc5055dd58ddf601b5d980ff61ea2057ad2d051a2bf20bf711",
+    "imageId": "sha256:f07b3d626f42c929315e988ceea4d49590214e0dda6e4a4fd8b2c2e3bfb836a9",
+    "sourceArchiveSha256": "120e1af522d5ebd2bf720d65cd953767c32139e59517b8f1bbdc3bd9d0aa45c4",
+    "e2eHarnessSha256": "5b9867171f6b32ae3ac59a6c58a375c48a59ddba3534f51d17ae567a65767c14",
+    "dataset": {
+      "dataset": "princeton-nlp/SWE-bench_Verified",
+      "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "split": "test",
+      "instance_id": "pytest-dev__pytest-10356",
+      "repo": "pytest-dev/pytest",
+      "base_commit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1"
+    },
+    "model": {
+      "model": "ornith-1.5:9b",
+      "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen35",
+        "families": [
+          "qwen35"
+        ],
+        "parameter_size": "9.0B",
+        "quantization_level": "Q4_K_M"
+      },
+      "ollama": {
+        "version": "0.34.4"
+      },
+      "templateSha256": "f55f52930aa8bf44ab5cb85f99370fcc3c56e9a85640b812086d5330bce5d86b"
+    },
+    "config": {
+      "contextPolicy": "budgeted",
+      "options": {
+        "num_ctx": 32768,
+        "num_predict": 4096,
+        "seed": 42,
+        "temperature": 0.6,
+        "top_p": 0.95
+      },
+      "promptSha256": "be4f8872ca96bce5f4aa9f05dc581e7ddad7ab67b3611768e90011aade660b89",
+      "rounds": "unlimited",
+      "strategy": "verified-focused-v1",
+      "think": false,
+      "timeoutMs": 900000
+    },
+    "contextPolicy": {
+      "mode": "budgeted",
+      "profile": {
+        "model": "ornith-1.5:9b",
+        "outputReserve": 4096,
+        "provider": "ollama",
+        "revision": "model-capacity-v1",
+        "safetyMargin": 1639,
+        "summaryOutput": 2048,
+        "target": 10813,
+        "templateOverhead": 256,
+        "trigger": 17571,
+        "window": 32768
+      }
+    },
+    "environment": {
+      "dockerMemoryBytes": 4107141120,
+      "solverPlatform": "linux/arm64",
+      "officialImagePlatform": "linux/amd64 (Docker emulation on ARM64)"
+    },
+    "preflight": {
+      "passed": true,
+      "publicSmoke": "13 passed, 1 skipped"
+    },
+    "elapsedMs": 919994,
+    "runStatus": "runtime-error",
+    "runtimeOutcome": "incomplete",
+    "runtime": {
+      "cleanupErrors": [],
+      "outcome": "incomplete",
+      "quiescence": false,
+      "reason": "budget-exceeded:elapsedMs:900000:900059:0",
+      "recording": {
+        "level": "memory",
+        "mode": "memory",
+        "status": "acknowledged"
+      },
+      "runId": "65ccaee2-a5f4-4c08-b7eb-f1bb37f93d78",
+      "sessionId": "01a0e85c-efe0-753c-a543-228f6280eca5",
+      "stopRequest": "budget-exceeded",
+      "unresolved": [
+        "context-summary:6685ac40-d53e-4fcf-928e-1b44a52894df"
+      ]
+    },
+    "metrics": {
+      "compactionFailureReasons": {
+        "summary-invalid-format": 1
+      },
+      "compactionsCompleted": 0,
+      "compactionsFailed": 1,
+      "compactionsSkipped": 145,
+      "compactionsStarted": 2,
+      "modelCallsCompleted": 166,
+      "modelCallsStarted": 166,
+      "modelWallMs": 913579.719037,
+      "ollamaEvalMs": 598192.8909969999,
+      "ollamaLoadMs": 341.36825999999985,
+      "ollamaPromptMs": 293625.086,
+      "ollamaTotalMs": 913019.6601669999,
+      "repeatedFailedCalls": 137,
+      "summaryAttempts": 4,
+      "summaryFailures": 1,
+      "summaryValidationFailures": 1,
+      "summaryWallMs": 469197.059463,
+      "toolCalls": 162,
+      "toolErrors": 146,
+      "toolWallMs": 1187.4286749995053
+    },
+    "usage": {
+      "inputTokens": 3587439,
+      "outputTokens": 12705
+    },
+    "usageComplete": false,
+    "patchBytes": 0,
+    "predictionFile": "2026-09-28-context-semantic-swe-predictions.jsonl",
+    "predictionSha256": "a8c9ad5d5c7bbd75a86cc09252f4222404b5cfbe8733c6e81e2234e94d37601b",
+    "officialGrading": {
+      "aggregate": {
+        "total_instances": 1,
+        "submitted_instances": 1,
+        "completed_instances": 0,
+        "resolved_instances": 0,
+        "unresolved_instances": 0,
+        "empty_patch_instances": 1,
+        "error_instances": 0,
+        "completed_ids": [],
+        "incomplete_ids": [],
+        "empty_patch_ids": [
+          "pytest-dev__pytest-10356"
+        ],
+        "submitted_ids": [
+          "pytest-dev__pytest-10356"
+        ],
+        "resolved_ids": [],
+        "unresolved_ids": [],
+        "error_ids": [],
+        "schema_version": 2
+      },
+      "aggregateFile": "orbit-ornith-1.5-9b.orbit-prediction-0b109564-ef75-4e8b-aebe-df802a815c0f.json",
+      "dataset": {
+        "dataset": "princeton-nlp/SWE-bench_Verified",
+        "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+        "split": "test",
+        "instance_id": "pytest-dev__pytest-10356",
+        "repo": "pytest-dev/pytest",
+        "base_commit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1"
+      },
+      "datasetFileSha256": "8569cdb75c9a3319aa2c52fc49d5d761b5bdf8cb64ec88e04283fcac3d6b4f32",
+      "evaluationPlatform": "linux/amd64 (Docker emulation on ARM64)",
+      "gradingDisposition": "skipped-empty-patch",
+      "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+      "harnessInstallation": {
+        "sourceCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "sourceType": "local checkout"
+      },
+      "harnessVersion": "4.1.0",
+      "imageDigests": [
+        "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+        "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da"
+      ],
+      "imageId": "sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+      "imageReference": "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+      "predictionsSha256": "a8c9ad5d5c7bbd75a86cc09252f4222404b5cfbe8733c6e81e2234e94d37601b",
+      "processExit": 0,
+      "reportFile": null,
+      "runId": "orbit-prediction-0b109564-ef75-4e8b-aebe-df802a815c0f",
+      "status": "unresolved"
+    },
+    "contextEvents": [
+      {
+        "type": "context.compaction.started",
+        "iteration": 16,
+        "timestamp": "2026-09-28T14:14:40.958Z",
+        "data": {
+          "beforeTokens": 17740
+        }
+      },
+      {
+        "type": "context.summary.started",
+        "iteration": 16,
+        "timestamp": "2026-09-28T14:14:40.977Z",
+        "data": {
+          "attempt": 1,
+          "outputLimit": 2048,
+          "phase": "batch",
+          "sourceMessages": 7
+        }
+      },
+      {
+        "type": "context.summary.completed",
+        "iteration": 16,
+        "timestamp": "2026-09-28T14:15:49.326Z",
+        "data": {
+          "attempt": 1,
+          "durationMs": 68348.501822
+        }
+      },
+      {
+        "type": "context.compaction.failed",
+        "iteration": 16,
+        "timestamp": "2026-09-28T14:15:49.328Z",
+        "data": {
+          "beforeTokens": 17740,
+          "durationMs": 68370.038031,
+          "fallback": true,
+          "reason": "summary-invalid-format"
+        }
+      },
+      {
+        "type": "context.compaction.started",
+        "iteration": 162,
+        "timestamp": "2026-09-28T14:21:39.053Z",
+        "data": {
+          "beforeTokens": 27078
+        }
+      },
+      {
+        "type": "context.summary.started",
+        "iteration": 162,
+        "timestamp": "2026-09-28T14:21:39.103Z",
+        "data": {
+          "attempt": 1,
+          "outputLimit": 2048,
+          "phase": "batch",
+          "sourceMessages": 15
+        }
+      },
+      {
+        "type": "context.summary.completed",
+        "iteration": 162,
+        "timestamp": "2026-09-28T14:23:39.407Z",
+        "data": {
+          "attempt": 1,
+          "durationMs": 120304.14005400002
+        }
+      },
+      {
+        "type": "context.summary.started",
+        "iteration": 162,
+        "timestamp": "2026-09-28T14:23:39.461Z",
+        "data": {
+          "attempt": 1,
+          "outputLimit": 2048,
+          "phase": "batch",
+          "sourceMessages": 60
+        }
+      },
+      {
+        "type": "context.summary.completed",
+        "iteration": 162,
+        "timestamp": "2026-09-28T14:25:58.920Z",
+        "data": {
+          "attempt": 1,
+          "durationMs": 139461.148315
+        }
+      },
+      {
+        "type": "context.summary.started",
+        "iteration": 162,
+        "timestamp": "2026-09-28T14:25:58.970Z",
+        "data": {
+          "attempt": 1,
+          "outputLimit": 2048,
+          "phase": "batch",
+          "sourceMessages": 82
+        }
+      },
+      {
+        "type": "context.summary.failed",
+        "iteration": 162,
+        "timestamp": "2026-09-28T14:28:20.053Z",
+        "data": {
+          "attempt": 1,
+          "durationMs": 141083.26927199995,
+          "reason": "request-failed"
+        }
+      }
+    ],
+    "firstInvalidSummary": {
+      "content": "{\"version\":1,\"goals\":[{\"text\":\"Fix pytest so that classes inheriting from two marked baseclasses collect marks from both (via MRO), instead of only the first. Add changelog entry and tests.\",\"sourceIds\":[\"01a0e85c-efef-763a-9336-8710a52fff6b\",\"01a0e85d-0771-720d-848f-29d90c146e5a\"]},{\"text\":\"After implementing a minimal fix, run a focused regression for the reported inheritance-mark behavior and the affected existing mark test module; confirm passing, then summarize and finish.\",\"sourceIds\":[\"01a0e85c-efef-763a-9336-8710a52fff6b\"]}],\",facts\":[{\"text\":\"Repository is pytest at /workspace (src/ layout); marks implemented in src/_pytest/mark/structures.py via MarkDecorator/Mark/store_mark; pytestmark is a single attribute resolved per-object by MRO, so multiple marked baseclasses only keep the first mark.\",\"sourceIds\":[\"01a0e85d-174f-75a3-a90c-402247dcd137\",\"01a0e85d-2adf-742d-b3e7-fabd89d76b22\"]}],\",changedPaths\":[],\"tests\":[],\"unfinished\":[{\"text\":\"No fix implemented yet: no edit/write tool results observed. Fix to mark collection and a focused regression test remain.\",\"sourceIds\":[\"01a0e85d-0771-720d-848f-29d90c146e5a\",\"01a0e85c-efef-763a-9336-8710a52fff6b\"]},{\"text\":\"Create changelog file (e.g. <ISSUE>.feature.rst) and add AUTHORS entry per PR checklist.\",\"sourceIds\":[\"01a0e85c-efef-763a-9336-8710a52fff6b\"]}],\",uncertainties\":[{\"text\":\"Whether the intended fix merges marks by MRO (possibly deduplicating names) rather than only keeping the first mark; the source shows single-attribute resolution, so behavior is currently MRO-first.\",\"sourceIds\":[\"01a0e85c-efef-763a-9336-8710a52fff6b\",\"01a0e85d-2adf-742d-b3e7-fabd89d76b22\"]}]}",
+      "jsonValid": true,
+      "keys": [
+        "version",
+        "goals",
+        ",facts",
+        ",changedPaths",
+        "tests",
+        "unfinished",
+        ",uncertainties"
+      ],
+      "stopReason": "stop",
+      "inputTokens": 20510,
+      "outputTokens": 604,
+      "reason": "Expected facts, changedPaths and uncertainties are instead named ,facts, ,changedPaths and ,uncertainties."
+    },
+    "repeatedSearch": {
+      "command": "cd /workspace && grep -n \"newcollect\" src/_pytest/nodes.py",
+      "count": 136,
+      "exitCode": 1
+    },
+    "semanticGrade": {
+      "status": "not-measured",
+      "reason": "No checkpoint was accepted; the fixed-case grader is not valid for new evidence IDs."
+    },
+    "limits": [
+      "Single continuation, not a representative benchmark or controlled runtime prompt comparison.",
+      "Official harness skipped test execution for the empty patch; no new reference-patch control was run.",
+      "Usage is incomplete according to runtime accounting; late response after cancellation is present in diagnostic totals."
+    ]
+  }
 }
