@@ -37,6 +37,29 @@ class Observations(unittest.TestCase):
         self.assertIn('1 deselected', last['stdout'])
         self.assertEqual(last['verificationCoverage'], 'unknown')
 
+    def test_multiple_results_in_one_call_group_follow_parent_chain(self):
+        messages = pair('a', 'edit', {'path': 'a.py'}, call_id='first')
+        messages[0]['payload']['toolCalls'].append({'id': 'second', 'name': 'edit', 'input': {}})
+        second = copy.deepcopy(messages[-1]); second['id'] = 'second-result'; second['parentid'] = messages[-1]['id']
+        second['payload']['toolCallId'] = 'second'; second['payload']['output']['details']['path'] = 'b.py'
+        ledger = extract_observations(messages + [second])
+        self.assertEqual([r['path'] for r in ledger['records']], ['a.py', 'b.py'])
+        self.assertEqual(ledger['records'][1]['sourceIds'], ['a', 'second-result'])
+        self.assertEqual(ledger['unlinkedResultIds'], [])
+
+    def test_new_edit_does_not_bind_older_test_to_new_contents(self):
+        messages = pair('test', 'bash', {'exitCode': 0, 'stdout': '1 passed'}) + pair('edit', 'edit', {'path': 'a.py'})
+        view = observation_view(extract_observations(messages))
+        self.assertLess(view['records'][0]['sequence'], view['records'][1]['sequence'])
+        self.assertNotIn('revision', view['records'][0])
+        self.assertEqual(view['records'][0]['verificationCoverage'], 'unknown')
+
+    def test_sources_are_isolated_without_shared_state(self):
+        first = extract_observations(pair('a', 'edit', {'path': 'a.py'}))
+        second = extract_observations(pair('b', 'edit', {'path': 'b.py'}))
+        self.assertNotEqual(first['sourceSha256'], second['sourceSha256'])
+        self.assertEqual([r['path'] for r in second['records']], ['b.py'])
+
     def test_reused_call_ids_are_correlated_by_parent(self):
         ledger = extract_observations(pair('a', 'edit', {'path': 'a.py', 'bytes': 3}) +
                                       pair('b', 'edit', {'path': 'b.py', 'bytes': 4}))

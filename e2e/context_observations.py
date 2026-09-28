@@ -26,10 +26,13 @@ def extract_observations(messages):
         payload = message.get('payload') or {}
         if message.get('type') == 'tool':
             parent = by_id.get(message.get('parentid'), {})
+            # Result messages in a multi-call group form a parent chain.
+            while parent.get('type') == 'tool':
+                parent = by_id.get(parent.get('parentid'), {})
             calls = (parent.get('payload') or {}).get('toolCalls', [])
             matches = [call for call in calls if call.get('id') == payload.get('toolCallId')
                        and call.get('name') == payload.get('name')]
-            key = (message.get('parentid'), payload.get('toolCallId'))
+            key = (parent.get('id'), payload.get('toolCallId'))
             if len(matches) != 1 or key in completed:
                 unlinked.append(mid)
             else:
