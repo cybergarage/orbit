@@ -3,6 +3,7 @@ status: current
 investigation-date: 2026-09-29
 orbit-commit: 1be53b4effb0f4b1c10849660f1d6c40f9340e97
 related-adrs:
+  - docs/adr/2026-09-29-source-derived-tool-observations.md
   - docs/adr/2026-09-08-budgeted-session-compaction.md
   - docs/adr/2026-09-25-long-turn-context-recovery.md
 superseded-by: []
@@ -161,6 +162,7 @@ This investigation extends the questions behind
 [Budgeted Session Compaction](../adr/2026-09-08-budgeted-session-compaction.md)
 and [Long-Turn Context Recovery](../adr/2026-09-25-long-turn-context-recovery.md).
 It changes neither decision nor their implementation statuses.
+The resulting [observation ADR proposal](../adr/2026-09-29-source-derived-tool-observations.md) is proposed / not-started and requires author acceptance.
 
 - [Earlier context-exhaustion investigation](2026-09-25-book-workflow-context-exhaustion.md)
 - [Maintained E2E instructions](../e2e-evaluation.md)
