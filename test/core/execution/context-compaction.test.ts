@@ -363,6 +363,8 @@ describe('budgeted context preparation', () => {
     expect(result.outcome, JSON.stringify(result)).to.equal('completed')
     expect(summaryPrompt).to.contain('Successful edit/write tool results confirm saved changes')
     expect(summaryPrompt).to.contain('A failed test does not undo a successful edit')
+    expect(summaryPrompt).to.contain('Reconcile every category')
+    expect(summaryPrompt).to.contain('Passing tests prove only the assertions actually exercised')
     const checkpoint = session.getCompaction()!
     expect(checkpoint.summary.changedPaths[0].sourceIds).to.deep.equal([editResult.id])
     expect(checkpoint.summary.tests[0]).to.include({outcome: 'failed', revision: null})
@@ -590,7 +592,14 @@ describe('budgeted context preparation', () => {
     ])
     const model = fixtureModel(id, 'cap-sensitive')
     const diagnostics = new DiagnosticEventBus()
-    const {result} = await execute(session, model, policy, undefined, 100, diagnostics)
+    const {result} = await execute(
+      session,
+      model,
+      {...policy, profile: {...profile, window: 22_000}},
+      undefined,
+      100,
+      diagnostics,
+    )
     expect(result.outcome, JSON.stringify(result)).to.equal('completed')
     const phases = diagnostics.list().filter((event) => event.type === 'context.summary.started')
     expect(phases.length).to.be.greaterThan(2)
