@@ -365,6 +365,9 @@ describe('budgeted context preparation', () => {
     expect(summaryPrompt).to.contain('A failed test does not undo a successful edit')
     expect(summaryPrompt).to.contain('Reconcile every category')
     expect(summaryPrompt).to.contain('Passing tests prove only the assertions actually exercised')
+    expect(summaryPrompt).to.contain('Separate observed execution from verified behavior')
+    expect(summaryPrompt).to.contain('A test body containing only pass proves execution')
+    expect(summaryPrompt).to.contain('previous-summary item: remove unsupported behavioral-success claims')
     const checkpoint = session.getCompaction()!
     expect(checkpoint.summary.changedPaths[0].sourceIds).to.deep.equal([editResult.id])
     expect(checkpoint.summary.tests[0]).to.include({outcome: 'failed', revision: null})
