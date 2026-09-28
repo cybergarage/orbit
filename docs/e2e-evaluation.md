@@ -573,3 +573,24 @@ never supplied to it. The fixed consumer grader checks the observed saved path,
 latest bar-only selection, and absence of an unsupported verified-behavior claim.
 It checks source IDs and completion separately. This is still one English history,
 not a general semantic truth verifier, integrity proof or release benchmark.
+
+### Check core observations independently of model answers
+
+Budgeted solver runs emit `context.observations.prepared` diagnostics. Validate
+those projected save/process records directly against canonical solver entries:
+
+```sh
+npm run test:e2e:core-observations
+npm run eval:core-observations -- \
+  --result <solver-output>/result.json \
+  --events <solver-output>/events.jsonl \
+  --output tmp/e2e/core-observations-check.json
+```
+
+`not-exercised` means no projection diagnostic was recorded; it is not a passing
+projection trial. This checker tests correspondence in controlled runtime
+artifacts, not journal cryptographic authentication, current file contents or
+behavioral correctness. The core tests separately verify runtime provenance and
+persistent/reopened journal binding. Model-consumer scores from the fixed-history
+replay remain separate; that replay assumes known legacy-fixture provenance and
+does not retroactively authenticate its old Session records.

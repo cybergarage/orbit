@@ -127,7 +127,9 @@
     "test:e2e:coding-workflows:unit": "mocha --no-config --no-package --forbid-only e2e/coding-workflows/cases.test.mjs",
     "test:e2e:coding-workflows:graders": "mocha --no-config --no-package --forbid-only e2e/coding-workflows/graders.e2e.mjs",
     "test:e2e:observations": "python3 -B -m unittest discover -s e2e -p context_observations_test.py",
-    "eval:context-observations": "python3 -B e2e/context-observations-replay.py"
+    "eval:context-observations": "python3 -B e2e/context-observations-replay.py",
+    "eval:core-observations": "python3 -B e2e/core_observations.py",
+    "test:e2e:core-observations": "python3 -B -m unittest discover -s e2e -p core_observations_test.py"
   },
   "types": "dist/index.d.ts",
   "prettier": "@oclif/prettier-config",
