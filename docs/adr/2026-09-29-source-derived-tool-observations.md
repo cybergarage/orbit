@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-09-29
-decision-date: null
+decision-date: 2026-09-29
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -19,7 +19,7 @@ on the model to maintain a second copy of operation history.
 
 ## Decision
 
-**Proposed, awaiting author acceptance.** Derive a deterministic observation
+**Accepted by the author on 2026-09-29.** Derive a deterministic observation
 view from canonical completed tool results and runtime-owned provenance, then
 include that view separately from prose when budgeted context uses a checkpoint.
 The source transcript remains authoritative; do not persist a duplicate ledger
@@ -188,7 +188,8 @@ These comparisons inform design; they do not prove Orbit's safety or performance
 
 ## Implementation and Confirmation
 
-Core implementation is **not started** and requires explicit author acceptance.
+Core implementation is **not started**. The author explicitly approved this ADR
+and requested implementation with staged commits on 2026-09-29.
 The evaluation-only prototype and result commits are not ADR implementation
 commits. Implement after acceptance in the following phases, committing each:
 
@@ -216,8 +217,8 @@ commits, maintained documentation and these confirmation records.
 
 ## Follow-up Work
 
-Before acceptance, the author must approve the provenance/persistence and
-context behavior above. During implementation, resolve envelope schema details
+The author approved the provenance/persistence and context behavior on
+2026-09-29. During implementation, resolve envelope schema details
 within this scope and demonstrate old-reader/writer behavior. If that requires
 an incompatible format or broader API, revise the proposal before that change.
 
