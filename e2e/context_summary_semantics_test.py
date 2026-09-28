@@ -87,17 +87,18 @@ class SemanticChecks(unittest.TestCase):
                 return io.BytesIO(b'{}')
             body = json.loads(request.data)
             content = body['messages'][0]['content']
-            source = json.loads(content.split('\nSOURCE: ')[1])
+            source = json.loads(content.split('\nSOURCE: ')[1].split('\nFINAL_REVIEW: ')[0])
             self.assertEqual(source, fixture['source'])
             self.assertNotIn('savedEditSourceIds', content)
             self.assertNotIn('latestSelectionSourceIds', content)
+            self.assertTrue(content.endswith('\nFINAL_REVIEW: Audit fixture.'))
             calls.append(body)
             return io.BytesIO(json.dumps({'message': {'content': json.dumps(value)},
                                          'done': True, 'done_reason': 'stop'}).encode())
         with tempfile.TemporaryDirectory() as output:
             argv = ['replay', '--fixture', str(directory / 'fixtures/context-work-state.json'), '--output', output]
             with patch.object(sys, 'argv', argv), patch('urllib.request.urlopen', response), patch(
-                'subprocess.check_output', return_value="const SUMMARY_INSTRUCTIONS =\n  'Summarize fixture.'"
+                'subprocess.check_output', return_value="const SUMMARY_INSTRUCTIONS =\n  'Summarize fixture.'\nconst SUMMARY_REVIEW_INSTRUCTIONS =\n  'Audit fixture.'"
             ):
                 with contextlib.redirect_stdout(io.StringIO()):
                     runpy.run_path(str(directory / 'context-summary-work-state-replay.py'), run_name='__main__')

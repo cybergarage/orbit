@@ -31,7 +31,8 @@ def prompt_at_ref(root, ref):
     match = re.search(r"const SUMMARY_INSTRUCTIONS =\n  '([^\n]+)'", code)
     if match is None:
         raise ValueError("Cannot locate summary instructions at " + ref)
-    return match.group(1)
+    review = re.search(r"const SUMMARY_REVIEW_INSTRUCTIONS =\n  '([^\n]+)'", code)
+    return match.group(1), (review.group(1) if review else None)
 
 
 def main():
@@ -78,12 +79,15 @@ def main():
     variants = [("baseline", args.baseline_ref), ("candidate", args.candidate_ref)]
     rows = []
     for name, ref in variants:
+        instructions, review = prompt_at_ref(root, ref)
         prompt = (
-            prompt_at_ref(root, ref)
+            instructions
             + "\nOUTPUT_TOKEN_BUDGET: 2048. Complete the JSON object within this budget."
             + "\nORIGINAL_SOURCE_IDS: " + json.dumps(ids)
             + "\nSOURCE: " + json.dumps(source)
         )
+        if review is not None:
+            prompt += "\nFINAL_REVIEW: " + review
         body = {
             "model": "ornith-1.5:9b", "stream": False, "think": False, "format": "json",
             "messages": [{"role": "user", "content": prompt}],

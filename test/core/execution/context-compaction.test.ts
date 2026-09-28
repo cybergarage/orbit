@@ -128,7 +128,7 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
             const content = ['fenced', 'fenced-bad-id', 'fenced-prose'].includes(mode)
               ? '```json\n' + JSON.stringify(summary) + '\n```' + (mode === 'fenced-prose' ? '\nUnverified text' : '')
               : JSON.stringify(summary)
-            const source = JSON.parse(String(request.messages[0]).split('\nSOURCE: ')[1]) as {messages: unknown[]}
+            const source = JSON.parse(String(request.messages[0]).split('\nSOURCE: ')[1].split('\nFINAL_REVIEW: ')[0]) as {messages: unknown[]}
             const truncated =
               mode === 'truncated' ||
               (mode === 'length-sensitive' && source.messages.length > 1) ||
@@ -326,7 +326,7 @@ describe('budgeted context preparation', () => {
       if (!messages[0].content.startsWith('Summarize')) return prepared
       const prompt = messages[0].content
       summaryPrompt = prompt
-      const source = JSON.parse(prompt.split('\nSOURCE: ')[1]) as {messages: Array<{id: string}>}
+      const source = JSON.parse(prompt.split('\nSOURCE: ')[1].split('\nFINAL_REVIEW: ')[0]) as {messages: Array<{id: string}>}
       expect(source.messages.map((message) => message.id)).to.include.members([
         editCall.id,
         editResult.id,
@@ -365,11 +365,11 @@ describe('budgeted context preparation', () => {
     expect(summaryPrompt).to.contain('A failed test does not undo a successful edit')
     expect(summaryPrompt).to.contain('Reconcile every category')
     expect(summaryPrompt).to.contain('Passing tests prove only the assertions actually exercised')
-    expect(summaryPrompt).to.contain('Separate observed execution from verified behavior')
-    expect(summaryPrompt).to.contain('Do not turn missing behavioral verification into a claim that no test ran')
-    expect(summaryPrompt).to.contain('Preserve observed passing runs and later failures or deselections separately')
-    expect(summaryPrompt).to.contain('A test body containing only pass proves execution')
-    expect(summaryPrompt).to.contain('previous-summary item: remove unsupported behavioral-success claims')
+    const review = summaryPrompt.split('\nFINAL_REVIEW: ')[1]
+    expect(review).to.contain('A passing empty test proves execution only')
+    expect(review).to.contain('Preserve each latest test command/filter outcome')
+    expect(review).to.contain('Successful edit/write results mean saved changes')
+    expect(summaryPrompt.indexOf('\nFINAL_REVIEW: ')).to.be.greaterThan(summaryPrompt.indexOf('\nSOURCE: '))
     const checkpoint = session.getCompaction()!
     expect(checkpoint.summary.changedPaths[0].sourceIds).to.deep.equal([editResult.id])
     expect(checkpoint.summary.tests[0]).to.include({outcome: 'failed', revision: null})
@@ -459,7 +459,7 @@ describe('budgeted context preparation', () => {
       ),
     ).to.equal(true)
     for (const request of summaries) {
-      const source = JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1]) as {
+      const source = JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1].split('\nFINAL_REVIEW: ')[0]) as {
         messages: Array<{id: string}>
       }
       expect(source.messages.some((message) => message.id === call.id)).to.equal(
@@ -499,7 +499,7 @@ describe('budgeted context preparation', () => {
       String((request.messages as unknown[])[0]).startsWith('Summarize'),
     )
     const sources = summaries.map((request) =>
-      JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1]) as {messages: unknown[]},
+      JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1].split('\nFINAL_REVIEW: ')[0]) as {messages: unknown[]},
     )
     expect(sources[0].messages).to.have.length(8)
     expect(sources[1].messages).to.have.length(8)
@@ -523,7 +523,7 @@ describe('budgeted context preparation', () => {
     expect(summaries).to.have.length(2)
     expect(summaries.map((request) => request.cap)).to.deep.equal([profile.summaryOutput, profile.outputReserve])
     const sources = summaries.map((request) =>
-      JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1]),
+      JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1].split('\nFINAL_REVIEW: ')[0]),
     )
     expect(sources[1]).to.deep.equal(sources[0])
     expect(session.getCompaction()?.summary.goals[0].sourceIds).to.deep.equal([id])

@@ -276,7 +276,9 @@ reported feature; an empty passing test demonstrates execution only. When the
 source does not show the relevant assertions being exercised, the prompt asks
 for the observed outcome to be retained and behavioral verification to remain
 pending. This also applies to unsupported claims inherited from earlier
-checkpoints. These instructions guide model output; structural/evidence-ID
+checkpoints. A final review instruction after the serialized source asks the
+model to reconcile these claims against raw tool results before returning JSON.
+These instructions guide model output; structural/evidence-ID
 validation does not independently prove semantic truth. The fixed-case
 [semantic diagnostic](e2e-evaluation.md#fixed-context-summary-semantic-diagnostic)
 checks the observed failure separately.
