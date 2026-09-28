@@ -6,13 +6,13 @@
 import fs from 'node:fs'
 import {Ollama} from 'ollama'
 
+import {OllamaAgent, ollamaFetch} from '../dist/core/models/adapters/ollama.js'
 import {
   Agent,
   createModelContextPolicy,
   DiagnosticEventBus,
   MemorySessionLogStore,
   Message,
-  OllamaAgent,
   SessionRepository,
   State,
 } from '../dist/index.js'
@@ -67,7 +67,7 @@ try {
 const reopened = await repository.open(session.getFile())
 const diagnostics = new DiagnosticEventBus({capture: 'full', fullCaptureDurationMs: 600_000, maxEvents: 1000})
 diagnostics.subscribe((event) => fs.appendFileSync(`${root}/events.jsonl`, JSON.stringify(event) + '\n'))
-const sdk = new Ollama({host: 'http://host.docker.internal:11434'})
+const sdk = new Ollama({fetch: ollamaFetch, host: 'http://host.docker.internal:11434'})
 const client = {
   abort: () => sdk.abort(),
   chat: (request) =>
