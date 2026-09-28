@@ -366,6 +366,8 @@ describe('budgeted context preparation', () => {
     expect(summaryPrompt).to.contain('Reconcile every category')
     expect(summaryPrompt).to.contain('Passing tests prove only the assertions actually exercised')
     expect(summaryPrompt).to.contain('Separate observed execution from verified behavior')
+    expect(summaryPrompt).to.contain('Do not turn missing behavioral verification into a claim that no test ran')
+    expect(summaryPrompt).to.contain('Preserve observed passing runs and later failures or deselections separately')
     expect(summaryPrompt).to.contain('A test body containing only pass proves execution')
     expect(summaryPrompt).to.contain('previous-summary item: remove unsupported behavioral-success claims')
     const checkpoint = session.getCompaction()!
