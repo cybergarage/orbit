@@ -516,6 +516,8 @@ budgets and does not increase the selected Ollama context window.
 `npm run eval:context-summary` replays the committed public solver-history fixture
 against localhost Ollama (`ornith-1.5:9b`), comparing the prompt at `4eb5701`
 with the current commit. Use `-- --candidate-ref <commit>` to pin the candidate.
+The replay also reproduces an optional post-source review instruction from the
+selected Git ref, so historical instruction-placement trials remain replayable.
 This diagnostic does not run a SWE-bench solver or official harness.
 
 The fixture separates `source` from grader-only `expected` values. Only source

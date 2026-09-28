@@ -1,5 +1,18 @@
 # Test evidence in summaries — 2026-09-28
 
+## Outcome — 2026-09-29
+
+Four instruction variants were tried; none is accepted as an overall improvement. Each comparison used the same fixed source and unchanged independent grader, one real model request per condition. Baselines consistently failed unsupported behavioral-success claims. Some candidates removed that claim but introduced missing/stale test observations, wrong saved state/path, mixed test outcomes or missing source IDs. Runtime prompt changes are restored to the pre-task version rather than shipping those regressions. The replay driver retains support for reproducing historical post-source review variants; no public API, persistence schema or iteration-limit change remains.
+
+| Candidate | Saved edit | Latest test / remaining work | Unsupported success | Overall |
+| --- | --- | --- | --- | --- |
+| `b3026e6` | Pass | Needs review | Needs review | Needs review; manual rejection |
+| `598f2b8` | Fail | Fail | Pass | Fail |
+| `e3561fc` | Fail | Fail | Pass | Fail |
+| `516a2d5` | Not scored | Not scored | Not scored | Fail: missing test source IDs |
+
+These trials are not independent representative benchmark samples: they reuse one history to diagnose a known failure. No SWE-bench solver/official grading run was repeated in this task. Full-suite and narrow unit-test success validates implementation mechanics, not model semantic correctness.
+
 ## First focused attempt
 
 Prompt `b3026e6` distinguishes observed execution from behavioral verification and explicitly warns that an empty passing test or a test name does not prove a feature. This is a local instruction change; no public API, checkpoint schema, stopping rule or dependency changes, so no ADR is required. Unit validation passed: 47 context-compaction tests, 11 fixed semantic tests, headers check, build and 1,038 full-suite tests.
@@ -21,3 +34,31 @@ The second live comparison still rejected the candidate: baseline `1a69535` fail
 Commit `e3561fc` restored the original main instructions and placed a brief consistency check after the untrusted serialized source. The replay driver now reads the optional review instruction from each tested Git ref and reproduces its placement; its mock integration test checks placement and continued isolation of grader-only expectations. Validation passed: 47 context tests, 11 semantic tests, headers/build, 1,038 full-suite tests. No source data, grader or output schema changed.
 
 Live baseline: fail, 66.6 s. Candidate: fail, 85.5 s. The candidate passed noUnsupportedSuccess and retained later observations, but misspelled the changed path (`markers.py` instead of `structures.py`) and combined passing/deselected results into an item labeled passed. Manual review also found a conflicting claim that no post-save test ran. The source hashes stayed identical across these trials. This is not an overall semantic pass, and timings are not a speed claim. A further local review instruction will require exact observed paths and separate outcomes for distinct commands/filters.
+
+## Separate path / test observations — 2026-09-29
+
+Commit `516a2d5` required exact observed paths and one outcome per command/filter. Narrow tests (47), semantic tests (11), headers and build passed. Live baseline: fail, 69.8 s. Candidate: fail, 77.4 s: its JSON was complete and parseable but both test items omitted mandatory sourceIds. Semantic checks were not scored through a shape failure. A historical test item still claimed an edit was unsaved. Valid JSON is again insufficient for schema or semantic correctness.
+
+## Reproduction and next design question
+
+```sh
+npm run test:e2e:summary
+npm run eval:context-summary -- --baseline-ref 1a69535 --candidate-ref b3026e6 --output tmp/e2e/test-evidence-first-repeat
+npm run eval:context-summary -- --baseline-ref 1a69535 --candidate-ref 516a2d5 --output tmp/e2e/test-evidence-last-repeat
+```
+
+The updated driver reads both the main instructions and optional FINAL_REVIEW from each specified Git ref. The fixed fixture and grader are unchanged. Full requests/responses remain locally in the four `tmp/e2e/context-test-evidence-*` directories; generated summaries, hashes and grading evidence are committed in JSON. Expected grading facts never go to the model.
+
+Further prompt-only tuning on this history cannot establish reliable semantic preservation. A next design investigation should consider preserving structured edit/test observations independently of model-authored summaries, and distinguishing test execution from assertion coverage. Arbitrary shell output cannot automatically prove a behavior; explicitly reported observations should retain their source evidence and unknown coverage. This is a proposal, not an implemented guarantee. A change to checkpoint persistence or public tool contracts would need an ADR before implementation. Broader histories and real solve tests are still required before claiming general improvement.
+
+## Final disposition
+
+Runtime source, context-compaction tests and feature documentation were restored
+byte-for-byte to pre-task commit `8b06209` by dedicated revert commit `fea9330`.
+Historical trial commits remain available without rewriting history. The net
+implementation addition is replay support for historical final-review prompts,
+with model-input isolation covered by the deterministic integration test.
+
+Final restored-state validation passed: 11 semantic evaluator/driver tests,
+headers check, build and 1,038 full-suite tests. No book files were changed,
+no iteration cap was added and no push was performed.
