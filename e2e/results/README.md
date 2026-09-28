@@ -57,6 +57,12 @@ solves. The current runner ignores this removed setting and recorded
 `rounds: unlimited` in each Session. Runs continued until a normal completion,
 a runtime error or the separate 900-second elapsed-time budget.
 
+## Runtime observation diagnostic
+
+The [live reopened projection report](2026-09-29-core-observations-live.md)
+records two actual saves retained independently of model prose after reopening
+a Session. Its direct correspondence check passed; this is not a SWE-bench score.
+
 ## Context summary replay
 
 This is a focused solver-history diagnostic, not a SWE-bench solve or grade.

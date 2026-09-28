@@ -1,0 +1,137 @@
+{
+  "date": "2026-09-29",
+  "scope": "live-reopened-core-observation-diagnostic",
+  "coreSourceCommit": "912e2109c05c866a11f349315881f4dab1636edb",
+  "driverCommit": "fcc69cb1a08ef01a3208e646c7bc69322c566933",
+  "imageId": "sha256:2c553a109243755a61480f12663f10b29fc9af5004716d93be8728a5801c625e",
+  "model": {
+    "name": "ornith-1.5:9b",
+    "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+    "quantization": "Q4_K_M",
+    "ollamaVersion": "0.34.4"
+  },
+  "settings": {
+    "num_ctx": 32768,
+    "num_predict": 2048,
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "seed": 42,
+    "think": false
+  },
+  "contextPolicy": {
+    "mode": "budgeted",
+    "profile": {
+      "model": "ornith-1.5:9b",
+      "outputReserve": 2048,
+      "provider": "ollama",
+      "revision": "model-capacity-v1",
+      "safetyMargin": 1639,
+      "summaryOutput": 2048,
+      "target": 2500,
+      "templateOverhead": 256,
+      "trigger": 3500,
+      "window": 32768
+    }
+  },
+  "fixture": {
+    "fixedSetupModel": true,
+    "actualBuiltinWrites": 2,
+    "reusedCallId": true,
+    "persistedTranscriptVersion": 2,
+    "reopenedBeforeRealModel": true,
+    "toolsInConsumerStage": 0,
+    "deadlineMs": 300000
+  },
+  "runtime": {
+    "outcome": "completed",
+    "reason": "completed",
+    "quiescence": true,
+    "unresolved": [],
+    "cleanupErrors": []
+  },
+  "directCheck": {
+    "scope": "runtime-diagnostic-source-correspondence-v1",
+    "status": "pass",
+    "viewCount": 1,
+    "recordCount": 2,
+    "rows": [
+      {
+        "sequence": 8,
+        "tokens": 1140,
+        "omittedRecords": 0,
+        "unknownResults": 0,
+        "records": [
+          {
+            "sourceIds": ["01a0e90f-0ee6-7355-a0e9-2af1f8fb9386", "01a0e90f-0eed-7319-b441-3c0c4ba5daa2"],
+            "kind": "file-write",
+            "passed": true
+          },
+          {
+            "sourceIds": ["01a0e90f-0eee-7752-909a-b2a4fa15c9d0", "01a0e90f-0ef4-71df-b39b-5032ce14eb24"],
+            "kind": "file-write",
+            "passed": true
+          }
+        ],
+        "passed": true
+      }
+    ],
+    "limitations": [
+      "Checks correspondence with controlled runtime artifacts, not journal cryptographic authentication.",
+      "Does not grade model answers, current workspace state or behavioral correctness."
+    ]
+  },
+  "view": {
+    "omittedRecords": 0,
+    "records": [
+      {
+        "adapter": "builtin-write-v1",
+        "isError": false,
+        "resultSha256": "af642fe2ff7e47ea76779382661f425fafa5e41a14913a7172bdbc77cce3c33c",
+        "sequence": 2,
+        "sourceIds": ["01a0e90f-0ee6-7355-a0e9-2af1f8fb9386", "01a0e90f-0eed-7319-b441-3c0c4ba5daa2"],
+        "bytes": 1,
+        "kind": "file-write",
+        "path": "/workspace/observed-1.txt",
+        "savedAtOperation": true
+      },
+      {
+        "adapter": "builtin-write-v1",
+        "isError": false,
+        "resultSha256": "8c1766a3f932ea020a342f7bf7727f80b5a4a8bc26af3cb30a7ac0f86af14f83",
+        "sequence": 4,
+        "sourceIds": ["01a0e90f-0eee-7752-909a-b2a4fa15c9d0", "01a0e90f-0ef4-71df-b39b-5032ce14eb24"],
+        "bytes": 1,
+        "kind": "file-write",
+        "path": "/workspace/observed-2.txt",
+        "savedAtOperation": true
+      }
+    ],
+    "sourceSha256": "733f83a1bfe7669de5a09dd254b78922001a83fa334806ea0dca108534e5e110",
+    "unknownResults": 0,
+    "version": 1
+  },
+  "compaction": {
+    "afterTokens": 1140,
+    "beforeTokens": 10066,
+    "durationMs": 38839.851226
+  },
+  "modelAnswer": "## Acknowledged Saved Operations\n\nTwo file-write operations were acknowledged, based on the untrusted source-derived observations you provided. I'll present these strictly as reported, without any behavioral verification.\n\n| Path | Bytes | Result SHA-256 |\n|------|-------|----------------|\n| `/workspace/observed-1.txt` | 1 | `af642fe2ff7e47ea76779382661f425fafa5e41a14913a7172bdbc77cce3c33c` |\n| `/workspace/observed-2.txt` | 1 | `8c1766a3f932ea020a342f7bf7727f80b5a4a8bc26af3cb30a7ac0f86af14f83` |\n\n### Notes\n- Both entries report `\"isError\": false` and `\"savedAtOperation\": true`.\n- Each write reports 1 byte.\n- As instructed, no actions were performed and no test claims were made.",
+  "modelAnswerSource": "model.response.completed (result.answer was read before completion in this driver revision)",
+  "summaryReferenceCheck": {
+    "referencedIds": 9,
+    "unknownIds": [],
+    "allReferencesExist": true,
+    "scope": "membership only; no semantic entailment guarantee"
+  },
+  "usage": {
+    "inputTokens": 12016,
+    "outputTokens": 709
+  },
+  "limitations": [
+    "Controlled actual-write fixture, not a coding-ability or SWE-bench result.",
+    "Direct checker proves artifact correspondence, not independent journal cryptographic authentication.",
+    "Summary reference membership/meaning and current workspace state are separate from the deterministic observation view.",
+    "One real-model diagnostic, no statistical speed or reliability inference.",
+    "Opaque runtime proofs and raw journals are excluded from this curated artifact."
+  ]
+}
