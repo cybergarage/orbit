@@ -11,6 +11,7 @@ import type {RunContext} from './run.js'
 
 import {resolveShell} from '../tools/builtins/bash.js'
 import {textToolResult} from '../tools/definition.js'
+import {bindObservationResult, observationAdapter} from '../tools/observation-provenance.js'
 import {copyJSON} from './journal.js'
 
 export type OperationEffect = 'command' | 'mcp' | 'opaque' | 'read' | 'write'
@@ -111,6 +112,11 @@ export async function executeManagedTool(
     return textToolResult('Invalid or unauthorized operation preparation', {isError: true})
   }
 
+  const adapter = observationAdapter(definition)
+  const observation =
+    adapter && typeof context.groupId === 'string'
+      ? {adapter, groupId: context.groupId, inputDigest: run.journal.digest(input)}
+      : undefined
   const descriptor: PreparedOperation = {
     binding: {
       ...preparation.binding,
@@ -118,7 +124,7 @@ export async function executeManagedTool(
       catalog: run.catalogIdentity() ?? '',
       iteration: context.iteration ?? 0,
       policy: options.policy.generation,
-      source: copyJSON(definition.source),
+      source: {...copyJSON(definition.source), ...(observation ? {observation} : {})},
     },
     cwd: context.cwd,
     effect: preparation.effect,
@@ -132,7 +138,27 @@ export async function executeManagedTool(
     variant: 'tool-call',
     version: 1,
   }
-  return executePrepared(run, descriptor, preparation, options.policy, false, options.onToolSettled)
+  const result = await executePrepared(run, descriptor, preparation, options.policy, false, options.onToolSettled)
+  const completed = run.journal
+    .records()
+    .find(
+      (record) =>
+        record.runId === run.id &&
+        record.kind === 'operation-result' &&
+        record.data.operationId === id &&
+        ['failed', 'succeeded'].includes(String(record.data.status)) &&
+        record.data.outputDigest === run.journal.digest(result),
+    )
+  if (observation && completed)
+    bindObservationResult(result, {
+      ...observation,
+      callId: context.callId,
+      operationId: id,
+      outputDigest: run.journal.digest(result),
+      runId: run.id,
+      version: 1,
+    })
+  return result
 }
 
 export async function executePrepared(

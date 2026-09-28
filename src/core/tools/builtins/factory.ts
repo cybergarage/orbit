@@ -6,6 +6,7 @@ import type {z} from 'zod'
 import type {ToolDefinition, ToolExecutionContext, ToolResult, ToolScheduling} from '../definition.js'
 
 import {zodToolInput} from '../definition.js'
+import {markObservationAdapter} from '../observation-provenance.js'
 
 export function defineBuiltinTool<Input, Details = unknown>(options: {
   description: string
@@ -15,7 +16,7 @@ export function defineBuiltinTool<Input, Details = unknown>(options: {
   schema: z.ZodType<Input>
 }): ToolDefinition<Input, Details> {
   const input = zodToolInput(options.schema)
-  return {
+  const definition: ToolDefinition<Input, Details> = {
     execute: options.execute,
     input,
     scheduling: options.scheduling,
@@ -26,4 +27,6 @@ export function defineBuiltinTool<Input, Details = unknown>(options: {
       name: options.name,
     },
   }
+  markObservationAdapter(definition)
+  return definition
 }

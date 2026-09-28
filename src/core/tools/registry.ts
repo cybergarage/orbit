@@ -5,6 +5,7 @@ import type {ModelToolCall} from '../models/model.js'
 import type {ToolDefinition, ToolExecutionContext, ToolResult} from './definition.js'
 
 import {copyJSON} from '../execution/journal.js'
+import {copyObservationAdapter} from './observation-provenance.js'
 
 const TOOL_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/u
 
@@ -29,14 +30,16 @@ export class ToolRegistry {
       )
     }
 
-    this.definitions.set(name, {
+    const registered: ToolDefinition = {
       ...definition,
       execute: definition.execute.bind(definition),
       input: {jsonSchema: copyJSON(definition.input.jsonSchema), parse: definition.input.parse.bind(definition.input)},
       source: copyJSON(definition.source),
       spec: copyJSON(definition.spec),
       ...(definition.prepare ? {prepare: definition.prepare.bind(definition)} : {}),
-    })
+    }
+    copyObservationAdapter(definition, registered)
+    this.definitions.set(name, registered)
   }
 
   snapshot(): ToolSnapshot {

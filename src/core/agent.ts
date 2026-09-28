@@ -96,6 +96,7 @@ import {normalizeSkillSelections} from './skills/index.js'
 import {skillPrefix} from './skills/record.js'
 import {State} from './state.js'
 import {adaptInvokableTool, createBuiltinTools, ToolProfile, ToolRegistry, ToolRuntime} from './tools/index.js'
+import {observationProvenance} from './tools/observation-provenance.js'
 
 export type AgentTool = InvokableTool
 
@@ -981,6 +982,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                   update,
                 })
               },
+              groupId: storedModelMessage.id,
               iteration,
               signal,
             }),
@@ -1499,6 +1501,7 @@ function createToolResultMessage(toolCall: ModelToolCall, output: ToolResult): M
     isError: output.isError === true,
     name: toolCall.name,
     output,
+    ...(observationProvenance(output) ? {observation: observationProvenance(output)} : {}),
     toolCallId: toolCall.id,
   }
 
