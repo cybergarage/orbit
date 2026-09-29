@@ -64,6 +64,9 @@ a runtime error or the separate 900-second elapsed-time budget.
 
 ## Runtime observation diagnostic
 
+The [smaller-batch/cumulative-summary reopened diagnostic](2026-09-29-compact-batches-live.md) and [JSON](2026-09-29-compact-batches-live.json) record final core `08097e5`: one 45.11-second short-history compaction and 2/2 saves preserved. This is not a long-history batching speed measurement; exact deduplication is covered by deterministic tests, and the natural Verified run is recorded separately.
+
+
 The [summary validation/recovery diagnostic](2026-09-29-summary-validation-recovery-live.md)
 completed natural-output, injected-empty and injected-missing-field conditions.
 Each retained 2/2 actual save records; injected conditions regenerated summaries

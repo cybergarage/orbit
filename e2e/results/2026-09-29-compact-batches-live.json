@@ -1,0 +1,268 @@
+{
+  "date": "2026-09-29",
+  "scope": "final-smaller-batches-reopened-diagnostic",
+  "coreCommit": "08097e57a1f57cdd19b68e035bd8ae259cf506e2",
+  "imageId": "sha256:d83c2c90273a5169a299320212a72462eb91275236b476fa451d1fe548bdff62",
+  "model": {
+    "model": "ornith-1.5:9b",
+    "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+    "details": {
+      "parent_model": "",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": [
+        "qwen35"
+      ],
+      "parameter_size": "9.0B",
+      "quantization_level": "Q4_K_M"
+    },
+    "ollama": {
+      "version": "0.34.4"
+    },
+    "templateSha256": "f55f52930aa8bf44ab5cb85f99370fcc3c56e9a85640b812086d5330bce5d86b"
+  },
+  "generation": {
+    "num_ctx": 32768,
+    "num_predict": 2048,
+    "seed": 42,
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "think": false
+  },
+  "environment": {
+    "host": "macOS ARM64",
+    "container": "linux/arm64",
+    "dockerVersion": "29.8.1",
+    "dockerMemoryBytes": 4107141120
+  },
+  "run": {
+    "condition": "natural-reopened-diagnostic",
+    "runtime": {
+      "outcome": "completed",
+      "reason": "completed",
+      "quiescence": true,
+      "unresolved": [],
+      "cleanupErrors": []
+    },
+    "profile": {
+      "mode": "budgeted",
+      "profile": {
+        "model": "ornith-1.5:9b",
+        "outputReserve": 2048,
+        "provider": "ollama",
+        "revision": "model-capacity-v1",
+        "safetyMargin": 1639,
+        "summaryOutput": 2048,
+        "target": 2500,
+        "templateOverhead": 256,
+        "trigger": 3500,
+        "window": 32768
+      }
+    },
+    "summaryRequests": [
+      {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "full",
+        "previousSummaryBytes": 0,
+        "sourceMessages": 6,
+        "inputTokens": 11356,
+        "sourceTargetTokens": 4096,
+        "summaryTargetTokens": 1024
+      }
+    ],
+    "summarySizes": [
+      {
+        "itemsAfter": 8,
+        "itemsBefore": 8,
+        "summaryBytesAfter": 1286,
+        "summaryBytesBefore": 1286
+      }
+    ],
+    "compaction": {
+      "afterTokens": 1253,
+      "beforeTokens": 10066,
+      "durationMs": 45108.60860299999
+    },
+    "summary": {
+      "version": 1,
+      "goals": [
+        {
+          "text": "Save observed-1.txt (content '1') and observed-2.txt (content '2'); do not run tests.",
+          "sourceIds": [
+            "01a0ebbf-6649-71d0-b4af-1f1d0adafe3c"
+          ]
+        },
+        {
+          "text": "Historical fixture filler (non-instructive filler content).",
+          "sourceIds": [
+            "01a0ebbf-6665-749a-8f60-095bf07efee3",
+            "01a0ebbf-6681-717b-8a60-3fa818428343",
+            "01a0ebbf-6681-717b-8a60-465bd7fb6ab1",
+            "01a0ebbf-669a-750d-b071-a6c4e2e56dee"
+          ]
+        },
+        {
+          "text": "Do not run tests.",
+          "sourceIds": [
+            "01a0ebbf-6649-71d0-b4af-1f1d0adafe3c",
+            "01a0ebbf-669a-750d-b071-ac9c958a5778"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "text": "Created /workspace/observed-1.txt with content '1' (1 byte).",
+          "sourceIds": [
+            "01a0ebbf-6681-717b-8a60-3fa818428343"
+          ]
+        },
+        {
+          "text": "Created /workspace/observed-2.txt with content '2' (1 byte).",
+          "sourceIds": [
+            "01a0ebbf-6681-717b-8a60-465bd7fb6ab1"
+          ]
+        }
+      ],
+      "changedPaths": [
+        {
+          "text": "/workspace/observed-1.txt created (existed:false, 1 byte).",
+          "sourceIds": [
+            "01a0ebbf-6681-717b-8a60-3fa818428343"
+          ]
+        },
+        {
+          "text": "/workspace/observed-2.txt created (existed:false, 1 byte).",
+          "sourceIds": [
+            "01a0ebbf-6681-717b-8a60-465bd7fb6ab1"
+          ]
+        }
+      ],
+      "tests": [],
+      "unfinished": [
+        {
+          "text": "No tests were run, per the user's explicit instruction; no test outcomes exist.",
+          "sourceIds": [
+            "01a0ebbf-6649-71d0-b4af-1f1d0adafe3c",
+            "01a0ebbf-669a-750d-b071-ac9c958a5778"
+          ]
+        }
+      ],
+      "uncertainties": []
+    },
+    "providerUsage": {
+      "inputTokens": 12330,
+      "outputTokens": 712,
+      "totalTokens": 13042
+    },
+    "providerResponses": 2,
+    "answer": "The following operations were acknowledged as saved:\n\n1. **/workspace/observed-1.txt** \u2014 `builtin-write-v1` file write, 1 byte, no error.\n2. **/workspace/observed-2.txt** \u2014 `builtin-write-v1` file write, 1 byte, no error.\n\nNo actions were performed beyond reporting these acknowledgments, and no tests were run or verified.",
+    "directCheck": {
+      "scope": "runtime-diagnostic-source-correspondence-v1",
+      "status": "pass",
+      "viewCount": 1,
+      "recordCount": 2,
+      "rows": [
+        {
+          "sequence": 9,
+          "tokens": 1253,
+          "omittedRecords": 0,
+          "unknownResults": 0,
+          "records": [
+            {
+              "sourceIds": [
+                "01a0ebbf-6665-749a-8f60-095bf07efee3",
+                "01a0ebbf-6681-717b-8a60-3fa818428343"
+              ],
+              "kind": "file-write",
+              "passed": true
+            },
+            {
+              "sourceIds": [
+                "01a0ebbf-6681-717b-8a60-465bd7fb6ab1",
+                "01a0ebbf-669a-750d-b071-a6c4e2e56dee"
+              ],
+              "kind": "file-write",
+              "passed": true
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "limitations": [
+        "Checks correspondence with controlled runtime artifacts, not journal cryptographic authentication.",
+        "Does not grade model answers, current workspace state or behavioral correctness."
+      ]
+    }
+  },
+  "previousNaturalDiagnostic": {
+    "coreCommit": "f7d7fe496e4052a49783fd0b26145349da9dc4e5",
+    "dockerVersion": "29.8.0",
+    "compaction": {
+      "afterTokens": 1222,
+      "beforeTokens": 10066,
+      "durationMs": 46962.673979
+    },
+    "providerUsage": {
+      "inputTokens": 12247,
+      "outputTokens": 756,
+      "totalTokens": 13003
+    },
+    "directCheck": {
+      "scope": "runtime-diagnostic-source-correspondence-v1",
+      "status": "pass",
+      "viewCount": 1,
+      "recordCount": 2,
+      "rows": [
+        {
+          "sequence": 8,
+          "tokens": 1222,
+          "omittedRecords": 0,
+          "unknownResults": 0,
+          "records": [
+            {
+              "sourceIds": [
+                "01a0eb0b-4a71-7159-8bcd-908c27222938",
+                "01a0eb0b-4a80-7562-b44e-8fce1e05d923"
+              ],
+              "kind": "file-write",
+              "passed": true
+            },
+            {
+              "sourceIds": [
+                "01a0eb0b-4a80-7562-b44e-97951e42417c",
+                "01a0eb0b-4a8c-74ef-9819-85a4a0d4d2fd"
+              ],
+              "kind": "file-write",
+              "passed": true
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "limitations": [
+        "Checks correspondence with controlled runtime artifacts, not journal cryptographic authentication.",
+        "Does not grade model answers, current workspace state or behavioral correctness."
+      ]
+    }
+  },
+  "validation": {
+    "headersCheck": "pass",
+    "build": "pass",
+    "fullTests": 1063,
+    "focusedCompactionAndIntegrationTests": 64,
+    "compactionTests": 60,
+    "hostTests": 19,
+    "directCheckerTests": 4,
+    "semanticEvaluatorTests": 11,
+    "initialFullValidation": "1062 passing / 1 verified-interruption integration failure; fixed before final full suite and source commit"
+  },
+  "limitations": [
+    "Six-message short history uses one full summary, not the eighth-sized source batches; the natural Verified trial covers longer histories separately.",
+    "No exact duplicate items were generated here; deterministic unit tests cover source-ID unions and distinct test outcome retention.",
+    "The soft summary target is not a guaranteed output size or semantic correctness proof.",
+    "One diagnostic, different source UUIDs and Docker version; timing is not an isolated causal comparison.",
+    "Direct checker tests derived-record correspondence, not every model statement or current file state.",
+    "Raw session proofs, credentials and private host paths are excluded."
+  ]
+}
