@@ -509,6 +509,9 @@ function summaryRequest(
       '\nOUTPUT_TOKEN_BUDGET: ' +
       (request.outputLimit ?? options.policy.profile.summaryOutput) +
       '. Complete the JSON object within this budget.' +
+      '\nSUMMARY_TARGET_TOKENS: ' +
+      Math.max(1, Math.floor(options.policy.profile.summaryOutput / 2)) +
+      '. Aim for this compact total including source IDs. Merge repeated evidence into concise items; retain distinct confirmed changes, latest test outcomes, unresolved failures and uncertainties. Never omit evidence just to meet the target.' +
       '\nORIGINAL_SOURCE_IDS: ' +
       JSON.stringify([...request.allowedIds]) +
       '\nSOURCE: ' +
@@ -542,6 +545,33 @@ function summarySourceIds(summary: ContextSummary): string[] {
   ].flatMap((item) => item.sourceIds)
 }
 
+// Remove only exact duplicate items, preserving every referenced source and
+// distinct test target/revision/outcome. Never truncate evidence to a size cap.
+function compactSummaryItems<T extends {sourceIds: string[]}>(items: T[]): T[] {
+  const unique = new Map<string, T>()
+  for (const item of items) {
+    const {sourceIds, ...fields} = item
+    const key = canonicalJSON(fields)
+    const existing = unique.get(key)
+    if (existing) existing.sourceIds = [...new Set([...existing.sourceIds, ...sourceIds])]
+    else unique.set(key, {...item, sourceIds: [...new Set(sourceIds)]})
+  }
+
+  return [...unique.values()]
+}
+
+function compactSummary(summary: ContextSummary): ContextSummary {
+  return {
+    ...summary,
+    changedPaths: compactSummaryItems(summary.changedPaths),
+    facts: compactSummaryItems(summary.facts),
+    goals: compactSummaryItems(summary.goals),
+    tests: compactSummaryItems(summary.tests),
+    uncertainties: compactSummaryItems(summary.uncertainties),
+    unfinished: compactSummaryItems(summary.unfinished),
+  }
+}
+
 function completeSummaryGroups(messages: Message[]): Message[][] {
   const groups: Message[][] = []
   for (let index = 0; index < messages.length; index++) {
@@ -564,15 +594,34 @@ async function summarizeEligible(
   const originalIds = new Set(originals.map((message) => message.id))
   const inputLimit =
     options.policy.profile.window - options.policy.profile.summaryOutput - options.policy.profile.safetyMargin
+  const compactPrevious = previous ? compactSummary(previous) : null
+  const sourceTarget = options.policy.profile.summaryOutput * 2
+  const groupCount = eligible.filter((message) => message.type !== MessageType.Tool).length
+  const fitsSourceTarget = (request: PreparedModelInvocation, prior: ContextSummary | null, ids: Set<string>) => {
+    const baseline = summaryRequest(options, [], prior, {allowedIds: ids})
+    return checkedEstimate(request, options).tokens - checkedEstimate(baseline, options).tokens <= sourceTarget
+  }
+
   const invoke = async (
     request: PreparedModelInvocation,
     allowedIds: Set<string>,
-    details: {outputLimit: number; phase: 'batch' | 'expanded' | 'full'; sourceMessages: number},
+    details: {
+      outputLimit: number
+      phase: 'batch' | 'expanded' | 'full'
+      previousSummaryBytes: number
+      sourceMessages: number
+    },
   ): Promise<{summary: ContextSummary; usage?: Record<string, number>}> => {
     const invokeOnce = async (attempt: number) => {
       const startedAt = performance.now()
       options.run.consume('modelCalls')
-      diagnostic(options, 'context.summary.started', {attempt, ...details})
+      diagnostic(options, 'context.summary.started', {
+        attempt,
+        ...details,
+        inputTokens: checkedEstimate(request, options).tokens,
+        sourceTargetTokens: sourceTarget,
+        summaryTargetTokens: Math.max(1, Math.floor(options.policy.profile.summaryOutput / 2)),
+      })
       try {
         const response = await options.run.wait('context-summary', request.invoke())
         diagnostic(options, 'context.summary.completed', {attempt, durationMs: performance.now() - startedAt})
@@ -636,7 +685,20 @@ async function summarizeEligible(
       throw new ContextBudgetError('summary-invalid-format')
     }
 
-    return {summary, usage: summaryUsage(response)}
+    const compacted = compactSummary(summary)
+    diagnostic(options, 'context.summary.validated', {
+      itemsAfter: SUMMARY_OUTPUT_CONTRACT.categories.reduce(
+        (count, key) => count + compacted[key as keyof Omit<ContextSummary, 'version'>].length,
+        0,
+      ),
+      itemsBefore: SUMMARY_OUTPUT_CONTRACT.categories.reduce(
+        (count, key) => count + summary[key as keyof Omit<ContextSummary, 'version'>].length,
+        0,
+      ),
+      summaryBytesAfter: Buffer.byteLength(JSON.stringify(compacted)),
+      summaryBytesBefore: Buffer.byteLength(JSON.stringify(summary)),
+    })
+    return {summary: compacted, usage: summaryUsage(response)}
   }
 
   // Recover output exhaustion before splitting the same evidence into many
@@ -649,12 +711,14 @@ async function summarizeEligible(
     phase: 'batch' | 'full',
   ): Promise<{summary: ContextSummary; usage?: Record<string, number>}> => {
     const {outputReserve, safetyMargin, summaryOutput, window} = options.policy.profile
+    const previousSummaryBytes = prior ? Buffer.byteLength(JSON.stringify(prior)) : 0
     let outputLimit = summaryOutput
     const generate = async (prepared: PreparedModelInvocation, repair?: string) => {
       try {
         return await invoke(prepared, allowedIds, {
           outputLimit,
           phase: outputLimit > summaryOutput ? 'expanded' : phase,
+          previousSummaryBytes,
           sourceMessages: messages.length,
         })
       } catch (error) {
@@ -669,6 +733,7 @@ async function summarizeEligible(
         return invoke(expanded, allowedIds, {
           outputLimit,
           phase: 'expanded',
+          previousSummaryBytes,
           sourceMessages: messages.length,
         })
       }
@@ -697,21 +762,29 @@ async function summarizeEligible(
     }
   }
 
-  const oneShot = summaryRequest(options, eligible, previous, {allowedIds: originalIds})
-  if (checkedEstimate(oneShot, options).tokens <= inputLimit) {
+  const oneShot = summaryRequest(options, eligible, compactPrevious, {allowedIds: originalIds})
+  if (
+    checkedEstimate(oneShot, options).tokens <= inputLimit &&
+    (options.verifiedContext?.projectionIds.length ||
+      groupCount <= 8 ||
+      fitsSourceTarget(oneShot, compactPrevious, originalIds))
+  ) {
     try {
-      return await invokeSource(oneShot, eligible, previous, originalIds, 'full')
+      return await invokeSource(oneShot, eligible, compactPrevious, originalIds, 'full')
     } catch (error) {
       if (!isSummaryLengthError(error) && !(error instanceof RecoverableSummaryError)) throw error
     }
   }
 
+  // Raw verified-interruption history can contain nondispatched calls without
+  // results. Preserve its existing one-shot path; validate complete groups only
+  // when actual splitting is required. Never fabricate results for batching.
   const groups = completeSummaryGroups(eligible)
   // The input budget does not predict summary output length. Start with several
   // small batches instead of spending a full generation on an oversized summary.
-  let maxBatchGroups = Math.max(1, Math.ceil(groups.length / 4))
+  let maxBatchGroups = Math.max(1, Math.ceil(groups.length / 8))
   let cursor = 0
-  let accumulated = previous
+  let accumulated = compactPrevious
   let usage: Record<string, number> | undefined
   while (cursor < groups.length) {
     let low = cursor + 1
@@ -725,7 +798,10 @@ async function summarizeEligible(
         ...batch.map((message) => message.id).filter((id) => originalIds.has(id)),
       ])
       const request = summaryRequest(options, batch, accumulated, {allowedIds: ids})
-      if (checkedEstimate(request, options).tokens <= inputLimit) {
+      if (
+        checkedEstimate(request, options).tokens <= inputLimit &&
+        (end === cursor + 1 || fitsSourceTarget(request, accumulated, ids))
+      ) {
         chosen = {end, ids, request}
         low = end + 1
       } else high = end - 1

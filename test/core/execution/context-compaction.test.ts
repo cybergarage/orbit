@@ -108,7 +108,7 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
               tests: [
                 {
                   outcome: 'failed',
-                  revision: null,
+                  revision: null as null | string,
                   sourceIds: [id],
                   target: 'target.test.ts',
                   text: 'Target test failed; revision unknown',
@@ -136,6 +136,22 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
               delete (summary.tests[0] as Partial<(typeof summary.tests)[0]>).revision
             if (['empty-once', 'missing-item-once', 'missing-once'].includes(mode) && summaries === 2)
               expect(String(request.messages[0])).to.contain('VALIDATION_FEEDBACK:')
+            if (mode === 'duplicates') {
+              summary.goals.push({
+                ...summary.goals[0],
+                sourceIds: [id, id, (source.messages[1] as undefined | {id: string})?.id ?? id],
+              })
+              summary.tests.push(
+                {...summary.tests[0], sourceIds: [id, id]},
+                {...summary.tests[0], outcome: 'passed', revision: 'new-revision'},
+                {...summary.tests[0], target: 'other.test.ts'},
+              )
+              if ('previous' in source && source.previous) {
+                expect((source.previous as typeof summary).goals).to.have.length(1)
+                expect((source.previous as typeof summary).tests).to.have.length(3)
+              }
+            }
+
             if (mode === 'oversized') summary.goals[0].text = 'x'.repeat(6000)
             if (mode === 'bad-test') summary.tests[0].outcome = 'invented'
             if (mode === 'fenced-bad-id') summary.goals[0].sourceIds = ['invented']
@@ -386,7 +402,7 @@ describe('budgeted context preparation', () => {
               tests: [
                 {
                   outcome: 'failed',
-                  revision: null,
+                  revision: null as null | string,
                   sourceIds: [testResult.id],
                   target: 'tests/test_marks.py',
                   text: 'Collection TypeError',
@@ -521,7 +537,7 @@ describe('budgeted context preparation', () => {
       ).to.be.greaterThan(1)
     })
 
-  it('starts output-limited history in quarter-sized complete-message batches', async () => {
+  it('starts output-limited history in eighth-sized complete-message batches', async () => {
     const session = new Session()
     session.appendMessages(
       Array.from({length: 4}, (_, index) => [
@@ -541,7 +557,111 @@ describe('budgeted context preparation', () => {
     )
     expect(sources[0].messages).to.have.length(8)
     expect(sources[1].messages).to.have.length(8)
-    expect(sources[2].messages.length).to.be.at.most(2)
+    expect(sources[2].messages).to.have.length(1)
+  })
+
+  it('starts large histories with smaller sources without attempting a full generation', async () => {
+    const session = new Session()
+    const entries = session.appendMessages(
+      Array.from(
+        {length: 16},
+        (_, index) => new Message(MessageType.User, {content: `Case ${index} ` + 'x'.repeat(400)}),
+      ),
+    )
+    const model = fixtureModel(entries[0].id)
+    const diagnostics = new DiagnosticEventBus()
+    const {result} = await execute(session, model, policy, undefined, 100, diagnostics)
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    const requests = model.requests.filter((request) =>
+      String((request.messages as unknown[])[0]).startsWith('Summarize'),
+    )
+    expect(requests).to.have.length(8)
+    const sources = requests.map((request) =>
+      JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1]),
+    )
+    expect(sources.every((source) => source.messages.length === 2)).to.equal(true)
+    expect(sources.flatMap((source) => source.messages.map((message: {id: string}) => message.id))).to.deep.equal(
+      entries.map((entry) => entry.id),
+    )
+    const starts = diagnostics.list().filter((event) => event.type === 'context.summary.started')
+    expect(starts.every((event) => event.data?.phase === 'batch')).to.equal(true)
+    expect(starts[0].data).to.include({previousSummaryBytes: 0, sourceTargetTokens: 1600, summaryTargetTokens: 400})
+    expect(starts[0].data?.inputTokens).to.be.a('number')
+    expect(session.getConversationMessages()).to.have.length(18)
+    expect(session.getCompaction()).not.to.equal(undefined)
+  })
+
+  it('reduces multi-group candidates when marginal source size exceeds the target', async () => {
+    const session = new Session()
+    const entries = session.appendMessages(
+      Array.from(
+        {length: 16},
+        (_, index) => new Message(MessageType.User, {content: `Case ${index} ` + 'x'.repeat(900)}),
+      ),
+    )
+    const model = fixtureModel(entries[0].id)
+    const {result} = await execute(session, model)
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    const requests = model.requests.filter((request) =>
+      String((request.messages as unknown[])[0]).startsWith('Summarize'),
+    )
+    expect(requests).to.have.length(16)
+    const sources = requests.map((request) =>
+      JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1]),
+    )
+    expect(sources.every((source) => source.messages.length === 1)).to.equal(true)
+    expect(sources.flatMap((source) => source.messages.map((message: {id: string}) => message.id))).to.deep.equal(
+      entries.map((entry) => entry.id),
+    )
+    expect(session.getCompaction()).not.to.equal(undefined)
+  })
+
+  it('merges exact duplicates while retaining distinct test outcomes, revisions and targets', async () => {
+    const session = new Session()
+    const id = oldConversation(session)
+    const diagnostics = new DiagnosticEventBus()
+    const {result} = await execute(session, fixtureModel(id, 'duplicates'), policy, undefined, 100, diagnostics)
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    const summary = session.getCompaction()?.summary
+    expect(summary?.goals).to.have.length(1)
+    expect(summary?.goals[0].sourceIds).to.deep.equal([id, session.getConversationMessages()[1].id])
+    expect(summary?.tests).to.have.length(3)
+    expect(summary?.tests.map(({outcome, revision, target}) => ({outcome, revision, target}))).to.deep.equal([
+      {outcome: 'failed', revision: null, target: 'target.test.ts'},
+      {outcome: 'passed', revision: 'new-revision', target: 'target.test.ts'},
+      {outcome: 'failed', revision: null, target: 'other.test.ts'},
+    ])
+    const measured = diagnostics.list().find((event) => event.type === 'context.summary.validated')?.data
+    expect(measured).to.include({itemsAfter: 4, itemsBefore: 6})
+    expect(measured?.summaryBytesAfter).to.be.lessThan(measured?.summaryBytesBefore as number)
+    expect(session.getConversationMessages()).to.have.length(4)
+  })
+
+  it('passes compacted evidence to subsequent batches without truncating distinct items', async () => {
+    const session = new Session()
+    const entries = session.appendMessages(
+      Array.from(
+        {length: 16},
+        (_, index) => new Message(MessageType.User, {content: `Case ${index} ` + 'x'.repeat(400)}),
+      ),
+    )
+    const model = fixtureModel(entries[0].id, 'duplicates')
+    const {result} = await execute(session, model)
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    const requests = model.requests.filter((request) =>
+      String((request.messages as unknown[])[0]).startsWith('Summarize'),
+    )
+    const sources = requests.map((request) =>
+      JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1]),
+    )
+    expect(sources[0].previous).to.equal(null)
+    for (const source of sources.slice(1)) {
+      expect(source.previous.goals).to.have.length(1)
+      expect(source.previous.tests).to.have.length(3)
+    }
+
+    expect(session.getCompaction()?.summary.tests).to.have.length(3)
+    expect(session.getConversationMessages()).to.have.length(18)
   })
 
   it('expands a truncated full summary before splitting its source into batches', async () => {
