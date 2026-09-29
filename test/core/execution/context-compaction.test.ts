@@ -127,7 +127,11 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
               summary.tests = []
             }
 
-            if (mode === 'missing-once' && summaries === 1) delete (summary as Partial<typeof summary>).uncertainties
+            if (
+              (mode === 'missing-once' && summaries === 1) ||
+              (['expanded-missing', 'expanded-repair-length'].includes(mode) && summaries === 2)
+            )
+              delete (summary as Partial<typeof summary>).uncertainties
             if (mode === 'missing-item-once' && summaries === 1)
               delete (summary.tests[0] as Partial<(typeof summary.tests)[0]>).revision
             if (['empty-once', 'missing-item-once', 'missing-once'].includes(mode) && summaries === 2)
@@ -140,8 +144,10 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
               : JSON.stringify(summary)
             const truncated =
               mode === 'truncated' ||
+              (mode === 'expanded-repair-length' && summaries === 3) ||
               (mode === 'length-sensitive' && source.messages.length > 1) ||
-              (mode === 'cap-sensitive' && request.cap === profile.summaryOutput)
+              (['cap-sensitive', 'expanded-missing', 'expanded-repair-length'].includes(mode) &&
+                request.cap === profile.summaryOutput)
             return new Message(MessageType.Assistant, {
               content,
               ...(truncated
@@ -571,6 +577,96 @@ describe('budgeted context preparation', () => {
         .filter((event) => event.type === 'context.summary.started')
         .map((event) => event.data?.phase),
     ).to.deep.equal(['full', 'expanded'])
+  })
+
+  it('retains the expanded allowance when correcting incomplete output', async () => {
+    const session = new Session()
+    const model = fixtureModel(oldConversation(session), 'expanded-missing')
+    const diagnostics = new DiagnosticEventBus()
+    const {result} = await execute(session, model, policy, undefined, 100, diagnostics)
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    const summaries = model.requests.filter((request) =>
+      String((request.messages as unknown[])[0]).startsWith('Summarize'),
+    )
+    expect(summaries.map((request) => request.cap)).to.deep.equal([
+      profile.summaryOutput,
+      profile.outputReserve,
+      profile.outputReserve,
+    ])
+    const sources = summaries.map((request) =>
+      JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1]),
+    )
+    expect(sources[1]).to.deep.equal(sources[0])
+    expect(sources[2]).to.deep.equal(sources[0])
+    expect(String((summaries[2].messages as unknown[])[0])).to.contain('VALIDATION_FEEDBACK:')
+    expect(session.getCompaction()).not.to.equal(undefined)
+    expect(
+      diagnostics
+        .list()
+        .filter((event) => event.type === 'context.summary.started')
+        .map((event) => event.data?.phase),
+    ).to.deep.equal(['full', 'expanded', 'expanded'])
+  })
+
+  it('splits the source after corrective output exhausts the reserve without re-expanding it', async () => {
+    const session = new Session()
+    const model = fixtureModel(oldConversation(session), 'expanded-repair-length')
+    const {result} = await execute(session, model)
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    const summaries = model.requests.filter((request) =>
+      String((request.messages as unknown[])[0]).startsWith('Summarize'),
+    )
+    expect(summaries.map((request) => request.cap)).to.deep.equal([
+      profile.summaryOutput,
+      profile.outputReserve,
+      profile.outputReserve,
+      profile.summaryOutput,
+      profile.outputReserve,
+      profile.summaryOutput,
+      profile.outputReserve,
+    ])
+    const sources = summaries.map(
+      (request) =>
+        JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1]) as {messages: unknown[]},
+    )
+    expect(sources[2]).to.deep.equal(sources[0])
+    expect(sources[3].messages).to.have.length(1)
+    expect(session.getConversationMessages()).to.have.length(4)
+    expect(session.getCompaction()).not.to.equal(undefined)
+  })
+
+  it('rechecks the expanded input budget before corrective generation', async () => {
+    const session = new Session()
+    const model = fixtureModel(oldConversation(session), 'expanded-missing')
+    const selected: ContextPolicy = {
+      ...policy,
+      estimator(request) {
+        const prompt = String((request.messages as unknown[])[0])
+        const oversized = request.cap === profile.outputReserve && prompt.includes('VALIDATION_FEEDBACK:')
+        const tokens = oversized ? profile.window : JSON.stringify(request).length
+        return {
+          components: {json: tokens},
+          kind: 'estimated',
+          model: profile.model,
+          provider: profile.provider,
+          revision: 'corrective-budget-fixture',
+          tokens,
+        }
+      },
+    }
+    const {result} = await execute(session, model, selected)
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    const summaries = model.requests.filter((request) =>
+      String((request.messages as unknown[])[0]).startsWith('Summarize'),
+    )
+    expect(summaries.slice(0, 2).map((request) => request.cap)).to.deep.equal([
+      profile.summaryOutput,
+      profile.outputReserve,
+    ])
+    expect(
+      summaries.some((request) => String((request.messages as unknown[])[0]).includes('VALIDATION_FEEDBACK:')),
+    ).to.equal(false)
+    expect(session.getCompaction()).not.to.equal(undefined)
   })
 
   it('refuses a single oversized tool group without activating an intermediate summary', async () => {

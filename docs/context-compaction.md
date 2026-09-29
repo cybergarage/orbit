@@ -326,3 +326,5 @@ from `missing-fields` when requesting correction. Persistent summary validation
 and transcript versions are unchanged. This is a local generation/recovery fix
 within the existing budgeted-compaction policy; it changes no public model API,
 provider format option, authorization boundary or persistence contract.
+
+A corrective generation retains the output allowance used by the defective response. If a source already exhausted `summaryOutput` and expanded to `outputReserve`, correction starts at `outputReserve`; it does not repeat the exhausted smaller allowance or expand beyond the reserve. The corrected prompt is re-estimated against the input budget for that allowance before invocation. Correction feedback is also retained if a correction at the initial allowance needs expansion. Failure at the reserve returns to the existing complete-group splitting path. This is a local recovery fix within the existing compaction policy; it changes no public API, provider format, persistence format, or authorization behavior.

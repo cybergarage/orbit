@@ -649,19 +649,25 @@ async function summarizeEligible(
     phase: 'batch' | 'full',
   ): Promise<{summary: ContextSummary; usage?: Record<string, number>}> => {
     const {outputReserve, safetyMargin, summaryOutput, window} = options.policy.profile
-    const generate = async (prepared: PreparedModelInvocation, repairing = false) => {
+    let outputLimit = summaryOutput
+    const generate = async (prepared: PreparedModelInvocation, repair?: string) => {
       try {
-        return await invoke(prepared, allowedIds, {outputLimit: summaryOutput, phase, sourceMessages: messages.length})
+        return await invoke(prepared, allowedIds, {
+          outputLimit,
+          phase: outputLimit > summaryOutput ? 'expanded' : phase,
+          sourceMessages: messages.length,
+        })
       } catch (error) {
-        if (!isSummaryLengthError(error) || outputReserve <= summaryOutput) throw error
+        if (!isSummaryLengthError(error) || outputReserve <= outputLimit) throw error
         const expanded = summaryRequest(options, messages, prior, {
           allowedIds,
           outputLimit: outputReserve,
-          ...(repairing ? {repair: 'Complete nonempty evidence-backed output with every required category'} : {}),
+          ...(repair ? {repair} : {}),
         })
         if (checkedEstimate(expanded, options).tokens > window - outputReserve - safetyMargin) throw error
+        outputLimit = outputReserve
         return invoke(expanded, allowedIds, {
-          outputLimit: outputReserve,
+          outputLimit,
           phase: 'expanded',
           sourceMessages: messages.length,
         })
@@ -673,17 +679,21 @@ async function summarizeEligible(
     } catch (error) {
       if (!(error instanceof RecoverableSummaryError)) throw error
       options.run.check()
-      diagnostic(options, 'context.summary.validation-failed', {defect: error.defect, phase, recovery: 'regenerate'})
-      const repaired = summaryRequest(options, messages, prior, {
-        allowedIds,
-        repair:
-          error.defect === 'empty'
-            ? 'All categories were empty'
-            : 'Version 1, all category arrays and every item field are required; one or more were missing',
+      diagnostic(options, 'context.summary.validation-failed', {
+        defect: error.defect,
+        outputLimit,
+        phase,
+        recovery: 'regenerate',
       })
-      if (checkedEstimate(repaired, options).tokens > inputLimit) throw error
+      const repair =
+        error.defect === 'empty'
+          ? 'All categories were empty'
+          : 'Version 1, all category arrays and every item field are required; one or more were missing'
+      const repaired = summaryRequest(options, messages, prior, {allowedIds, outputLimit, repair})
+      if (checkedEstimate(repaired, options).tokens > window - outputLimit - safetyMargin) throw error
+      // Retain an expanded allowance: a lower allowance already exhausted this source.
       // One corrective generation per source; smaller groups provide further recovery.
-      return generate(repaired, true)
+      return generate(repaired, repair)
     }
   }
 

@@ -639,3 +639,5 @@ naturally occurring model errors or coding benchmark attempts. Inspect the
 `context.summary.validation-failed` event, accepted checkpoint, source-view
 correspondence and final runtime separately. The injected response has no real
 provider token usage; real response usage remains separate.
+
+The `expanded-missing` diagnostic uses a 4,096-token reserve and injects two responses: first output exhaustion, then a missing category at the expanded allowance. The third summary response and consumer use actual Ollama. This checks that correction retains the expanded allowance, not the natural frequency of this sequence. The output records the count of injected responses.

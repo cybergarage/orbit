@@ -18,7 +18,7 @@ import {
 } from '../dist/index.js'
 
 const fault = process.env.ORBIT_E2E_SUMMARY_FAULT ?? 'none'
-if (!['empty', 'missing-fields', 'none'].includes(fault)) throw new Error('Unsupported summary fault fixture')
+if (!['empty', 'expanded-missing', 'missing-fields', 'none'].includes(fault)) throw new Error('Unsupported summary fault fixture')
 
 const root = '/output/observations-live'
 fs.mkdirSync(root, {recursive: false})
@@ -83,7 +83,7 @@ const client = {
   show: (request) => sdk.show(request),
 }
 const model = new OllamaAgent('ornith-1.5:9b', {getContextWindow: () => 32_768, getName: () => 'ollama'}, {client})
-const policy = await createModelContextPolicy(model, {outputReserve: 2048})
+const policy = await createModelContextPolicy(model, {outputReserve: fault === 'expanded-missing' ? 4096 : 2048})
 // Diagnostic-only forced compaction, not a production profile recommendation.
 policy.profile.trigger = 3500
 policy.profile.target = 2500
@@ -91,19 +91,24 @@ fs.writeFileSync(`${root}/context-policy.json`, JSON.stringify(policy, null, 2))
 // Controlled invalid-response injection exercises corrective generation with
 // the real model. It is never represented as a naturally occurring model error.
 const prepare = model.prepare.bind(model)
-let injected = false
+let injected = 0
 model.prepare = (messages, options) => {
   const prepared = prepare(messages, options)
   if (fault === 'none' || options?.responseFormat !== 'json') return prepared
   return {
     ...prepared,
     async invoke() {
-      if (injected) return prepared.invoke()
-      injected = true
+      if (injected >= (fault === 'expanded-missing' ? 2 : 1)) return prepared.invoke()
+      injected++
       const invalid = {changedPaths: [], facts: [], goals: [], tests: [], uncertainties: [], unfinished: [], version: 1}
-      if (fault === 'missing-fields') delete invalid.uncertainties
-      fs.writeFileSync(`${root}/injected-fault.json`, JSON.stringify({fault, injected: true}))
-      return new Message('assistant', {content: JSON.stringify(invalid)})
+      if (['expanded-missing', 'missing-fields'].includes(fault)) delete invalid.uncertainties
+      fs.writeFileSync(`${root}/injected-fault.json`, JSON.stringify({fault, injected: true, injectedResponses: injected}))
+      return new Message('assistant', {
+        content: JSON.stringify(invalid),
+        ...(fault === 'expanded-missing' && injected === 1
+          ? {payload: {response: {model: 'ornith-1.5:9b', provider: 'ollama', stopReason: 'length'}}}
+          : {}),
+      })
     },
   }
 }
