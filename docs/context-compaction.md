@@ -302,3 +302,27 @@ validation path. Summary-model source serialization omits that opaque envelope
 metadata; it still includes the original tool request/result and message IDs.
 This keeps execution proofs out of the summary token budget without changing
 source digests, persisted bytes, or the separately derived observation view.
+
+### Empty and incomplete summary recovery
+
+Summary requests include an explicit output contract: version 1, every category
+array, all evidence/test item fields, and at least one supported item across the
+categories. This complements provider JSON mode; it is not provider-enforced
+JSON Schema and does not guarantee semantic correctness.
+
+An empty summary or missing required fields triggers one corrective generation
+for that source, using the same original evidence and deterministic validation
+feedback. Invalid output is never persisted or patched with fabricated facts.
+The corrective request includes no tools, is measured before dispatch, consumes
+ordinary Run model-call allowance, and obeys cancellation/deadlines. Existing
+output-length recovery still applies. If correction remains empty/incomplete,
+Orbit tries smaller complete tool groups and halves failing multi-group batches.
+A failing single group stops recovery; unchanged-history fallback and validation
+cooldown retain their existing capacity checks. No agent iteration cap is added.
+
+Unknown evidence IDs, invalid test outcomes and unsupported versions remain
+invalid. `context.summary.validation-failed` diagnostics distinguish `empty`
+from `missing-fields` when requesting correction. Persistent summary validation
+and transcript versions are unchanged. This is a local generation/recovery fix
+within the existing budgeted-compaction policy; it changes no public model API,
+provider format option, authorization boundary or persistence contract.

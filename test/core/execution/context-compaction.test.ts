@@ -98,6 +98,7 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
               return new Message(MessageType.Assistant, {
                 payload: {toolCalls: [{id: 'bad', input: {command: 'false'}, name: 'bash'}]},
               })
+            const source = JSON.parse(String(request.messages[0]).split('\nSOURCE: ')[1]) as {messages: unknown[]}
             const summary = {
               changedPaths: [],
               facts: [],
@@ -117,18 +118,26 @@ function fixtureModel(id: string, mode = 'ok'): Model & {requests: Readonly<Reco
               unfinished: [],
               version: 1,
             }
-            if (mode === 'empty') {
+            if (
+              mode === 'empty' ||
+              (mode === 'empty-once' && summaries === 1) ||
+              (mode === 'empty-large' && source.messages.length > 1)
+            ) {
               summary.goals = []
               summary.tests = []
             }
 
+            if (mode === 'missing-once' && summaries === 1) delete (summary as Partial<typeof summary>).uncertainties
+            if (mode === 'missing-item-once' && summaries === 1)
+              delete (summary.tests[0] as Partial<(typeof summary.tests)[0]>).revision
+            if (['empty-once', 'missing-item-once', 'missing-once'].includes(mode) && summaries === 2)
+              expect(String(request.messages[0])).to.contain('VALIDATION_FEEDBACK:')
             if (mode === 'oversized') summary.goals[0].text = 'x'.repeat(6000)
             if (mode === 'bad-test') summary.tests[0].outcome = 'invented'
             if (mode === 'fenced-bad-id') summary.goals[0].sourceIds = ['invented']
             const content = ['fenced', 'fenced-bad-id', 'fenced-prose'].includes(mode)
               ? '```json\n' + JSON.stringify(summary) + '\n```' + (mode === 'fenced-prose' ? '\nUnverified text' : '')
               : JSON.stringify(summary)
-            const source = JSON.parse(String(request.messages[0]).split('\nSOURCE: ')[1]) as {messages: unknown[]}
             const truncated =
               mode === 'truncated' ||
               (mode === 'length-sensitive' && source.messages.length > 1) ||
@@ -281,6 +290,33 @@ describe('budgeted context preparation', () => {
     expect(messages).to.have.length(3)
     expect(messages[1].content).to.equal('Continue with the latest request')
     expect(events.some((event) => event.type === 'context-prepared' && event.outcome === 'compacted')).to.equal(true)
+  })
+
+  for (const mode of ['empty-once', 'missing-once', 'missing-item-once'])
+    it('regenerates from original evidence after ' + mode, async () => {
+      const session = new Session()
+      const id = oldConversation(session)
+      const model = fixtureModel(id, mode)
+      const diagnostics = new DiagnosticEventBus()
+      const {result} = await execute(session, model, policy, undefined, 100, diagnostics)
+      expect(result.outcome).to.equal('completed')
+      expect(session.getCompaction()?.summary.goals[0].sourceIds).to.deep.equal([id])
+      expect(model.requests).to.have.length(3)
+      expect(diagnostics.list().filter((e) => e.type === 'context.summary.validation-failed')).to.have.length(1)
+      const source = (index: number) => String((model.requests[index].messages as string[])[0]).split('\nSOURCE: ')[1]
+      expect(source(0)).to.equal(source(1))
+    })
+
+  it('splits repeatedly empty larger sources while keeping canonical history intact', async () => {
+    const session = new Session()
+    const id = oldConversation(session)
+    const originals = JSON.stringify(session.getConversationMessages())
+    const model = fixtureModel(id, 'empty-large')
+    const {result} = await execute(session, model)
+    expect(result.outcome).to.equal('completed')
+    expect(session.getCompaction()).not.to.equal(undefined)
+    expect(model.requests).to.have.length(5)
+    expect(JSON.stringify(session.getConversationMessages().slice(0, 2))).to.equal(originals)
   })
 
   it('carries confirmed edits and failed tests into a work-state checkpoint', async () => {
@@ -493,8 +529,9 @@ describe('budgeted context preparation', () => {
     const summaries = model.requests.filter((request) =>
       String((request.messages as unknown[])[0]).startsWith('Summarize'),
     )
-    const sources = summaries.map((request) =>
-      JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1]) as {messages: unknown[]},
+    const sources = summaries.map(
+      (request) =>
+        JSON.parse(String((request.messages as unknown[])[0]).split('\nSOURCE: ')[1]) as {messages: unknown[]},
     )
     expect(sources[0].messages).to.have.length(8)
     expect(sources[1].messages).to.have.length(8)
@@ -646,7 +683,7 @@ describe('budgeted context preparation', () => {
       const {events, result} = await execute(session, model, policy, undefined, 100, diagnostics)
       expect(result.outcome, JSON.stringify(result)).to.equal('completed')
       expect(session.getCompaction()).to.equal(undefined)
-      if (mode === 'truncated') expect(model.requests.length).to.be.greaterThan(2)
+      if (mode === 'truncated' || mode === 'empty') expect(model.requests.length).to.be.greaterThan(2)
       else expect(model.requests).to.have.length(2)
       expect(events.some((event) => event.type === 'context-prepared' && event.outcome === 'failed')).to.equal(true)
       const expectedReason =
@@ -788,82 +825,99 @@ describe('budgeted context preparation', () => {
     ).to.throw('digest mismatch')
   })
 
-  it('does not bypass a model-call limit for summarization', async () => {
-    const session = new Session()
-    const model = fixtureModel(oldConversation(session))
-    const store = new MemorySessionLogStore()
-    const agent = new Agent({
-      contextPolicy: policy,
-      cwd: os.tmpdir(),
-      deps: {createModel: () => model},
-      execution: {limits: {modelCalls: 1}},
-      logStore: store,
-      settings: {model: 'fixture', provider: 'ollama'},
-      state: new State(session),
-      toolProfile: 'none',
+  for (const mode of ['ok', 'empty-once'])
+    it('does not bypass a model-call limit during ' + mode, async () => {
+      const session = new Session()
+      const model = fixtureModel(oldConversation(session), mode)
+      const store = new MemorySessionLogStore()
+      const agent = new Agent({
+        contextPolicy: policy,
+        cwd: os.tmpdir(),
+        deps: {createModel: () => model},
+        execution: {limits: {modelCalls: 1}},
+        logStore: store,
+        settings: {model: 'fixture', provider: 'ollama'},
+        state: new State(session),
+        toolProfile: 'none',
+      })
+      try {
+        const result = await (await agent.startRun([new Message(MessageType.User, {content: 'Continue'})])).finished
+        expect(result.outcome).not.to.equal('completed')
+        expect(model.requests).to.have.length(1)
+      } finally {
+        await agent.close()
+        await store.close()
+      }
     })
-    try {
-      const result = await (await agent.startRun([new Message(MessageType.User, {content: 'Continue'})])).finished
-      expect(result.outcome).not.to.equal('completed')
-      expect(model.requests).to.have.length(1)
-    } finally {
-      await agent.close()
-      await store.close()
-    }
-  })
 
-  it('cancels a cooperative summary without activating a checkpoint', async () => {
-    const session = new Session()
-    oldConversation(session)
-    let entered!: () => void
-    const started = new Promise<void>((resolve) => {
-      entered = resolve
-    })
-    let calls = 0
-    const model: Model = {
-      getModel: () => 'fixture',
-      getName: () => 'fixture',
-      getProvider: () => 'ollama',
-      async invoke() {
-        throw new Error('Unexpected direct call')
-      },
-      prepare(messages, options) {
-        const request = freezeModelRequest({messages: messages.map((message) => message.content)})
-        return {
-          invoke: () =>
-            new Promise<Message>((_resolve, reject) => {
+  for (const repairing of [false, true])
+    it('cancels a cooperative summary without activating a checkpoint; repair=' + repairing, async () => {
+      const session = new Session()
+      oldConversation(session)
+      let entered!: () => void
+      const started = new Promise<void>((resolve) => {
+        entered = resolve
+      })
+      let calls = 0
+      const model: Model = {
+        getModel: () => 'fixture',
+        getName: () => 'fixture',
+        getProvider: () => 'ollama',
+        async invoke() {
+          throw new Error('Unexpected direct call')
+        },
+        prepare(messages, options) {
+          const request = freezeModelRequest({messages: messages.map((message) => message.content)})
+          return {
+            invoke() {
               calls++
-              options?.signal?.addEventListener('abort', () => reject(new Error('Aborted summary')), {once: true})
-              entered()
-            }),
-          request,
-        }
-      },
-    }
-    const store = new MemorySessionLogStore()
-    const agent = new Agent({
-      contextPolicy: policy,
-      cwd: os.tmpdir(),
-      deps: {createModel: () => model},
-      logStore: store,
-      settings: {model: 'fixture', provider: 'ollama'},
-      state: new State(session),
-      toolProfile: 'none',
+              if (repairing && calls === 1)
+                return Promise.resolve(
+                  new Message(MessageType.Assistant, {
+                    content: JSON.stringify({
+                      changedPaths: [],
+                      facts: [],
+                      goals: [],
+                      tests: [],
+                      uncertainties: [],
+                      unfinished: [],
+                      version: 1,
+                    }),
+                  }),
+                )
+              return new Promise<Message>((_resolve, reject) => {
+                options?.signal?.addEventListener('abort', () => reject(new Error('Aborted summary')), {once: true})
+                entered()
+              })
+            },
+            request,
+          }
+        },
+      }
+      const store = new MemorySessionLogStore()
+      const agent = new Agent({
+        contextPolicy: policy,
+        cwd: os.tmpdir(),
+        deps: {createModel: () => model},
+        logStore: store,
+        settings: {model: 'fixture', provider: 'ollama'},
+        state: new State(session),
+        toolProfile: 'none',
+      })
+      try {
+        const handle = await agent.startRun([new Message(MessageType.User, {content: 'Continue'})])
+        await started
+        handle.requestStop('user')
+        const result = await handle.finished
+        expect(result.outcome).to.equal('cancelled')
+        expect(result.quiescence).to.equal(true)
+        expect(calls).to.equal(repairing ? 2 : 1)
+        expect(session.getCompaction()).to.equal(undefined)
+      } finally {
+        await agent.close()
+        await store.close()
+      }
     })
-    try {
-      const handle = await agent.startRun([new Message(MessageType.User, {content: 'Continue'})])
-      await started
-      handle.requestStop('user')
-      const result = await handle.finished
-      expect(result.outcome).to.equal('cancelled')
-      expect(result.quiescence).to.equal(true)
-      expect(calls).to.equal(1)
-      expect(session.getCompaction()).to.equal(undefined)
-    } finally {
-      await agent.close()
-      await store.close()
-    }
-  })
 
   it('applies the configured budget to durable application threads and projects the result', async () => {
     const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-context-app-')))
