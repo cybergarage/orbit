@@ -1,0 +1,490 @@
+{
+  "date": "2026-09-29",
+  "scope": "live-controlled-summary-validation-recovery",
+  "coreSourceCommit": "fb63aaa0a28e36bcabed2a03bc92593e8f7d163a",
+  "driverCommit": "982c02c30f313e8043654780f5c2e7ab087855dd",
+  "imageId": "sha256:03a2c63061ac8d995a3f49a6bf9b5c7ea5b00520bca98dc5829de22e29cc1e96",
+  "model": {
+    "model": "ornith-1.5:9b",
+    "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+    "details": {
+      "parent_model": "",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": ["qwen35"],
+      "parameter_size": "9.0B",
+      "quantization_level": "Q4_K_M"
+    },
+    "ollama": {
+      "version": "0.34.4"
+    }
+  },
+  "settings": {
+    "num_ctx": 32768,
+    "num_predict": 2048,
+    "seed": 42,
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "think": false
+  },
+  "fixture": {
+    "setup": "Fixed setup model, two actual built-in writes, then persistent Session reopen",
+    "consumerTools": 0,
+    "forcedTrigger": 3500,
+    "forcedTarget": 2500,
+    "deadlineMs": 300000
+  },
+  "validation": {
+    "headersCheck": "pass",
+    "build": "pass",
+    "fullTests": 1056,
+    "focusedTests": 68,
+    "e2eHostTests": 19,
+    "directCheckerTests": 4,
+    "semanticEvaluatorTests": 11
+  },
+  "runs": [
+    {
+      "condition": "none",
+      "faultInjection": null,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true,
+        "unresolved": [],
+        "cleanupErrors": []
+      },
+      "compactions": [
+        {
+          "afterTokens": 1274,
+          "beforeTokens": 10066,
+          "durationMs": 48843.127355
+        }
+      ],
+      "validationRecovery": [],
+      "summaryAttempts": 1,
+      "actualProviderResponses": 2,
+      "usage": {
+        "inputTokens": 12266,
+        "outputTokens": 1092
+      },
+      "directCheck": {
+        "scope": "runtime-diagnostic-source-correspondence-v1",
+        "status": "pass",
+        "viewCount": 1,
+        "recordCount": 2,
+        "rows": [
+          {
+            "sequence": 8,
+            "tokens": 1274,
+            "omittedRecords": 0,
+            "unknownResults": 0,
+            "records": [
+              {
+                "sourceIds": ["01a0eacd-c6fe-765d-a137-4f32f7e7666b", "01a0eacd-c704-70e5-9aa7-b47c4385ef64"],
+                "kind": "file-write",
+                "passed": true
+              },
+              {
+                "sourceIds": ["01a0eacd-c704-70e5-9aa7-bcd420a537e1", "01a0eacd-c709-7171-ba6f-bd261a642b8f"],
+                "kind": "file-write",
+                "passed": true
+              }
+            ],
+            "passed": true
+          }
+        ],
+        "limitations": [
+          "Checks correspondence with controlled runtime artifacts, not journal cryptographic authentication.",
+          "Does not grade model answers, current workspace state or behavioral correctness."
+        ]
+      },
+      "view": {
+        "omittedRecords": 0,
+        "records": [
+          {
+            "adapter": "builtin-write-v1",
+            "isError": false,
+            "resultSha256": "af642fe2ff7e47ea76779382661f425fafa5e41a14913a7172bdbc77cce3c33c",
+            "sequence": 2,
+            "sourceIds": ["01a0eacd-c6fe-765d-a137-4f32f7e7666b", "01a0eacd-c704-70e5-9aa7-b47c4385ef64"],
+            "bytes": 1,
+            "kind": "file-write",
+            "path": "/workspace/observed-1.txt",
+            "savedAtOperation": true
+          },
+          {
+            "adapter": "builtin-write-v1",
+            "isError": false,
+            "resultSha256": "8c1766a3f932ea020a342f7bf7727f80b5a4a8bc26af3cb30a7ac0f86af14f83",
+            "sequence": 4,
+            "sourceIds": ["01a0eacd-c704-70e5-9aa7-bcd420a537e1", "01a0eacd-c709-7171-ba6f-bd261a642b8f"],
+            "bytes": 1,
+            "kind": "file-write",
+            "path": "/workspace/observed-2.txt",
+            "savedAtOperation": true
+          }
+        ],
+        "sourceSha256": "22a1924761270fab57b8dec0bbbd7e3b566d6705ab1bb28c8a81a9e985e5de2a",
+        "unknownResults": 0,
+        "version": 1
+      },
+      "acceptedSummary": {
+        "version": 1,
+        "goals": [
+          {
+            "text": "Save observed-1.txt (content 1) and observed-2.txt (content 2); do not run tests.",
+            "sourceIds": ["01a0eacd-c6f5-75d8-abae-877394806f8c"]
+          },
+          {
+            "text": "Historical fixture filler.",
+            "sourceIds": ["01a0eacd-c6fe-765d-a137-4f32f7e7666b"]
+          },
+          {
+            "text": "Historical fixture filler.",
+            "sourceIds": ["01a0eacd-c704-70e5-9aa7-bcd420a537e1"]
+          },
+          {
+            "text": "Historical fixture filler.",
+            "sourceIds": ["01a0eacd-c709-7171-ba6f-bd261a642b8f"]
+          },
+          {
+            "text": "Historical fixture filler.",
+            "sourceIds": ["01a0eacd-c709-7171-ba6f-c76f062c56ba"]
+          },
+          {
+            "text": "No tests were selected.",
+            "sourceIds": ["01a0eacd-c6f5-75d8-abae-877394806f8c"]
+          },
+          {
+            "text": "No tests were selected.",
+            "sourceIds": ["01a0eacd-c709-7171-ba6f-c76f062c56ba"]
+          }
+        ],
+        "facts": [
+          {
+            "text": "Created /workspace/observed-1.txt with content 1.",
+            "sourceIds": ["01a0eacd-c704-70e5-9aa7-b47c4385ef64"]
+          },
+          {
+            "text": "Created /workspace/observed-2.txt with content 2.",
+            "sourceIds": ["01a0eacd-c709-7171-ba6f-bd261a642b8f"]
+          },
+          {
+            "text": "No tests were run.",
+            "sourceIds": ["01a0eacd-c6f5-75d8-abae-877394806f8c", "01a0eacd-c709-7171-ba6f-c76f062c56ba"]
+          }
+        ],
+        "changedPaths": [
+          {
+            "text": "Created /workspace/observed-1.txt with content 1.",
+            "sourceIds": ["01a0eacd-c704-70e5-9aa7-b47c4385ef64"]
+          },
+          {
+            "text": "Created /workspace/observed-2.txt with content 2.",
+            "sourceIds": ["01a0eacd-c709-7171-ba6f-bd261a642b8f"]
+          }
+        ],
+        "tests": [],
+        "unfinished": [],
+        "uncertainties": []
+      },
+      "answer": "The checkpoint and tool observations describe two acknowledged file-write operations. I'll report them as recorded, without any behavioral verification.\n\n## Acknowledged Saved Operations\n\n**Operation 1**\n- **Path:** `/workspace/observed-1.txt`\n- **Kind:** file-write\n- **Bytes:** 1\n- **Error:** none\n- **Result SHA-256:** `af642fe2ff7e47ea76779382661f425fafa5e41a14913a7172bdbc77cce3c33c`\n- **Saved at operation:** true\n- **Source IDs:** `01a0eacd-c6fe-765d-a137-4f32f7e7666b`, `01a0eacd-c704-70e5-9aa7-b47c4385ef64`\n\n**Operation 2**\n- **Path:** `/workspace/observed-2.txt`\n- **Kind:** file-write\n- **Bytes:** 1\n- **Error:** none\n- **Result SHA-256:** `8c1766a3f932ea020a342f7bf7727f80b5a4a8bc26af3cb30a7ac0f86af14f83`\n- **Saved at operation:** true\n- **Source IDs:** `01a0eacd-c704-70e5-9aa7-bcd420a537e1`, `01a0eacd-c709-7171-ba6f-bd261a642b8f`\n\n## Notes\n- Both files were created with the content described in the checkpoint (content 1 and content 2, respectively).\n- The checkpoint records that **no tests were selected** and **no tests were run**.\n- No behavioral verification occurred; this is a report of acknowledged saved operations only."
+    },
+    {
+      "condition": "empty",
+      "faultInjection": {
+        "fault": "empty",
+        "injected": true
+      },
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true,
+        "unresolved": [],
+        "cleanupErrors": []
+      },
+      "compactions": [
+        {
+          "afterTokens": 1106,
+          "beforeTokens": 10066,
+          "durationMs": 38561.193975
+        }
+      ],
+      "validationRecovery": [
+        {
+          "defect": "empty",
+          "phase": "full",
+          "recovery": "regenerate"
+        }
+      ],
+      "summaryAttempts": 2,
+      "actualProviderResponses": 2,
+      "usage": {
+        "inputTokens": 12092,
+        "outputTokens": 703
+      },
+      "directCheck": {
+        "scope": "runtime-diagnostic-source-correspondence-v1",
+        "status": "pass",
+        "viewCount": 1,
+        "recordCount": 2,
+        "rows": [
+          {
+            "sequence": 11,
+            "tokens": 1106,
+            "omittedRecords": 0,
+            "unknownResults": 0,
+            "records": [
+              {
+                "sourceIds": ["01a0eace-de9c-721d-9830-80234a0b778e", "01a0eace-dea2-7142-b22e-d64fda49bd15"],
+                "kind": "file-write",
+                "passed": true
+              },
+              {
+                "sourceIds": ["01a0eace-dea2-7142-b22e-de37789cc05d", "01a0eace-dea7-7703-877e-84f12af0c1b2"],
+                "kind": "file-write",
+                "passed": true
+              }
+            ],
+            "passed": true
+          }
+        ],
+        "limitations": [
+          "Checks correspondence with controlled runtime artifacts, not journal cryptographic authentication.",
+          "Does not grade model answers, current workspace state or behavioral correctness."
+        ]
+      },
+      "view": {
+        "omittedRecords": 0,
+        "records": [
+          {
+            "adapter": "builtin-write-v1",
+            "isError": false,
+            "resultSha256": "af642fe2ff7e47ea76779382661f425fafa5e41a14913a7172bdbc77cce3c33c",
+            "sequence": 2,
+            "sourceIds": ["01a0eace-de9c-721d-9830-80234a0b778e", "01a0eace-dea2-7142-b22e-d64fda49bd15"],
+            "bytes": 1,
+            "kind": "file-write",
+            "path": "/workspace/observed-1.txt",
+            "savedAtOperation": true
+          },
+          {
+            "adapter": "builtin-write-v1",
+            "isError": false,
+            "resultSha256": "8c1766a3f932ea020a342f7bf7727f80b5a4a8bc26af3cb30a7ac0f86af14f83",
+            "sequence": 4,
+            "sourceIds": ["01a0eace-dea2-7142-b22e-de37789cc05d", "01a0eace-dea7-7703-877e-84f12af0c1b2"],
+            "bytes": 1,
+            "kind": "file-write",
+            "path": "/workspace/observed-2.txt",
+            "savedAtOperation": true
+          }
+        ],
+        "sourceSha256": "e9d31869c1c6153aa1059bb4ca4b383c17e17d814d59f1eb8dd69f0a48831358",
+        "unknownResults": 0,
+        "version": 1
+      },
+      "acceptedSummary": {
+        "version": 1,
+        "goals": [
+          {
+            "text": "Save observed-1.txt with content '1'.",
+            "sourceIds": ["01a0eace-de91-7059-8cc0-140cdd78744e"]
+          },
+          {
+            "text": "Save observed-2.txt with content '2'.",
+            "sourceIds": ["01a0eace-de91-7059-8cc0-140cdd78744e"]
+          },
+          {
+            "text": "Do not run tests.",
+            "sourceIds": ["01a0eace-de91-7059-8cc0-140cdd78744e"]
+          }
+        ],
+        "facts": [
+          {
+            "text": "observed-1.txt was created at /workspace/observed-1.txt with 1 byte.",
+            "sourceIds": ["01a0eace-dea2-7142-b22e-d64fda49bd15"]
+          },
+          {
+            "text": "observed-2.txt was created at /workspace/observed-2.txt with 1 byte.",
+            "sourceIds": ["01a0eace-dea7-7703-877e-84f12af0c1b2"]
+          }
+        ],
+        "changedPaths": [
+          {
+            "text": "/workspace/observed-1.txt created with content '1'.",
+            "sourceIds": ["01a0eace-dea2-7142-b22e-d64fda49bd15"]
+          },
+          {
+            "text": "/workspace/observed-2.txt created with content '2'.",
+            "sourceIds": ["01a0eace-dea7-7703-877e-84f12af0c1b2"]
+          }
+        ],
+        "tests": [],
+        "unfinished": [
+          {
+            "text": "No tests were run, per user instruction.",
+            "sourceIds": ["01a0eace-dea7-7703-877e-8ed7853fa6de"]
+          }
+        ],
+        "uncertainties": []
+      },
+      "answer": "Based on the tool observations provided, here are the acknowledged saved operations:\n\n## Acknowledged File Writes\n\n1. **observed-1.txt**\n   - Path: `/workspace/observed-1.txt`\n   - Bytes: 1\n   - Result SHA-256: `af642fe2ff7e47ea76779382661f425fafa5e41a14913a7172bdbc77cce3c33c`\n   - Error status: None\n\n2. **observed-2.txt**\n   - Path: `/workspace/observed-2.txt`\n   - Bytes: 1\n   - Result SHA-256: `8c1766a3f932ea020a342f7bf7727f80b5a4a8bc26af3cb30a7ac0f86af14f83`\n   - Error status: None\n\n## Notes\n\n- No tests were run, and no behavioral verification occurred.\n- The operations are acknowledged as saved based on the tool records, but this does not constitute verification of the file contents or system state."
+    },
+    {
+      "condition": "missing-fields",
+      "faultInjection": {
+        "fault": "missing-fields",
+        "injected": true
+      },
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true,
+        "unresolved": [],
+        "cleanupErrors": []
+      },
+      "compactions": [
+        {
+          "afterTokens": 1189,
+          "beforeTokens": 10066,
+          "durationMs": 43693.44452
+        }
+      ],
+      "validationRecovery": [
+        {
+          "defect": "missing-fields",
+          "phase": "full",
+          "recovery": "regenerate"
+        }
+      ],
+      "summaryAttempts": 2,
+      "actualProviderResponses": 2,
+      "usage": {
+        "inputTokens": 12226,
+        "outputTokens": 854
+      },
+      "directCheck": {
+        "scope": "runtime-diagnostic-source-correspondence-v1",
+        "status": "pass",
+        "viewCount": 1,
+        "recordCount": 2,
+        "rows": [
+          {
+            "sequence": 11,
+            "tokens": 1189,
+            "omittedRecords": 0,
+            "unknownResults": 0,
+            "records": [
+              {
+                "sourceIds": ["01a0eacf-ac68-732b-898c-6959ae5b335d", "01a0eacf-ac73-7395-88bb-02552f30520b"],
+                "kind": "file-write",
+                "passed": true
+              },
+              {
+                "sourceIds": ["01a0eacf-ac73-7395-88bb-0a91a6915d07", "01a0eacf-ac7b-75c2-b4d1-14caeaa37d1b"],
+                "kind": "file-write",
+                "passed": true
+              }
+            ],
+            "passed": true
+          }
+        ],
+        "limitations": [
+          "Checks correspondence with controlled runtime artifacts, not journal cryptographic authentication.",
+          "Does not grade model answers, current workspace state or behavioral correctness."
+        ]
+      },
+      "view": {
+        "omittedRecords": 0,
+        "records": [
+          {
+            "adapter": "builtin-write-v1",
+            "isError": false,
+            "resultSha256": "af642fe2ff7e47ea76779382661f425fafa5e41a14913a7172bdbc77cce3c33c",
+            "sequence": 2,
+            "sourceIds": ["01a0eacf-ac68-732b-898c-6959ae5b335d", "01a0eacf-ac73-7395-88bb-02552f30520b"],
+            "bytes": 1,
+            "kind": "file-write",
+            "path": "/workspace/observed-1.txt",
+            "savedAtOperation": true
+          },
+          {
+            "adapter": "builtin-write-v1",
+            "isError": false,
+            "resultSha256": "8c1766a3f932ea020a342f7bf7727f80b5a4a8bc26af3cb30a7ac0f86af14f83",
+            "sequence": 4,
+            "sourceIds": ["01a0eacf-ac73-7395-88bb-0a91a6915d07", "01a0eacf-ac7b-75c2-b4d1-14caeaa37d1b"],
+            "bytes": 1,
+            "kind": "file-write",
+            "path": "/workspace/observed-2.txt",
+            "savedAtOperation": true
+          }
+        ],
+        "sourceSha256": "423aee99603e2e7808dce870137e2540f144933a3ebb79f12254fd4342f11348",
+        "unknownResults": 0,
+        "version": 1
+      },
+      "acceptedSummary": {
+        "version": 1,
+        "goals": [
+          {
+            "text": "Save observed-1.txt and observed-2.txt; do not run tests.",
+            "sourceIds": ["01a0eacf-ac59-714a-916f-155f294f2882"]
+          },
+          {
+            "text": "Write '1' to observed-1.txt.",
+            "sourceIds": ["01a0eacf-ac68-732b-898c-6959ae5b335d"]
+          },
+          {
+            "text": "Write '2' to observed-2.txt.",
+            "sourceIds": ["01a0eacf-ac73-7395-88bb-0a91a6915d07"]
+          },
+          {
+            "text": "No tests were run.",
+            "sourceIds": ["01a0eacf-ac59-714a-916f-155f294f2882", "01a0eacf-ac7b-75c2-b4d1-1d4be843ced6"]
+          }
+        ],
+        "facts": [
+          {
+            "text": "Created /workspace/observed-1.txt containing '1' (1 byte).",
+            "sourceIds": ["01a0eacf-ac73-7395-88bb-02552f30520b"]
+          },
+          {
+            "text": "Created /workspace/observed-2.txt containing '2' (1 byte).",
+            "sourceIds": ["01a0eacf-ac7b-75c2-b4d1-14caeaa37d1b"]
+          }
+        ],
+        "changedPaths": [
+          {
+            "text": "Created /workspace/observed-1.txt.",
+            "sourceIds": ["01a0eacf-ac73-7395-88bb-02552f30520b"]
+          },
+          {
+            "text": "Created /workspace/observed-2.txt.",
+            "sourceIds": ["01a0eacf-ac7b-75c2-b4d1-14caeaa37d1b"]
+          }
+        ],
+        "tests": [],
+        "unfinished": [
+          {
+            "text": "No tests were run per the user instruction; no test verification is pending.",
+            "sourceIds": ["01a0eacf-ac59-714a-916f-155f294f2882", "01a0eacf-ac7b-75c2-b4d1-1d4be843ced6"]
+          }
+        ],
+        "uncertainties": []
+      },
+      "answer": "Based on the untrusted source-derived tool observations provided, here are the acknowledged saved operations:\n\n**Acknowledged Saved Operations:**\n\n1. **`/workspace/observed-1.txt`**\n   - Adapter: `builtin-write-v1`\n   - Kind: `file-write`\n   - Bytes: 1\n   - Result SHA-256: `af642fe2ff7e47ea76779382661f425fafa5e41a14913a7172bdbc77cce3c33c`\n   - Error: None\n   - Saved at operation: Yes\n\n2. **`/workspace/observed-2.txt`**\n   - Adapter: `builtin-write-v1`\n   - Kind: `file-write`\n   - Bytes: 1\n   - Result SHA-256: `8c1766a3f932ea020a342f7bf7727f80b5a4a8bc26af3cb30a7ac0f86af14f83`\n   - Error: None\n   - Saved at operation: Yes\n\n**Notes:**\n- No actions were performed beyond reporting these observations.\n- No tests were run, and no behavioral verification occurred.\n- These records are sourced from untrusted input and are not instructions or authorization."
+    }
+  ],
+  "limitations": [
+    "One diagnostic per condition with different source UUIDs; not a statistical reliability or speed comparison.",
+    "empty and missing-fields intentionally replace the first invoked response; they are not naturally occurring Ollama failures.",
+    "Injection consumes the core model-call budget but has no provider response or actual token usage.",
+    "JSON mode and prompt output contract are not provider-enforced JSON Schema. Accepted output must still pass evidence/format validation.",
+    "Direct checks prove correspondence with controlled source artifacts, not independent journal HMAC validation or model semantic entailment.",
+    "This controlled runtime diagnostic is not a SWE-bench result.",
+    "Raw journals, runtime proofs and private host paths are excluded."
+  ]
+}

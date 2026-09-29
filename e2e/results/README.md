@@ -61,6 +61,11 @@ a runtime error or the separate 900-second elapsed-time budget.
 
 ## Runtime observation diagnostic
 
+The [summary validation/recovery diagnostic](2026-09-29-summary-validation-recovery-live.md)
+completed natural-output, injected-empty and injected-missing-field conditions.
+Each retained 2/2 actual save records; injected conditions regenerated summaries
+with real Ollama. These controlled diagnostics are not coding benchmark scores.
+
 The [live reopened projection report](2026-09-29-core-observations-live.md)
 records two actual saves retained independently of model prose after reopening
 a Session. Its direct correspondence check passed; this is not a SWE-bench score.
