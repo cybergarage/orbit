@@ -1,0 +1,684 @@
+{
+  "date": "2026-09-29",
+  "scope": "natural-Verified-smaller-batches-reevaluation",
+  "environment": {
+    "host": "macOS ARM64",
+    "dockerMemoryBytes": 4107141120,
+    "dockerVersion": "29.8.1",
+    "solverPlatform": "linux/arm64",
+    "officialPlatform": "linux/amd64 emulation",
+    "ollamaLocation": "host macOS via host.docker.internal"
+  },
+  "reference": {
+    "status": "resolved",
+    "runId": "orbit-gold-04c11f55-9adb-445d-ba19-f4d02ee1284f",
+    "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+    "harnessVersion": "4.1.0",
+    "evaluationPlatform": "linux/amd64 (Docker emulation on ARM64)",
+    "imageReference": "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+    "imageId": "sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+    "imageDigests": [
+      "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+      "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da"
+    ],
+    "predictionsSha256": null,
+    "processExit": 0,
+    "gradingDisposition": "evaluated-or-error",
+    "aggregate": {
+      "total_instances": 1,
+      "submitted_instances": 1,
+      "completed_instances": 1,
+      "resolved_instances": 1,
+      "unresolved_instances": 0,
+      "empty_patch_instances": 0,
+      "error_instances": 0,
+      "completed_ids": [
+        "pytest-dev__pytest-10356"
+      ],
+      "incomplete_ids": [],
+      "empty_patch_ids": [],
+      "submitted_ids": [
+        "pytest-dev__pytest-10356"
+      ],
+      "resolved_ids": [
+        "pytest-dev__pytest-10356"
+      ],
+      "unresolved_ids": [],
+      "error_ids": [],
+      "schema_version": 2
+    },
+    "patchApplied": true,
+    "tests": {
+      "FAIL_TO_PASS": {
+        "success": 1,
+        "failure": 0
+      },
+      "PASS_TO_PASS": {
+        "success": 79,
+        "failure": 0
+      },
+      "FAIL_TO_FAIL": {
+        "success": 0,
+        "failure": 0
+      },
+      "PASS_TO_FAIL": {
+        "success": 0,
+        "failure": 0
+      }
+    }
+  },
+  "previousRun": {
+    "coreSourceCommit": "f7d7fe496e4052a49783fd0b26145349da9dc4e5",
+    "runStatus": "runtime-error",
+    "metrics": {
+      "compactionFailureReasons": {},
+      "compactionsCompleted": 0,
+      "compactionsFailed": 0,
+      "compactionsSkipped": 0,
+      "compactionsStarted": 1,
+      "modelCallsCompleted": 36,
+      "modelCallsStarted": 36,
+      "modelWallMs": 904381.1472100001,
+      "ollamaEvalMs": 745671.5199999999,
+      "ollamaLoadMs": 104.528873,
+      "ollamaPromptMs": 154532.785,
+      "ollamaTotalMs": 904169.2621610002,
+      "repeatedFailedCalls": 1,
+      "summaryAttempts": 6,
+      "summaryFailures": 1,
+      "summaryValidationFailures": 0,
+      "summaryWallMs": 617462.7959920001,
+      "toolCalls": 30,
+      "toolErrors": 6,
+      "toolWallMs": 1615.8700030000819
+    },
+    "elapsedMs": 907601,
+    "usage": {
+      "inputTokens": 395229,
+      "outputTokens": 16222
+    },
+    "usageComplete": false,
+    "officialGrade": {
+      "status": "unresolved",
+      "runId": "orbit-prediction-6c9f12eb-dc86-49d6-a1c2-464c8458be63",
+      "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+      "harnessVersion": "4.1.0",
+      "evaluationPlatform": "linux/amd64 (Docker emulation on ARM64)",
+      "imageReference": "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+      "imageId": "sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+      "imageDigests": [
+        "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+        "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da"
+      ],
+      "predictionsSha256": "73b552bbbeae5cf1329e7144a4255c04a5973b879e3568845000b4e39b5773f8",
+      "processExit": 0,
+      "gradingDisposition": "evaluated-or-error",
+      "aggregate": {
+        "total_instances": 1,
+        "submitted_instances": 1,
+        "completed_instances": 1,
+        "resolved_instances": 0,
+        "unresolved_instances": 1,
+        "empty_patch_instances": 0,
+        "error_instances": 0,
+        "completed_ids": [
+          "pytest-dev__pytest-10356"
+        ],
+        "incomplete_ids": [],
+        "empty_patch_ids": [],
+        "submitted_ids": [
+          "pytest-dev__pytest-10356"
+        ],
+        "resolved_ids": [],
+        "unresolved_ids": [
+          "pytest-dev__pytest-10356"
+        ],
+        "error_ids": [],
+        "schema_version": 2
+      },
+      "patchApplied": true,
+      "tests": {
+        "FAIL_TO_PASS": {
+          "success": 0,
+          "failure": 1
+        },
+        "PASS_TO_PASS": {
+          "success": 0,
+          "failure": 79
+        },
+        "FAIL_TO_FAIL": {
+          "success": 0,
+          "failure": 0
+        },
+        "PASS_TO_FAIL": {
+          "success": 0,
+          "failure": 0
+        }
+      }
+    },
+    "directObservations": {
+      "scope": "runtime-diagnostic-source-correspondence-v1",
+      "status": "not-exercised",
+      "viewCount": 0,
+      "recordCount": 0,
+      "rows": [],
+      "limitations": [
+        "Checks correspondence with controlled runtime artifacts, not journal cryptographic authentication.",
+        "Does not grade model answers, current workspace state or behavioral correctness."
+      ]
+    }
+  },
+  "run": {
+    "coreSourceCommit": "08097e57a1f57cdd19b68e035bd8ae259cf506e2",
+    "metadataOrbitCommit": "c0279d7c61ade6d3aa777d4b987881efb2842edd",
+    "sourceFingerprint": "633b1382aac663caefa0a5f7da30e446c72dfbc9db0e7f95899bc4db3ae5c101",
+    "imageId": "sha256:6e0be682e8c3a8c2295dcf3ebb080a484e40fd19f51e95c77a5288baac4aa3c1",
+    "dataset": {
+      "dataset": "princeton-nlp/SWE-bench_Verified",
+      "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "split": "test",
+      "instance_id": "pytest-dev__pytest-10356",
+      "repo": "pytest-dev/pytest",
+      "base_commit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1"
+    },
+    "model": {
+      "model": "ornith-1.5:9b",
+      "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen35",
+        "families": [
+          "qwen35"
+        ],
+        "parameter_size": "9.0B",
+        "quantization_level": "Q4_K_M"
+      },
+      "ollama": {
+        "version": "0.34.4"
+      },
+      "templateSha256": "f55f52930aa8bf44ab5cb85f99370fcc3c56e9a85640b812086d5330bce5d86b"
+    },
+    "config": {
+      "contextPolicy": "budgeted",
+      "options": {
+        "num_ctx": 32768,
+        "num_predict": 4096,
+        "seed": 42,
+        "temperature": 0.6,
+        "top_p": 0.95
+      },
+      "promptSha256": "c43618edd4b7fcf336cbfd36dd7639abece932f9a932c540520649808eca329b",
+      "rounds": "unlimited",
+      "strategy": "coding-recovery-v1",
+      "think": false,
+      "timeoutMs": 900000
+    },
+    "contextProfile": {
+      "mode": "budgeted",
+      "profile": {
+        "model": "ornith-1.5:9b",
+        "outputReserve": 4096,
+        "provider": "ollama",
+        "revision": "model-capacity-v1",
+        "safetyMargin": 1639,
+        "summaryOutput": 2048,
+        "target": 10813,
+        "templateOverhead": 256,
+        "trigger": 17571,
+        "window": 32768
+      }
+    },
+    "elapsedMs": 935745,
+    "runStatus": "timeout",
+    "runtime": {
+      "outcome": "incomplete",
+      "reason": "budget-exceeded:elapsedMs:900000:900013:0",
+      "quiescence": false,
+      "unresolved": [
+        "context-summary:f96a68ce-b881-403b-923a-cf2ae7fd47dd"
+      ],
+      "cleanupErrors": []
+    },
+    "metrics": {
+      "compactionFailureReasons": {},
+      "compactionsCompleted": 0,
+      "compactionsFailed": 0,
+      "compactionsSkipped": 0,
+      "compactionsStarted": 1,
+      "modelCallsCompleted": 48,
+      "modelCallsStarted": 49,
+      "modelWallMs": 885028.0668570002,
+      "ollamaEvalMs": 773151.0199990001,
+      "ollamaLoadMs": 100.572206,
+      "ollamaPromptMs": 108190.852,
+      "ollamaTotalMs": 884815.1739950001,
+      "repeatedFailedCalls": 0,
+      "summaryAttempts": 11,
+      "summaryFailures": 1,
+      "summaryValidationFailures": 0,
+      "summaryWallMs": 686584.8091440002,
+      "toolCalls": 38,
+      "toolErrors": 15,
+      "toolWallMs": 1284.2938760000143
+    },
+    "usage": {
+      "inputTokens": 406460,
+      "outputTokens": 17168
+    },
+    "usageComplete": false,
+    "preflightPassed": true,
+    "quality": {
+      "status": "not-measured",
+      "issues": [],
+      "tests": []
+    },
+    "excludedGeneratedPaths": [],
+    "patchBytes": 0,
+    "patchFiles": [],
+    "prediction": "2026-09-29-compact-batches-predictions.jsonl",
+    "officialGrade": {
+      "status": "unresolved",
+      "runId": "orbit-prediction-2a2ca27c-5257-4a15-b776-5ebf07d50544",
+      "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+      "harnessVersion": "4.1.0",
+      "evaluationPlatform": "linux/amd64 (Docker emulation on ARM64)",
+      "imageReference": "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+      "imageId": "sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+      "imageDigests": [
+        "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da",
+        "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356@sha256:363458d4698f5d985f6476d189d3f1cf902253cd9518705fd395516cd30138da"
+      ],
+      "predictionsSha256": "a8c9ad5d5c7bbd75a86cc09252f4222404b5cfbe8733c6e81e2234e94d37601b",
+      "processExit": 0,
+      "gradingDisposition": "skipped-empty-patch",
+      "aggregate": {
+        "total_instances": 1,
+        "submitted_instances": 1,
+        "completed_instances": 0,
+        "resolved_instances": 0,
+        "unresolved_instances": 0,
+        "empty_patch_instances": 1,
+        "error_instances": 0,
+        "completed_ids": [],
+        "incomplete_ids": [],
+        "empty_patch_ids": [
+          "pytest-dev__pytest-10356"
+        ],
+        "submitted_ids": [
+          "pytest-dev__pytest-10356"
+        ],
+        "resolved_ids": [],
+        "unresolved_ids": [],
+        "error_ids": [],
+        "schema_version": 2
+      },
+      "patchApplied": null,
+      "tests": {}
+    },
+    "directObservations": {
+      "scope": "runtime-diagnostic-source-correspondence-v1",
+      "status": "not-exercised",
+      "viewCount": 0,
+      "recordCount": 0,
+      "rows": [],
+      "limitations": [
+        "Checks correspondence with controlled runtime artifacts, not journal cryptographic authentication.",
+        "Does not grade model answers, current workspace state or behavioral correctness."
+      ]
+    },
+    "recoveryEvents": [],
+    "compactions": [],
+    "summaryRequests": [
+      {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "previousSummaryBytes": 0,
+        "sourceMessages": 1,
+        "inputTokens": 2924,
+        "sourceTargetTokens": 4096,
+        "summaryTargetTokens": 1024
+      },
+      {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "previousSummaryBytes": 1906,
+        "sourceMessages": 2,
+        "inputTokens": 3686,
+        "sourceTargetTokens": 4096,
+        "summaryTargetTokens": 1024
+      },
+      {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "previousSummaryBytes": 1729,
+        "sourceMessages": 2,
+        "inputTokens": 4938,
+        "sourceTargetTokens": 4096,
+        "summaryTargetTokens": 1024
+      },
+      {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "previousSummaryBytes": 2574,
+        "sourceMessages": 10,
+        "inputTokens": 5826,
+        "sourceTargetTokens": 4096,
+        "summaryTargetTokens": 1024
+      },
+      {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "previousSummaryBytes": 4682,
+        "sourceMessages": 10,
+        "inputTokens": 5935,
+        "sourceTargetTokens": 4096,
+        "summaryTargetTokens": 1024
+      },
+      {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "previousSummaryBytes": 3255,
+        "sourceMessages": 10,
+        "inputTokens": 5471,
+        "sourceTargetTokens": 4096,
+        "summaryTargetTokens": 1024
+      },
+      {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "previousSummaryBytes": 4166,
+        "sourceMessages": 6,
+        "inputTokens": 6362,
+        "sourceTargetTokens": 4096,
+        "summaryTargetTokens": 1024
+      },
+      {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "previousSummaryBytes": 4510,
+        "sourceMessages": 4,
+        "inputTokens": 5650,
+        "sourceTargetTokens": 4096,
+        "summaryTargetTokens": 1024
+      },
+      {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "previousSummaryBytes": 3669,
+        "sourceMessages": 4,
+        "inputTokens": 4976,
+        "sourceTargetTokens": 4096,
+        "summaryTargetTokens": 1024
+      },
+      {
+        "attempt": 1,
+        "outputLimit": 2048,
+        "phase": "batch",
+        "previousSummaryBytes": 4432,
+        "sourceMessages": 2,
+        "inputTokens": 6073,
+        "sourceTargetTokens": 4096,
+        "summaryTargetTokens": 1024
+      },
+      {
+        "attempt": 1,
+        "outputLimit": 4096,
+        "phase": "expanded",
+        "previousSummaryBytes": 4432,
+        "sourceMessages": 2,
+        "inputTokens": 6073,
+        "sourceTargetTokens": 4096,
+        "summaryTargetTokens": 1024
+      }
+    ],
+    "summarySizes": [
+      {
+        "itemsAfter": 9,
+        "itemsBefore": 9,
+        "summaryBytesAfter": 1906,
+        "summaryBytesBefore": 1906
+      },
+      {
+        "itemsAfter": 8,
+        "itemsBefore": 8,
+        "summaryBytesAfter": 1729,
+        "summaryBytesBefore": 1729
+      },
+      {
+        "itemsAfter": 12,
+        "itemsBefore": 12,
+        "summaryBytesAfter": 2574,
+        "summaryBytesBefore": 2574
+      },
+      {
+        "itemsAfter": 21,
+        "itemsBefore": 21,
+        "summaryBytesAfter": 4682,
+        "summaryBytesBefore": 4682
+      },
+      {
+        "itemsAfter": 15,
+        "itemsBefore": 15,
+        "summaryBytesAfter": 3255,
+        "summaryBytesBefore": 3255
+      },
+      {
+        "itemsAfter": 19,
+        "itemsBefore": 19,
+        "summaryBytesAfter": 4166,
+        "summaryBytesBefore": 4166
+      },
+      {
+        "itemsAfter": 20,
+        "itemsBefore": 20,
+        "summaryBytesAfter": 4510,
+        "summaryBytesBefore": 4510
+      },
+      {
+        "itemsAfter": 18,
+        "itemsBefore": 18,
+        "summaryBytesAfter": 3669,
+        "summaryBytesBefore": 3669
+      },
+      {
+        "itemsAfter": 21,
+        "itemsBefore": 22,
+        "summaryBytesAfter": 4432,
+        "summaryBytesBefore": 4589
+      }
+    ],
+    "summaryTruncations": [
+      {
+        "outputLimit": 2048,
+        "phase": "batch",
+        "previousSummaryBytes": 4432,
+        "sourceMessages": 2,
+        "reason": "length"
+      }
+    ]
+  },
+  "validation": {
+    "headersCheck": "pass",
+    "build": "pass",
+    "fullTests": 1063,
+    "compactionTests": 60,
+    "focusedCompactionAndIntegrationTests": 64,
+    "e2eHostTests": 19,
+    "directCheckerTests": 4,
+    "semanticEvaluatorTests": 11
+  },
+  "limitations": [
+    "One repeated convenience-selected problem, not a benchmark pass rate or statistical reliability comparison.",
+    "Natural solver trial uses no injected responses; separate live diagnostics intentionally inject controlled invalid outputs.",
+    "The new output contract is prompt-level with existing JSON mode, not provider-enforced JSON Schema.",
+    "A format-valid summary is not proof of semantic accuracy; direct observations and official grading remain separate.",
+    "Model/Session trajectories and source UUIDs differ from the preceding run; timing and solve outcomes are not a causal comparison.",
+    "Usage marked incomplete is a partial reported total.",
+    "No reference patch or hidden grading information was supplied to the solver.",
+    "Raw journals, runtime proofs and private host paths are excluded from curated artifacts.",
+    "Docker version changed from 29.8.0 in the preceding trial to 29.8.1; generation settings and model digest were retained.",
+    "No accepted checkpoint, so the natural solver did not activate the deterministic observation view.",
+    "Eleven summary invocations include nine validated batches, one output-length stop and one deadline-interrupted expansion.",
+    "The soft cumulative target was not consistently obeyed; exact deduplication removed one item in this natural run.",
+    "The empty prediction did not execute official target or regression tests; the fresh reference control did."
+  ],
+  "duplicateSourceExcerptDiagnostic": {
+    "scope": "exact-stream-text-substring-candidate-diagnostic",
+    "rows": [
+      {
+        "sourceId": "01a0ebc1-eeab-7703-aa1d-338f3a98db95",
+        "field": "stdout",
+        "bytes": 1683
+      },
+      {
+        "sourceId": "01a0ebc1-fda4-735f-9c27-470711c129c5",
+        "field": "stdout",
+        "bytes": 3110
+      },
+      {
+        "sourceId": "01a0ebc2-1437-7084-8d16-3f63999a3e22",
+        "field": "stdout",
+        "bytes": 827
+      },
+      {
+        "sourceId": "01a0ebc2-2735-7594-a394-fc8548959c07",
+        "field": "stdout",
+        "bytes": 559
+      },
+      {
+        "sourceId": "01a0ebc2-56ed-71ce-a755-ae4b10717571",
+        "field": "stdout",
+        "bytes": 2
+      },
+      {
+        "sourceId": "01a0ebc2-7a4b-70e9-84c4-cc5e51043f0f",
+        "field": "stdout",
+        "bytes": 6
+      },
+      {
+        "sourceId": "01a0ebc2-ce90-7748-a998-bd5cca81c86b",
+        "field": "stdout",
+        "bytes": 35
+      },
+      {
+        "sourceId": "01a0ebc2-e862-735a-9b87-b08992da37b2",
+        "field": "stdout",
+        "bytes": 86
+      },
+      {
+        "sourceId": "01a0ebc2-fa0f-7799-92e3-34db93fab004",
+        "field": "stdout",
+        "bytes": 2602
+      },
+      {
+        "sourceId": "01a0ebc3-2395-721c-a3fc-035f94720ee9",
+        "field": "stdout",
+        "bytes": 652
+      },
+      {
+        "sourceId": "01a0ebc3-3004-712d-922c-394016e81c70",
+        "field": "stdout",
+        "bytes": 1583
+      },
+      {
+        "sourceId": "01a0ebc3-4505-73ac-b7a6-1640dc0928fb",
+        "field": "stdout",
+        "bytes": 1384
+      },
+      {
+        "sourceId": "01a0ebc3-567e-7557-a619-e305bc99daa7",
+        "field": "stdout",
+        "bytes": 916
+      },
+      {
+        "sourceId": "01a0ebc3-6106-704a-8ad8-cc1122100b8d",
+        "field": "stdout",
+        "bytes": 5273
+      },
+      {
+        "sourceId": "01a0ebc3-771a-706a-abe1-77e4cc8002c8",
+        "field": "stdout",
+        "bytes": 5360
+      },
+      {
+        "sourceId": "01a0ebc3-90e5-7012-a67c-1008945dc59b",
+        "field": "stdout",
+        "bytes": 543
+      },
+      {
+        "sourceId": "01a0ebc3-9b8f-70be-89b1-1fce989b50fb",
+        "field": "stdout",
+        "bytes": 1654
+      },
+      {
+        "sourceId": "01a0ebc3-aac7-7652-91bf-9e6c1b58f6b0",
+        "field": "stdout",
+        "bytes": 265
+      },
+      {
+        "sourceId": "01a0ebc3-b51f-744f-afd1-3194b28e5abf",
+        "field": "stdout",
+        "bytes": 2948
+      },
+      {
+        "sourceId": "01a0ebc3-d70c-75db-8320-63448b8eca4d",
+        "field": "stdout",
+        "bytes": 210
+      },
+      {
+        "sourceId": "01a0ebc3-e159-716c-a740-62c074b457b5",
+        "field": "stdout",
+        "bytes": 3509
+      },
+      {
+        "sourceId": "01a0ebc4-19a6-73f8-a38a-46e3a42a0871",
+        "field": "stdout",
+        "bytes": 765
+      },
+      {
+        "sourceId": "01a0ebc4-2b99-734f-bed6-b8994159b9f8",
+        "field": "stdout",
+        "bytes": 765
+      },
+      {
+        "sourceId": "01a0ebc4-6170-7572-a0e2-7f8ed4f44024",
+        "field": "stdout",
+        "bytes": 47
+      },
+      {
+        "sourceId": "01a0ebc4-9f67-734c-b04e-0c4abb89588c",
+        "field": "stdout",
+        "bytes": 5
+      },
+      {
+        "sourceId": "01a0ebc4-df3d-701b-99cd-671fc5e06d2f",
+        "field": "stdout",
+        "bytes": 801
+      },
+      {
+        "sourceId": "01a0ebc5-1a8c-72b8-a909-7cc93222c7e4",
+        "field": "stdout",
+        "bytes": 801
+      }
+    ],
+    "exactRepeatedUtf8Bytes": 36391,
+    "limitations": "Exact strings also appear in content, but stream identity and whitespace still require preservation in any future source representation; no source normalization was implemented."
+  },
+  "batchHeuristics": {
+    "initialGroupsDivisor": 8,
+    "marginalSourceTargetTokens": 4096,
+    "softCumulativeSummaryTargetTokens": 1024,
+    "singleCompleteGroupCanExceedSourceTarget": true,
+    "shortHistoryAndVerifiedInterruptionOneShotPreserved": true
+  }
+}
