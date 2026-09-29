@@ -17,6 +17,9 @@ import {
   State,
 } from '../dist/index.js'
 
+const fault = process.env.ORBIT_E2E_SUMMARY_FAULT ?? 'none'
+if (!['empty', 'missing-fields', 'none'].includes(fault)) throw new Error('Unsupported summary fault fixture')
+
 const root = '/output/observations-live'
 fs.mkdirSync(root, {recursive: false})
 const repository = new SessionRepository({rootDir: `${root}/sessions`})
@@ -85,6 +88,26 @@ const policy = await createModelContextPolicy(model, {outputReserve: 2048})
 policy.profile.trigger = 3500
 policy.profile.target = 2500
 fs.writeFileSync(`${root}/context-policy.json`, JSON.stringify(policy, null, 2))
+// Controlled invalid-response injection exercises corrective generation with
+// the real model. It is never represented as a naturally occurring model error.
+const prepare = model.prepare.bind(model)
+let injected = false
+model.prepare = (messages, options) => {
+  const prepared = prepare(messages, options)
+  if (fault === 'none' || options?.responseFormat !== 'json') return prepared
+  return {
+    ...prepared,
+    async invoke() {
+      if (injected) return prepared.invoke()
+      injected = true
+      const invalid = {changedPaths: [], facts: [], goals: [], tests: [], uncertainties: [], unfinished: [], version: 1}
+      if (fault === 'missing-fields') delete invalid.uncertainties
+      fs.writeFileSync(`${root}/injected-fault.json`, JSON.stringify({fault, injected: true}))
+      return new Message('assistant', {content: JSON.stringify(invalid)})
+    },
+  }
+}
+
 const store = new MemorySessionLogStore()
 const agent = new Agent({
   contextPolicy: policy,

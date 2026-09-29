@@ -627,3 +627,15 @@ produce `not-exercised` if the model summary fails validation; record this
 separately from a failed source-correspondence check. This is neither a reference
 patch check nor an official SWE-bench solve. The forced thresholds are not a
 production tuning recommendation.
+
+For controlled summary recovery diagnostics, add
+`-e ORBIT_E2E_SUMMARY_FAULT=empty` or
+`-e ORBIT_E2E_SUMMARY_FAULT=missing-fields` to the `docker run` command.
+Use a fresh container/output directory per condition. The driver replaces only
+its first invoked summary response with a fixed invalid object; subsequent
+summary regeneration and the consumer use real Ollama. `injected-fault.json`
+records the intervention. Treat these as fault-injection trials, never as
+naturally occurring model errors or coding benchmark attempts. Inspect the
+`context.summary.validation-failed` event, accepted checkpoint, source-view
+correspondence and final runtime separately. The injected response has no real
+provider token usage; real response usage remains separate.
