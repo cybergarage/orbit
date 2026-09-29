@@ -99,6 +99,10 @@ The recovery runs all completed normally. The baseline included host timeouts;
 the later runs occurred under different host conditions. Do not attribute the
 change to the instructions alone.
 
+## Summary allowance recovery diagnostic
+
+The [2026-09-29 report](2026-09-29-summary-output-allowance-live.md) and [JSON](2026-09-29-summary-output-allowance-live.json) verify that correction retains an expanded output allowance. Natural output and a controlled truncation/missing-category retry completed with 2/2 source-derived saves. The interrupted Docker attempt is separately retained as an environment error. These are controlled diagnostics, not official SWE-bench solves.
+
 ## Recording another evaluation
 
 Add a dated report and its compact machine-readable summary here, then add one
