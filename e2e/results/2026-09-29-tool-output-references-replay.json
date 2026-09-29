@@ -1,0 +1,2008 @@
+{
+  "evaluationKind": "frozen-history-complete-core-compaction; not a SWE-bench solve or grade",
+  "metadata": {
+    "startedAt": "2026-09-29T06:45:46Z",
+    "checkout": "677e9927b329d7a766e47b16ab175b08394e384b",
+    "fixtureSha256": "ea452897cc34223e032a9c4a97f84f8542ef4917ca39823d61385dbb8af479e3",
+    "driverSha256": "e148a75cf09e2fe82505e31afd6478ee8293841c03befcd787252e1ba4dd8596",
+    "model": {
+      "name": "ornith-1.5:9b",
+      "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen35",
+        "families": [
+          "qwen35"
+        ],
+        "parameter_size": "9.0B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 262144,
+        "embedding_length": 4096
+      },
+      "ollamaVersion": "0.34.4",
+      "templateSha256": "f55f52930aa8bf44ab5cb85f99370fcc3c56e9a85640b812086d5330bce5d86b"
+    },
+    "docker": {
+      "ServerVersion": "29.8.1",
+      "Architecture": "aarch64",
+      "MemTotal": 4107141120
+    },
+    "generation": {
+      "num_ctx": 32768,
+      "seed": 42,
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "think": false,
+      "summaryOutput": 2048,
+      "expandedOutput": 4096
+    },
+    "conditions": {
+      "baseline": {
+        "image": "sha256:d83c2c90273a5169a299320212a72462eb91275236b476fa451d1fe548bdff62",
+        "sourceFingerprint": "633b1382aac663caefa0a5f7da30e446c72dfbc9db0e7f95899bc4db3ae5c101",
+        "exitCode": 0,
+        "hostElapsedMs": 841996,
+        "artifactsCopied": true
+      },
+      "candidate": {
+        "image": "sha256:7bf06fd968a49b3e7199674490dfc9b799877c2e3787220690858b1fc29a338f",
+        "sourceFingerprint": "58cfa8025102f3c81d274805a1b2faabfe0fd1cf0615dcbb241e2ec9562533e4",
+        "exitCode": 0,
+        "hostElapsedMs": 1488838,
+        "artifactsCopied": true
+      }
+    }
+  },
+  "source": {
+    "messages": 77,
+    "originalBytes": 162302,
+    "projectedBytes": 127176,
+    "savedBytes": 35126,
+    "referencedStreams": 21,
+    "opaqueProofsRemoved": true,
+    "authenticatedObservationReplay": false,
+    "sameIdsAcrossConditions": true,
+    "sameFixtureHashes": true,
+    "semanticAccuracyGuaranteedByLosslessEncoding": false
+  },
+  "conditions": {
+    "baseline": {
+      "fixtureSha256": "ea452897cc34223e032a9c4a97f84f8542ef4917ca39823d61385dbb8af479e3",
+      "elapsedMs": 841554.876925,
+      "outcome": "completed",
+      "quiescence": true,
+      "error": null,
+      "canonicalUnchanged": true,
+      "summaryStarted": 11,
+      "summaryCompleted": 11,
+      "summaryFailed": 0,
+      "summaryDurationMs": 841356.3770930001,
+      "inputTokens": 57561,
+      "outputTokens": 17199,
+      "usageIncomplete": false,
+      "requests": [
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 7169,
+          "sourceBytes": 7169,
+          "sourceIds": [
+            "01a0ebc1-d9b1-71ec-adfd-e0f83d0476b4"
+          ]
+        },
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 4896,
+          "sourceBytes": 4896,
+          "sourceIds": [
+            "01a0ebc1-ee93-75f5-8b83-7fbb6b52fe18",
+            "01a0ebc1-eeab-7703-aa1d-338f3a98db95"
+          ]
+        },
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 7927,
+          "sourceBytes": 7927,
+          "sourceIds": [
+            "01a0ebc1-fd9d-7212-8c19-dadf230c7b8f",
+            "01a0ebc1-fda4-735f-9c27-470711c129c5"
+          ]
+        },
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 10964,
+          "sourceBytes": 10964,
+          "sourceIds": [
+            "01a0ebc2-1428-754d-b52b-da93419de78b",
+            "01a0ebc2-1437-7084-8d16-3f63999a3e22",
+            "01a0ebc2-205f-7088-b042-4fe524cbe491",
+            "01a0ebc2-206a-71ac-b811-c4f9f34be45a",
+            "01a0ebc2-2729-764f-9f6e-755a10719e5b",
+            "01a0ebc2-2735-7594-a394-fc8548959c07",
+            "01a0ebc2-3100-73e9-b17f-8c5f1f3c6f86",
+            "01a0ebc2-310a-77eb-bb95-de27ff61eaa3",
+            "01a0ebc2-3ea1-73c1-aa40-e440b7ccd8a0",
+            "01a0ebc2-3eab-76b9-9f67-148898b365f7"
+          ]
+        },
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 8405,
+          "sourceBytes": 8405,
+          "sourceIds": [
+            "01a0ebc2-4cec-748d-bd4b-310da85d0ced",
+            "01a0ebc2-4cf5-70cc-a133-f0586df7d055",
+            "01a0ebc2-56e3-70ba-91c2-3b38f4efd36a",
+            "01a0ebc2-56ed-71ce-a755-ae4b10717571",
+            "01a0ebc2-6033-70a6-9034-79272228f8c0",
+            "01a0ebc2-603d-72cc-a1f0-3505112963fc",
+            "01a0ebc2-6dc7-768e-a5ee-462a43ca07e5",
+            "01a0ebc2-6dd1-742b-b636-f7f0ec0df033",
+            "01a0ebc2-7a2e-744e-b40f-d895c45e0386",
+            "01a0ebc2-7a4b-70e9-84c4-cc5e51043f0f"
+          ]
+        },
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 8911,
+          "sourceBytes": 8911,
+          "sourceIds": [
+            "01a0ebc2-8bca-7170-9858-6058155c177a",
+            "01a0ebc2-8bd3-732c-a48f-d4eddf7af5bb",
+            "01a0ebc2-9c07-7621-a01b-dd3d0834be06",
+            "01a0ebc2-9c0f-738b-8cf2-76ce0bc94401",
+            "01a0ebc2-a741-71a8-b405-d2073367ff81",
+            "01a0ebc2-a748-77f7-bde3-4cb84dd604d8",
+            "01a0ebc2-b225-7497-9050-dd5a15ca0947",
+            "01a0ebc2-b22d-749c-b20e-b35aca6f0b88",
+            "01a0ebc2-c0f6-75c8-b7e9-6163b6168b3c",
+            "01a0ebc2-c0ff-741b-b397-902b2edf61eb"
+          ]
+        },
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 11778,
+          "sourceBytes": 11778,
+          "sourceIds": [
+            "01a0ebc2-ce74-76c8-aa53-c7363d5b46d8",
+            "01a0ebc2-ce90-7748-a998-bd5cca81c86b",
+            "01a0ebc2-e843-74ad-b625-ef38d45e9e3b",
+            "01a0ebc2-e862-735a-9b87-b08992da37b2",
+            "01a0ebc2-fa06-74be-98cb-4a5c716613a3",
+            "01a0ebc2-fa0f-7799-92e3-34db93fab004"
+          ]
+        },
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 9482,
+          "sourceBytes": 9482,
+          "sourceIds": [
+            "01a0ebc3-237a-76ae-8694-f2dd67e173ea",
+            "01a0ebc3-2395-721c-a3fc-035f94720ee9",
+            "01a0ebc3-2ffa-736c-b3ff-d15d0f23505e",
+            "01a0ebc3-3004-712d-922c-394016e81c70"
+          ]
+        },
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 8448,
+          "sourceBytes": 8448,
+          "sourceIds": [
+            "01a0ebc3-44fc-71d8-835e-3fef6e23c256",
+            "01a0ebc3-4505-73ac-b7a6-1640dc0928fb",
+            "01a0ebc3-5672-7238-add6-a94aa7e72a11",
+            "01a0ebc3-567e-7557-a619-e305bc99daa7"
+          ]
+        },
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 12335,
+          "sourceBytes": 12335,
+          "sourceIds": [
+            "01a0ebc3-60fb-71cb-9219-f3688b28e098",
+            "01a0ebc3-6106-704a-8ad8-cc1122100b8d"
+          ]
+        },
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 12335,
+          "sourceBytes": 12335,
+          "sourceIds": [
+            "01a0ebc3-60fb-71cb-9219-f3688b28e098",
+            "01a0ebc3-6106-704a-8ad8-cc1122100b8d"
+          ]
+        }
+      ],
+      "inputSourceIds": [
+        "01a0ebc1-d9b1-71ec-adfd-e0f83d0476b4",
+        "01a0ebc1-ee93-75f5-8b83-7fbb6b52fe18",
+        "01a0ebc1-eeab-7703-aa1d-338f3a98db95",
+        "01a0ebc1-fd9d-7212-8c19-dadf230c7b8f",
+        "01a0ebc1-fda4-735f-9c27-470711c129c5",
+        "01a0ebc2-1428-754d-b52b-da93419de78b",
+        "01a0ebc2-1437-7084-8d16-3f63999a3e22",
+        "01a0ebc2-205f-7088-b042-4fe524cbe491",
+        "01a0ebc2-206a-71ac-b811-c4f9f34be45a",
+        "01a0ebc2-2729-764f-9f6e-755a10719e5b",
+        "01a0ebc2-2735-7594-a394-fc8548959c07",
+        "01a0ebc2-3100-73e9-b17f-8c5f1f3c6f86",
+        "01a0ebc2-310a-77eb-bb95-de27ff61eaa3",
+        "01a0ebc2-3ea1-73c1-aa40-e440b7ccd8a0",
+        "01a0ebc2-3eab-76b9-9f67-148898b365f7",
+        "01a0ebc2-4cec-748d-bd4b-310da85d0ced",
+        "01a0ebc2-4cf5-70cc-a133-f0586df7d055",
+        "01a0ebc2-56e3-70ba-91c2-3b38f4efd36a",
+        "01a0ebc2-56ed-71ce-a755-ae4b10717571",
+        "01a0ebc2-6033-70a6-9034-79272228f8c0",
+        "01a0ebc2-603d-72cc-a1f0-3505112963fc",
+        "01a0ebc2-6dc7-768e-a5ee-462a43ca07e5",
+        "01a0ebc2-6dd1-742b-b636-f7f0ec0df033",
+        "01a0ebc2-7a2e-744e-b40f-d895c45e0386",
+        "01a0ebc2-7a4b-70e9-84c4-cc5e51043f0f",
+        "01a0ebc2-8bca-7170-9858-6058155c177a",
+        "01a0ebc2-8bd3-732c-a48f-d4eddf7af5bb",
+        "01a0ebc2-9c07-7621-a01b-dd3d0834be06",
+        "01a0ebc2-9c0f-738b-8cf2-76ce0bc94401",
+        "01a0ebc2-a741-71a8-b405-d2073367ff81",
+        "01a0ebc2-a748-77f7-bde3-4cb84dd604d8",
+        "01a0ebc2-b225-7497-9050-dd5a15ca0947",
+        "01a0ebc2-b22d-749c-b20e-b35aca6f0b88",
+        "01a0ebc2-c0f6-75c8-b7e9-6163b6168b3c",
+        "01a0ebc2-c0ff-741b-b397-902b2edf61eb",
+        "01a0ebc2-ce74-76c8-aa53-c7363d5b46d8",
+        "01a0ebc2-ce90-7748-a998-bd5cca81c86b",
+        "01a0ebc2-e843-74ad-b625-ef38d45e9e3b",
+        "01a0ebc2-e862-735a-9b87-b08992da37b2",
+        "01a0ebc2-fa06-74be-98cb-4a5c716613a3",
+        "01a0ebc2-fa0f-7799-92e3-34db93fab004",
+        "01a0ebc3-237a-76ae-8694-f2dd67e173ea",
+        "01a0ebc3-2395-721c-a3fc-035f94720ee9",
+        "01a0ebc3-2ffa-736c-b3ff-d15d0f23505e",
+        "01a0ebc3-3004-712d-922c-394016e81c70",
+        "01a0ebc3-44fc-71d8-835e-3fef6e23c256",
+        "01a0ebc3-4505-73ac-b7a6-1640dc0928fb",
+        "01a0ebc3-5672-7238-add6-a94aa7e72a11",
+        "01a0ebc3-567e-7557-a619-e305bc99daa7",
+        "01a0ebc3-60fb-71cb-9219-f3688b28e098",
+        "01a0ebc3-6106-704a-8ad8-cc1122100b8d",
+        "01a0ebc3-770b-73fe-b807-a157e65fa24c",
+        "01a0ebc3-771a-706a-abe1-77e4cc8002c8",
+        "01a0ebc3-90d9-7654-b910-de1d15e27b38",
+        "01a0ebc3-90e5-7012-a67c-1008945dc59b",
+        "01a0ebc3-9b86-71cc-9aa0-8951215b4832",
+        "01a0ebc3-9b8f-70be-89b1-1fce989b50fb",
+        "01a0ebc3-aabb-74de-9431-1d89a98a0e32",
+        "01a0ebc3-aac7-7652-91bf-9e6c1b58f6b0",
+        "01a0ebc3-b514-7409-bfa6-a3ba8f88bf3f",
+        "01a0ebc3-b51f-744f-afd1-3194b28e5abf",
+        "01a0ebc3-d702-745a-ba30-922ee58923bf",
+        "01a0ebc3-d70c-75db-8320-63448b8eca4d",
+        "01a0ebc3-e14f-76bf-a010-abe38a7bd118",
+        "01a0ebc3-e159-716c-a740-62c074b457b5",
+        "01a0ebc4-1897-76ec-9e55-649594cd9bc6",
+        "01a0ebc4-19a6-73f8-a38a-46e3a42a0871",
+        "01a0ebc4-2b07-702c-8ed5-4e0b9b3602ec",
+        "01a0ebc4-2b99-734f-bed6-b8994159b9f8",
+        "01a0ebc4-6163-75c0-bff1-4d3488c16a9e",
+        "01a0ebc4-6170-7572-a0e2-7f8ed4f44024",
+        "01a0ebc4-9f59-76bd-9f6d-3a9e85aa9db1",
+        "01a0ebc4-9f67-734c-b04e-0c4abb89588c",
+        "01a0ebc4-de0d-76eb-a96f-166edc676bbf",
+        "01a0ebc4-df3d-701b-99cd-671fc5e06d2f",
+        "01a0ebc5-19fc-7066-b33a-43190404c7b6",
+        "01a0ebc5-1a8c-72b8-a909-7cc93222c7e4"
+      ],
+      "sourceIdsCovered": [
+        "01a0ebc1-d9b1-71ec-adfd-e0f83d0476b4",
+        "01a0ebc1-ee93-75f5-8b83-7fbb6b52fe18",
+        "01a0ebc1-eeab-7703-aa1d-338f3a98db95",
+        "01a0ebc1-fd9d-7212-8c19-dadf230c7b8f",
+        "01a0ebc1-fda4-735f-9c27-470711c129c5",
+        "01a0ebc2-1428-754d-b52b-da93419de78b",
+        "01a0ebc2-1437-7084-8d16-3f63999a3e22",
+        "01a0ebc2-205f-7088-b042-4fe524cbe491",
+        "01a0ebc2-206a-71ac-b811-c4f9f34be45a",
+        "01a0ebc2-2729-764f-9f6e-755a10719e5b",
+        "01a0ebc2-2735-7594-a394-fc8548959c07",
+        "01a0ebc2-3100-73e9-b17f-8c5f1f3c6f86",
+        "01a0ebc2-310a-77eb-bb95-de27ff61eaa3",
+        "01a0ebc2-3ea1-73c1-aa40-e440b7ccd8a0",
+        "01a0ebc2-3eab-76b9-9f67-148898b365f7",
+        "01a0ebc2-4cec-748d-bd4b-310da85d0ced",
+        "01a0ebc2-4cf5-70cc-a133-f0586df7d055",
+        "01a0ebc2-56e3-70ba-91c2-3b38f4efd36a",
+        "01a0ebc2-56ed-71ce-a755-ae4b10717571",
+        "01a0ebc2-6033-70a6-9034-79272228f8c0",
+        "01a0ebc2-603d-72cc-a1f0-3505112963fc",
+        "01a0ebc2-6dc7-768e-a5ee-462a43ca07e5",
+        "01a0ebc2-6dd1-742b-b636-f7f0ec0df033",
+        "01a0ebc2-7a2e-744e-b40f-d895c45e0386",
+        "01a0ebc2-7a4b-70e9-84c4-cc5e51043f0f",
+        "01a0ebc2-8bca-7170-9858-6058155c177a",
+        "01a0ebc2-8bd3-732c-a48f-d4eddf7af5bb",
+        "01a0ebc2-9c07-7621-a01b-dd3d0834be06",
+        "01a0ebc2-9c0f-738b-8cf2-76ce0bc94401",
+        "01a0ebc2-a741-71a8-b405-d2073367ff81",
+        "01a0ebc2-a748-77f7-bde3-4cb84dd604d8",
+        "01a0ebc2-b225-7497-9050-dd5a15ca0947",
+        "01a0ebc2-b22d-749c-b20e-b35aca6f0b88",
+        "01a0ebc2-c0f6-75c8-b7e9-6163b6168b3c",
+        "01a0ebc2-c0ff-741b-b397-902b2edf61eb",
+        "01a0ebc2-ce74-76c8-aa53-c7363d5b46d8",
+        "01a0ebc2-ce90-7748-a998-bd5cca81c86b",
+        "01a0ebc2-e843-74ad-b625-ef38d45e9e3b",
+        "01a0ebc2-e862-735a-9b87-b08992da37b2",
+        "01a0ebc2-fa06-74be-98cb-4a5c716613a3",
+        "01a0ebc2-fa0f-7799-92e3-34db93fab004",
+        "01a0ebc3-237a-76ae-8694-f2dd67e173ea",
+        "01a0ebc3-2395-721c-a3fc-035f94720ee9",
+        "01a0ebc3-2ffa-736c-b3ff-d15d0f23505e",
+        "01a0ebc3-3004-712d-922c-394016e81c70",
+        "01a0ebc3-44fc-71d8-835e-3fef6e23c256",
+        "01a0ebc3-4505-73ac-b7a6-1640dc0928fb",
+        "01a0ebc3-5672-7238-add6-a94aa7e72a11",
+        "01a0ebc3-567e-7557-a619-e305bc99daa7",
+        "01a0ebc3-60fb-71cb-9219-f3688b28e098",
+        "01a0ebc3-6106-704a-8ad8-cc1122100b8d"
+      ],
+      "sourceBytesAcrossInvocations": 102650,
+      "renderedBytesAcrossInvocations": 102650,
+      "referencedStreamsAcrossInvocations": 0,
+      "compactionFailures": [
+        {
+          "beforeTokens": 17119,
+          "durationMs": 841526.1484249999,
+          "fallback": true,
+          "reason": "summary-failed"
+        }
+      ],
+      "compactionOutcome": "failed",
+      "summaryEvents": [
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 0,
+            "sourceMessages": 1,
+            "inputTokens": 2924,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 30638.687806
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 9,
+            "itemsBefore": 9,
+            "summaryBytesAfter": 1906,
+            "summaryBytesBefore": 1906
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 1906,
+            "sourceMessages": 2,
+            "inputTokens": 3686,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 28940.009138999998
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 8,
+            "itemsBefore": 8,
+            "summaryBytesAfter": 1729,
+            "summaryBytesBefore": 1729
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 1729,
+            "sourceMessages": 2,
+            "inputTokens": 4938,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 44249.103812999994
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 12,
+            "itemsBefore": 12,
+            "summaryBytesAfter": 2574,
+            "summaryBytesBefore": 2574
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 2574,
+            "sourceMessages": 10,
+            "inputTokens": 5826,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 80015.14895199999
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 21,
+            "itemsBefore": 21,
+            "summaryBytesAfter": 4682,
+            "summaryBytesBefore": 4682
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 4682,
+            "sourceMessages": 10,
+            "inputTokens": 5935,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 58085.291318
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 15,
+            "itemsBefore": 15,
+            "summaryBytesAfter": 3255,
+            "summaryBytesBefore": 3255
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 3255,
+            "sourceMessages": 10,
+            "inputTokens": 5471,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 74607.270201
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 19,
+            "itemsBefore": 19,
+            "summaryBytesAfter": 4166,
+            "summaryBytesBefore": 4166
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 4166,
+            "sourceMessages": 6,
+            "inputTokens": 6362,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 83179.52274699998
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 20,
+            "itemsBefore": 20,
+            "summaryBytesAfter": 4510,
+            "summaryBytesBefore": 4510
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 4510,
+            "sourceMessages": 4,
+            "inputTokens": 5650,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 69525.447407
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 18,
+            "itemsBefore": 18,
+            "summaryBytesAfter": 3669,
+            "summaryBytesBefore": 3669
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 3669,
+            "sourceMessages": 4,
+            "inputTokens": 4976,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 81094.33653700002
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 21,
+            "itemsBefore": 22,
+            "summaryBytesAfter": 4432,
+            "summaryBytesBefore": 4589
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 4432,
+            "sourceMessages": 2,
+            "inputTokens": 6073,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 96784.01879400003
+          }
+        },
+        {
+          "type": "context.summary.truncated",
+          "data": {
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 4432,
+            "sourceMessages": 2,
+            "reason": "length"
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 4096,
+            "phase": "expanded",
+            "previousSummaryBytes": 4432,
+            "sourceMessages": 2,
+            "inputTokens": 6073,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 194237.540379
+          }
+        },
+        {
+          "type": "context.summary.truncated",
+          "data": {
+            "outputLimit": 4096,
+            "phase": "expanded",
+            "previousSummaryBytes": 4432,
+            "sourceMessages": 2,
+            "reason": "length"
+          }
+        }
+      ],
+      "checkpoint": null,
+      "consumer": "fixed; no ordinary inference or tools",
+      "semanticReview": {
+        "status": "not-exercised",
+        "reason": "No final checkpoint. The run fell back to raw history after expanded output exhaustion; intermediate prefix summaries are not graded as full-history summaries."
+      },
+      "reconstructedAcrossInvocations": 53,
+      "independentReconstruction": "pass; all rendered source fields equal original canonical fields",
+      "summaryCalls": [
+        {
+          "elapsedMs": 30637.269597000002,
+          "inputTokens": 2410,
+          "outputTokens": 607,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 28938.463972000005,
+          "inputTokens": 3749,
+          "outputTokens": 547,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 44246.979562,
+          "inputTokens": 5266,
+          "outputTokens": 862,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 80012.88457699999,
+          "inputTokens": 6018,
+          "outputTokens": 1648,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 58082.668485,
+          "inputTokens": 6145,
+          "outputTokens": 1102,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 74604.75990900001,
+          "inputTokens": 5560,
+          "outputTokens": 1517,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 83177.02549600002,
+          "inputTokens": 6302,
+          "outputTokens": 1674,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 69522.48811500001,
+          "inputTokens": 5581,
+          "outputTokens": 1400,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 81091.34357899998,
+          "inputTokens": 5004,
+          "outputTokens": 1698,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 96781.37704399996,
+          "inputTokens": 5763,
+          "outputTokens": 2048,
+          "doneReason": "length"
+        },
+        {
+          "elapsedMs": 194231.7547119999,
+          "inputTokens": 5763,
+          "outputTokens": 4096,
+          "doneReason": "length"
+        }
+      ]
+    },
+    "candidate": {
+      "fixtureSha256": "ea452897cc34223e032a9c4a97f84f8542ef4917ca39823d61385dbb8af479e3",
+      "elapsedMs": 1488132.985304,
+      "outcome": "completed",
+      "quiescence": true,
+      "error": null,
+      "canonicalUnchanged": true,
+      "summaryStarted": 17,
+      "summaryCompleted": 17,
+      "summaryFailed": 0,
+      "summaryDurationMs": 1487765.146805,
+      "inputTokens": 108059,
+      "outputTokens": 29390,
+      "usageIncomplete": false,
+      "requests": [
+        {
+          "referencedStreams": 1,
+          "renderedBytes": 10457,
+          "sourceBytes": 12065,
+          "sourceIds": [
+            "01a0ebc1-d9b1-71ec-adfd-e0f83d0476b4",
+            "01a0ebc1-ee93-75f5-8b83-7fbb6b52fe18",
+            "01a0ebc1-eeab-7703-aa1d-338f3a98db95"
+          ]
+        },
+        {
+          "referencedStreams": 2,
+          "renderedBytes": 9212,
+          "sourceBytes": 13016,
+          "sourceIds": [
+            "01a0ebc1-fd9d-7212-8c19-dadf230c7b8f",
+            "01a0ebc1-fda4-735f-9c27-470711c129c5",
+            "01a0ebc2-1428-754d-b52b-da93419de78b",
+            "01a0ebc2-1437-7084-8d16-3f63999a3e22",
+            "01a0ebc2-205f-7088-b042-4fe524cbe491",
+            "01a0ebc2-206a-71ac-b811-c4f9f34be45a"
+          ]
+        },
+        {
+          "referencedStreams": 1,
+          "renderedBytes": 8836,
+          "sourceBytes": 9301,
+          "sourceIds": [
+            "01a0ebc2-2729-764f-9f6e-755a10719e5b",
+            "01a0ebc2-2735-7594-a394-fc8548959c07",
+            "01a0ebc2-3100-73e9-b17f-8c5f1f3c6f86",
+            "01a0ebc2-310a-77eb-bb95-de27ff61eaa3",
+            "01a0ebc2-3ea1-73c1-aa40-e440b7ccd8a0",
+            "01a0ebc2-3eab-76b9-9f67-148898b365f7",
+            "01a0ebc2-4cec-748d-bd4b-310da85d0ced",
+            "01a0ebc2-4cf5-70cc-a133-f0586df7d055",
+            "01a0ebc2-56e3-70ba-91c2-3b38f4efd36a",
+            "01a0ebc2-56ed-71ce-a755-ae4b10717571"
+          ]
+        },
+        {
+          "referencedStreams": 1,
+          "renderedBytes": 8836,
+          "sourceBytes": 9301,
+          "sourceIds": [
+            "01a0ebc2-2729-764f-9f6e-755a10719e5b",
+            "01a0ebc2-2735-7594-a394-fc8548959c07",
+            "01a0ebc2-3100-73e9-b17f-8c5f1f3c6f86",
+            "01a0ebc2-310a-77eb-bb95-de27ff61eaa3",
+            "01a0ebc2-3ea1-73c1-aa40-e440b7ccd8a0",
+            "01a0ebc2-3eab-76b9-9f67-148898b365f7",
+            "01a0ebc2-4cec-748d-bd4b-310da85d0ced",
+            "01a0ebc2-4cf5-70cc-a133-f0586df7d055",
+            "01a0ebc2-56e3-70ba-91c2-3b38f4efd36a",
+            "01a0ebc2-56ed-71ce-a755-ae4b10717571"
+          ]
+        },
+        {
+          "referencedStreams": 1,
+          "renderedBytes": 8836,
+          "sourceBytes": 9301,
+          "sourceIds": [
+            "01a0ebc2-2729-764f-9f6e-755a10719e5b",
+            "01a0ebc2-2735-7594-a394-fc8548959c07",
+            "01a0ebc2-3100-73e9-b17f-8c5f1f3c6f86",
+            "01a0ebc2-310a-77eb-bb95-de27ff61eaa3",
+            "01a0ebc2-3ea1-73c1-aa40-e440b7ccd8a0",
+            "01a0ebc2-3eab-76b9-9f67-148898b365f7",
+            "01a0ebc2-4cec-748d-bd4b-310da85d0ced",
+            "01a0ebc2-4cf5-70cc-a133-f0586df7d055",
+            "01a0ebc2-56e3-70ba-91c2-3b38f4efd36a",
+            "01a0ebc2-56ed-71ce-a755-ae4b10717571"
+          ]
+        },
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 8893,
+          "sourceBytes": 8893,
+          "sourceIds": [
+            "01a0ebc2-6033-70a6-9034-79272228f8c0",
+            "01a0ebc2-603d-72cc-a1f0-3505112963fc",
+            "01a0ebc2-6dc7-768e-a5ee-462a43ca07e5",
+            "01a0ebc2-6dd1-742b-b636-f7f0ec0df033",
+            "01a0ebc2-7a2e-744e-b40f-d895c45e0386",
+            "01a0ebc2-7a4b-70e9-84c4-cc5e51043f0f",
+            "01a0ebc2-8bca-7170-9858-6058155c177a",
+            "01a0ebc2-8bd3-732c-a48f-d4eddf7af5bb",
+            "01a0ebc2-9c07-7621-a01b-dd3d0834be06",
+            "01a0ebc2-9c0f-738b-8cf2-76ce0bc94401"
+          ]
+        },
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 9456,
+          "sourceBytes": 9456,
+          "sourceIds": [
+            "01a0ebc2-a741-71a8-b405-d2073367ff81",
+            "01a0ebc2-a748-77f7-bde3-4cb84dd604d8",
+            "01a0ebc2-b225-7497-9050-dd5a15ca0947",
+            "01a0ebc2-b22d-749c-b20e-b35aca6f0b88",
+            "01a0ebc2-c0f6-75c8-b7e9-6163b6168b3c",
+            "01a0ebc2-c0ff-741b-b397-902b2edf61eb",
+            "01a0ebc2-ce74-76c8-aa53-c7363d5b46d8",
+            "01a0ebc2-ce90-7748-a998-bd5cca81c86b",
+            "01a0ebc2-e843-74ad-b625-ef38d45e9e3b",
+            "01a0ebc2-e862-735a-9b87-b08992da37b2"
+          ]
+        },
+        {
+          "referencedStreams": 3,
+          "renderedBytes": 12099,
+          "sourceBytes": 16801,
+          "sourceIds": [
+            "01a0ebc2-fa06-74be-98cb-4a5c716613a3",
+            "01a0ebc2-fa0f-7799-92e3-34db93fab004",
+            "01a0ebc3-237a-76ae-8694-f2dd67e173ea",
+            "01a0ebc3-2395-721c-a3fc-035f94720ee9",
+            "01a0ebc3-2ffa-736c-b3ff-d15d0f23505e",
+            "01a0ebc3-3004-712d-922c-394016e81c70"
+          ]
+        },
+        {
+          "referencedStreams": 3,
+          "renderedBytes": 13280,
+          "sourceBytes": 20783,
+          "sourceIds": [
+            "01a0ebc3-44fc-71d8-835e-3fef6e23c256",
+            "01a0ebc3-4505-73ac-b7a6-1640dc0928fb",
+            "01a0ebc3-5672-7238-add6-a94aa7e72a11",
+            "01a0ebc3-567e-7557-a619-e305bc99daa7",
+            "01a0ebc3-60fb-71cb-9219-f3688b28e098",
+            "01a0ebc3-6106-704a-8ad8-cc1122100b8d"
+          ]
+        },
+        {
+          "referencedStreams": 3,
+          "renderedBytes": 13065,
+          "sourceBytes": 20555,
+          "sourceIds": [
+            "01a0ebc3-770b-73fe-b807-a157e65fa24c",
+            "01a0ebc3-771a-706a-abe1-77e4cc8002c8",
+            "01a0ebc3-90d9-7654-b910-de1d15e27b38",
+            "01a0ebc3-90e5-7012-a67c-1008945dc59b",
+            "01a0ebc3-9b86-71cc-9aa0-8951215b4832",
+            "01a0ebc3-9b8f-70be-89b1-1fce989b50fb"
+          ]
+        },
+        {
+          "referencedStreams": 3,
+          "renderedBytes": 9223,
+          "sourceBytes": 12460,
+          "sourceIds": [
+            "01a0ebc3-aabb-74de-9431-1d89a98a0e32",
+            "01a0ebc3-aac7-7652-91bf-9e6c1b58f6b0",
+            "01a0ebc3-b514-7409-bfa6-a3ba8f88bf3f",
+            "01a0ebc3-b51f-744f-afd1-3194b28e5abf",
+            "01a0ebc3-d702-745a-ba30-922ee58923bf",
+            "01a0ebc3-d70c-75db-8320-63448b8eca4d"
+          ]
+        },
+        {
+          "referencedStreams": 3,
+          "renderedBytes": 12584,
+          "sourceBytes": 17485,
+          "sourceIds": [
+            "01a0ebc3-e14f-76bf-a010-abe38a7bd118",
+            "01a0ebc3-e159-716c-a740-62c074b457b5",
+            "01a0ebc4-1897-76ec-9e55-649594cd9bc6",
+            "01a0ebc4-19a6-73f8-a38a-46e3a42a0871",
+            "01a0ebc4-2b07-702c-8ed5-4e0b9b3602ec",
+            "01a0ebc4-2b99-734f-bed6-b8994159b9f8"
+          ]
+        },
+        {
+          "referencedStreams": 3,
+          "renderedBytes": 12584,
+          "sourceBytes": 17485,
+          "sourceIds": [
+            "01a0ebc3-e14f-76bf-a010-abe38a7bd118",
+            "01a0ebc3-e159-716c-a740-62c074b457b5",
+            "01a0ebc4-1897-76ec-9e55-649594cd9bc6",
+            "01a0ebc4-19a6-73f8-a38a-46e3a42a0871",
+            "01a0ebc4-2b07-702c-8ed5-4e0b9b3602ec",
+            "01a0ebc4-2b99-734f-bed6-b8994159b9f8"
+          ]
+        },
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 9065,
+          "sourceBytes": 9065,
+          "sourceIds": [
+            "01a0ebc4-6163-75c0-bff1-4d3488c16a9e",
+            "01a0ebc4-6170-7572-a0e2-7f8ed4f44024",
+            "01a0ebc4-9f59-76bd-9f6d-3a9e85aa9db1",
+            "01a0ebc4-9f67-734c-b04e-0c4abb89588c"
+          ]
+        },
+        {
+          "referencedStreams": 0,
+          "renderedBytes": 9065,
+          "sourceBytes": 9065,
+          "sourceIds": [
+            "01a0ebc4-6163-75c0-bff1-4d3488c16a9e",
+            "01a0ebc4-6170-7572-a0e2-7f8ed4f44024",
+            "01a0ebc4-9f59-76bd-9f6d-3a9e85aa9db1",
+            "01a0ebc4-9f67-734c-b04e-0c4abb89588c"
+          ]
+        },
+        {
+          "referencedStreams": 2,
+          "renderedBytes": 11006,
+          "sourceBytes": 12422,
+          "sourceIds": [
+            "01a0ebc4-de0d-76eb-a96f-166edc676bbf",
+            "01a0ebc4-df3d-701b-99cd-671fc5e06d2f",
+            "01a0ebc5-19fc-7066-b33a-43190404c7b6",
+            "01a0ebc5-1a8c-72b8-a909-7cc93222c7e4"
+          ]
+        },
+        {
+          "referencedStreams": 2,
+          "renderedBytes": 11006,
+          "sourceBytes": 12422,
+          "sourceIds": [
+            "01a0ebc4-de0d-76eb-a96f-166edc676bbf",
+            "01a0ebc4-df3d-701b-99cd-671fc5e06d2f",
+            "01a0ebc5-19fc-7066-b33a-43190404c7b6",
+            "01a0ebc5-1a8c-72b8-a909-7cc93222c7e4"
+          ]
+        }
+      ],
+      "inputSourceIds": [
+        "01a0ebc1-d9b1-71ec-adfd-e0f83d0476b4",
+        "01a0ebc1-ee93-75f5-8b83-7fbb6b52fe18",
+        "01a0ebc1-eeab-7703-aa1d-338f3a98db95",
+        "01a0ebc1-fd9d-7212-8c19-dadf230c7b8f",
+        "01a0ebc1-fda4-735f-9c27-470711c129c5",
+        "01a0ebc2-1428-754d-b52b-da93419de78b",
+        "01a0ebc2-1437-7084-8d16-3f63999a3e22",
+        "01a0ebc2-205f-7088-b042-4fe524cbe491",
+        "01a0ebc2-206a-71ac-b811-c4f9f34be45a",
+        "01a0ebc2-2729-764f-9f6e-755a10719e5b",
+        "01a0ebc2-2735-7594-a394-fc8548959c07",
+        "01a0ebc2-3100-73e9-b17f-8c5f1f3c6f86",
+        "01a0ebc2-310a-77eb-bb95-de27ff61eaa3",
+        "01a0ebc2-3ea1-73c1-aa40-e440b7ccd8a0",
+        "01a0ebc2-3eab-76b9-9f67-148898b365f7",
+        "01a0ebc2-4cec-748d-bd4b-310da85d0ced",
+        "01a0ebc2-4cf5-70cc-a133-f0586df7d055",
+        "01a0ebc2-56e3-70ba-91c2-3b38f4efd36a",
+        "01a0ebc2-56ed-71ce-a755-ae4b10717571",
+        "01a0ebc2-6033-70a6-9034-79272228f8c0",
+        "01a0ebc2-603d-72cc-a1f0-3505112963fc",
+        "01a0ebc2-6dc7-768e-a5ee-462a43ca07e5",
+        "01a0ebc2-6dd1-742b-b636-f7f0ec0df033",
+        "01a0ebc2-7a2e-744e-b40f-d895c45e0386",
+        "01a0ebc2-7a4b-70e9-84c4-cc5e51043f0f",
+        "01a0ebc2-8bca-7170-9858-6058155c177a",
+        "01a0ebc2-8bd3-732c-a48f-d4eddf7af5bb",
+        "01a0ebc2-9c07-7621-a01b-dd3d0834be06",
+        "01a0ebc2-9c0f-738b-8cf2-76ce0bc94401",
+        "01a0ebc2-a741-71a8-b405-d2073367ff81",
+        "01a0ebc2-a748-77f7-bde3-4cb84dd604d8",
+        "01a0ebc2-b225-7497-9050-dd5a15ca0947",
+        "01a0ebc2-b22d-749c-b20e-b35aca6f0b88",
+        "01a0ebc2-c0f6-75c8-b7e9-6163b6168b3c",
+        "01a0ebc2-c0ff-741b-b397-902b2edf61eb",
+        "01a0ebc2-ce74-76c8-aa53-c7363d5b46d8",
+        "01a0ebc2-ce90-7748-a998-bd5cca81c86b",
+        "01a0ebc2-e843-74ad-b625-ef38d45e9e3b",
+        "01a0ebc2-e862-735a-9b87-b08992da37b2",
+        "01a0ebc2-fa06-74be-98cb-4a5c716613a3",
+        "01a0ebc2-fa0f-7799-92e3-34db93fab004",
+        "01a0ebc3-237a-76ae-8694-f2dd67e173ea",
+        "01a0ebc3-2395-721c-a3fc-035f94720ee9",
+        "01a0ebc3-2ffa-736c-b3ff-d15d0f23505e",
+        "01a0ebc3-3004-712d-922c-394016e81c70",
+        "01a0ebc3-44fc-71d8-835e-3fef6e23c256",
+        "01a0ebc3-4505-73ac-b7a6-1640dc0928fb",
+        "01a0ebc3-5672-7238-add6-a94aa7e72a11",
+        "01a0ebc3-567e-7557-a619-e305bc99daa7",
+        "01a0ebc3-60fb-71cb-9219-f3688b28e098",
+        "01a0ebc3-6106-704a-8ad8-cc1122100b8d",
+        "01a0ebc3-770b-73fe-b807-a157e65fa24c",
+        "01a0ebc3-771a-706a-abe1-77e4cc8002c8",
+        "01a0ebc3-90d9-7654-b910-de1d15e27b38",
+        "01a0ebc3-90e5-7012-a67c-1008945dc59b",
+        "01a0ebc3-9b86-71cc-9aa0-8951215b4832",
+        "01a0ebc3-9b8f-70be-89b1-1fce989b50fb",
+        "01a0ebc3-aabb-74de-9431-1d89a98a0e32",
+        "01a0ebc3-aac7-7652-91bf-9e6c1b58f6b0",
+        "01a0ebc3-b514-7409-bfa6-a3ba8f88bf3f",
+        "01a0ebc3-b51f-744f-afd1-3194b28e5abf",
+        "01a0ebc3-d702-745a-ba30-922ee58923bf",
+        "01a0ebc3-d70c-75db-8320-63448b8eca4d",
+        "01a0ebc3-e14f-76bf-a010-abe38a7bd118",
+        "01a0ebc3-e159-716c-a740-62c074b457b5",
+        "01a0ebc4-1897-76ec-9e55-649594cd9bc6",
+        "01a0ebc4-19a6-73f8-a38a-46e3a42a0871",
+        "01a0ebc4-2b07-702c-8ed5-4e0b9b3602ec",
+        "01a0ebc4-2b99-734f-bed6-b8994159b9f8",
+        "01a0ebc4-6163-75c0-bff1-4d3488c16a9e",
+        "01a0ebc4-6170-7572-a0e2-7f8ed4f44024",
+        "01a0ebc4-9f59-76bd-9f6d-3a9e85aa9db1",
+        "01a0ebc4-9f67-734c-b04e-0c4abb89588c",
+        "01a0ebc4-de0d-76eb-a96f-166edc676bbf",
+        "01a0ebc4-df3d-701b-99cd-671fc5e06d2f",
+        "01a0ebc5-19fc-7066-b33a-43190404c7b6",
+        "01a0ebc5-1a8c-72b8-a909-7cc93222c7e4"
+      ],
+      "sourceIdsCovered": [
+        "01a0ebc1-d9b1-71ec-adfd-e0f83d0476b4",
+        "01a0ebc1-ee93-75f5-8b83-7fbb6b52fe18",
+        "01a0ebc1-eeab-7703-aa1d-338f3a98db95",
+        "01a0ebc1-fd9d-7212-8c19-dadf230c7b8f",
+        "01a0ebc1-fda4-735f-9c27-470711c129c5",
+        "01a0ebc2-1428-754d-b52b-da93419de78b",
+        "01a0ebc2-1437-7084-8d16-3f63999a3e22",
+        "01a0ebc2-205f-7088-b042-4fe524cbe491",
+        "01a0ebc2-206a-71ac-b811-c4f9f34be45a",
+        "01a0ebc2-2729-764f-9f6e-755a10719e5b",
+        "01a0ebc2-2735-7594-a394-fc8548959c07",
+        "01a0ebc2-3100-73e9-b17f-8c5f1f3c6f86",
+        "01a0ebc2-310a-77eb-bb95-de27ff61eaa3",
+        "01a0ebc2-3ea1-73c1-aa40-e440b7ccd8a0",
+        "01a0ebc2-3eab-76b9-9f67-148898b365f7",
+        "01a0ebc2-4cec-748d-bd4b-310da85d0ced",
+        "01a0ebc2-4cf5-70cc-a133-f0586df7d055",
+        "01a0ebc2-56e3-70ba-91c2-3b38f4efd36a",
+        "01a0ebc2-56ed-71ce-a755-ae4b10717571",
+        "01a0ebc2-6033-70a6-9034-79272228f8c0",
+        "01a0ebc2-603d-72cc-a1f0-3505112963fc",
+        "01a0ebc2-6dc7-768e-a5ee-462a43ca07e5",
+        "01a0ebc2-6dd1-742b-b636-f7f0ec0df033",
+        "01a0ebc2-7a2e-744e-b40f-d895c45e0386",
+        "01a0ebc2-7a4b-70e9-84c4-cc5e51043f0f",
+        "01a0ebc2-8bca-7170-9858-6058155c177a",
+        "01a0ebc2-8bd3-732c-a48f-d4eddf7af5bb",
+        "01a0ebc2-9c07-7621-a01b-dd3d0834be06",
+        "01a0ebc2-9c0f-738b-8cf2-76ce0bc94401",
+        "01a0ebc2-a741-71a8-b405-d2073367ff81",
+        "01a0ebc2-a748-77f7-bde3-4cb84dd604d8",
+        "01a0ebc2-b225-7497-9050-dd5a15ca0947",
+        "01a0ebc2-b22d-749c-b20e-b35aca6f0b88",
+        "01a0ebc2-c0f6-75c8-b7e9-6163b6168b3c",
+        "01a0ebc2-c0ff-741b-b397-902b2edf61eb",
+        "01a0ebc2-ce74-76c8-aa53-c7363d5b46d8",
+        "01a0ebc2-ce90-7748-a998-bd5cca81c86b",
+        "01a0ebc2-e843-74ad-b625-ef38d45e9e3b",
+        "01a0ebc2-e862-735a-9b87-b08992da37b2",
+        "01a0ebc2-fa06-74be-98cb-4a5c716613a3",
+        "01a0ebc2-fa0f-7799-92e3-34db93fab004",
+        "01a0ebc3-237a-76ae-8694-f2dd67e173ea",
+        "01a0ebc3-2395-721c-a3fc-035f94720ee9",
+        "01a0ebc3-2ffa-736c-b3ff-d15d0f23505e",
+        "01a0ebc3-3004-712d-922c-394016e81c70",
+        "01a0ebc3-44fc-71d8-835e-3fef6e23c256",
+        "01a0ebc3-4505-73ac-b7a6-1640dc0928fb",
+        "01a0ebc3-5672-7238-add6-a94aa7e72a11",
+        "01a0ebc3-567e-7557-a619-e305bc99daa7",
+        "01a0ebc3-60fb-71cb-9219-f3688b28e098",
+        "01a0ebc3-6106-704a-8ad8-cc1122100b8d",
+        "01a0ebc3-770b-73fe-b807-a157e65fa24c",
+        "01a0ebc3-771a-706a-abe1-77e4cc8002c8",
+        "01a0ebc3-90d9-7654-b910-de1d15e27b38",
+        "01a0ebc3-90e5-7012-a67c-1008945dc59b",
+        "01a0ebc3-9b86-71cc-9aa0-8951215b4832",
+        "01a0ebc3-9b8f-70be-89b1-1fce989b50fb",
+        "01a0ebc3-aabb-74de-9431-1d89a98a0e32",
+        "01a0ebc3-aac7-7652-91bf-9e6c1b58f6b0",
+        "01a0ebc3-b514-7409-bfa6-a3ba8f88bf3f",
+        "01a0ebc3-b51f-744f-afd1-3194b28e5abf",
+        "01a0ebc3-d702-745a-ba30-922ee58923bf",
+        "01a0ebc3-d70c-75db-8320-63448b8eca4d",
+        "01a0ebc3-e14f-76bf-a010-abe38a7bd118",
+        "01a0ebc3-e159-716c-a740-62c074b457b5",
+        "01a0ebc4-1897-76ec-9e55-649594cd9bc6",
+        "01a0ebc4-19a6-73f8-a38a-46e3a42a0871",
+        "01a0ebc4-2b07-702c-8ed5-4e0b9b3602ec",
+        "01a0ebc4-2b99-734f-bed6-b8994159b9f8",
+        "01a0ebc4-6163-75c0-bff1-4d3488c16a9e",
+        "01a0ebc4-6170-7572-a0e2-7f8ed4f44024",
+        "01a0ebc4-9f59-76bd-9f6d-3a9e85aa9db1",
+        "01a0ebc4-9f67-734c-b04e-0c4abb89588c",
+        "01a0ebc4-de0d-76eb-a96f-166edc676bbf",
+        "01a0ebc4-df3d-701b-99cd-671fc5e06d2f",
+        "01a0ebc5-19fc-7066-b33a-43190404c7b6",
+        "01a0ebc5-1a8c-72b8-a909-7cc93222c7e4"
+      ],
+      "sourceBytesAcrossInvocations": 219876,
+      "renderedBytesAcrossInvocations": 177503,
+      "referencedStreamsAcrossInvocations": 28,
+      "compactionFailures": [],
+      "compactionOutcome": "accepted",
+      "summaryEvents": [
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 0,
+            "sourceMessages": 3,
+            "inputTokens": 4424,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 55361.914734000005
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 17,
+            "itemsBefore": 17,
+            "summaryBytesAfter": 2909,
+            "summaryBytesBefore": 2987
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 2909,
+            "sourceMessages": 6,
+            "inputTokens": 5708,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 84433.71308
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 23,
+            "itemsBefore": 23,
+            "summaryBytesAfter": 4294,
+            "summaryBytesBefore": 4294
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 4294,
+            "sourceMessages": 10,
+            "inputTokens": 5914,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 104799.55163099998
+          }
+        },
+        {
+          "type": "context.summary.truncated",
+          "data": {
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 4294,
+            "sourceMessages": 10,
+            "reason": "length"
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 4096,
+            "phase": "expanded",
+            "previousSummaryBytes": 4294,
+            "sourceMessages": 10,
+            "inputTokens": 5914,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 93403.69816800003
+          }
+        },
+        {
+          "type": "context.summary.validation-failed",
+          "data": {
+            "defect": "missing-fields",
+            "outputLimit": 4096,
+            "phase": "batch",
+            "recovery": "regenerate"
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 4096,
+            "phase": "expanded",
+            "previousSummaryBytes": 4294,
+            "sourceMessages": 10,
+            "inputTokens": 5959,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 135162.668395
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 28,
+            "itemsBefore": 28,
+            "summaryBytesAfter": 6217,
+            "summaryBytesBefore": 6217
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 6217,
+            "sourceMessages": 10,
+            "inputTokens": 7156,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 66772.633447
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 11,
+            "itemsBefore": 11,
+            "summaryBytesAfter": 2684,
+            "summaryBytesBefore": 2684
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 2684,
+            "sourceMessages": 10,
+            "inputTokens": 5866,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 60188.200402999995
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 11,
+            "itemsBefore": 11,
+            "summaryBytesAfter": 2576,
+            "summaryBytesBefore": 2576
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 2576,
+            "sourceMessages": 6,
+            "inputTokens": 6060,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 60576.66169399989
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 12,
+            "itemsBefore": 12,
+            "summaryBytesAfter": 2873,
+            "summaryBytesBefore": 2873
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 2873,
+            "sourceMessages": 6,
+            "inputTokens": 6379,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 61366.91215300001
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 12,
+            "itemsBefore": 12,
+            "summaryBytesAfter": 2862,
+            "summaryBytesBefore": 2862
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 2862,
+            "sourceMessages": 6,
+            "inputTokens": 6308,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 70980.03419899999
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 14,
+            "itemsBefore": 14,
+            "summaryBytesAfter": 3368,
+            "summaryBytesBefore": 3368
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 3368,
+            "sourceMessages": 6,
+            "inputTokens": 5653,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 89264.32633300009
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 16,
+            "itemsBefore": 16,
+            "summaryBytesAfter": 4151,
+            "summaryBytesBefore": 4151
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 4151,
+            "sourceMessages": 6,
+            "inputTokens": 7230,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 103396.75533800002
+          }
+        },
+        {
+          "type": "context.summary.truncated",
+          "data": {
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 4151,
+            "sourceMessages": 6,
+            "reason": "length"
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 4096,
+            "phase": "expanded",
+            "previousSummaryBytes": 4151,
+            "sourceMessages": 6,
+            "inputTokens": 7230,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 98728.715463
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 16,
+            "itemsBefore": 16,
+            "summaryBytesAfter": 4469,
+            "summaryBytesBefore": 4469
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 4469,
+            "sourceMessages": 4,
+            "inputTokens": 6329,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 98500.48204499995
+          }
+        },
+        {
+          "type": "context.summary.truncated",
+          "data": {
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 4469,
+            "sourceMessages": 4,
+            "reason": "length"
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 4096,
+            "phase": "expanded",
+            "previousSummaryBytes": 4469,
+            "sourceMessages": 4,
+            "inputTokens": 6329,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 101469.15450399998
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 17,
+            "itemsBefore": 17,
+            "summaryBytesAfter": 4818,
+            "summaryBytesBefore": 4818
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 4818,
+            "sourceMessages": 4,
+            "inputTokens": 6980,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 101013.69921300001
+          }
+        },
+        {
+          "type": "context.summary.truncated",
+          "data": {
+            "outputLimit": 2048,
+            "phase": "batch",
+            "previousSummaryBytes": 4818,
+            "sourceMessages": 4,
+            "reason": "length"
+          }
+        },
+        {
+          "type": "context.summary.started",
+          "data": {
+            "attempt": 1,
+            "outputLimit": 4096,
+            "phase": "expanded",
+            "previousSummaryBytes": 4818,
+            "sourceMessages": 4,
+            "inputTokens": 6980,
+            "sourceTargetTokens": 4096,
+            "summaryTargetTokens": 1024
+          }
+        },
+        {
+          "type": "context.summary.completed",
+          "data": {
+            "attempt": 1,
+            "durationMs": 102346.02600500011
+          }
+        },
+        {
+          "type": "context.summary.validated",
+          "data": {
+            "itemsAfter": 17,
+            "itemsBefore": 17,
+            "summaryBytesAfter": 4818,
+            "summaryBytesBefore": 4818
+          }
+        }
+      ],
+      "checkpoint": {
+        "beforeTokens": 17119,
+        "afterTokens": 2192,
+        "sourceDigest": "6d8cc2a3a2b94ebbcefccda1a577221ee5b3094f7367d5076a37521074aa2361",
+        "retainedUserIds": null,
+        "projectionVersion": 1,
+        "summary": {
+          "version": 1,
+          "goals": [
+            {
+              "text": "Fix pytest losing pytestmark on subclasses inheriting from two baseclasses with pytestmark (MRO-merge marks); implement minimal fix, add changelog + AUTHORS entry, run focused tests; use python3, no network, do not alter tests to hide failures.",
+              "sourceIds": [
+                "01a0ebc1-d9b1-71ec-adfd-e0f83d0476b4"
+              ]
+            },
+            {
+              "text": "Reproduce the reported marker-loss behavior before editing.",
+              "sourceIds": [
+                "01a0ebc1-d9b1-71ec-adfd-e0f83d0476b4"
+              ]
+            },
+            {
+              "text": "Summarize changed files and actual test results, then finish.",
+              "sourceIds": [
+                "01a0ebc1-d9b1-71ec-adfd-e0f83d0476b4"
+              ]
+            }
+          ],
+          "facts": [
+            {
+              "text": "Repository root contains src/, testing/, changelog/, AUTHORS, pyproject.toml, tox.ini, README.rst (pytest source snapshot).",
+              "sourceIds": [
+                "01a0ebc1-eeab-7703-aa1d-338f3a98db95"
+              ]
+            },
+            {
+              "text": "pytestmark usages are confined to mark/structures.py (getattr/setter), terminal.py (lines 1345, 1351) and config/__init__.py (line 354); none in python.py, fixtures.py, or _code/.",
+              "sourceIds": [
+                "01a0ebc1-eeab-7703-aa1d-338f3a98db95",
+                "01a0ebc2-206a-71ac-b811-c4f9f34be45a",
+                "01a0ebc2-3100-73e9-b17f-8c5f1f3c6f86"
+              ]
+            },
+            {
+              "text": "Marks are stored via MarkDecorator.__call__ (store_mark) which reassigns obj.pytestmark to [*get_unpacked_marks(obj), mark]; Function.obj extends own_markers from get_unpacked_marks.",
+              "sourceIds": [
+                "01a0ebc2-fa06-74be-98cb-4a5c716613a3",
+                "01a0ebc3-3004-712d-922c-394016e81c70"
+              ]
+            },
+            {
+              "text": "PyCollector.keywords.update() takes only own_markers (no parent traversal), while PyobjMixin.obj takes own_markers plus parent-traversed marks, creating a keyword/marker inconsistency.",
+              "sourceIds": [
+                "01a0ebc2-e843-74ad-b625-ef38d45e9e3b",
+                "01a0ebc2-e862-735a-9b87-b08992da37b2",
+                "01a0ebc2-a748-77f7-bde3-4cb84dd604d8"
+              ]
+            },
+            {
+              "text": "Class node methods add_marker/iter_markers/iter_markers_with_node/get_closest_marker/listextrakeywords/listnames/addfinalizer exist in src/_pytest/nodes.py (lines 340-420).",
+              "sourceIds": [
+                "01a0ebc2-e843-74ad-b625-ef38d45e9e3b",
+                "01a0ebc2-e862-735a-9b87-b08992da37b2",
+                "01a0ebc2-a748-77f7-bde3-4cb84dd604d8",
+                "01a0ebc2-ce90-7748-a998-bd5cca81c86b",
+                "01a0ebc3-aabb-74de-9431-1d89a98a0e32",
+                "01a0ebc3-aac7-7652-91bf-9e6c1b58f6b0",
+                "01a0ebc3-b514-7409-bfa6-a3ba8f88bf3f",
+                "01a0ebc3-b51f-744f-afd1-3194b28e5abf",
+                "01a0ebc3-d702-745a-ba30-922ee58923bf",
+                "01a0ebc3-d70c-75db-8320-63448b8eca4d"
+              ]
+            },
+            {
+              "text": "Node has own_markers (lines 227, 359, 361, 380); NodeMeta at line 128 and Node at line 158.",
+              "sourceIds": [
+                "01a0ebc3-aabb-74de-9431-1d89a98a0e32",
+                "01a0ebc3-aac7-7652-91bf-9e6c1b58f6b0"
+              ]
+            },
+            {
+              "text": "No source files were edited; all tool activity was read-only investigation.",
+              "sourceIds": [
+                "01a0ebc1-d9b1-71ec-adfd-e0f83d0476b4"
+              ]
+            },
+            {
+              "text": "python3 executes successfully (trivial script printed output, exit 0).",
+              "sourceIds": [
+                "01a0ebc2-7a4b-70e9-84c4-cc5e51043f0f",
+                "01a0ebc2-7a2e-744e-b40f-d895c45e0386"
+              ]
+            }
+          ],
+          "changedPaths": [],
+          "tests": [
+            {
+              "text": "Repro test (two baseclasses Foo/Bar with pytestmark, subclass TestDings) collects as 1 test with PytestUnknownMarkWarning for foo/bar; collection exit code 0. This confirms pytest can collect the scenario but not whether markers are merged on the test node.",
+              "target": "/tmp/repro/test_issue.py::TestDings::test_dings",
+              "revision": "main",
+              "outcome": "unknown",
+              "sourceIds": [
+                "01a0ebc4-19a6-73f8-a38a-46e3a42a0871",
+                "01a0ebc4-2b99-734f-bed6-b8994159b9f8"
+              ]
+            },
+            {
+              "text": "proposed pytester-based marker-inspection test not run; references pytestorer() which is a typo (should be pytester), so no saved test exists.",
+              "target": "/tmp/repro2/test_collect_markers.py::test_mro_markers",
+              "revision": "main",
+              "outcome": "unknown",
+              "sourceIds": [
+                "01a0ebc4-9f59-76bd-9f6d-3a9e85aa9db1",
+                "01a0ebc4-9f67-734c-b04e-0c4abb89588c"
+              ]
+            }
+          ],
+          "unfinished": [
+            {
+              "text": "MRO-based mark-merging fix not implemented; investigation only located mark/structures.py (get_unpacked_marks/setter) and pytestmark usages. Next: read structures.py ~lines 360-391, reproduce the two-baseclass marker-loss case, then edit and run focused marker/regression tests.",
+              "sourceIds": [
+                "01a0ebc1-d9b1-71ec-adfd-e0f83d0476b4",
+                "01a0ebc1-eeab-7703-aa1d-338f3a98db95"
+              ]
+            },
+            {
+              "text": "Changelog entry and AUTHORS addition have not been performed.",
+              "sourceIds": [
+                "01a0ebc1-d9b1-71ec-adfd-e0f83d0476b4"
+              ]
+            },
+            {
+              "text": "Reproducing the reported marker-loss behavior (on the actual test node, not just collection) has not been done yet.",
+              "sourceIds": [
+                "01a0ebc1-d9b1-71ec-adfd-e0f83d0476b4"
+              ]
+            }
+          ],
+          "uncertainties": [
+            {
+              "text": "Tool reported '[command exit code 1]' even for zero-arg commands; assistant suspected the tool may block non-zero exits (e.g. grep) and switched to python3, but this behavior is unconfirmed.",
+              "sourceIds": [
+                "01a0ebc2-a748-77f7-bde3-4cb84dd604d8",
+                "01a0ebc2-b22d-749c-b20e-b35aca6f0b88",
+                "01a0ebc2-c0ff-741b-b397-902b2edf61eb",
+                "01a0ebc2-ce90-7748-a998-bd5cca81c86b",
+                "01a0ebc2-e843-74ad-b625-ef38d45e9e3b",
+                "01a0ebc2-e862-735a-9b87-b08992da37b2"
+              ]
+            }
+          ]
+        },
+        "summaryUsage": {
+          "inputTokens": 75224,
+          "outputTokens": 19347,
+          "totalTokens": 94571
+        }
+      },
+      "consumer": "fixed; no ordinary inference or tools",
+      "semanticReview": {
+        "method": "Manual comparison with frozen canonical commands and outputs; focused checks, not a general truth verifier",
+        "status": "fail",
+        "checks": {
+          "latestTestFailure": {
+            "status": "fail",
+            "expectedSourceIds": [
+              "01a0ebc4-df3d-701b-99cd-671fc5e06d2f",
+              "01a0ebc5-1a8c-72b8-a909-7cc93222c7e4"
+            ],
+            "expected": "Both latest test invocations failed during setup because fixture pytester was not found (exit 1).",
+            "actual": "Neither source is cited. The final summary instead says the proposed test was not run and no saved test exists."
+          },
+          "temporaryTestFiles": {
+            "status": "fail",
+            "expectedSourceIds": [
+              "01a0ebc4-19a6-73f8-a38a-46e3a42a0871",
+              "01a0ebc4-2b99-734f-bed6-b8994159b9f8",
+              "01a0ebc5-1a8c-72b8-a909-7cc93222c7e4"
+            ],
+            "expected": "Temporary reproduction files were created and loaded by pytest; repository source was not fixed.",
+            "actual": "No source files were edited is consistent with the empty repository patch, but all tool activity was read-only and no saved test exists contradict the temporary-file activity."
+          },
+          "repositoryNotFixed": {
+            "status": "pass",
+            "reason": "The final summary retains an unimplemented MRO fix and leaves changedPaths empty for repository source."
+          },
+          "noUnsupportedTestSuccess": {
+            "status": "pass",
+            "reason": "No test is reported passed; collection success is explicitly not proof that both markers are merged."
+          }
+        },
+        "limitations": "Opaque execution proofs were intentionally removed. This diagnostic tests text summarization, not authenticated observation projection. Other implementation claims were not exhaustively reviewed."
+      },
+      "reconstructedAcrossInvocations": 111,
+      "independentReconstruction": "pass; all rendered source fields equal original canonical fields",
+      "summaryCalls": [
+        {
+          "elapsedMs": 55358.592899999996,
+          "inputTokens": 4138,
+          "outputTokens": 1094,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 84431.79383099999,
+          "inputTokens": 6023,
+          "outputTokens": 1538,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 104796.631548,
+          "inputTokens": 6079,
+          "outputTokens": 2048,
+          "doneReason": "length"
+        },
+        {
+          "elapsedMs": 93399.868834,
+          "inputTokens": 6079,
+          "outputTokens": 1851,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 135156.01852000004,
+          "inputTokens": 6124,
+          "outputTokens": 2753,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 66768.49669700005,
+          "inputTokens": 7543,
+          "outputTokens": 1200,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 60183.116819999996,
+          "inputTokens": 6147,
+          "outputTokens": 1053,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 60573.14606900001,
+          "inputTokens": 6055,
+          "outputTokens": 1170,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 61362.33598600002,
+          "inputTokens": 6433,
+          "outputTokens": 1165,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 70975.139615,
+          "inputTokens": 6311,
+          "outputTokens": 1389,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 89259.74441599997,
+          "inputTokens": 5773,
+          "outputTokens": 1872,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 103392.76421399997,
+          "inputTokens": 7382,
+          "outputTokens": 2048,
+          "doneReason": "length"
+        },
+        {
+          "elapsedMs": 98723.11783800006,
+          "inputTokens": 7382,
+          "outputTokens": 1953,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 98496.90246200003,
+          "inputTokens": 6319,
+          "outputTokens": 2048,
+          "doneReason": "length"
+        },
+        {
+          "elapsedMs": 101462.65600399999,
+          "inputTokens": 6319,
+          "outputTokens": 2080,
+          "doneReason": "stop"
+        },
+        {
+          "elapsedMs": 101007.22454600013,
+          "inputTokens": 6976,
+          "outputTokens": 2048,
+          "doneReason": "length"
+        },
+        {
+          "elapsedMs": 102338.49046300002,
+          "inputTokens": 6976,
+          "outputTokens": 2080,
+          "doneReason": "stop"
+        }
+      ]
+    }
+  },
+  "nextExperiment": {
+    "priority": "Preserve and independently check the latest test failure before accepting a generated summary as accurate. Use a live authenticated Session/control to distinguish text-summary defects from direct observation projection.",
+    "outputPressureDiagnostic": {
+      "finalSummaryBytes": 4818,
+      "sourceIdOccurrences": 41,
+      "uuidStringBytes": 1476,
+      "uuidFractionOfBytes": 0.30635118306351183,
+      "meaning": "Repeated UUID strings occupy about 30.6% of the final JSON bytes, excluding punctuation. This motivates a lossless short-ID alias experiment; it does not establish the cause of output exhaustion.",
+      "implemented": false
+    }
+  },
+  "validation": {
+    "headers": "passed",
+    "build": "passed",
+    "fullSuitePassing": 1070,
+    "focusedCompactionAndEncodingPassing": 95,
+    "guardCommit": "9a687637e4e0cf66bcdd6cf70788f567a26103de",
+    "guardImage": "sha256:391cae78b376c09c0bf79b648d4d2ed1cdb1450324a45696fdc5ad2823af31ea",
+    "guardSourceFingerprint": "c087d4ea2ef1cda803130400655f0db019200ca3804745e32d3d5aa215633085",
+    "guardFixedSummaryControl": {
+      "identicalPreparedRequests": true,
+      "calls": 12,
+      "hashes": [
+        "1ddec3b4708c5a06131db91ebe3c20f2fd64720f3a59d411226b98caf8f2e1f2",
+        "7a21e131b7d01d3c97adb5c206cb3dbda87abb896ea3603ac756cb61e978f1e8",
+        "46a92e8cbb5564bc52553fc4d6c283808756a99a6abc002413fab65bf65f209c",
+        "6f06a94209bcf4d76771f688042629ed34dc0fc5d0ba8ac2a274fecee0220de3",
+        "19864765a064ebdd3db0aa654f6c8288ae0850bb91ff9ac818d5f01b586344c5",
+        "2198589f5256cd2d37b35d5a57dc6c5dfcc049f0a937fe9c33fd05112f049786",
+        "29ead995203b5959d6680af592a3b96594d640e615dbed839aa20b4c033a329a",
+        "391fceb82e8937d298dc856783b875128d15bef0c4a773b44361e531877a2605",
+        "7317d651449e928b1bc29fc5282474336a6d717bbe8e16677570b14d12eb0dad",
+        "01a6ba93484b082e8eef136440b435dda9cc46c528174c3413b0436b6b750d20",
+        "569037304a17280d1aef491b1e601b34cea1986094953270b78672d9b41988fb",
+        "2cd4d3cd82282fa5718bb7906bfcc32dacb43c17ed2195c1f197d98b421c0d8f"
+      ]
+    },
+    "guardControlScope": "Explicit fixed summaries, not another real-model timing trial. Both images completed the same fixture and preserved original fields; all 12 prepared summary requests were identical. Native reserved-encoding cases are covered by deterministic unit/integration tests, not a live-model trial."
+  }
+}
