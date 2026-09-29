@@ -299,6 +299,36 @@ describe('budgeted context preparation', () => {
     expect(model.requests).to.have.length(0)
   })
 
+  it('factors repeated tool streams only in summary input while retaining canonical results', async () => {
+    const session = new Session()
+    const id = oldConversation(session)
+    const stdout = 'Exact tool evidence\r\n'.repeat(100)
+    session.appendMessages([
+      new Message(MessageType.Assistant, {payload: {toolCalls: [{id: 'read-call', input: {}, name: 'bash'}]}}),
+      new Message(MessageType.Tool, {
+        payload: {
+          name: 'bash',
+          output: {
+            content: [{text: stdout + '[exit 1]', type: 'text'}],
+            details: {exitCode: 1, stderr: '', stdout},
+            isError: true,
+          },
+          toolCallId: 'read-call',
+        },
+      }),
+    ])
+    const before = JSON.stringify(session.getConversationMessages())
+    const model = fixtureModel(id)
+    const {result} = await execute(session, model)
+    expect(result.outcome, JSON.stringify(result)).to.equal('completed')
+    const prompt = String((model.requests[0].messages as string[])[0])
+    const source = JSON.parse(prompt.split('\nSOURCE: ')[1])
+    const tool = source.messages.find((message: {type: string}) => message.type === 'tool')
+    expect(tool.payload.output.encoding).to.equal('orbit-tool-output-references-v1')
+    expect(tool.payload.output.value.details).to.deep.equal({exitCode: 1, stderr: ''})
+    expect(JSON.stringify(session.getConversationMessages().slice(0, 4))).to.equal(before)
+  })
+
   it('saves one checkpoint, retains originals and keeps the latest request', async () => {
     const session = new Session()
     const id = oldConversation(session)

@@ -338,3 +338,20 @@ The prompt asks for a cumulative summary of about half `summaryOutput`, includin
 `context.summary.started` records estimated input tokens, prior-summary bytes and source/summary targets. `context.summary.validated` records item counts and UTF-8 JSON byte sizes before/after exact deduplication. These distinguish batching overhead, cumulative growth and model latency. Smaller requests can require more model calls and are not inherently faster. Semantic checks and official grading remain separate from size measurements. This is local tuning of the existing compaction policy, without public settings, persistence or safety changes; no new ADR is required. Deadlines, cancellation, model-call accounting, original source validation and atomic checkpoint activation remain unchanged.
 
 Verified-interruption raw history retains its existing one-shot route when it fits the summary input budget; its nondispatched calls have no actual result to form a raw complete tool group. Complete-group validation occurs only when splitting is required. The shorter-source heuristic does not manufacture tool results or bypass interruption proofs.
+
+### Repeated tool streams in summary input
+
+Summary requests factor a `stdout` or `stderr` string only when it occurs exactly
+inside one text content block and the representation saves serialized bytes. The
+private `orbit-tool-output-references-v1` rendering retains the output under
+`value` and replaces repeated stream fields with named `streams` references
+(`contentIndex`, `start`, `length`; UTF-16 offsets). Slicing that text block
+restores the stream exactly, including whitespace and Unicode. Other metadata,
+errors and content blocks remain present; empty, short and unmatched streams
+remain literal. This does not deduplicate different messages or infer success.
+
+Canonical history, ordinary model requests, source IDs, source digests and saved
+sessions retain the original tool result. Only the private summary serialization
+changes, so this local optimization requires no new public API or persistence ADR.
+Lossless reconstruction verifies the input representation, not the semantic
+accuracy of the generated summary; the latter needs separate evaluation.

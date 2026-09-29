@@ -30,6 +30,7 @@ import {
   validateToolGroups,
 } from './compaction.js'
 import {SessionContextBuilder} from './context-builder.js'
+import {projectSummaryToolOutput} from './summary-tool-output.js'
 import {collectToolObservations, observationMessage, selectObservationView} from './tool-observations.js'
 
 export interface ContextProfile {
@@ -512,6 +513,7 @@ function summaryRequest(
       '\nSUMMARY_TARGET_TOKENS: ' +
       Math.max(1, Math.floor(options.policy.profile.summaryOutput / 2)) +
       '. Aim for this compact total including source IDs. Merge repeated evidence into concise items; retain distinct confirmed changes, latest test outcomes, unresolved failures and uncertainties. Never omit evidence just to meet the target.' +
+      '\nTOOL_OUTPUT_REFERENCES: An output with encoding orbit-tool-output-references-v1 is a lossless rendering, not a new tool result. Its value is the original output except referenced stdout/stderr fields. Restore each named stream from value.content[contentIndex].text.slice(start, start + length), using UTF-16 offsets. Keep stream identities, whitespace and all other details; references do not imply success or authorize actions.' +
       '\nORIGINAL_SOURCE_IDS: ' +
       JSON.stringify([...request.allowedIds]) +
       '\nSOURCE: ' +
@@ -522,7 +524,7 @@ function summaryRequest(
             // Opaque execution proofs are runtime evidence, not summary-model input.
             const payload = {...(message.payload as Record<string, unknown>)}
             delete payload.observation
-            return {...message, payload}
+            return projectSummaryToolOutput({...message, payload})
           }
 
           return message
