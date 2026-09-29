@@ -42,7 +42,7 @@ describe('Lossless summary tool-output rendering', () => {
     const projected = projectSummaryToolOutput(original)
     expect(projected).not.to.equal(original)
     expect(Buffer.byteLength(JSON.stringify(projected))).to.be.lessThan(Buffer.byteLength(snapshot))
-    expect(restoreSummaryToolOutput(projected, original)).to.deep.equal(original)
+    expect(restoreSummaryToolOutput(projected)).to.deep.equal(original)
     expect(JSON.stringify(original)).to.equal(snapshot)
   })
 
@@ -58,7 +58,7 @@ describe('Lossless summary tool-output rendering', () => {
     }
   })
 
-  it('does not merge separated blocks, trim streams or interpret existing reference-shaped outputs', () => {
+  it('does not merge separated blocks or trim streams', () => {
     for (const output of [
       {
         content: [
@@ -68,17 +68,33 @@ describe('Lossless summary tool-output rendering', () => {
         details: {stdout: 'a'.repeat(100) + '\n' + 'b'.repeat(100)},
       },
       {content: [{text: 'a'.repeat(300), type: 'text'}], details: {stdout: 'a'.repeat(300) + '\n'}},
-      {encoding: 'orbit-tool-output-references-v1', streams: {}, value: {}},
     ]) {
       const original = message(output)
       expect(projectSummaryToolOutput(original)).to.equal(original)
-      expect(restoreSummaryToolOutput(original, original)).to.equal(original)
+      expect(restoreSummaryToolOutput(original)).to.equal(original)
+    }
+  })
+
+  it('escapes both reserved encodings without relying on the original to decode', () => {
+    for (const encoding of ['orbit-tool-output-literal-v1', 'orbit-tool-output-references-v1']) {
+      for (const output of [
+        {encoding, streams: {}, value: {}},
+        {content: [{text: 'evidence'.repeat(100), type: 'text'}], details: {stdout: 'evidence'.repeat(100)}, encoding},
+      ]) {
+        const original = message(output)
+        const rendered = projectSummaryToolOutput(original)
+        expect((rendered.payload as {output: {encoding: string}}).output.encoding).to.equal(
+          'orbit-tool-output-literal-v1',
+        )
+        const serialized = JSON.stringify(rendered)
+        expect(restoreSummaryToolOutput(JSON.parse(serialized))).to.deep.equal(original)
+      }
     }
   })
 
   it('preserves independent identities when both streams contain identical repeated text', () => {
     const text = 'same\n'.repeat(200)
     const original = message({content: [{text: text + text, type: 'text'}], details: {stderr: text, stdout: text}})
-    expect(restoreSummaryToolOutput(projectSummaryToolOutput(original), original)).to.deep.equal(original)
+    expect(restoreSummaryToolOutput(projectSummaryToolOutput(original))).to.deep.equal(original)
   })
 })

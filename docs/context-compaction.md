@@ -355,3 +355,10 @@ sessions retain the original tool result. Only the private summary serialization
 changes, so this local optimization requires no new public API or persistence ADR.
 Lossless reconstruction verifies the input representation, not the semantic
 accuracy of the generated summary; the latter needs separate evaluation.
+
+Native tool outputs using either reserved encoding are escaped under
+`orbit-tool-output-literal-v1`. Unwrap that rendering once to recover the
+original data; embedded encodings are not interpreted recursively. This makes
+the representation unambiguous even for custom outputs resembling a reference.
+The literal-rendering instruction is added only to requests containing an
+escaped output; the fixed comparison history has no reserved encodings.

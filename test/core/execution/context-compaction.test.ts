@@ -329,6 +329,31 @@ describe('budgeted context preparation', () => {
     expect(JSON.stringify(session.getConversationMessages().slice(0, 4))).to.equal(before)
   })
 
+  it('explains escaped native encodings without interpreting them as references', async () => {
+    const session = new Session()
+    const id = oldConversation(session)
+    const output = {
+      content: [{text: 'Native evidence', type: 'text'}],
+      details: {stdout: 'Native evidence'},
+      encoding: 'orbit-tool-output-references-v1',
+      streams: {native: 'data'},
+    }
+    session.appendMessages([
+      new Message(MessageType.Assistant, {payload: {toolCalls: [{id: 'native-call', input: {}, name: 'bash'}]}}),
+      new Message(MessageType.Tool, {payload: {name: 'bash', output, toolCallId: 'native-call'}}),
+    ])
+    const model = fixtureModel(id)
+    const {result} = await execute(session, model)
+    expect(result.outcome).to.equal('completed')
+    const prompt = String((model.requests[0].messages as string[])[0])
+    expect(prompt).to.contain('LITERAL_TOOL_OUTPUT:')
+    const tool = JSON.parse(prompt.split('\nSOURCE: ')[1]).messages.find(
+      (message: {type: string}) => message.type === 'tool',
+    )
+    expect(tool.payload.output).to.deep.equal({encoding: 'orbit-tool-output-literal-v1', value: output})
+    expect((session.getConversationMessages()[3].payload as {output: unknown}).output).to.deep.equal(output)
+  })
+
   it('saves one checkpoint, retains originals and keeps the latest request', async () => {
     const session = new Session()
     const id = oldConversation(session)

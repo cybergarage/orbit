@@ -23,14 +23,14 @@ import {
 const fixtureBytes = fs.readFileSync('/input/history.json')
 const fixture = JSON.parse(fixtureBytes)
 const session = new Session({
+  entries: fixture.messages.map((message) => ({message, timestamp: message.timestamp, type: 'message'})),
   formatVersion: 2,
+  messages: fixture.messages.map((message) => new Message(message.type, message)),
   metadata: {
+    createdAt: '2026-09-29T00:00:00.000Z',
     id: '00000000-0000-4000-8000-000000000001',
     rootMessageId: fixture.messages[0].parentid,
-    createdAt: '2026-09-29T00:00:00.000Z',
   },
-  messages: fixture.messages.map((message) => new Message(message.type, message)),
-  entries: fixture.messages.map((message) => ({type: 'message', message, timestamp: message.timestamp})),
 })
 const root = '/output/replay'
 fs.mkdirSync(root, {recursive: false})

@@ -20,7 +20,15 @@ function object(value: unknown): value is Record<string, unknown> {
 export function projectSummaryToolOutput(message: PersistedMessage): PersistedMessage {
   if (message.type !== MessageType.Tool || !object(message.payload)) return message
   const {output} = message.payload
-  if (!object(output) || !Array.isArray(output.content) || !object(output.details)) return message
+  if (!object(output)) return message
+  // Escape reserved encodings once, so arbitrary native tool data can never be
+  // confused with a projection. Literal wrappers themselves must also escape.
+  if (output.encoding === 'orbit-tool-output-literal-v1' || output.encoding === 'orbit-tool-output-references-v1')
+    return {
+      ...message,
+      payload: {...message.payload, output: {encoding: 'orbit-tool-output-literal-v1', value: output}},
+    }
+  if (!Array.isArray(output.content) || !object(output.details)) return message
   const details = {...output.details}
   const streams: Record<string, StreamReference> = {}
   for (const stream of ['stdout', 'stderr']) {
@@ -49,11 +57,16 @@ export function projectSummaryToolOutput(message: PersistedMessage): PersistedMe
   return {...message, payload: {...message.payload, output: projection}}
 }
 
-/** Restore only a projection produced by projectSummaryToolOutput, not arbitrary tool data. */
-export function restoreSummaryToolOutput(projected: PersistedMessage, original: PersistedMessage): PersistedMessage {
-  if (projected === original) return original
-  const payload = projected.payload as Record<string, unknown>
-  const projection = payload.output as OutputProjection
+/** Restore a rendered source once; embedded native encodings remain literal data. */
+export function restoreSummaryToolOutput(projected: PersistedMessage): PersistedMessage {
+  if (projected.type !== MessageType.Tool || !object(projected.payload)) return projected
+  const {payload} = projected
+  const {output} = payload
+  if (!object(output)) return projected
+  if (output.encoding === 'orbit-tool-output-literal-v1')
+    return {...projected, payload: {...payload, output: output.value}}
+  if (output.encoding !== 'orbit-tool-output-references-v1') return projected
+  const projection = output as OutputProjection
   const content = projection.value.content as {text: string}[]
   const details = {...(projection.value.details as Record<string, unknown>)}
   for (const [stream, reference] of Object.entries(projection.streams)) {
