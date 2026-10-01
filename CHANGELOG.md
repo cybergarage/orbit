@@ -1,5 +1,57 @@
 # Changelog
 
+## 0.8.0 — 2026-10-01
+
+Source release for the Orbit version used as the technical book's source
+baseline. npm publication and the book's full source comparison are tracked
+separately.
+
+### Added
+
+- Add transactional Project catalogs, SQLite-backed storage, Session membership
+  and explicitly curated cross-session memory, with GUI management and sidebar
+  navigation. See [Projects and Memory](docs/projects.md).
+- Load local Agent Plugins containing Skills and stdio MCP configuration through
+  managed discovery, preparation and execution. See [Agent Plugins](docs/plugins.md).
+- Add CLI inventories for tools, MCP servers and plugins, and confirmed offline
+  storage reset. See the [CLI Reference](docs/cli.md).
+- Add opt-in Prometheus operational metrics. See [Metrics](docs/metrics.md).
+- Add local Ollama/Docker coding evaluations, pinned SWE-bench grading and
+  independent checks of generated patches. Preserve dated conditions, failures
+  and limitations in the [evaluation results](e2e/results/README.md).
+
+### Changed
+
+- Support unlimited execution budgets by default, configurable finite limits
+  and explicit GUI continuation after budget stops. Applications that require
+  bounded execution must configure limits; see [Managed Execution](docs/execution.md).
+- Resolve model context capacity from provider metadata and settings, and compact
+  completed rounds within long-running turns. See [Model Context Capacity](docs/model-context-capacity.md)
+  and [Compaction](docs/context-compaction.md).
+- Preserve descriptive Skill metadata, including license and compatibility.
+- Pin the standalone consumer example to package version 0.8.0.
+
+### Fixed
+
+- Reject incomplete model responses before tool dispatch and preserve unhandled
+  shell test failures.
+- Recover truncated, empty and incomplete context summaries with bounded
+  batching, validated regeneration and retained output allowances.
+- Preserve source-derived edit and command observations beside checkpoints,
+  and factor repeated summary tool output losslessly.
+- Restore application-specific workspace instruction files and improve
+  interactive input handling and GUI layout.
+
+### Validation scope
+
+Deterministic runtime and installed-package checks are separate from live-model
+quality and deployment validation. Local SWE-bench results are diagnostic
+observations, not general model-reliability estimates. Summary semantic errors
+remain in recorded live diagnostics. The known stale-lock reclamation race and
+its diagnostic probe remain documented in [Development](docs/development.md).
+Existing installations must follow the applicable storage guides before
+changing writers or storage formats.
+
 ## 0.6.1 — 2026-09-15
 
 First npm publication; the GitHub 0.6.0 source release remains unchanged.

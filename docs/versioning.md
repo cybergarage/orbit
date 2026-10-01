@@ -12,7 +12,9 @@ runtime is in its 0.x development series.
 | `0.8.0` | Book publication milestone, with the book and examples identifying their matching Orbit release |
 | `1.0.0` | A complete OpenClaw/Hermes-style application built on Orbit, accompanied by an explicit stable API and compatibility contract |
 
-The later milestones are plans, not available functionality or promised dates.
+The v0.8.0 source release is the technical book's matching Orbit baseline.
+npm publication and the book's full source comparison remain separate tasks.
+The 1.0 milestone is a plan, not available functionality or a promised date.
 Application completion should provide evidence for 1.0 readiness: representative
 workflows, operator recovery, deployment behavior and API usage. The version
 number alone is not evidence that these properties were tested.
@@ -37,8 +39,8 @@ Public exports include low-level trusted extension machinery. Their presence
 does not mean an arbitrary direct invocation receives the guarantees of a
 managed Agent Run. Prefer the boundaries in [Building an agent](building-agents.md).
 
-Storage formats have their own versions; package `0.6.0` does not imply Session
-format 6. Upgrading or downgrading software never authorizes mixed-version
+Storage formats have their own versions; package `0.8.0` does not imply Session
+format 8. Upgrading or downgrading software never authorizes mixed-version
 writers. Stop writers, retain data and follow the applicable
 [storage](session-storage.md), [execution](execution.md), and
 [interrupted-context](interrupted-context.md) migration instructions. Do not
