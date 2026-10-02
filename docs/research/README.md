@@ -117,6 +117,7 @@ at pinned revisions by default. If either is not relevant, record why.
 
 | Investigated | Status     | Topic                                                                                                                                   |
 | ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-02 | current | [Public Execution API Review](2026-10-02-public-execution-api.md) |
 | 2026-09-29 | current | [Structured Tool Observations Across Compaction](2026-09-29-structured-tool-observations.md) |
 | 2026-09-25   | current    | [Book Workflow Failures at Context Exhaustion](2026-09-25-book-workflow-context-exhaustion.md)                                          |
 | 2026-09-25   | current    | [Agent Execution Limits and GUI Continuation](2026-09-25-agent-execution-limits-and-gui-continuation.md)                                |
