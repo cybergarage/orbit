@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-10-02
 decision-date: 2026-10-02
-implementation-status: partial
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-10-02
+implementation-commits:
+  - 50872709eca86b6fd9575a9836a36917626a547a
 superseded-by: []
 ---
 
@@ -110,11 +111,11 @@ metadata and the consumer example. Preserve unrelated research changes.
 
 ## Follow-up Work
 
-Tag creation, npm publication and book-wide target-version/link regeneration
-require their separate release workflow. Existing parent ADR deferrals remain
-unchanged. No commits are authorized by this request; preserve lifecycle
-transitions in this record and leave implementation-commits empty until an
-explicit commit request, rather than inventing commit evidence.
+npm publication and book-wide target-version/link regeneration remain separate
+work. Existing parent ADR deferrals remain unchanged. The author subsequently
+authorized commits, the annotated v0.8.1 tag and push; the finalization below
+records the implementation commit separately from the initial working-tree
+validation.
 
 ## References
 
@@ -198,3 +199,28 @@ The source remains 0.8.1 Unreleased. Real-provider evaluations and additional
 platform runs were not repeated. Parent ADR deferrals remain unchanged.
 The book's existing v0.8.0 source links and EPUB remain unchanged pending an
 explicit release tag and subsequent book comparison.
+
+## Implementation Finalization and Source Release — 2026-10-02
+
+Following working-tree validation, the author explicitly requested commits,
+tagging and push. The research/decision record was committed in
+5646b18a9890a7090eaa9dde3226464f482064c2 (the initial uncommitted lifecycle is
+preserved above). The accepted
+implementation is committed in
+50872709eca86b6fd9575a9836a36917626a547a. Its complete defined scope and maintained
+documentation are delivered, with the 1,078-test suite and independent package
+validation recorded above. Mark this bounded ADR completed; do not change the
+status or deferred confirmation scope of any parent ADR.
+
+The release finalization changes only documentation and release evidence.
+No source, test, dependency or storage behavior changed after validation.
+The changelog date is 2026-10-02. The annotated v0.8.1 tag identifies the
+subsequent release documentation commit, which contains this implementation
+hash. Publish main and that tag together without rewriting v0.8.0. npm
+publication and book-wide source comparison are outside this release action.
+
+Final release-documentation package validation passed with 394 files, including
+consumer compilation, operation execution, existing consumer smoke and CLI help.
+Log: `/private/tmp/orbit-081-package-final.log`.
+Package: `/private/tmp/orbit-081-release-final/cybergarage-orbit-0.8.1.tgz`.
+SHA-256: `9e00b4a786413c9e37340e73ee8f4f825f03bea10f702f2e267a79a8662de989`.

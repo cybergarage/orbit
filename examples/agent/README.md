@@ -10,7 +10,7 @@ agent, not a messaging gateway or a complete autonomous product.
 Use Node.js 20.19 or newer and npm. The commands below apply after the 0.8.1
 npm package is published. To validate the source checkout before npm
 publication, run `npm run test:package` from the repository root.
-After the v0.8.1 source tag and npm package are published:
+The v0.8.1 source tag is available. After its npm package is published:
 
 ```sh
 git clone --branch v0.8.1 https://github.com/cybergarage/orbit.git

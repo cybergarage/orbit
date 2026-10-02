@@ -1,6 +1,9 @@
 # Changelog
 
-## 0.8.1 — Unreleased
+## 0.8.1 — 2026-10-02
+
+Source release with compatible public execution APIs. npm publication remains
+a separate step.
 
 ### Added
 
