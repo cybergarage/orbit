@@ -12,7 +12,7 @@ export type {
   AgentToolUpdatedEvent,
 } from './agent-events.js'
 export {Agent} from './agent.js'
-export type {AgentInvokeOptions, AgentOptions, AgentTool} from './agent.js'
+export type {AgentExecutionOptions, AgentInvokeOptions, AgentOptions, AgentTool} from './agent.js'
 export {
   APP_NAME,
   configureApp,

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.8.1 — Unreleased
+
+### Added
+
+- Add public `OperationExecutor`, binding a Run and its policy for tool and
+  prepared-operation execution, and reusable `AgentExecutionOptions`.
+
+### Changed
+
+- Route Agent, Graph tool nodes and managed MCP startup through the same
+  operation executor. Encapsulate shared resource ownership without changing
+  its conflict domain, approval protocol or journal/storage formats.
+- Preserve `executeManagedTool` and `executePrepared` as compatible delegates.
+  Settings merging and session parsing remain standalone transformations.
+
+### Fixed
+
+- Refuse new operation preparation and recording through retained executors or
+  compatibility calls after their Run has terminated.
+
+See [Managed Execution](docs/execution.md) for ownership and API selection.
+
 ## 0.8.0 — 2026-10-01
 
 Source release for the Orbit version used as the technical book's source

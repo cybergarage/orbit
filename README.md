@@ -19,19 +19,19 @@ authentication and notification delivery. See [capabilities and boundaries](docs
 Requires Node.js **20.19 or newer** and npm. The library uses native ESM and runs
 in a trusted Node.js process, not a browser renderer.
 
-The source release is v0.8.0. The registry commands below apply after the npm
-package is published; to use the source checkout, follow [Development](docs/development.md).
+This checkout prepares 0.8.1; the latest source release remains v0.8.0. The
+registry commands below apply after the 0.8.1 npm package is published; to use the source checkout, follow [Development](docs/development.md).
 
 As an application dependency:
 
 ```sh
-npm install --save-exact @cybergarage/orbit@0.8.0
+npm install --save-exact @cybergarage/orbit@0.8.1
 ```
 
 Or as a command-line application:
 
 ```sh
-npm install --global @cybergarage/orbit@0.8.0
+npm install --global @cybergarage/orbit@0.8.1
 orbit --help
 ```
 

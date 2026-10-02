@@ -2,7 +2,7 @@
 
 This guide is for an application developer using `@cybergarage/orbit` as the
 agent framework for a desktop agent, messaging agent or automated workflow.
-Orbit 0.6 provides reusable execution machinery. You provide the product's
+Orbit 0.8 provides reusable execution machinery. You provide the product's
 identity, transport, scheduling, memory policy and delivery behavior.
 
 Start with the [runnable agent example](../examples/agent/README.md).
@@ -16,6 +16,7 @@ After that works, replace the terminal with one channel or UI at a time.
 | `OrbitApplicationService` | Building a complete local agent or GUI | Workspace/storage setup, transport, authentication, input queue, approvals and delivery |
 | `ThreadManager` | Building a host with its own settings and application services | Agent construction, settings, optional SessionRepository, logs and client transport |
 | `Agent` | Embedding a single managed model/tool loop | Messages/Session, run handles, policies, approval responder and lifetime |
+| `RunSupervisor` + `OperationExecutor` | Implementing a trusted managed runtime without the Agent loop | Readiness/catalog, aggregate budgets, transcript synchronization and cleanup; the executor handles operation authorization and recording |
 | Model/tool/MCP primitives | Implementing adapters or lower-level infrastructure | All execution management; direct calls are outside the managed Agent contract |
 
 Use the package root import:

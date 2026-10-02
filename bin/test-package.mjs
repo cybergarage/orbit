@@ -68,6 +68,18 @@ try {
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
   runNpm(['install', '--ignore-scripts', '--no-audit', '--no-fund'], consumer)
   runNpm(['rebuild', 'better-sqlite3'], consumer)
+  await writeFile(
+    path.join(consumer, 'src/execution-api-probe.ts'),
+    `
+import {OperationExecutor, executeManagedTool, executePrepared} from '@cybergarage/orbit'
+import type {AgentExecutionOptions, AgentOptions, ManagedToolOptions, PreparedExecutionOptions, RunContext} from '@cybergarage/orbit'
+export function executionApi(run: RunContext, managed: ManagedToolOptions, execution: AgentExecutionOptions) {
+  const options: AgentOptions = {execution}
+  const prepared: PreparedExecutionOptions = {deferPluginStartupFailure: false}
+  return {executor: new OperationExecutor(run, managed), executeManagedTool, executePrepared, options, prepared}
+}
+`,
+  )
   runNpm(['run', 'build'], consumer)
   runNpm(['test'], consumer)
   const catalogProbe = path.join(consumer, 'catalog-probe.mjs')
@@ -77,7 +89,24 @@ try {
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import {randomUUID} from 'node:crypto'
-import {PluginCatalog, PLUGIN_SCHEMA, SqliteProjectStore} from '@cybergarage/orbit'
+import {PluginCatalog, PLUGIN_SCHEMA, SqliteProjectStore, OperationExecutor, RunSupervisor, MemoryExecutionJournal} from '@cybergarage/orbit'
+const supervisor = new RunSupervisor()
+try {
+  const handle = await supervisor.startRun({
+    sessionId: 'package', requestId: 'executor', input: {}, configuration: {},
+    journal: async () => new MemoryExecutionJournal('package'),
+    async execute(run) {
+      await run.ready([])
+      const executor = new OperationExecutor(run, {policy: {generation: 'package', profile: 'unrestricted', roots: []}})
+      const preparation = {binding: {}, effect: 'read', preview: {}, targets: [], revalidate: async () => true, execute: async () => ({content: []})}
+      return executor.executePrepared({
+        binding: {}, cwd: process.cwd(), effect: 'read', id: 'operation', input: {}, name: 'package', preview: {},
+        runId: run.id, sessionId: 'package', targets: [], variant: 'tool-call', version: 1,
+      }, preparation)
+    },
+  })
+  assert.equal((await handle.finished).operations[0].status, 'succeeded')
+} finally { await supervisor.close() }
 assert.equal(PLUGIN_SCHEMA, 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json')
 assert.deepEqual((await new PluginCatalog([], {dataRoot: path.resolve('plugin-data')}).inspect()).plugins, [])
 const store = await SqliteProjectStore.open({file: path.resolve('catalog/projects.sqlite')})

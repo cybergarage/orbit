@@ -101,7 +101,14 @@ restore saved status and submit a new request with the previous Run ID; they do 
 replay operations or rewrite terminal results.
 
 `src/core/execution/` owns lifecycle, authorization, required storage and
-recovery. ThreadManager and application surfaces project its snapshots. Model
+recovery. `OperationExecutor` in `execution/authorization.ts` binds one Run and
+policy and owns tool preparation and prepared-operation execution. Agent's loop,
+Graph tool nodes and managed MCP startup use its methods; old function APIs
+remain compatibility delegates. `execution/resources.ts` encapsulates the
+shared in-process ownership Maps in an internal ResourceCoordinator, with
+release still controlled by RunContext. `AgentExecutionOptions` names the
+configuration accepted by Agent; it does not introduce a separate execution
+engine. ThreadManager and application surfaces project its snapshots. Model
 iterations are sequential. Managed read/list/grep/glob calls may be batched;
 mutations, custom tools and MCP calls are serial barriers. See
 [Managed Execution](execution.md) for public APIs, ownership and migration.

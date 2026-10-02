@@ -46,7 +46,7 @@ import type {
 
 import {AgentEventType} from './agent-events.js'
 import {InvalidInputError, ModelAbortError, OrbitError} from './errors/index.js'
-import {assertManagedTool, executeManagedTool} from './execution/authorization.js'
+import {assertManagedTool, OperationExecutor} from './execution/authorization.js'
 import {copyJSON, FileExecutionJournal, MemoryExecutionJournal} from './execution/journal.js'
 import {executionLimitValue, isExecutionLimit, parseRunLimits} from './execution/limits.js'
 import {isolateLogger} from './execution/observer.js'
@@ -130,6 +130,18 @@ interface ManagedInvokeOptions extends AgentInvokeOptions {
   skillReader?: SkillCatalog
 }
 
+/** Configuration shared by all managed Runs created by an Agent. */
+export interface AgentExecutionOptions {
+  allowLegacyTools?: boolean
+  journalFactory?: (session: Session) => Promise<ExecutionJournal>
+  journalLevel?: Exclude<JournalLevel, 'memory'>
+  journalRoot?: string
+  limits?: Partial<RunLimits>
+  onApproval?: (request: ApprovalRequest) => Promise<void> | void
+  policy?: ExecutionPolicy
+  responderScope?: string
+}
+
 export interface AgentOptions {
   contextPolicy?: ContextPolicy
   cwd?: string
@@ -140,16 +152,7 @@ export interface AgentOptions {
     sessionContextBuilder?: SessionContextBuilderType
   }
   diagnostics?: DiagnosticEventBus
-  execution?: {
-    allowLegacyTools?: boolean
-    journalFactory?: (session: Session) => Promise<ExecutionJournal>
-    journalLevel?: Exclude<JournalLevel, 'memory'>
-    journalRoot?: string
-    limits?: Partial<RunLimits>
-    onApproval?: (request: ApprovalRequest) => Promise<void> | void
-    policy?: ExecutionPolicy
-    responderScope?: string
-  }
+  execution?: AgentExecutionOptions
   interruptionPolicy?: InterruptionPolicy
 
   logger?: Logger
@@ -185,7 +188,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   private closePromise?: Promise<void>
   private readonly cwd: string
   private readonly diagnostics?: DiagnosticEventBus
-  private readonly execution: NonNullable<AgentOptions['execution']>
+  private readonly execution: AgentExecutionOptions
   private readonly graphHandles = new Map<string, RunHandle<GraphValue>>()
   private readonly graphSnapshots = new Map<string, GraphSnapshot>()
   private readonly journals = new Map<string, Promise<ExecutionJournal>>()
@@ -569,6 +572,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       onToolSettled: (outcome: 'completed' | 'failed') => this.observeMetric(() => this.metrics?.toolCall(outcome)),
       policy,
     }
+    const executor = new OperationExecutor(run, managed)
     const diagnostics = options?.diagnostics ?? this.diagnostics
     const turnStartedAt = performance.now()
     let terminalRecorded = false
@@ -695,7 +699,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       await run.ready(toolSnapshot.specs(), graph ? await graphSynchronize(run, session) : undefined)
       const toolRuntime = new ToolRuntime(
         toolSnapshot,
-        (definition, input, context) => executeManagedTool(run, definition, input, context, managed),
+        (definition, input, context) => executor.executeTool(definition, input, context),
         async () => {
           const id = uuidv7()
           run.operations.push({id, status: 'invalid'})
@@ -1039,13 +1043,12 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         tool: async (name, input) => {
           const definition = toolSnapshot.get(name)!
           const before = run.operations.length
-          const result = await executeManagedTool(
-            run,
-            definition,
-            input,
-            {callId: uuidv7(), cwd: this.cwd, emitUpdate() {}, signal: run.signal},
-            managed,
-          )
+          const result = await executor.executeTool(definition, input, {
+            callId: uuidv7(),
+            cwd: this.cwd,
+            emitUpdate() {},
+            signal: run.signal,
+          })
           if (
             run.operations
               .slice(before)

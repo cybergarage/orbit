@@ -1,7 +1,7 @@
 {
   "name": "@cybergarage/orbit",
   "description": "A TypeScript agent framework for building agent applications.",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "author": "Satoshi Konno",
   "bin": {
     "orbit": "./bin/run.js"

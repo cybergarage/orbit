@@ -13,6 +13,7 @@ import {resolveShell} from '../tools/builtins/bash.js'
 import {textToolResult} from '../tools/definition.js'
 import {bindObservationResult, observationAdapter} from '../tools/observation-provenance.js'
 import {copyJSON} from './journal.js'
+import {operationResources} from './resources.js'
 
 export type OperationEffect = 'command' | 'mcp' | 'opaque' | 'read' | 'write'
 export interface PreparedOperation {
@@ -51,8 +52,10 @@ export interface ManagedToolOptions {
   policy: ExecutionPolicy
 }
 
-const serverOwners = new Map<string, RunContext>()
-const resourceOwners = new Map<string, RunContext>()
+/** Options for trusted prepared operations such as managed MCP startup. */
+export interface PreparedExecutionOptions {
+  deferPluginStartupFailure?: boolean
+}
 
 export async function canonicalPath(file: string): Promise<string> {
   try {
@@ -89,6 +92,222 @@ export function assertManagedTool(definition: ToolDefinition, options: ManagedTo
     throw new Error(`Tool requires a trusted preparation adapter: ${definition.spec.name}`)
 }
 
+/**
+ * Executes trusted operations within one admitted Run and policy.
+ * RunSupervisor owns admission and cleanup; the executor owns operation ordering.
+ * All instances share the same in-process resource coordination domain.
+ */
+export class OperationExecutor {
+  constructor(
+    private readonly run: RunContext,
+    private readonly options: ManagedToolOptions,
+  ) {}
+
+  /** Execute an application-trusted preparation under this Run's policy. */
+  async executePrepared(
+    descriptor: PreparedOperation,
+    preparation: OperationPreparation,
+    options: PreparedExecutionOptions = {},
+  ): Promise<ToolResult> {
+    const {run} = this
+    const {onToolSettled, policy} = this.options
+    const {deferPluginStartupFailure = false} = options
+    run.check()
+    const operation = freezeJSON(copyJSON({...descriptor, preview: redactPreview(descriptor.preview)}))
+    const digest = run.journal.digest(operation)
+    let decision: 'allow' | 'ask' | 'deny' =
+      policy.profile === 'unrestricted' ? 'allow' : operation.effect === 'read' ? 'allow' : 'ask'
+    if (policy.revoked?.()) decision = 'deny'
+    // Resolve each declared root before deciding containment.
+    // eslint-disable-next-line no-await-in-loop
+    for (const target of operation.targets) if (!(await allowedPath(target, policy))) decision = 'deny'
+    if (decision !== 'deny' && policy.decide) {
+      try {
+        decision = policy.decide(operation)
+      } catch {
+        decision = 'deny'
+      }
+    }
+
+    let expiresAt = Infinity
+    let authorization: string = randomUUID()
+    if (decision === 'ask' && operation.effect === 'opaque' && !('input' in operation.preview)) decision = 'deny'
+    if (decision === 'ask') {
+      const answer = await run.ask(operation.id, digest, operation.preview, policy.generation)
+      decision = answer.granted ? 'allow' : 'deny'
+      expiresAt = answer.expiresAt
+      authorization = answer.requestId
+    } else
+      await run.record('authorization-decided', {
+        decision,
+        digest,
+        operationId: operation.id,
+        policy: policy.generation,
+        requestId: authorization,
+      })
+    if (decision !== 'allow') {
+      run.operations.push({id: operation.id, status: 'denied'})
+      await run.record('operation-result', {operationId: operation.id, status: 'denied'})
+      return textToolResult('Operation denied or approval unavailable', {isError: true})
+    }
+
+    if (operation.effect === 'mcp') {
+      const source = operation.binding.source as undefined | {server?: string}
+      const server = String(operation.binding.server ?? source?.server ?? operation.name)
+      if (!operationResources.acquireServer(run, server)) return notStarted(run, operation.id)
+    }
+
+    // Retain the whole-workspace lease when external work remains unknown.
+    const resources = await Promise.all([operation.cwd, ...operation.targets].map((target) => canonicalPath(target)))
+    if (!operationResources.acquirePaths(run, resources)) return notStarted(run, operation.id)
+
+    const valid = async () => !policy.revoked?.() && Date.now() < expiresAt && preparation.revalidate()
+    if (!(await valid())) return notStarted(run, operation.id)
+    run.check()
+    await run.record('operation-intent', {
+      authorization,
+      budget: {...run.budget},
+      ...(operation.variant === 'tool-call'
+        ? {call: run.journal.digest(operation.binding.callId ?? operation.id), catalog: run.catalogIdentity()}
+        : {}),
+      digest,
+      effect: operation.effect,
+      operationId: operation.id,
+      source: run.journal.digest(operation.binding.source ?? operation.binding.configuration ?? operation.name),
+      variant: operation.variant,
+    })
+    if (!(await valid())) return notStarted(run, operation.id)
+    run.check()
+    if (policy.revoked?.() || Date.now() >= expiresAt) return notStarted(run, operation.id)
+    const outcome = {id: operation.id, status: 'unknown' as 'failed' | 'succeeded' | 'unknown'}
+    run.operations.push(outcome)
+    // No await between the final checks, registration, and the trusted executor invocation.
+    let resolve!: (value: ToolResult) => void
+    let reject!: (error: unknown) => void
+    const execution = new Promise<ToolResult>((done, fail) => {
+      resolve = done
+      reject = fail
+    })
+    run.track(`dispatch:${operation.id}`, execution)
+    if (operation.variant === 'tool-call' && onToolSettled) {
+      const observe = (outcome: 'completed' | 'failed') => {
+        try {
+          onToolSettled(outcome)
+        } catch {
+          // An optional observer cannot change execution or journal results.
+        }
+      }
+
+      execution.then(
+        (result) => observe(result.isError ? 'failed' : 'completed'),
+        () => observe('failed'),
+      )
+    }
+
+    try {
+      preparation.execute().then(resolve, reject)
+    } catch (error) {
+      reject(error)
+    }
+
+    try {
+      const result = await run.wait(
+        `operation:${operation.id}`,
+        execution.then((result) => {
+          outcome.status = result.isError ? 'failed' : 'succeeded'
+          return result
+        }),
+      )
+      await run.record('operation-result', {
+        operationId: operation.id,
+        outputDigest: run.journal.digest(result),
+        status: outcome.status,
+      })
+      return result
+    } catch (error) {
+      if (
+        !run.signal.aborted &&
+        !(deferPluginStartupFailure && operation.variant === 'mcp-startup' && operation.binding.plugin)
+      ) {
+        // Arbitrary executor rejection cannot establish external completion.
+        run.requestStop(outcome.status === 'unknown' ? 'unknown-operation' : 'runtime-failed')
+      }
+
+      throw error
+    }
+  }
+
+  /** Validate and prepare a tool call before authorization and dispatch. */
+  async executeTool(definition: ToolDefinition, input: unknown, context: ToolExecutionContext): Promise<ToolResult> {
+    const {options, run} = this
+    run.check()
+    const id = randomUUID()
+    let preparation: OperationPreparation
+    let parsed: unknown
+    try {
+      assertManagedTool(definition, options)
+      parsed = copyJSON(definition.input.parse(copyJSON(input)))
+      preparation = definition.prepare
+        ? await run.wait('prepare', definition.prepare(parsed, context))
+        : await run.wait('prepare', prepareDefault(definition, parsed, context, options.policy))
+    } catch (error) {
+      if (run.signal.aborted) throw error
+      run.operations.push({id, status: 'invalid'})
+      await run.record('operation-result', {operationId: id, status: 'invalid'})
+      return textToolResult('Invalid or unauthorized operation preparation', {isError: true})
+    }
+
+    const adapter = observationAdapter(definition)
+    const observation =
+      adapter && typeof context.groupId === 'string'
+        ? {adapter, groupId: context.groupId, inputDigest: run.journal.digest(input)}
+        : undefined
+    const descriptor: PreparedOperation = {
+      binding: {
+        ...preparation.binding,
+        callId: context.callId,
+        catalog: run.catalogIdentity() ?? '',
+        iteration: context.iteration ?? 0,
+        policy: options.policy.generation,
+        source: {...copyJSON(definition.source), ...(observation ? {observation} : {})},
+      },
+      cwd: context.cwd,
+      effect: preparation.effect,
+      id,
+      input: copyJSON(parsed),
+      name: definition.spec.name,
+      preview: redactPreview(preparation.preview),
+      runId: run.id,
+      sessionId: run.options.sessionId,
+      targets: preparation.targets,
+      variant: 'tool-call',
+      version: 1,
+    }
+    const result = await this.executePrepared(descriptor, preparation)
+    const completed = run.journal
+      .records()
+      .find(
+        (record) =>
+          record.runId === run.id &&
+          record.kind === 'operation-result' &&
+          record.data.operationId === id &&
+          ['failed', 'succeeded'].includes(String(record.data.status)) &&
+          record.data.outputDigest === run.journal.digest(result),
+      )
+    if (observation && completed)
+      bindObservationResult(result, {
+        ...observation,
+        callId: context.callId,
+        operationId: id,
+        outputDigest: run.journal.digest(result),
+        runId: run.id,
+        version: 1,
+      })
+    return result
+  }
+}
+
+/** Compatibility function; new Run integrations can retain an OperationExecutor. */
 export async function executeManagedTool(
   run: RunContext,
   definition: ToolDefinition,
@@ -96,71 +315,10 @@ export async function executeManagedTool(
   context: ToolExecutionContext,
   options: ManagedToolOptions,
 ): Promise<ToolResult> {
-  const id = randomUUID()
-  let preparation: OperationPreparation
-  let parsed: unknown
-  try {
-    assertManagedTool(definition, options)
-    parsed = copyJSON(definition.input.parse(copyJSON(input)))
-    preparation = definition.prepare
-      ? await run.wait('prepare', definition.prepare(parsed, context))
-      : await run.wait('prepare', prepareDefault(definition, parsed, context, options.policy))
-  } catch (error) {
-    if (run.signal.aborted) throw error
-    run.operations.push({id, status: 'invalid'})
-    await run.record('operation-result', {operationId: id, status: 'invalid'})
-    return textToolResult('Invalid or unauthorized operation preparation', {isError: true})
-  }
-
-  const adapter = observationAdapter(definition)
-  const observation =
-    adapter && typeof context.groupId === 'string'
-      ? {adapter, groupId: context.groupId, inputDigest: run.journal.digest(input)}
-      : undefined
-  const descriptor: PreparedOperation = {
-    binding: {
-      ...preparation.binding,
-      callId: context.callId,
-      catalog: run.catalogIdentity() ?? '',
-      iteration: context.iteration ?? 0,
-      policy: options.policy.generation,
-      source: {...copyJSON(definition.source), ...(observation ? {observation} : {})},
-    },
-    cwd: context.cwd,
-    effect: preparation.effect,
-    id,
-    input: copyJSON(parsed),
-    name: definition.spec.name,
-    preview: redactPreview(preparation.preview),
-    runId: run.id,
-    sessionId: run.options.sessionId,
-    targets: preparation.targets,
-    variant: 'tool-call',
-    version: 1,
-  }
-  const result = await executePrepared(run, descriptor, preparation, options.policy, false, options.onToolSettled)
-  const completed = run.journal
-    .records()
-    .find(
-      (record) =>
-        record.runId === run.id &&
-        record.kind === 'operation-result' &&
-        record.data.operationId === id &&
-        ['failed', 'succeeded'].includes(String(record.data.status)) &&
-        record.data.outputDigest === run.journal.digest(result),
-    )
-  if (observation && completed)
-    bindObservationResult(result, {
-      ...observation,
-      callId: context.callId,
-      operationId: id,
-      outputDigest: run.journal.digest(result),
-      runId: run.id,
-      version: 1,
-    })
-  return result
+  return new OperationExecutor(run, options).executeTool(definition, input, context)
 }
 
+/** Compatibility function sharing the same executor and resource domain. */
 export async function executePrepared(
   run: RunContext,
   descriptor: PreparedOperation,
@@ -169,148 +327,9 @@ export async function executePrepared(
   deferPluginStartupFailure = false,
   onToolSettled?: (outcome: 'completed' | 'failed') => void,
 ): Promise<ToolResult> {
-  const operation = freezeJSON(copyJSON({...descriptor, preview: redactPreview(descriptor.preview)}))
-  const digest = run.journal.digest(operation)
-  let decision: 'allow' | 'ask' | 'deny' =
-    policy.profile === 'unrestricted' ? 'allow' : operation.effect === 'read' ? 'allow' : 'ask'
-  if (policy.revoked?.()) decision = 'deny'
-  // Resolve each declared root before deciding containment.
-  // eslint-disable-next-line no-await-in-loop
-  for (const target of operation.targets) if (!(await allowedPath(target, policy))) decision = 'deny'
-  if (decision !== 'deny' && policy.decide) {
-    try {
-      decision = policy.decide(operation)
-    } catch {
-      decision = 'deny'
-    }
-  }
-
-  let expiresAt = Infinity
-  let authorization: string = randomUUID()
-  if (decision === 'ask' && operation.effect === 'opaque' && !('input' in operation.preview)) decision = 'deny'
-  if (decision === 'ask') {
-    const answer = await run.ask(operation.id, digest, operation.preview, policy.generation)
-    decision = answer.granted ? 'allow' : 'deny'
-    expiresAt = answer.expiresAt
-    authorization = answer.requestId
-  } else
-    await run.record('authorization-decided', {
-      decision,
-      digest,
-      operationId: operation.id,
-      policy: policy.generation,
-      requestId: authorization,
-    })
-  if (decision !== 'allow') {
-    run.operations.push({id: operation.id, status: 'denied'})
-    await run.record('operation-result', {operationId: operation.id, status: 'denied'})
-    return textToolResult('Operation denied or approval unavailable', {isError: true})
-  }
-
-  if (operation.effect === 'mcp') {
-    const source = operation.binding.source as undefined | {server?: string}
-    const server = String(operation.binding.server ?? source?.server ?? operation.name)
-    const owner = serverOwners.get(server)
-    if (owner && owner !== run) return notStarted(run, operation.id)
-    if (!owner) {
-      serverOwners.set(server, run)
-      run.retain(() => {
-        if (serverOwners.get(server) === run) serverOwners.delete(server)
-      })
-    }
-  }
-
-  // A whole-workspace lease also covers opaque shell/custom effects. Retain it if work remains unknown.
-  const resources = await Promise.all([operation.cwd, ...operation.targets].map((target) => canonicalPath(target)))
-
-  for (const resource of resources)
-    for (const [reserved, owner] of resourceOwners) {
-      if (owner !== run && (overlaps(resource, reserved) || overlaps(reserved, resource)))
-        return notStarted(run, operation.id)
-    }
-
-  for (const resource of resources)
-    if (!resourceOwners.has(resource)) {
-      resourceOwners.set(resource, run)
-      run.retain(() => {
-        if (resourceOwners.get(resource) === run) resourceOwners.delete(resource)
-      })
-    }
-
-  const valid = async () => !policy.revoked?.() && Date.now() < expiresAt && preparation.revalidate()
-  if (!(await valid())) return notStarted(run, operation.id)
-  run.check()
-  await run.record('operation-intent', {
-    authorization,
-    budget: {...run.budget},
-    ...(operation.variant === 'tool-call'
-      ? {call: run.journal.digest(operation.binding.callId ?? operation.id), catalog: run.catalogIdentity()}
-      : {}),
-    digest,
-    effect: operation.effect,
-    operationId: operation.id,
-    source: run.journal.digest(operation.binding.source ?? operation.binding.configuration ?? operation.name),
-    variant: operation.variant,
+  return new OperationExecutor(run, {onToolSettled, policy}).executePrepared(descriptor, preparation, {
+    deferPluginStartupFailure,
   })
-  if (!(await valid())) return notStarted(run, operation.id)
-  run.check()
-  if (policy.revoked?.() || Date.now() >= expiresAt) return notStarted(run, operation.id)
-  const outcome = {id: operation.id, status: 'unknown' as 'failed' | 'succeeded' | 'unknown'}
-  run.operations.push(outcome)
-  // No await between the final checks, registration, and the trusted executor invocation.
-  let resolve!: (value: ToolResult) => void
-  let reject!: (error: unknown) => void
-  const execution = new Promise<ToolResult>((done, fail) => {
-    resolve = done
-    reject = fail
-  })
-  run.track(`dispatch:${operation.id}`, execution)
-  if (operation.variant === 'tool-call' && onToolSettled) {
-    const observe = (outcome: 'completed' | 'failed') => {
-      try {
-        onToolSettled(outcome)
-      } catch {
-        // An optional observer cannot change execution or journal results.
-      }
-    }
-
-    execution.then(
-      (result) => observe(result.isError ? 'failed' : 'completed'),
-      () => observe('failed'),
-    )
-  }
-
-  try {
-    preparation.execute().then(resolve, reject)
-  } catch (error) {
-    reject(error)
-  }
-
-  try {
-    const result = await run.wait(
-      `operation:${operation.id}`,
-      execution.then((result) => {
-        outcome.status = result.isError ? 'failed' : 'succeeded'
-        return result
-      }),
-    )
-    await run.record('operation-result', {
-      operationId: operation.id,
-      outputDigest: run.journal.digest(result),
-      status: outcome.status,
-    })
-    return result
-  } catch (error) {
-    if (
-      !run.signal.aborted &&
-      !(deferPluginStartupFailure && operation.variant === 'mcp-startup' && operation.binding.plugin)
-    ) {
-      // Arbitrary executor rejection cannot establish external completion.
-      run.requestStop(outcome.status === 'unknown' ? 'unknown-operation' : 'runtime-failed')
-    }
-
-    throw error
-  }
 }
 
 async function notStarted(run: RunContext, id: string): Promise<ToolResult> {
@@ -468,9 +487,4 @@ function freezeJSON<T>(value: T): T {
   }
 
   return value
-}
-
-function overlaps(left: string, right: string): boolean {
-  const relative = path.relative(left, right)
-  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
 }

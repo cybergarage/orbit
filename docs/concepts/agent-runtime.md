@@ -30,6 +30,13 @@ result. Agent owns the model/tool loop. The supervisor acknowledges required
 journal records before admission and dispatch; operation preparation and policy
 bind each single-use permission to the actual call.
 
+`OperationExecutor` binds the Run and its policy for tool preparation,
+authorization, required intent recording and dispatch. `ToolRuntime` selects
+and schedules calls; `RunSupervisor` owns their enclosing lifecycle. An internal
+resource coordinator shares ownership across executor instances and legacy
+function calls. It releases resources through RunContext's existing completion
+and reconciliation conditions.
+
 `ThreadManager` and the application service project the same run snapshots.
 Budget exhaustion is a terminal outcome, not completion of the user task. An explicit
 continuation creates a new Run with its own limits and retains the prior result.

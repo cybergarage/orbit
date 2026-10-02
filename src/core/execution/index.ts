@@ -1,12 +1,13 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-export {allowedPath, canonicalPath, executeManagedTool, executePrepared} from './authorization.js'
+export {allowedPath, canonicalPath, executeManagedTool, executePrepared, OperationExecutor} from './authorization.js'
 export type {
   ExecutionPolicy,
   ManagedToolOptions,
   OperationEffect,
   OperationPreparation,
+  PreparedExecutionOptions,
   PreparedOperation,
 } from './authorization.js'
 export {canonicalJSON, FileExecutionJournal, MemoryExecutionJournal} from './journal.js'

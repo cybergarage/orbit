@@ -55,6 +55,61 @@ configuration or starting MCP resources. Different submitted input with that ID
 conflicts. A recovered duplicate supplies evidence, not a reconstructed live
 message value and never an automatic retry of an operation.
 
+## Execution components and extension APIs
+
+| Component | Responsibility | Caller |
+| --- | --- | --- |
+| `Agent` | Model/tool loop and Session integration | Applications embedding a conversation |
+| `AgentExecutionOptions` | Reusable policy, journal, limits and approval configuration | Hosts constructing Agents |
+| `RunSupervisor` | Admission, cancellation, cleanup and reconciliation | Agent and trusted runtime integrations |
+| `RunContext` | One Run's live state, budgets and required journal | Runtime components inside an admitted Run |
+| `ToolRuntime` | Tool lookup and scheduling | Agent's tool loop |
+| `OperationExecutor` | Preparation, authorization, intent recording and dispatch under one Run/policy | Tool loop, Graph nodes, MCP startup and trusted runtime integrations |
+
+Most applications configure `Agent` and use its Run handles. Reusable execution
+settings can be typed without extracting a property from AgentOptions:
+
+```ts
+import type {AgentExecutionOptions} from '@cybergarage/orbit'
+
+const execution: AgentExecutionOptions = {
+  policy: {generation: 'workspace-v1', profile: 'workspace-confirm', roots: [workspacePath]},
+  limits: {toolRequests: 20},
+}
+```
+
+A trusted integration implementing its own Run body can construct an
+`OperationExecutor` inside `RunSupervisor.startRun({execute(run) { ... }})`.
+Bind the admitted Run and its policy once, then call
+`executor.executeTool(definition, input, context)`. It validates input, creates
+the preparation and descriptor, and follows the same authorization and required
+recording path as Agent. `ManagedToolOptions` types its constructor options.
+The context must belong to that Run, including its signal and trusted workspace.
+
+`executor.executePrepared(descriptor, preparation, options?)` is the lower-level
+operation used for trusted preparations such as MCP startup. The optional
+`PreparedExecutionOptions.deferPluginStartupFailure` controls the existing
+plugin-startup failure isolation; it does not erase unknown effects or release
+resources. Neither method admits a Run, constructs its Session transcript, or
+supplies application cleanup. The host must establish readiness/catalog and
+consume its aggregate request budgets where appropriate, as Agent does. A
+ToolResult describes the operation; the RunHandle's terminal result describes
+the whole Run. Retained executors refuse further work after terminal completion.
+
+All executors in the same loaded Orbit module instance share an internal
+resource coordinator. Different Agents, supervisors, MCP startup and legacy
+function calls therefore still conflict on the same workspace paths or MCP
+identity. There is no public coordinator replacement/reset API. RunContext
+retains ownership until normal release or verified reconciliation. This is not
+a cross-process lock, and installing duplicate module copies does not establish
+a shared coordination domain.
+
+The existing `executeManagedTool(...)` and `executePrepared(...)` functions keep
+their signatures and delegate to this same implementation. Existing callers do
+not need to migrate. A class is useful here because it binds a Run and policy;
+`mergeWorkspaceSettings` and `parseSessionFile` remain independent data
+transformations, with filesystem ownership in their existing service classes.
+
 ## Results, budgets and ownership
 
 Phases are initializing, running, awaiting-approval, stopping, finalizing and

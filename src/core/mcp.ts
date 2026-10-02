@@ -19,7 +19,7 @@ import type {ExecutionPolicy} from './execution/authorization.js'
 import type {RunContext} from './execution/run.js'
 import type {McpServerSettings, McpSettings} from './settings.js'
 
-import {canonicalPath, executePrepared} from './execution/authorization.js'
+import {canonicalPath, OperationExecutor} from './execution/authorization.js'
 import {copyJSON} from './execution/journal.js'
 import {until} from './execution/run.js'
 import {validatePluginStartup} from './plugins/catalog.js'
@@ -273,8 +273,7 @@ class StdioMcpToolManager implements McpToolManager {
       },
       targets: [workspace],
     }
-    const result = await executePrepared(
-      run,
+    const result = await new OperationExecutor(run, {policy}).executePrepared(
       {
         binding,
         cwd: workspace,
@@ -290,8 +289,7 @@ class StdioMcpToolManager implements McpToolManager {
         version: 1,
       },
       preparation,
-      policy,
-      Boolean(settings.plugin),
+      {deferPluginStartupFailure: Boolean(settings.plugin)},
     )
     if (!connection || result.isError) throw new Error('MCP startup denied')
     return connection

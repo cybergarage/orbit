@@ -18,6 +18,14 @@ The current orchestration object that runs one bounded model/tool turn over a
 Session. Conceptually, an agent exposes a goal-oriented runtime contract that
 may later be implemented by a Processor Graph.
 
+### Operation Executor
+
+The Run-bound component that prepares and authorizes a tool call or executes a
+trusted prepared operation, acknowledges required intent and records its
+outcome. The current `OperationExecutor` shares resource ownership with every
+other executor in the same loaded module instance. It does not own Run admission
+or replace the enclosing supervisor. See [Managed Execution](../execution.md).
+
 ### Context checkpoint
 
 A validated, synchronized record selecting an untrusted summary and retained
