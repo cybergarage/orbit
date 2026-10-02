@@ -19,9 +19,8 @@ authentication and notification delivery. See [capabilities and boundaries](docs
 Requires Node.js **20.19 or newer** and npm. The library uses native ESM and runs
 in a trusted Node.js process, not a browser renderer.
 
-The source release is v0.8.1. The registry commands below apply after the 0.8.1
-npm package is published; to use the source checkout, follow
-[Development](docs/development.md).
+Version 0.8.1 is available from npm and the v0.8.1 source tag. To use the
+source checkout, follow [Development](docs/development.md).
 
 As an application dependency:
 

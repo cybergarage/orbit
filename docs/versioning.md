@@ -10,13 +10,15 @@ runtime is in its 0.x development series.
 | --- | --- |
 | `0.6.x` | Initial public releases with a documented application entry point, runnable consumer example and package validation |
 | `0.8.0` | Book publication milestone, with the book and examples identifying their matching Orbit release |
+| `0.8.1` | Published npm package and updated book baseline with a Run-bound operation executor and named execution settings |
 | `1.0.0` | A complete OpenClaw/Hermes-style application built on Orbit, accompanied by an explicit stable API and compatibility contract |
 
-The v0.8.1 source release adds a compatible Run-bound operation executor and
-named Agent execution settings. npm publication remains a separate step.
-
-The v0.8.0 source release is the technical book's matching Orbit baseline.
-npm publication and the book's full source comparison remain separate tasks.
+Version 0.8.1 was published to npm on 2026-10-02. Its tarball matches the
+validated release artifact, and the npm `latest` tag points to 0.8.1. The
+technical book references v0.8.1 at commit
+`bf3f7c4e752de24fd51524633114d48600af5eb3`; its source links, execution API
+explanations, and EPUB have been updated and checked against that baseline.
+Book storefront publication remains a separate author decision.
 The 1.0 milestone is a plan, not available functionality or a promised date.
 Application completion should provide evidence for 1.0 readiness: representative
 workflows, operator recovery, deployment behavior and API usage. The version
