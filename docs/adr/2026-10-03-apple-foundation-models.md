@@ -34,7 +34,9 @@ Codex and Pi comparisons are not applicable to this narrow platform bridge: neit
 
 ## Confirmation and follow-up
 
-Observed Mac mini M4, 24 GB, macOS 27.0.1. xcrun swift --version stops at the unaccepted Xcode license. Do not bypass this gate. Compilation, model availability, inference, transcript replay and tool roundtrip remain unverified. The user must review and accept the Xcode license themselves before native verification. Live tool roundtrip is outside the draft subset.
+Initially observed Mac mini M4, 24 GB, macOS 27.0.1 with xcrun stopped by the unaccepted Xcode license. The user subsequently reported accepting the license. Rechecking verified Swift 6.4; the helper compiled with Xcode 27.0 for an arm64 macOS 26 target. Actual availability returned true. Sandbox generation failed, while the same bounded Node invocation outside the sandbox generated a response and replayed a synthetic two-turn transcript, answering Cobalt to the prior favorite-color prompt. Native process cancellation and invalid protocol fields/caps also passed. No Apple Intelligence settings, downloads, Xcode selection or additional agreements were changed. Live tool roundtrip remains outside the draft subset.
+
+Node build, header checks, 1094 local tests and independent npm consumer validation passed for implementation commit `238f4bb44b046522072a99b398582513677ac19c`. The optional `npm run test:apple` smoke script makes native verification reproducible. The ADR remains proposed: successful text verification does not accept wider framework capabilities.
 
 ## References
 

@@ -2,7 +2,7 @@
 
 Orbit includes an optional `apple` provider for local text conversations through a small Swift helper. There is no Node.js Foundation Models API dependency, install hook, cloud fallback or API billing. Installing Orbit and importing its API remain portable; selecting Apple requires a compatible Mac and a separately compiled helper.
 
-This adapter is a draft with Node-side tests. Native compilation and inference have not been verified because the inspected Mac's Xcode license is unaccepted. Do not interpret a successful Node build as native or model validation.
+Native compilation, actual availability, two-turn text inference and owned process cancellation were verified on a Mac mini M4 with macOS 27.0.1, Xcode 27.0 and Swift 6.4 after the user accepted the Xcode license. This verifies the text subset on that machine; it does not establish model availability on other installations.
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ export ORBIT_APPLE_HELPER_PATH="$PWD/.local/apple/orbit-apple-helper"
 printf '%s' '{"version":1,"operation":"availability"}' | "$ORBIT_APPLE_HELPER_PATH"
 ```
 
-Only `{"version":1,"available":true}` confirms current model availability. A false result reports `device_not_eligible`, `apple_intelligence_not_enabled`, `model_not_ready` or `model_unavailable`. Recheck after user-managed setup; do not infer readiness from the machine's hardware or OS version.
+A protocol-v1 response with `available: true` confirms current model availability (JSON property order is immaterial). A false result reports `device_not_eligible`, `apple_intelligence_not_enabled`, `model_not_ready` or `model_unavailable`. Recheck after user-managed setup; do not infer readiness from the machine's hardware or OS version.
 
 ## Local usage
 
@@ -49,7 +49,7 @@ For CLI text use, configure an isolated workspace with no MCP servers or plugins
 {"provider": "apple", "model": "system", "tools": {"profile": "none"}}
 ```
 
-Then run `orbit exec 'Summarize: The meeting moved to Friday.'` with the helper environment variable set. Existing inherited MCP or plugin tools still cause an explicit unsupported-tools error; review workspace inheritance before running. This command remains unverified until the native prerequisites above are satisfied.
+Then run `orbit exec 'Summarize: The meeting moved to Friday.'` with the helper environment variable set. Existing inherited MCP or plugin tools still cause an explicit unsupported-tools error; review workspace inheritance before running. The Node adapter and two-turn transcript were verified directly; this CLI example still requires an appropriately isolated workspace.
 
 ## Capability boundary
 
@@ -85,6 +85,12 @@ npm test
 npm run test:package
 ```
 
-The process tests use temporary Node fixtures and do not call an Apple model or touch user settings. After compiling and confirming availability, run the usage example and an alternating two-turn conversation. Native inference and transcript replay remain required follow-up checks. A tool roundtrip is not supported by this adapter; do not claim one based on text generation or a mocked transport.
+The process tests use temporary Node fixtures and do not call an Apple model or touch user settings. After compiling and confirming availability, run the usage example and an alternating two-turn conversation. Native inference and transcript replay passed on the inspected M4. Inference inside the execution sandbox returned `generation_failed`; running the same helper outside that sandbox succeeded. A deployment sandbox must permit Foundation Models access. A tool roundtrip is not supported by this adapter; do not claim one based on text generation or a mocked transport.
 
 [Proposed architecture and evidence](adr/2026-10-03-apple-foundation-models.md).
+
+The opt-in native smoke test uses synthetic text, checks actual availability, replays a two-turn conversation and cancels an owned helper process. It never changes Apple Intelligence settings or downloads assets:
+
+```sh
+ORBIT_APPLE_HELPER_PATH="$PWD/.local/apple/orbit-apple-helper" npm run test:apple
+```

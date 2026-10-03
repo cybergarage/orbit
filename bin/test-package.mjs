@@ -36,6 +36,7 @@ try {
     'dist/index.js',
     'dist/index.d.ts',
     'native/apple-foundation-models/main.swift',
+    'bin/test-apple-foundation-models.mjs',
     'dist/apps/gui/public/client.js',
     'bin/run.js',
     'bin/args.js',
