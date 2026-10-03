@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-10-03
 decision-date: 2026-10-03
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-10-03
+implementation-commits:
+  - e29acaf125e935f36768b463df1302d425b2d787
 superseded-by: []
 ---
 
@@ -12,7 +13,7 @@ superseded-by: []
 
 ## Purpose
 
-Provide a minimal shared scheduling primitive for Nest without duplicating desktop scheduling or weakening the execution journal. Inspected upstream Orbit: 56b1bea (full revision recorded in Git ancestry). Existing execution/run.ts binds request IDs to canonical input; execution/authorization.ts records intent before dispatch; recovery.ts refuses automatic dispatch of uncertain effects. A schedule must retain this identity rather than consume a reservation and generate a new request ID.
+Provide a minimal shared scheduling primitive for Nest without duplicating desktop scheduling or weakening the execution journal. Inspected upstream Orbit: 56b1bea2d9f7b60266c03e2fece0bad579230290. Existing execution/run.ts binds request IDs to canonical input; execution/authorization.ts records intent before dispatch; recovery.ts refuses automatic dispatch of uncertain effects. A schedule must retain this identity rather than consume a reservation and generate a new request ID.
 
 ## Decision
 
@@ -35,3 +36,7 @@ One writer, serialized transitions, limited history size, explicit local storage
 ## Acceptance
 
 The user explicitly approved implementing the shared durable scheduler and first Nest prototype on 2026-10-03. Review found the narrow trigger and read-only scope consistent with that instruction; no separate architecture approval is required.
+
+## Implementation evidence
+
+Implementation e29acaf125e935f36768b463df1302d425b2d787: headers/build and 1,085 full-suite tests passed on the Mac mini M4; seven focused tests cover SIGKILL recovery, atomic cursor/result behavior, persistent approval/cancellation, canonical retries, ownership and corrupt evidence. Independent npm package-consumer verification passed (397 files). Nest's real gemma4:12b schedule was killed during inference and restarted with one stable request ID, two attempts and one visible result. Local-only model review is limited; PID reuse and snapshot scalability remain documented. Windows/power-loss validation is not claimed. orbit-app migration is a separate follow-up and not part of this store's implemented scope.
