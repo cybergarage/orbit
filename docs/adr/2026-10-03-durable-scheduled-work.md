@@ -1,8 +1,8 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-10-03
-decision-date: null
-implementation-status: not-started
+decision-date: 2026-10-03
+implementation-status: in-progress
 implementation-completed-date: null
 implementation-commits: []
 superseded-by: []
