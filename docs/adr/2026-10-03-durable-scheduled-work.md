@@ -26,7 +26,7 @@ Codex b741e480e203f037ca726bc2a76d99a8e8668e66, codex-rs/rollout/src/recorder.rs
 
 Pi 4c6fb7cfe8c538a668726f6f8b3554098c39faee, packages/coding-agent/src/core/session-manager.ts: append-only conversation trees, synchronous append/rewrite. Adopt separate durable identity and inspectable history; do not use transcript append as an atomic scheduling transaction.
 
-SQLite would scale better but requires a new dependency or Node version floor beyond Orbit's Node 20 support. A bounded atomic snapshot has higher write amplification and is suitable only for an initial desktop slice. Fail closed for corrupt state and live owner; do not steal a live lock. PID reuse can require manual lock inspection. Network shares and multiple machines are unsupported. Rename/fsync evidence covers process death; physical power-loss guarantees depend on filesystem/device behavior.
+Upstream already uses better-sqlite3 for project storage. SQLite would scale better, but this module deliberately uses built-in Node 20 APIs so Electron hosts can bundle the primitive without loading a native SQLite addon for another runtime ABI. This increases snapshot write amplification and should be revisited before larger workloads. A bounded atomic snapshot has higher write amplification and is suitable only for an initial desktop slice. Fail closed for corrupt state and live owner; do not steal a live lock. PID reuse can require manual lock inspection. Network shares and multiple machines are unsupported. Rename/fsync evidence covers process death; physical power-loss guarantees depend on filesystem/device behavior.
 
 ## Consequences
 

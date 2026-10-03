@@ -81,6 +81,15 @@ export type {
   EvaluationVariantSummary,
 } from './evaluation/index.js'
 export * from './execution/index.js'
+export {DurableWorkStore} from './execution/scheduled-work.js'
+export type {
+  ScheduledRun,
+  WorkAttempt,
+  WorkOccurrence,
+  WorkSchedule,
+  WorkState,
+  WorkStatus,
+} from './execution/scheduled-work.js'
 export {runInteractiveSession} from './interactive.js'
 export type {
   InteractiveAgentClass,
@@ -254,6 +263,7 @@ export {
   migrateSessionTranscript,
   validateContextProfile,
 } from './session/index.js'
+
 export type {
   ContextPolicy,
   ContextPreparationEvent,
@@ -265,6 +275,7 @@ export type {
   SummaryFact,
   SummaryTest,
 } from './session/index.js'
+
 export {
   DEFAULT_PROJECTION_LIMITS,
   inspectTranscriptMigration,
@@ -272,7 +283,6 @@ export {
   parseInterruptionPolicy,
   VerifiedContextError,
 } from './session/index.js'
-
 export type {ContextProjectionEntry, InterruptionPolicy} from './session/index.js'
 
 export type {TranscriptMigrationInspection} from './session/index.js'
@@ -283,7 +293,6 @@ export {
   loadWorkspaceSettingsWithSourcesSync,
   mergeWorkspaceSettings,
 } from './settings.js'
-
 export type {
   McpServerSettings,
   McpSettings,
@@ -294,10 +303,12 @@ export type {
   WorkspaceSettings,
   WorkspaceSettingsSource,
 } from './settings.js'
+
 export * from './skills/index.js'
 export {State} from './state.js'
 
 export {serializeMessage, ThreadEventType, ThreadManager, ThreadStatus} from './thread.js'
+
 export type {
   CreateThreadOptions,
   ThreadAgent,
@@ -320,10 +331,10 @@ export type {
   ThreadToolStartedEvent,
   ThreadToolUpdatedEvent,
 } from './thread.js'
-
 export {GptTokenizer} from './tokenizer/index.js'
 
 export type {Tokenizer} from './tokenizer/index.js'
+
 export {
   BuiltinToolName,
   createBashTool,
@@ -342,7 +353,6 @@ export {
   ToolRuntime,
   ToolSnapshot,
 } from './tools/index.js'
-
 export type {
   BashToolInput,
   BuiltinToolSelection,
