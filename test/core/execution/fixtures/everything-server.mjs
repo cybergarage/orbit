@@ -127,7 +127,7 @@ try {
   assert.equal(result.operations.at(-1).status, 'invalid')
   assert.equal(result.outcome, 'completed')
   assert.equal(result.recording.status, 'acknowledged')
-  assert.equal(result.recording.level, 'file-and-directory-sync')
+  assert.equal(result.recording.level, process.platform === 'win32' ? 'file-sync' : 'file-and-directory-sync')
   assert.equal(result.quiescence, true)
   const pid = Number(await fs.readFile(pidFile, 'utf8'))
   assert.throws(() => process.kill(pid, 0), {code: 'ESRCH'})

@@ -88,7 +88,7 @@ if (process.argv[2] === 'child') {
   }
 
   try {
-    await session.commitCompaction(candidate, 'file-and-directory-sync')
+    await session.commitCompaction(candidate, process.platform === 'win32' ? 'file-sync' : 'file-and-directory-sync')
   } catch {
     assert.equal(stop, 'sync-error')
     assert.equal(session.getCompaction(), undefined)

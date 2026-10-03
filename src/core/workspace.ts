@@ -1,6 +1,7 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {realpathSync} from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
@@ -28,7 +29,7 @@ export class LocalWorkspaceLocator implements WorkspaceLocator {
   private readonly start: string
 
   constructor(options: LocalWorkspaceLocatorOptions = {}) {
-    this.start = options.start ?? process.cwd()
+    this.start = options.start ?? realpathSync.native(process.cwd())
   }
 
   async directories(): Promise<string[]> {

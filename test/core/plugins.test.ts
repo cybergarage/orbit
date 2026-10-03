@@ -113,7 +113,7 @@ describe('portable local plugins', () => {
       one: {args: ['${PLUGIN_ROOT}/app.js', '${OTHER}'], command: 'node', env: {DIR: '${PLUGIN_DATA}'}, type: 'stdio'},
     })
     const server = (await catalog.inspect()).servers['plugin:test:one']
-    expect(server.args).deep.equal([path.join(pkg, 'app.js'), '${OTHER}'])
+    expect(server.args).deep.equal([pkg + '/app.js', '${OTHER}'])
     expect(server.plugin?.cwd).equal(pkg)
     expect(server.env).deep.equal({
       DIR: path.join(data, 'test'),
@@ -260,7 +260,7 @@ describe('portable local plugins', () => {
         cwd: root,
         deps: {
           createMcpToolManager(settings, options) {
-            const {run} = (options!.execution!)
+            const {run} = options!.execution!
             if (mode === 'journal') {
               const append = run.journal.append.bind(run.journal)
               run.journal.append = async (...args) => {
@@ -311,7 +311,7 @@ describe('portable local plugins', () => {
           confirmedStopped: true,
           operations: result.operations.map((o) => ({id: o.id, status: 'failed'})),
         })
-        await (mode === 'journal' ? rejection(reconciled) : reconciled);
+        await (mode === 'journal' ? rejection(reconciled) : reconciled)
       } finally {
         await agent.close()
       }

@@ -7,7 +7,7 @@ import os from 'node:os'
 import path from 'node:path'
 import {stub} from 'sinon'
 
-import {FileExecutionJournal} from '../../../src/core/execution/journal.js'
+import {FileExecutionJournal, syncDirectory} from '../../../src/core/execution/journal.js'
 import {Agent, MemorySessionLogStore, Message, MessageType, SessionRepository, State} from '../../../src/core/index.js'
 
 async function copy(from: string, to: string): Promise<void> {
@@ -371,8 +371,24 @@ describe('context evidence filesystem boundaries', () => {
           error = error_
         }
 
-        expect(hit).equal(true)
-        expect(String(error)).contains('directory')
+        if (process.platform === 'win32') {
+          expect(hit).equal(false)
+          expect(error).equal(undefined)
+          expect(f.journal.level).equal('file-sync')
+          let unsupported: unknown
+          try {
+            await syncDirectory(directory)
+          } catch (error_) {
+            unsupported = error_
+          }
+
+          expect(String(unsupported)).contains('unsupported on Windows')
+          expect(hit, 'unsupported request must fail before opening a directory').equal(false)
+        } else {
+          expect(hit).equal(true)
+          expect(String(error)).contains('directory')
+        }
+
         expect(f.session.hasManagedLease()).equal(true)
         await f.journal.settleContextEvidence()
         patched.restore()

@@ -251,8 +251,11 @@ high-water mark. Event IDs provide idempotence for recording, not for external
 effects. Journals are retained until explicit session deletion.
 
 Memory acknowledgement means process-local retention. File mode defaults to
-`file-and-directory-sync`, including ancestor entries and key synchronization.
-Unsupported capability rejects admission without fallback. Owners may explicitly
+`file-and-directory-sync` on Linux/macOS, including ancestor entries and key synchronization,
+and `file-sync` on Windows. Windows synchronizes file contents but does not acknowledge
+directory-entry durability across power loss. An explicit `file-and-directory-sync`
+request on Windows rejects admission before journal writes; no request is silently downgraded.
+Other synchronization failures reject admission without fallback. Owners may explicitly
 select `file-sync` through `execution.journalLevel` or `--journal-level`; deletion
 uses the same selected level (the CLI delete command accepts that flag too).
 Neither level promises universal hardware/controller power-loss survival.

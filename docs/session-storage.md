@@ -295,6 +295,21 @@ manual offline review; automatic recovery never discards a journal to proceed.
 See [v3 migration](interrupted-context.md#exclusive-v2-to-v3-migration) for the
 byte-preserving conversion and response-unknown restart conditions.
 
+## Platform acknowledgement
+
+Registration, writer guards, migration and retained evidence synchronize regular
+files on all platforms. Windows uses writable handles for required file flushes.
+Linux/macOS additionally synchronize directory entries; Node does not provide
+portable directory fsync on Windows. Windows registration and maintenance therefore
+acknowledge file flushes and logical identity/exclusion, without claiming directory
+power-loss durability. Atomic replacement remains a single rename on the same
+filesystem, with recovery artifacts retained and errors propagated.
+
+Managed journal/deletion defaults and explicit stronger-level rejection are defined
+in [Execution acknowledgement](execution.md). Canonical storage identity continues
+to use native realpaths, including expanded Windows short names, with no path
+lowercasing or relaxation of traversal and symlink checks.
+
 ## Supported assumptions and remaining verification
 
 The current verification focus is Linux/macOS. Windows and other environments

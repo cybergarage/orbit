@@ -63,7 +63,7 @@ if (process.argv[2] === 'child') {
   }
 
   try {
-    await session.commitSkills(candidate, 'file-and-directory-sync')
+    await session.commitSkills(candidate, process.platform === 'win32' ? 'file-sync' : 'file-and-directory-sync')
   } catch {
     assert.equal(stop, 'sync-error')
     assert.equal(session.getSkillContexts().length, 1)

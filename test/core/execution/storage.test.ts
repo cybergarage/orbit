@@ -40,7 +40,7 @@ describe('required journal storage faults', () => {
   let root: string
 
   beforeEach(async () => {
-    root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-storage-contract-'))
+    root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-storage-contract-')))
   })
 
   afterEach(async () => {
@@ -143,6 +143,7 @@ describe('required journal storage faults', () => {
     )
     await openTestJournal('session', {
       io,
+      level: 'file-and-directory-sync',
       releaseLease() {
         releases++
       },
@@ -152,7 +153,7 @@ describe('required journal storage faults', () => {
         throw new Error('Unexpected fallback')
       },
       (error) => {
-        expect(String(error)).contains('directory sync')
+        expect(String(error).toLowerCase()).contains('directory sync')
       },
     )
     expect(releases).equal(1)

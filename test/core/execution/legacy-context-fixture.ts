@@ -33,7 +33,7 @@ export async function seedLegacyContext(session: Session, root: string): Promise
         type: 'skill_context',
         version: 1,
       },
-      'file-and-directory-sync',
+      process.platform === 'win32' ? 'file-sync' : 'file-and-directory-sync',
     )
     const [answer] = session.appendMessages([new Message(MessageType.Assistant, {content: 'old answer'})], {
       turnId: 'old',
@@ -74,7 +74,7 @@ export async function seedLegacyContext(session: Session, root: string): Promise
         timestamp: new Date().toISOString(),
         type: 'compaction',
       },
-      'file-and-directory-sync',
+      process.platform === 'win32' ? 'file-sync' : 'file-and-directory-sync',
     )
   } finally {
     release()

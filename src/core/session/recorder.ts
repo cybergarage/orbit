@@ -13,6 +13,7 @@ import type {SessionWriterLease} from './writer-lease.js'
 import {syncDirectories} from '../execution/journal.js'
 import {encodeSessionEntry, parseSessionFile} from './codec.js'
 import {canonicalStoragePath, inspectTranscript, isSessionLocked, sessionScope, WriterClaim} from './coordination.js'
+import {assertSupportedSyncLevel, syncSupportedDirectory} from './durability.js'
 import {EvidenceHandles, evidencePath} from './evidence-io.js'
 import {sessionFilePath} from './paths.js'
 import {issueWriterLease} from './writer-lease.js'
@@ -84,12 +85,7 @@ export class SessionRecorder {
           fsSync.closeSync(descriptor)
         }
 
-        const directory = fsSync.openSync(path.dirname(resolved), 'r')
-        try {
-          fsSync.fsyncSync(directory)
-        } finally {
-          fsSync.closeSync(directory)
-        }
+        syncSupportedDirectory(path.dirname(resolved))
       }
     })
     return new SessionRecorder(resolved, claim)
@@ -154,6 +150,7 @@ export class SessionRecorder {
   }
 
   synchronize(level: JournalLevel): Promise<void> {
+    assertSupportedSyncLevel(level)
     if (this.closed) return Promise.reject(new Error('Session recorder is closed'))
     this.queue = this.queue.then(async () => {
       const handle = await fs.open(this.file, 'r+')

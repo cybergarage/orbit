@@ -2,7 +2,7 @@
 status: accepted
 proposed-date: 2026-10-04
 decision-date: 2026-10-04
-implementation-status: not-started
+implementation-status: in-progress
 implementation-completed-date: null
 implementation-commits: []
 superseded-by: []
@@ -46,7 +46,7 @@ Keep rejecting Windows default storage (prevents ordinary providers from running
 
 ## Implementation and Confirmation
 
-Accepted under the author's explicit instruction to implement the separate Windows compatibility fix, preserving durability and rejecting unsupported guarantees. The primary-source contract supports this scoped correction. Implementation has not started. Required confirmation: Linux and Windows full suites on the same head, writable-file acknowledgement and failure tests, canonical identity tests, cleanup and process-exit behavior, independent package consumer tests. Physical power-loss durability is not verified by unit tests.
+Accepted under the author's explicit instruction to implement the separate Windows compatibility fix, preserving durability and rejecting unsupported guarantees. The primary-source contract supports this scoped correction. Implementation is in progress. Required confirmation: Linux and Windows full suites on the same head, writable-file acknowledgement and failure tests, canonical identity tests, cleanup and process-exit behavior, independent package consumer tests. Physical power-loss durability is not verified by unit tests.
 
 ## Follow-up Work
 

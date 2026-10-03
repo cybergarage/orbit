@@ -11,6 +11,7 @@ import type {OfflineStorageConditions, RegistrationResumeOptions} from './storag
 import {type JournalRecord, validateNext} from '../execution/journal.js'
 import {inspectGraphRun} from '../processor/graph-inspection.js'
 import {parseSessionFile} from './codec.js'
+import {syncSupportedDirectory as syncDirectory} from './durability.js'
 import {sessionFilePath} from './paths.js'
 import {
   assertOfflineStorage,
@@ -62,15 +63,6 @@ function exists(file: string): boolean {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
     throw error
-  }
-}
-
-function syncDirectory(directory: string): void {
-  const fd = fs.openSync(directory, 'r')
-  try {
-    fs.fsyncSync(fd)
-  } finally {
-    fs.closeSync(fd)
   }
 }
 
@@ -602,7 +594,7 @@ export function beginTranscriptMaintenance(
     })
   }
 
-  const fd = fs.openSync(files.guard, 'r')
+  const fd = fs.openSync(files.guard, 'r+')
   try {
     fs.fsyncSync(fd)
   } finally {

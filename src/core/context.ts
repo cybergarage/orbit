@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import fs from 'node:fs/promises'
-import process from 'node:process'
 
 import {APP_NAME} from './app.js'
 import {LocalWorkspaceLocator} from './workspace.js'
@@ -36,7 +35,7 @@ function agentFilePattern(): RegExp {
   )
 }
 
-export async function loadSystemContexts(startDir = process.cwd()): Promise<Context[]> {
+export async function loadSystemContexts(startDir?: string): Promise<Context[]> {
   const files = await new LocalWorkspaceLocator({start: startDir}).files(agentFilePattern())
   const matches: Context[] = []
 

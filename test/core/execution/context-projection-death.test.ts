@@ -24,7 +24,7 @@ describe('projection process death before model consumption', function () {
       for (let boundary = 0; boundary <= steps + 1; boundary++) {
         const stop = boundary === steps + 1 ? -1 : boundary
         const report = path.join(root, String(stop))
-        let error: undefined | {killed?: boolean; signal?: string}
+        let error: undefined | {code?: number; killed?: boolean; signal?: string}
         try {
           // eslint-disable-next-line no-await-in-loop
           await child(process.execPath, ['test/core/execution/fixtures/verified-interrupted-context.mjs'], {
@@ -53,7 +53,8 @@ describe('projection process death before model consumption', function () {
             continue
           }
 
-          expect(error?.signal).equal('SIGKILL')
+          if (process.platform === 'win32') expect(error?.code).equal(1)
+          else expect(error?.signal).equal('SIGKILL')
           expect(error?.killed, 'timeout is not the intended stop').not.equal(true)
           // eslint-disable-next-line no-await-in-loop
           const hit = JSON.parse(await fs.readFile(report + '.boundary', 'utf8'))
