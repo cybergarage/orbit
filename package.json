@@ -70,7 +70,8 @@
     "examples/agent/src",
     "examples/agent/package.json",
     "examples/agent/tsconfig.json",
-    "examples/agent/README.md"
+    "examples/agent/README.md",
+    "native/apple-foundation-models/main.swift"
   ],
   "homepage": "https://github.com/cybergarage/orbit",
   "keywords": [

@@ -9,7 +9,7 @@ import {agentFlags, toAgentOptions} from '../../../src/apps/cli-flags.js'
 describe('CLI agent flags', () => {
   describe('agentFlags', () => {
     it('uses all defined providers as CLI options', () => {
-      expect(agentFlags.provider.options).to.deep.equal(['anthropic', 'ollama', 'openai'])
+      expect(agentFlags.provider.options).to.deep.equal(['anthropic', 'apple', 'ollama', 'openai'])
     })
   })
 

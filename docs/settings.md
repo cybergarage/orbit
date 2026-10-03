@@ -56,7 +56,7 @@ asynchronous loaders use this condition and continue searching ancestors.
 
 ## Top-level fields
 
-- `provider`: LLM provider. Valid values are `anthropic`, `ollama`, and `openai`.
+- `provider`: LLM provider. Built-in values are `anthropic`, `apple`, `ollama`, and `openai`. See [Apple Foundation Models](apple-foundation-models.md) for its optional helper and text-only restrictions.
 - `model`: Model name.
 - `providers`: Provider-specific connection settings.
 - `mcp`: MCP server settings.

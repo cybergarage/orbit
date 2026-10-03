@@ -1165,7 +1165,7 @@ describe('model helpers', () => {
 
   describe('getProvider', () => {
     it('returns all defined providers in a stable order', () => {
-      expect(getProvider()).to.deep.equal(['anthropic', 'ollama', 'openai'])
+      expect(getProvider()).to.deep.equal(['anthropic', 'apple', 'ollama', 'openai'])
     })
   })
 

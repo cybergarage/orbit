@@ -6,6 +6,7 @@ import type {Model} from './model.js'
 import type {Provider, ProviderName} from './provider.js'
 
 import {AnthropicAgent} from './adapters/anthropic.js'
+import {AppleFoundationModelsAgent} from './adapters/apple.js'
 import {OllamaAgent} from './adapters/ollama.js'
 import {OpenAIAgent} from './adapters/openai.js'
 import {createProvider, registerProviderName} from './provider.js'
@@ -53,10 +54,16 @@ const OPENAI_DEFAULT_MODEL = 'gpt-4o'
 
 export const DEFAULT_MODELS: Partial<Record<ProviderName, string>> = {
   anthropic: ANTHROPIC_DEFAULT_MODEL,
+  apple: 'system',
   openai: OPENAI_DEFAULT_MODEL,
 }
 
 const modelRegistry = new ModelRegistry()
+modelRegistry.register({
+  create: (model, provider) => new AppleFoundationModelsAgent(model, provider),
+  defaultModel: 'system',
+  name: 'apple',
+})
 modelRegistry.register({
   create: (model, provider) => new AnthropicAgent(model, provider),
   defaultModel: ANTHROPIC_DEFAULT_MODEL,

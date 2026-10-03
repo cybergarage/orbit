@@ -437,3 +437,5 @@ projections and operation permissions. Implementation completed on 2026-09-21
 in c17fc5a3170f6a5dbe800da6522e38870b513e1a with 832 passing tests.
 
 [Single-owner durable scheduled work](2026-10-03-durable-scheduled-work.md) adds the approved minimal desktop scheduling primitive. Its local fixed-interval policy does not provide calendar recurrence or exactly-once external execution.
+
+[Optional Apple Foundation Models adapter](2026-10-03-apple-foundation-models.md) proposes a bounded local Swift process bridge. The draft remains proposed and native verification is blocked by the Xcode license.

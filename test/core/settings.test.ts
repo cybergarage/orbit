@@ -73,7 +73,7 @@ describe('loadWorkspaceSettings', () => {
     await fs.mkdir(path.join(root, '.orbit'))
     await fs.writeFile(path.join(root, '.orbit', SETTINGS_FILE_NAME), JSON.stringify({provider: 'local'}))
 
-    await expectReject(loadWorkspaceSettings(root), 'provider must be one of anthropic, ollama, openai')
+    await expectReject(loadWorkspaceSettings(root), 'provider must be one of anthropic, apple, ollama, openai')
   })
 
   it('uses the configured dot app directory name', async () => {
