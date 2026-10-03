@@ -190,8 +190,9 @@ The `tests` GitHub Actions workflow runs package checks and the Ubuntu unit
 test matrix on every push. Use its manual `workflow_dispatch` trigger to run
 the separate Windows unit test matrix when investigating Windows behavior.
 Each job has a 30-minute timeout so a stalled test process does not occupy a
-runner for the platform's six-hour default limit. Windows test failures remain
-diagnostic until Windows support is verified.
+runner for the platform's six-hour default limit. The shared storage Windows
+compatibility matrix is confirmed in the [Windows acknowledgement ADR](adr/2026-10-04-windows-storage-acknowledgement.md);
+platform filesystem and privilege limits remain explicit there.
 
 ### Managed execution surface fixtures
 

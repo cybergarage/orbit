@@ -2,9 +2,13 @@
 status: accepted
 proposed-date: 2026-10-04
 decision-date: 2026-10-04
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-10-04
+implementation-commits:
+  - eaca2f5e7d0d3b5c81db2993184d17fe823c5349
+  - c3d4c5f8e34c7e23e14027bf6a14edeae37ae6bd
+  - 90eedff31ecff8609276a3e6c255b28360e56360
+  - 5f7c20fa3f4ff72c3ee97a5ad851898973af39ed
 superseded-by: []
 ---
 
@@ -46,11 +50,16 @@ Keep rejecting Windows default storage (prevents ordinary providers from running
 
 ## Implementation and Confirmation
 
-Accepted under the author's explicit instruction to implement the separate Windows compatibility fix, preserving durability and rejecting unsupported guarantees. The primary-source contract supports this scoped correction. Implementation is in progress. Required confirmation: Linux and Windows full suites on the same head, writable-file acknowledgement and failure tests, canonical identity tests, cleanup and process-exit behavior, independent package consumer tests. Physical power-loss durability is not verified by unit tests.
+The author explicitly requested this separate scoped compatibility implementation. Microsoft and pinned libuv evidence supported acceptance before implementation. The implemented scope is complete in the commits above.
+
+[Exact implementation-head CI](https://github.com/cybergarage/orbit/actions/runs/37155091483) at `5f7c20fa3f4ff72c3ee97a5ad851898973af39ed` passed all eight jobs: Linux and Windows on previous LTS, current LTS and latest Node, plus independent package consumers on Node 20.19 and 24. M4 headers/build and 1089 tests passed. Windows executes 1087 tests successfully; two pre-existing privilege-dependent symlink cases remain pending. No new tests or matrix jobs were skipped, no timeout was relaxed, and fsync failures are not ignored.
+
+Earlier trials exposed 193 Windows failures, then 11 fixture assumptions, then three Unix-only checkpoint-count thresholds. Semantic coverage now checks every supported write/file-sync/rename/unlink before and after, every measured interruption, and required file-sync failure. Windows directory namespace power-loss durability remains unclaimed. A separate Linux current-LTS process-death fixture hung twice through the experimental TypeScript loader; its child now exercises built code, has a 15-second hard termination deadline, and retains exact exit and recovery assertions. The final complete matrix confirms normal test-process exit.
+
 
 ## Follow-up Work
 
-Preserve existing deferred physical-media and deployment trials. Do not infer them from CI.
+Preserve the two pending Windows symlink-privilege cases and existing deferred physical-media, filesystem-variation and deployment trials. Do not infer their success from CI. Dates in this record use the execution host calendar (JST).
 
 ## References
 
