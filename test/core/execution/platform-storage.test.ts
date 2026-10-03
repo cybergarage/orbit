@@ -8,14 +8,16 @@ import path from 'node:path'
 import process from 'node:process'
 import {stub} from 'sinon'
 
-import {assertSupportedSyncLevel, defaultFileSyncLevel} from '../../../src/core/session/durability.js'
+import {assertSupportedSyncLevel, defaultFileSyncLevel, fileSyncAccess} from '../../../src/core/session/durability.js'
 import {offlineStorage, openTestJournal, SessionRepository} from '../../session-storage-fixture.js'
 
 describe('platform storage acknowledgements', () => {
   it('selects truthful defaults and rejects an explicit unsupported guarantee', () => {
     expect(defaultFileSyncLevel('win32')).equal('file-sync')
+    expect(fileSyncAccess('win32')).equal(fs.constants.O_RDWR)
     for (const platform of ['darwin', 'linux'] as const) {
       expect(defaultFileSyncLevel(platform)).equal('file-and-directory-sync')
+      expect(fileSyncAccess(platform)).equal(fs.constants.O_RDONLY)
       expect(() => assertSupportedSyncLevel('file-and-directory-sync', platform)).not.to.throw()
     }
 
@@ -94,7 +96,7 @@ describe('platform storage acknowledgements', () => {
       const value = descriptors.get(descriptor)!
       if (value.file.endsWith('.orbit-session-binding.json')) {
         // eslint-disable-next-line no-bitwise -- validate writable access used by FlushFileBuffers
-        expect(Number(value.flags) & fs.constants.O_RDWR).equal(fs.constants.O_RDWR)
+        expect(Number(value.flags) & fs.constants.O_RDWR).equal(fileSyncAccess())
         synced++
         throw new Error('required file flush failed')
       }

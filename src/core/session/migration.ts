@@ -15,7 +15,7 @@ import {
   inspectTranscript,
   migrationIntentPath,
 } from './coordination.js'
-import {syncSupportedDirectory} from './durability.js'
+import {fileSyncAccess, syncSupportedDirectory} from './durability.js'
 
 interface MigrationIntent {
   file: string
@@ -30,7 +30,7 @@ function digest(bytes: string): string {
 }
 
 function sync(file: string): void {
-  const descriptor = fs.openSync(file, 'r+')
+  const descriptor = fs.openSync(file, fileSyncAccess())
   try {
     fs.fsyncSync(descriptor)
   } finally {

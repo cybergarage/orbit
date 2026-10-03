@@ -11,7 +11,7 @@ import type {OfflineStorageConditions, RegistrationResumeOptions} from './storag
 import {type JournalRecord, validateNext} from '../execution/journal.js'
 import {inspectGraphRun} from '../processor/graph-inspection.js'
 import {parseSessionFile} from './codec.js'
-import {syncSupportedDirectory as syncDirectory} from './durability.js'
+import {fileSyncAccess, syncSupportedDirectory as syncDirectory} from './durability.js'
 import {sessionFilePath} from './paths.js'
 import {
   assertOfflineStorage,
@@ -594,7 +594,7 @@ export function beginTranscriptMaintenance(
     })
   }
 
-  const fd = fs.openSync(files.guard, 'r+')
+  const fd = fs.openSync(files.guard, fileSyncAccess())
   try {
     fs.fsyncSync(fd)
   } finally {

@@ -9,6 +9,7 @@ import {parentPort, workerData} from 'node:worker_threads'
 import type {CatalogBackend, CatalogRows, CatalogTable} from './engine.js'
 import type {ProjectMutation, ProjectQuery} from './types.js'
 
+import {fileSyncAccess} from '../session/durability.js'
 import {CatalogEngine, validateCatalogRow} from './engine.js'
 import {ProjectStoreError} from './types.js'
 
@@ -191,7 +192,7 @@ try {
               const reserved = fs.openSync(message.destination, 'wx', 0o600)
               fs.closeSync(reserved)
               await db!.backup(message.destination)
-              const completed = fs.openSync(message.destination, 'r+')
+              const completed = fs.openSync(message.destination, fileSyncAccess())
               try {
                 fs.fsyncSync(completed)
               } finally {

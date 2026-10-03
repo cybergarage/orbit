@@ -48,7 +48,7 @@ describe('context evidence filesystem boundaries', () => {
   for (const target of ['file', 'key', 'events'] as const)
     for (const phase of ['sync', 'close'] as const)
       for (const replacement of ['file', 'parent', 'root'] as const)
-        it(`rejects ${target} ${replacement} replacement during ${phase}`, async () => {
+        it(`rejects attempted ${target} ${replacement} replacement during ${phase}`, async () => {
           const f = await fixture()
           const destination =
             replacement === 'file'
@@ -61,6 +61,7 @@ describe('context evidence filesystem boundaries', () => {
           const held = destination + '.held'
           const before = await fs.readFile(f[target])
           let hit = false
+          let moved = false
           const open = fs.open.bind(fs)
           const patched = stub(fs, 'open').callsFake(async (...args) => {
             const handle = await open(...args)
@@ -71,6 +72,7 @@ describe('context evidence filesystem boundaries', () => {
                 if (!hit) {
                   hit = true
                   await fs.rename(destination, held)
+                  moved = true
                   await copy(held, destination)
                 }
               }
@@ -93,7 +95,7 @@ describe('context evidence filesystem boundaries', () => {
             expect((await fs.readFile(f[target])).equals(before)).equal(true)
           } finally {
             patched.restore()
-            if (hit) {
+            if (moved) {
               await fs.rm(destination, {recursive: true})
               await fs.rename(held, destination)
             }

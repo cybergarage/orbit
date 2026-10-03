@@ -16,6 +16,11 @@ export function defaultFileSyncLevel(platform = process.platform): Exclude<Journ
   return platform === 'win32' ? 'file-sync' : 'file-and-directory-sync'
 }
 
+/** Preserve POSIX readable-handle fsync; Windows FlushFileBuffers requires write access. */
+export function fileSyncAccess(platform = process.platform): number {
+  return platform === 'win32' ? fs.constants.O_RDWR : fs.constants.O_RDONLY
+}
+
 /** Coordination namespace changes on Windows do not claim power-loss directory durability. */
 export function syncSupportedDirectory(directory: string): void {
   if (process.platform === 'win32') return

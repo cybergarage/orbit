@@ -498,7 +498,9 @@ describe('guarded session recovery', () => {
     const bindingFile = path.join(repository.journalRoot, '.orbit-session-binding.json')
     const original = await fs.readFile(bindingFile, 'utf8')
     try {
-      await fs.writeFile(bindingFile, original.replace(repository.rootDir, path.join(root, 'different')))
+      const altered = JSON.parse(original)
+      altered.sessionRoot = path.join(root, 'different')
+      await fs.writeFile(bindingFile, JSON.stringify(altered) + '\n')
       await FileExecutionJournal.open('binding-lease', {...options, io}).then(
         () => {
           throw new Error('Changed binding accepted')

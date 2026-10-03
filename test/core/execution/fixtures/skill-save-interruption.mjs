@@ -79,7 +79,7 @@ if (process.argv[2] === 'child') {
   console.log(JSON.stringify({steps: step}))
 } else {
   const run = async (stop) => {
-    const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-skill-fault-')))
+    const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-skill-fault-')))
     const child = spawnSync(process.execPath, [fileURLToPath(import.meta.url), 'child', root, String(stop)], {
       encoding: 'utf8',
       timeout: 15_000,

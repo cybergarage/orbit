@@ -71,7 +71,7 @@ if (process.argv[2] === 'child') {
   process.stdout.write(JSON.stringify({steps: step, trace}) + '\n')
 } else {
   const run = (stop) => {
-    const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-migration-fault-')))
+    const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-migration-fault-')))
     const child = spawnSync(process.execPath, [fileURLToPath(import.meta.url), 'child', root, String(stop)], {
       encoding: 'utf8',
       timeout: 15_000,
