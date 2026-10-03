@@ -435,3 +435,5 @@ The accepted [descriptive Skill metadata decision](2026-09-21-skill-descriptive-
 extends catalog metadata with license and compatibility, preserving old
 projections and operation permissions. Implementation completed on 2026-09-21
 in c17fc5a3170f6a5dbe800da6522e38870b513e1a with 832 passing tests.
+
+[Single-owner durable scheduled work](2026-10-03-durable-scheduled-work.md) adds the approved minimal desktop scheduling primitive. Its local fixed-interval policy does not provide calendar recurrence or exactly-once external execution.

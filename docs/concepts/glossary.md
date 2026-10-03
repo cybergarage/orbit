@@ -248,3 +248,6 @@ runtime provenance and journal evidence. It preserves saved-at-operation or
 command-process facts independently of a model summary. It is not current
 workspace attestation, behavioral verification or operation authorization.
 See [Input budgets and compaction](../context-compaction.md#source-derived-tool-observations).
+
+- **Scheduled occurrence**: one materialized due timestamp associated with one stable request ID. A missed fixed interval coalesces to the latest due occurrence.
+- **Scheduled attempt**: one host dispatch attempt for a persisted scheduled run; distinct from its stable retry identity and from model/tool operation intents.

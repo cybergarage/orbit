@@ -325,3 +325,7 @@ checkpoint prose and revalidates evidence before invocation. Canonical transcrip
 messages and journal records remain the source; no duplicate ledger is persisted.
 Legacy or mismatched provenance does not acquire recognized built-in semantics.
 See [the feature contract](context-compaction.md#source-derived-tool-observations).
+
+## Durable scheduled work
+
+`DurableWorkStore` in `src/core/execution/scheduled-work.ts` provides single-owner local scheduling snapshots. It persists schedules, occurrences, runs and attempts separately and atomically creates queued occurrences with their next scheduling cursor. Fixed intervals coalesce missed runs. Interrupted read attempts become queued with their original request identity; opaque attempts become unknown. Persistent approvals gate queued dispatch, and cancellation rejects stale completion. Hosts supply scoped execution; this primitive does not execute model tools or replace RunSupervisor operation journals. See [scheduled work](scheduled-work.md).
