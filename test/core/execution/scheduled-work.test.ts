@@ -5,6 +5,7 @@ import {spawnSync} from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import {pathToFileURL} from 'node:url'
 
 import {DurableWorkStore} from '../../../src/core/execution/scheduled-work.js'
 
@@ -70,8 +71,11 @@ describe('Durable scheduled work', () => {
   it('recovers SIGKILL with stable attempt identity and one visible result; quarantines opaque work', () => {
     const file = path.join(root, 'state.json')
     const module = path.resolve('dist/core/execution/scheduled-work.js')
-    const script = `import {DurableWorkStore} from ${JSON.stringify(`file://${module}`)}; const s=new DurableWorkStore(${JSON.stringify(file)});s.schedule({next:1000,effect:'read',payload:{safe:true}});s.materialize(1000);const r=s.snapshot().runs[0];s.claim(r.id);s.enqueue('write',{},'opaque');s.claim('write');s.enqueue('approval',{},'opaque','preview');process.kill(process.pid,'SIGKILL');`
-    expect(spawnSync(process.execPath, ['--input-type=module', '-e', script]).signal).to.equal('SIGKILL')
+    const script = `import {DurableWorkStore} from ${JSON.stringify(pathToFileURL(module).href)}; const s=new DurableWorkStore(${JSON.stringify(file)});s.schedule({next:1000,effect:'read',payload:{safe:true}});s.materialize(1000);const r=s.snapshot().runs[0];s.claim(r.id);s.enqueue('write',{},'opaque');s.claim('write');s.enqueue('approval',{},'opaque','preview');process.kill(process.pid,'SIGKILL');`
+    const killed = spawnSync(process.execPath, ['--input-type=module', '-e', script])
+    expect(killed.error).equal(undefined)
+    if (process.platform === 'win32') expect(killed.status).equal(1)
+    else expect(killed.signal).equal('SIGKILL')
     let store = new DurableWorkStore(file)
     const run = store.snapshot().runs[0]
     expect(run.status).to.equal('queued')

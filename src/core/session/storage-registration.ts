@@ -5,6 +5,8 @@ import {createHash, randomUUID} from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 
+import {fileSyncAccess, syncSupportedDirectory as syncDirectory} from './durability.js'
+
 const bindingName = '.orbit-session-binding.json'
 const guardName = '.orbit-registration.guard'
 const stagedPrefix = '.orbit-binding-'
@@ -245,15 +247,6 @@ export function inspectSessionStorage(sessionRoot: string, journalRoot: string):
   return result
 }
 
-function syncDirectory(directory: string): void {
-  const fd = fs.openSync(directory, 'r')
-  try {
-    fs.fsyncSync(fd)
-  } finally {
-    fs.closeSync(fd)
-  }
-}
-
 function ensureDirectory(directory: string): void {
   if (present(directory)) {
     if (!fs.lstatSync(directory).isDirectory() || canonicalStoragePath(directory) !== directory)
@@ -276,7 +269,7 @@ function verifyArtifact(a: Artifact): void {
 function syncArtifact(a: Artifact): void {
   verifyArtifact(a)
   // eslint-disable-next-line no-bitwise -- combine Node filesystem open flags
-  const fd = fs.openSync(a.file, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0))
+  const fd = fs.openSync(a.file, fileSyncAccess() | (fs.constants.O_NOFOLLOW ?? 0))
   try {
     if (!identity(a.stat, fs.fstatSync(fd))) throw new Error('Registration artifact identity changed')
     fs.fsyncSync(fd)

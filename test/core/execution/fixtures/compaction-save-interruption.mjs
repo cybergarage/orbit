@@ -57,8 +57,10 @@ if (process.argv[2] === 'child') {
     type: 'compaction',
   }
   let step = 0
-  const tick = () => {
+  const boundaries = []
+  const tick = (method, phase, kind = 'file') => {
     step++
+    boundaries.push({kind, method, phase})
     if (String(step) === stop) {
       process.stdout.write(JSON.stringify({step}) + '\n')
       process.exit(87)
@@ -67,9 +69,9 @@ if (process.argv[2] === 'child') {
 
   const append = fsp.appendFile.bind(fsp)
   fsp.appendFile = async (...args) => {
-    tick()
+    tick('append', 'before')
     const result = await append(...args)
-    tick()
+    tick('append', 'after')
     return result
   }
 
@@ -77,18 +79,19 @@ if (process.argv[2] === 'child') {
   fsp.open = async (...args) => {
     const handle = await open(...args)
     const sync = handle.sync.bind(handle)
+    const kind = (await handle.stat()).isDirectory() ? 'directory' : 'file'
     handle.sync = async () => {
-      tick()
+      tick('sync', 'before', kind)
       if (stop === 'sync-error') throw new Error('Injected checkpoint sync failure')
       await sync()
-      tick()
+      tick('sync', 'after', kind)
     }
 
     return handle
   }
 
   try {
-    await session.commitCompaction(candidate, 'file-and-directory-sync')
+    await session.commitCompaction(candidate, process.platform === 'win32' ? 'file-sync' : 'file-and-directory-sync')
   } catch {
     assert.equal(stop, 'sync-error')
     assert.equal(session.getCompaction(), undefined)
@@ -101,10 +104,10 @@ if (process.argv[2] === 'child') {
   assert.ok(session.getCompaction())
   release()
   await session.close()
-  console.log(JSON.stringify({steps: step}))
+  console.log(JSON.stringify({boundaries, steps: step}))
 } else {
   const run = async (stop) => {
-    const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-checkpoint-fault-')))
+    const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-checkpoint-fault-')))
     const child = spawnSync(process.execPath, [fileURLToPath(import.meta.url), 'child', root, String(stop)], {
       encoding: 'utf8',
       timeout: 15_000,
@@ -132,5 +135,5 @@ if (process.argv[2] === 'child') {
   }
 
   await run('sync-error')
-  console.log(JSON.stringify({passed: baseline.steps + 1}))
+  console.log(JSON.stringify({boundaries: baseline.boundaries, passed: baseline.steps + 1, syncFailure: true}))
 }

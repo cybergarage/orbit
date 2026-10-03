@@ -118,6 +118,10 @@ The pair ID remains stable across repeated initialization and explicit resume.
 Transcripts, journals and minimal deletion records retain their existing formats.
 The configuration records outlive Session deletion and contain no conversation.
 
+The directory synchronization steps below apply where supported by Node. Windows
+uses the file-only acknowledgement described in [Platform acknowledgement](#platform-acknowledgement);
+no directory-flush failure is caught and treated as success.
+
 The initializer creates and syncs `.orbit-registration.guard` in **both roots**
 before writing registration data. It syncs existing binding files as well as new
 ones. V1 conversion writes a same-directory temporary v2 file, syncs it, renames
@@ -295,10 +299,26 @@ manual offline review; automatic recovery never discards a journal to proceed.
 See [v3 migration](interrupted-context.md#exclusive-v2-to-v3-migration) for the
 byte-preserving conversion and response-unknown restart conditions.
 
+## Platform acknowledgement
+
+Registration, writer guards, migration and retained evidence synchronize regular
+files on all platforms. Windows uses writable handles for required file flushes.
+Linux/macOS additionally synchronize directory entries; Node does not provide
+portable directory fsync on Windows. Windows registration and maintenance therefore
+acknowledge file flushes and logical identity/exclusion, without claiming directory
+power-loss durability. Atomic replacement remains a single rename on the same
+filesystem, with recovery artifacts retained and errors propagated.
+
+Managed journal/deletion defaults and explicit stronger-level rejection are defined
+in [Execution acknowledgement](execution.md). Canonical storage identity continues
+to use native realpaths, including expanded Windows short names, with no path
+lowercasing or relaxation of traversal and symlink checks.
+
 ## Supported assumptions and remaining verification
 
-The current verification focus is Linux/macOS. Windows and other environments
-are deferred. Representative application trials await the coding agent or a
+Platform CI confirmation for this compatibility correction is tracked in the
+[Windows acknowledgement ADR](adr/2026-10-04-windows-storage-acknowledgement.md).
+Other filesystems and deployed Windows environments require their own qualification. Representative application trials await the coding agent or a
 future autonomous application; real operational exclusion and physical-failure
 trials await a target deployment, storage and SLI/SLO. These deferrals are not
 passing evidence and do not relax runtime storage requirements.
