@@ -43,6 +43,14 @@ console.log(reply.content)
 
 Settings select `"provider": "apple", "model": "system"`. The helper path comes from `ORBIT_APPLE_HELPER_PATH` or the adapter's explicit `helperPath` option, never from model output. Use a trusted absolute executable path. The helper runs with the user's privileges. Do not configure `host`, API keys or `contextWindow` for Apple. Construct a text-only Agent with no tools and no MCP manager if using the agent runtime; default coding tools are unsupported and produce an explicit error.
 
+For CLI text use, configure an isolated workspace with no MCP servers or plugins and disable the default coding tools in its `.orbit/settings.json`:
+
+```json
+{"provider": "apple", "model": "system", "tools": {"profile": "none"}}
+```
+
+Then run `orbit exec 'Summarize: The meeting moved to Friday.'` with the helper environment variable set. Existing inherited MCP or plugin tools still cause an explicit unsupported-tools error; review workspace inheritance before running. This command remains unverified until the native prerequisites above are satisfied.
+
 ## Capability boundary
 
 | Capability                     | Apple framework               | Orbit adapter                                     |
