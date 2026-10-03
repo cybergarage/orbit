@@ -5,7 +5,7 @@ import {createHash, randomUUID} from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 
-import {canonicalJSON} from './journal.js'
+import {canonicalJSON} from './canonical-json.js'
 
 export type WorkStatus = 'approval' | 'cancelled' | 'failed' | 'queued' | 'running' | 'succeeded' | 'unknown'
 export interface WorkSchedule {
