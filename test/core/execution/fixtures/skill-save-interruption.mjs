@@ -32,8 +32,10 @@ if (process.argv[2] === 'child') {
   const release = session.acquireManagedLease()
   const candidate = {id: 'skill-1', sessionId: 'fixture', skills, timestamp: '2026-09-09T00:00:00Z', turnId: 'run-1', type: 'skill_context', version: 1}
   let step = 0
-  const tick = () => {
+  const boundaries = []
+  const tick = (method, phase, kind = 'file') => {
     step++
+    boundaries.push({kind, method, phase})
     if (String(step) === stop) {
       process.stdout.write(JSON.stringify({step}) + '\n')
       process.exit(87)
@@ -42,9 +44,9 @@ if (process.argv[2] === 'child') {
 
   const append = fsp.appendFile.bind(fsp)
   fsp.appendFile = async (...args) => {
-    tick()
+    tick('append', 'before')
     const result = await append(...args)
-    tick()
+    tick('append', 'after')
     return result
   }
 
@@ -52,11 +54,12 @@ if (process.argv[2] === 'child') {
   fsp.open = async (...args) => {
     const handle = await open(...args)
     const sync = handle.sync.bind(handle)
+    const kind = (await handle.stat()).isDirectory() ? 'directory' : 'file'
     handle.sync = async () => {
-      tick()
+      tick('sync', 'before', kind)
       if (stop === 'sync-error') throw new Error('Injected Skill sync failure')
       await sync()
-      tick()
+      tick('sync', 'after', kind)
     }
 
     return handle
@@ -76,7 +79,7 @@ if (process.argv[2] === 'child') {
   assert.equal(session.getSkillContexts().length, 1)
   release()
   await session.close()
-  console.log(JSON.stringify({steps: step}))
+  console.log(JSON.stringify({boundaries, steps: step}))
 } else {
   const run = async (stop) => {
     const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-skill-fault-')))
@@ -107,5 +110,5 @@ if (process.argv[2] === 'child') {
   }
 
   await run('sync-error')
-  console.log(JSON.stringify({passed: baseline.steps + 1}))
+  console.log(JSON.stringify({boundaries: baseline.boundaries, passed: baseline.steps + 1, syncFailure: true}))
 }
