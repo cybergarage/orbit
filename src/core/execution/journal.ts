@@ -9,7 +9,9 @@ import path from 'node:path'
 import type {SessionWriterLease} from '../session/writer-lease.js'
 
 import {validateProjectContextRecord} from '../projects/memory-journal.js'
+import {assertSupportedSyncLevel, defaultFileSyncLevel} from '../session/durability.js'
 import {EvidenceHandles, evidencePath} from '../session/evidence-io.js'
+import {canonicalStoragePath} from '../session/storage-registration.js'
 import {consumeWriterLease} from '../session/writer-lease.js'
 import {canonicalJSON} from './canonical-json.js'
 import {validateGraphRecord} from './graph-journal.js'
@@ -186,10 +188,11 @@ export class FileExecutionJournal extends MemoryExecutionJournal {
     private readonly releaseWriter: () => void,
   ) {
     super(sessionId)
-    this.root = path.resolve(options.root)
-    this.level = options.level ?? 'file-and-directory-sync'
+    this.root = canonicalStoragePath(options.root)
+    this.level = options.level ?? defaultFileSyncLevel()
     if (!['file-and-directory-sync', 'file-sync'].includes(this.level))
       throw new Error('Unsupported journal acknowledgement level')
+    assertSupportedSyncLevel(this.level)
     this.io = options.io ?? fs
   }
 
@@ -566,6 +569,7 @@ export async function exists(file: string, io = fs): Promise<boolean> {
 }
 
 export async function syncDirectory(directory: string, io = fs): Promise<void> {
+  assertSupportedSyncLevel('file-and-directory-sync')
   const handle = await io.open(directory, 'r')
   try {
     await handle.sync()
@@ -575,6 +579,7 @@ export async function syncDirectory(directory: string, io = fs): Promise<void> {
 }
 
 export async function syncDirectories(directory: string, level: JournalLevel, io = fs): Promise<void> {
+  assertSupportedSyncLevel(level)
   const missing: string[] = []
   let current = path.resolve(directory)
   // Preserve ordered filesystem acknowledgements before continuing.

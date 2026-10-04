@@ -7,7 +7,7 @@ import os from 'node:os'
 import path from 'node:path'
 import {stub} from 'sinon'
 
-import {FileExecutionJournal} from '../../../src/core/execution/journal.js'
+import {FileExecutionJournal, syncDirectory} from '../../../src/core/execution/journal.js'
 import {Agent, MemorySessionLogStore, Message, MessageType, SessionRepository, State} from '../../../src/core/index.js'
 
 async function copy(from: string, to: string): Promise<void> {
@@ -48,7 +48,7 @@ describe('context evidence filesystem boundaries', () => {
   for (const target of ['file', 'key', 'events'] as const)
     for (const phase of ['sync', 'close'] as const)
       for (const replacement of ['file', 'parent', 'root'] as const)
-        it(`rejects ${target} ${replacement} replacement during ${phase}`, async () => {
+        it(`rejects attempted ${target} ${replacement} replacement during ${phase}`, async () => {
           const f = await fixture()
           const destination =
             replacement === 'file'
@@ -61,6 +61,7 @@ describe('context evidence filesystem boundaries', () => {
           const held = destination + '.held'
           const before = await fs.readFile(f[target])
           let hit = false
+          let moved = false
           const open = fs.open.bind(fs)
           const patched = stub(fs, 'open').callsFake(async (...args) => {
             const handle = await open(...args)
@@ -71,6 +72,7 @@ describe('context evidence filesystem boundaries', () => {
                 if (!hit) {
                   hit = true
                   await fs.rename(destination, held)
+                  moved = true
                   await copy(held, destination)
                 }
               }
@@ -93,7 +95,7 @@ describe('context evidence filesystem boundaries', () => {
             expect((await fs.readFile(f[target])).equals(before)).equal(true)
           } finally {
             patched.restore()
-            if (hit) {
+            if (moved) {
               await fs.rm(destination, {recursive: true})
               await fs.rename(held, destination)
             }
@@ -371,8 +373,24 @@ describe('context evidence filesystem boundaries', () => {
           error = error_
         }
 
-        expect(hit).equal(true)
-        expect(String(error)).contains('directory')
+        if (process.platform === 'win32') {
+          expect(hit).equal(false)
+          expect(error).equal(undefined)
+          expect(f.journal.level).equal('file-sync')
+          let unsupported: unknown
+          try {
+            await syncDirectory(directory)
+          } catch (error_) {
+            unsupported = error_
+          }
+
+          expect(String(unsupported)).contains('unsupported on Windows')
+          expect(hit, 'unsupported request must fail before opening a directory').equal(false)
+        } else {
+          expect(hit).equal(true)
+          expect(String(error)).contains('directory')
+        }
+
         expect(f.session.hasManagedLease()).equal(true)
         await f.journal.settleContextEvidence()
         patched.restore()

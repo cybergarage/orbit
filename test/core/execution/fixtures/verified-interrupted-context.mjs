@@ -254,7 +254,7 @@ for (const family of process.env.PROJECTION_FAULT ? ['agent'] : ['agent', 'graph
       const terminal = await first.finished
       assert.equal(terminal.quiescence, true)
       assert.equal(terminal.recording.status, 'acknowledged')
-      assert.equal(terminal.recording.level, 'file-and-directory-sync')
+      assert.equal(terminal.recording.level, process.platform === 'win32' ? 'file-sync' : 'file-and-directory-sync')
       assert.equal(terminal.outcome, ending === 'cancel' ? 'cancelled' : 'completed')
       assert.equal(
         await fs.readFile(path.join(cwd, 'answer.txt'), 'utf8'),

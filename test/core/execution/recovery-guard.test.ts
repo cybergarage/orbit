@@ -404,7 +404,7 @@ describe('guarded session recovery', () => {
       await session.close()
       const scope = repository.scope('maintenance')
       const paths = coordinationPaths(scope)
-      const dead = await execute(process.execPath, ['-e', 'process.stdout.write(String(process.pid))'])
+      const dead = await execute(process.execPath, ['-e', 'process.stdout.write(String(process.pid))'], {killSignal: 'SIGKILL', timeout: 15_000})
       await fs.writeFile(paths.owner, JSON.stringify({pid: Number(dead.stdout), token: 'stale', version: 1}))
       await fs.writeFile(paths.guard, '')
       // This fixture owns both isolated roots; no service/restarter is launched until recovery finishes.
@@ -412,19 +412,22 @@ describe('guarded session recovery', () => {
       await fs.writeFile(gate, '')
       const script = `
         import fs from 'node:fs';
-        import {SessionRepository, recoverSessionWriter} from './src/core/index.ts';
+        import {SessionRepository, recoverSessionWriter} from './dist/core/index.js';
         const repo = new SessionRepository({rootDir: process.env.ORBIT_TEST_ROOT});
         const unlink = fs.unlinkSync.bind(fs);
         fs.unlinkSync = file => {unlink(file); if (String(file).endsWith('.' + process.env.ORBIT_TEST_ARTIFACT)) process.exit(73)};
         recoverSessionWriter(repo.scope('maintenance'), {allWritersStopped: true, automaticRestartersDisabled: true, exclusiveStorageControl: true});
       `
-      await execute(process.execPath, ['--loader', './test/alias-loader.mjs', '--input-type=module', '-e', script], {
+      // Exercise the built runtime without an experimental loader; bound child ownership below Mocha's deadline.
+      await execute(process.execPath, ['--input-type=module', '-e', script], {
         env: {
           ...process.env,
           ORBIT_TEST_ARTIFACT: artifact,
           ORBIT_TEST_ROOT: repository.rootDir,
           TS_NODE_PROJECT: 'tsconfig.test.json',
         },
+        killSignal: 'SIGKILL',
+        timeout: 15_000,
       }).then(
         () => {
           throw new Error('Missing interruption')
@@ -498,7 +501,9 @@ describe('guarded session recovery', () => {
     const bindingFile = path.join(repository.journalRoot, '.orbit-session-binding.json')
     const original = await fs.readFile(bindingFile, 'utf8')
     try {
-      await fs.writeFile(bindingFile, original.replace(repository.rootDir, path.join(root, 'different')))
+      const altered = JSON.parse(original)
+      altered.sessionRoot = path.join(root, 'different')
+      await fs.writeFile(bindingFile, JSON.stringify(altered) + '\n')
       await FileExecutionJournal.open('binding-lease', {...options, io}).then(
         () => {
           throw new Error('Changed binding accepted')

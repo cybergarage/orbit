@@ -42,7 +42,7 @@ describe('session persistence', () => {
     const repository = new SessionRepository({rootDir: root})
     const session = repository.create({
       createdAt: '2026-08-22T01:02:03.004Z',
-      cwd: '/work/orbit',
+      cwd: path.resolve('/work/orbit'),
       id: 'session-1',
       model: 'gpt-test',
       originator: 'test',
@@ -50,7 +50,7 @@ describe('session persistence', () => {
       systemPrompt: 'Test instructions',
     })
     session.recordTurnContext({
-      cwd: '/work/orbit',
+      cwd: path.resolve('/work/orbit'),
       maxToolIterations: 5,
       model: 'gpt-test',
       provider: 'openai',
@@ -72,7 +72,7 @@ describe('session persistence', () => {
 
     expect(parsed.recovered).to.equal(false)
     expect(parsed.header).to.include({
-      cwd: '/work/orbit',
+      cwd: path.resolve('/work/orbit'),
       id: 'session-1',
       model: 'gpt-test',
       originator: 'test',

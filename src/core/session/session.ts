@@ -28,6 +28,7 @@ import {Message as CoreMessage} from '../message/index.js'
 import {parseSkillEntry, validateSkillEntries} from '../skills/record.js'
 import {parseSessionFile} from './codec.js'
 import {validateCompactionEntries} from './compaction.js'
+import {assertSupportedSyncLevel} from './durability.js'
 import {SessionEntryType} from './entries.js'
 import {SessionHeader} from './header.js'
 import {validateContextProjectionEntries} from './interrupted-context.js'
@@ -199,6 +200,7 @@ export class Session {
   }
 
   async commitCompaction(candidate: SessionCompactionEntry, level: JournalLevel): Promise<void> {
+    assertSupportedSyncLevel(level)
     if (!this.hasManagedLease() || this.compactionSaving || this.closing)
       throw new Error('Compaction requires exclusive live Session ownership')
     if (this.getFile() && level === 'memory') throw new Error('Persistent compaction requires synchronization')
@@ -215,6 +217,7 @@ export class Session {
   }
 
   async commitProjection(entry: ContextProjectionEntry, level: JournalLevel): Promise<void> {
+    assertSupportedSyncLevel(level)
     if (!this.hasManagedLease() || this.compactionSaving || this.closing)
       throw new Error('Projection requires exclusive Session ownership')
     if (this.getFile() && level === 'memory') throw new Error('Persistent projection requires synchronization')
@@ -230,6 +233,7 @@ export class Session {
   }
 
   async commitSkills(entry: SessionSkillEntry, level: JournalLevel): Promise<void> {
+    assertSupportedSyncLevel(level)
     if (!this.hasManagedLease() || this.closing) throw new Error('Skill snapshot requires managed ownership')
     if (this.getFile() && level === 'memory') throw new Error('Persistent Skill snapshots require synchronization')
     const validated = parseSkillEntry(entry)

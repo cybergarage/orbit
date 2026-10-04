@@ -185,7 +185,10 @@ owner, preserving a minimal deletion marker. `session/coordination.ts` validates
 v2 reciprocal storage bindings and their pair identity at ownership boundaries.
 `session/storage-registration.ts` controls offline initialization, read-only
 inspection and explicit resume, using persistent guards in both roots and
-mandatory file/directory synchronization. Pending registration refuses writable
+mandatory file synchronization and supported directory synchronization.
+`session/durability.ts` selects Windows file-sync defaults and rejects explicit
+directory-sync requirements there; Unix defaults retain both barriers. Windows
+namespace power-loss durability is not claimed. Pending registration refuses writable
 scopes; final guard removal and API acknowledgement are distinct.
 The coordination module serializes owner transitions with exclusive
 guards; abandoned guards require offline recovery. `SessionRecorder` retains

@@ -275,7 +275,11 @@ describe('managed coding Agent integration', () => {
     })
     try {
       const result = await (await agent.startRun(user())).finished
-      expect(result.recording).deep.equal({level: 'file-and-directory-sync', mode: 'file', status: 'acknowledged'})
+      expect(result.recording).deep.equal({
+        level: process.platform === 'win32' ? 'file-sync' : 'file-and-directory-sync',
+        mode: 'file',
+        status: 'acknowledged',
+      })
       expect(order).deep.equal(['approval', 'connect', 'catalog', 'model', 'close'])
       expect(journal?.records().find((record) => record.kind === 'run-terminal')?.data.transcriptHighWater).greaterThan(
         0,

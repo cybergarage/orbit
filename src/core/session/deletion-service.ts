@@ -11,6 +11,7 @@ import type {SessionRepository, SessionSummary} from './repository.js'
 import {readDeletionMarker, writeDeletionMarker} from '../execution/deletion.js'
 import {syncDirectory} from '../execution/journal.js'
 import {inspectTranscript, WriterClaim} from './coordination.js'
+import {assertSupportedSyncLevel, defaultFileSyncLevel} from './durability.js'
 
 export interface SessionThreadCloser {
   closeThread(threadId: string): Promise<boolean>
@@ -24,12 +25,13 @@ export class SessionDeletionService {
     private readonly sessions: SessionRepository,
     private readonly logs: SessionLogStore,
     private readonly threads?: SessionThreadCloser,
-    private readonly level: Exclude<JournalLevel, 'memory'> = 'file-and-directory-sync',
+    private readonly level: Exclude<JournalLevel, 'memory'> = defaultFileSyncLevel(),
   ) {}
 
   async delete(sessionId: string): Promise<SessionSummary | undefined | {file?: undefined; id: string}> {
     if (!['file-and-directory-sync', 'file-sync'].includes(this.level))
       throw new Error('Unsupported deletion acknowledgement level')
+    assertSupportedSyncLevel(this.level)
     const scope = this.sessions.scope(sessionId)
     const root = this.sessions.journalRoot
     let marker = await readDeletionMarker(root, sessionId)

@@ -9,6 +9,7 @@ import {parentPort, workerData} from 'node:worker_threads'
 import type {CatalogBackend, CatalogRows, CatalogTable} from './engine.js'
 import type {ProjectMutation, ProjectQuery} from './types.js'
 
+import {fileSyncAccess} from '../session/durability.js'
 import {CatalogEngine, validateCatalogRow} from './engine.js'
 import {ProjectStoreError} from './types.js'
 
@@ -31,12 +32,15 @@ function syncDirectory(directory: string): void {
 function initialize(): CatalogEngine {
   const parent = path.dirname(file)
   const created = fs.mkdirSync(parent, {mode: 0o700, recursive: true})
-  if (created) {
-    let dir = parent
+  if (created && process.platform !== 'win32') {
+    let dir = fs.realpathSync.native(parent)
+    const ancestor = fs.realpathSync.native(path.dirname(created))
     while (true) {
       syncDirectory(dir)
-      if (dir === path.dirname(created)) break
-      dir = path.dirname(dir)
+      if (dir === ancestor) break
+      const next = path.dirname(dir)
+      if (next === dir) throw new ProjectStoreError('storage', 'Created directory ancestry changed')
+      dir = next
     }
   }
 
@@ -188,7 +192,7 @@ try {
               const reserved = fs.openSync(message.destination, 'wx', 0o600)
               fs.closeSync(reserved)
               await db!.backup(message.destination)
-              const completed = fs.openSync(message.destination, 'r')
+              const completed = fs.openSync(message.destination, fileSyncAccess())
               try {
                 fs.fsyncSync(completed)
               } finally {

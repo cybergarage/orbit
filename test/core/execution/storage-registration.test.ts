@@ -190,7 +190,7 @@ describe('offline storage registration', () => {
         observedGuard = true
         let directory = repository.rootDir
         while (true) {
-          expect(synced.has(directory), directory).equal(true)
+          expect(synced.has(directory), directory).equal(process.platform !== 'win32')
           const parent = path.dirname(directory)
           if (parent === directory) break
           directory = parent

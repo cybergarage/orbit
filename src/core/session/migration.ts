@@ -15,6 +15,7 @@ import {
   inspectTranscript,
   migrationIntentPath,
 } from './coordination.js'
+import {fileSyncAccess, syncSupportedDirectory} from './durability.js'
 
 interface MigrationIntent {
   file: string
@@ -29,7 +30,7 @@ function digest(bytes: string): string {
 }
 
 function sync(file: string): void {
-  const descriptor = fs.openSync(file, 'r')
+  const descriptor = fs.openSync(file, fileSyncAccess())
   try {
     fs.fsyncSync(descriptor)
   } finally {
@@ -47,7 +48,7 @@ function read(file: string): string {
 function write(file: string, bytes: string): void {
   fs.writeFileSync(file, bytes, {flag: 'wx', mode: 0o600})
   sync(file)
-  sync(path.dirname(file))
+  syncSupportedDirectory(path.dirname(file))
 }
 
 /** Stop all external writers and restarters for the entire operation and any interrupted recovery. */
@@ -139,12 +140,12 @@ export function migrateSessionTranscript(
   if (digest(read(backup)) !== intent.sourceDigest || digest(read(file)) !== intent.targetDigest)
     throw new Error('Migration evidence mismatch')
   sync(file)
-  sync(path.dirname(file))
+  syncSupportedDirectory(path.dirname(file))
   inspectTranscript(scope, file)
   // Intent still refuses ordinary admission during guard removal.
   guard.release()
   fs.unlinkSync(intentFile)
-  sync(path.dirname(intentFile))
+  syncSupportedDirectory(path.dirname(intentFile))
 }
 
 export interface TranscriptMigrationInspection {
@@ -248,7 +249,7 @@ export function migrateSessionTranscriptV3(
     if (parsed.recovered) throw new Error('Incomplete transcript cannot be migrated')
     if (parsed.header.version === 3) {
       sync(file)
-      sync(path.dirname(file))
+      syncSupportedDirectory(path.dirname(file))
       guard.release()
       return 'already-migrated'
     }
@@ -292,10 +293,10 @@ export function migrateSessionTranscriptV3(
   if (parsed.header.version !== 3 || parsed.recovered) throw new Error('Invalid migrated v3 transcript')
   sync(backup)
   sync(file)
-  sync(path.dirname(file))
+  syncSupportedDirectory(path.dirname(file))
   inspectTranscript(scope, file)
   guard.release()
   fs.unlinkSync(intentFile)
-  sync(path.dirname(intentFile))
+  syncSupportedDirectory(path.dirname(intentFile))
   return 'migrated'
 }
