@@ -1,9 +1,13 @@
-![](https://img.shields.io/badge/status-Work%20In%20Progress-8A2BE2)
+![Work in progress](https://img.shields.io/badge/status-Work%20In%20Progress-8A2BE2)
 ![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/cybergarage/orbit)
 [![npm package](https://img.shields.io/npm/v/@cybergarage/orbit?logo=npm)](https://www.npmjs.com/package/@cybergarage/orbit)
-[![Build Status](https://github.com/cybergarage/orbit/actions/workflows/test.yml/badge.svg)](https://github.com/cybergarage/orbit/actions/workflows/test.yml)
+[![Build Status](https://github.com/cybergarage/orbit/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/cybergarage/orbit/actions/workflows/test.yml)
 
 # Orbit
+
+Framework for building agent applications.
+
+Related projects: [Orbit App](https://github.com/cybergarage/orbit-app) · [Orbit Nest](https://github.com/cybergarage/orbit-nest).
 
 Orbit is a TypeScript agent framework for building agent applications. It
 provides model and tool execution, persistent conversations, and Run lifecycle
