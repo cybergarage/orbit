@@ -3,7 +3,7 @@
 
 import type {WorkspaceSettings} from '../settings.js'
 
-const providers = new Set<string>(['anthropic', 'ollama', 'openai'])
+const providers = new Set<string>(['anthropic', 'apple', 'ollama', 'openai'])
 
 export type ProviderName = string
 

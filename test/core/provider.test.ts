@@ -12,8 +12,8 @@ describe('Provider', () => {
   })
 
   it('returns all defined provider names in a stable order', () => {
-    expect(getProviderNames()).to.deep.equal(['anthropic', 'ollama', 'openai'])
-    expect(getProvider()).to.deep.equal(['anthropic', 'ollama', 'openai'])
+    expect(getProviderNames()).to.deep.equal(['anthropic', 'apple', 'ollama', 'openai'])
+    expect(getProvider()).to.deep.equal(['anthropic', 'apple', 'ollama', 'openai'])
   })
 
   it('validates provider names', () => {

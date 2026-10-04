@@ -71,7 +71,7 @@ USAGE
   $ orbit exec [PROMPT] [--plugin <value>...] [--plugin-data-dir <value>] [--anthropic-api-key-env
     <value>] [--debug] [--execution-policy workspace-confirm|unrestricted] [--journal-level
     file-and-directory-sync|file-sync] [--lang en|ja] [--model <value>] [--ollama-host <value>] [--openai-api-key-env
-    <value>] [--provider anthropic|ollama|openai] [--skill-root <value>...] [--skill <value>...]
+    <value>] [--provider anthropic|apple|ollama|openai] [--skill-root <value>...] [--skill <value>...]
 
 ARGUMENTS
   [PROMPT]  Prompt to send to the agent
@@ -91,7 +91,7 @@ FLAGS
   --plugin=<value>...              Enable local plugin ID=DIRECTORY (repeatable)
   --plugin-data-dir=<value>        Persistent plugin instance data root
   --provider=<option>              LLM provider (overrides workspace setting)
-                                   <options: anthropic|ollama|openai>
+                                   <options: anthropic|apple|ollama|openai>
   --skill=<value>...               Select Skill ID@DIGEST for this Run (repeatable)
   --skill-root=<value>...          Explicit Skill root ID=DIRECTORY (repeatable); replaces the workspace default
 
@@ -115,7 +115,7 @@ USAGE
   $ orbit gui [--plugin <value>...] [--plugin-data-dir <value>] [--anthropic-api-key-env <value>]
     [--debug] [--execution-policy workspace-confirm|unrestricted] [--journal-level file-and-directory-sync|file-sync]
     [--lang en|ja] [--model <value>] [--ollama-host <value>] [--openai-api-key-env <value>] [--provider
-    anthropic|ollama|openai] [--skill-root <value>...] [--metrics-port <value>] [--port <value>]
+    anthropic|apple|ollama|openai] [--skill-root <value>...] [--metrics-port <value>] [--port <value>]
 
 FLAGS
   --anthropic-api-key-env=<value>  Environment variable name for the Anthropic API key
@@ -134,7 +134,7 @@ FLAGS
   --plugin-data-dir=<value>        Persistent plugin instance data root
   --port=<value>                   Loopback port (uses an available port by default)
   --provider=<option>              LLM provider (overrides workspace setting)
-                                   <options: anthropic|ollama|openai>
+                                   <options: anthropic|apple|ollama|openai>
   --skill-root=<value>...          Explicit Skill root ID=DIRECTORY (repeatable); replaces the workspace default
 
 DESCRIPTION
@@ -216,7 +216,7 @@ USAGE
   $ orbit resume [SESSION] [--plugin <value>...] [--plugin-data-dir <value>] [--anthropic-api-key-env
     <value>] [--debug] [--execution-policy workspace-confirm|unrestricted] [--journal-level
     file-and-directory-sync|file-sync] [--lang en|ja] [--model <value>] [--ollama-host <value>] [--openai-api-key-env
-    <value>] [--provider anthropic|ollama|openai] [--skill-root <value>...] [--all] [--last]
+    <value>] [--provider anthropic|apple|ollama|openai] [--skill-root <value>...] [--all] [--last]
 
 ARGUMENTS
   [SESSION]  Exact ID of the saved session to resume
@@ -238,7 +238,7 @@ FLAGS
   --plugin=<value>...              Enable local plugin ID=DIRECTORY (repeatable)
   --plugin-data-dir=<value>        Persistent plugin instance data root
   --provider=<option>              LLM provider (overrides workspace setting)
-                                   <options: anthropic|ollama|openai>
+                                   <options: anthropic|apple|ollama|openai>
   --skill-root=<value>...          Explicit Skill root ID=DIRECTORY (repeatable); replaces the workspace default
 
 DESCRIPTION

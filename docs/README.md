@@ -109,3 +109,5 @@ repository adopts a dedicated specification lifecycle.
 - [Session storage registration, recovery and migration](session-storage.md): offline initialization, scoped writer/journal APIs, retained guards and deletion migration.
 
 - [Verified interrupted context](interrupted-context.md): opt-in cancelled nondispatch evidence, derived input and exclusive transcript-v3 migration.
+
+- [Apple Foundation Models](apple-foundation-models.md): optional local Swift helper, prerequisites and text-only capability boundary.

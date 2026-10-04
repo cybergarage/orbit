@@ -35,6 +35,8 @@ try {
   for (const required of [
     'dist/index.js',
     'dist/index.d.ts',
+    'native/apple-foundation-models/main.swift',
+    'bin/test-apple-foundation-models.mjs',
     'dist/apps/gui/public/client.js',
     'bin/run.js',
     'bin/args.js',
@@ -89,7 +91,9 @@ export function executionApi(run: RunContext, managed: ManagedToolOptions, execu
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import {randomUUID} from 'node:crypto'
-import {PluginCatalog, PLUGIN_SCHEMA, SqliteProjectStore, OperationExecutor, RunSupervisor, MemoryExecutionJournal} from '@cybergarage/orbit'
+import {AppleFoundationModelsAgent, getModel, PluginCatalog, PLUGIN_SCHEMA, SqliteProjectStore, OperationExecutor, RunSupervisor, MemoryExecutionJournal} from '@cybergarage/orbit'
+assert.ok(getModel('apple') instanceof AppleFoundationModelsAgent)
+assert.equal(getModel('apple').getModel(), 'system')
 const supervisor = new RunSupervisor()
 try {
   const handle = await supervisor.startRun({

@@ -139,6 +139,8 @@ export {Message, MessageType, UserMessage} from './message/index.js'
 export type {MessageOptions, MessagePayload} from './message/index.js'
 export {PrometheusOperationalMetrics} from './metrics.js'
 export type {OperationalMetrics} from './metrics.js'
+export {AppleFoundationModelsAgent, AppleHelperClient} from './models/adapters/apple.js'
+export type {AppleAvailability, AppleFoundationModelsOptions, AppleHelperTransport} from './models/adapters/apple.js'
 export {resolveModelContextCapacity} from './models/context-capacity.js'
 export type {ModelContextCapacity, ModelContextInfo, ModelContextOptions} from './models/context-capacity.js'
 export {DEFAULT_MODELS, getModel, getModelRegistry, ModelRegistry, registerModelProvider} from './models/factory.js'
@@ -250,6 +252,7 @@ export {
   resumeSessionStorage,
   retrySessionCleanup,
 } from './session/index.js'
+
 export type {
   OfflineStorageConditions,
   RegistrationResumeOptions,
@@ -257,13 +260,13 @@ export type {
   SessionWriterLease,
   StorageRegistrationInspection,
 } from './session/index.js'
+
 export {
   ContextBudgetError,
   estimateJSONRequest,
   migrateSessionTranscript,
   validateContextProfile,
 } from './session/index.js'
-
 export type {
   ContextPolicy,
   ContextPreparationEvent,
@@ -284,8 +287,8 @@ export {
   VerifiedContextError,
 } from './session/index.js'
 export type {ContextProjectionEntry, InterruptionPolicy} from './session/index.js'
-
 export type {TranscriptMigrationInspection} from './session/index.js'
+
 export {
   loadWorkspaceSettings,
   loadWorkspaceSettingsSync,
@@ -305,8 +308,8 @@ export type {
 } from './settings.js'
 
 export * from './skills/index.js'
-export {State} from './state.js'
 
+export {State} from './state.js'
 export {serializeMessage, ThreadEventType, ThreadManager, ThreadStatus} from './thread.js'
 
 export type {
@@ -331,8 +334,8 @@ export type {
   ThreadToolStartedEvent,
   ThreadToolUpdatedEvent,
 } from './thread.js'
-export {GptTokenizer} from './tokenizer/index.js'
 
+export {GptTokenizer} from './tokenizer/index.js'
 export type {Tokenizer} from './tokenizer/index.js'
 
 export {
