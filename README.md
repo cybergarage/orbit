@@ -3,11 +3,7 @@
 [![npm package](https://img.shields.io/npm/v/@cybergarage/orbit?logo=npm)](https://www.npmjs.com/package/@cybergarage/orbit)
 [![Build Status](https://github.com/cybergarage/orbit/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/cybergarage/orbit/actions/workflows/test.yml)
 
-# Orbit
-
 <img src="doc/img/orbit-logo-navy-blue-readme.png" alt="Orbit logo: an orbital O with a central dot and a satellite dot, beside the Orbit wordmark" width="360">
-
-Framework for building agent applications.
 
 Related projects: [Orbit App](https://github.com/cybergarage/orbit-app) · [Orbit Nest](https://github.com/cybergarage/orbit-nest).
 
