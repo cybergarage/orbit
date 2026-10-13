@@ -27,6 +27,12 @@ platform-specific upgrade notes, and [Development](development.md#releases-and-n
 for validation and publication steps. The book's v0.8.1 baseline remains
 independent of this release.
 
+The [v0.9.0 GitHub source release](https://github.com/cybergarage/orbit/releases/tag/v0.9.0)
+was published on 2026-10-14 after its
+[release validation](https://github.com/cybergarage/orbit/actions/runs/38442641049)
+passed. npm publication remains pending; do not assume the npm package or
+`latest` tag has changed from the source release alone.
+
 The 1.0 milestone is a plan, not available functionality or a promised date.
 Application completion should provide evidence for 1.0 readiness: representative
 workflows, operator recovery, deployment behavior and API usage. The version

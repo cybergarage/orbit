@@ -31,6 +31,10 @@ optional Apple text provider. See the [changelog](CHANGELOG.md) for additions
 and upgrade notes. To use the source checkout, follow
 [Development](docs/development.md).
 
+The [v0.9.0 GitHub source release](https://github.com/cybergarage/orbit/releases/tag/v0.9.0)
+is available. npm publication is pending; the installation commands below apply
+after npm publication.
+
 As an application dependency:
 
 ```sh
