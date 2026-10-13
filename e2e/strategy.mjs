@@ -4,7 +4,7 @@
 export const strategyVersion = 'coding-recovery-v1'
 
 export function readContextTriggerRatio(value) {
-  if (value === undefined || value === '') return undefined
+  if (value === undefined || value === '') return
   const ratio = Number(value)
   if (!Number.isFinite(ratio) || ratio <= 0.65 || ratio >= 0.95)
     throw new Error('Context trigger ratio must be greater than 0.65 and less than 0.95')

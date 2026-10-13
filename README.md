@@ -17,7 +17,7 @@ agents move work forward in line with people's goals. The name expresses the
 idea of creating that path. See the [logo and name](doc/style/README.md) for
 the selected artwork and the original Japanese wording.
 
-**0.8 is an evolving application-development release.** Orbit supplies the runtime;
+**0.9 is an evolving application-development release.** Orbit supplies the runtime;
 your application supplies channel integrations, scheduling, memory policy,
 authentication and notification delivery. See [capabilities and boundaries](docs/building-agents.md).
 
@@ -26,19 +26,21 @@ authentication and notification delivery. See [capabilities and boundaries](docs
 Requires Node.js **20.19 or newer** and npm. The library uses native ESM and runs
 in a trusted Node.js process, not a browser renderer.
 
-Version 0.8.1 is available from npm and the v0.8.1 source tag. To use the
-source checkout, follow [Development](docs/development.md).
+Version 0.9.0 adds durable scheduled work, Windows storage compatibility and an
+optional Apple text provider. See the [changelog](CHANGELOG.md) for additions
+and upgrade notes. To use the source checkout, follow
+[Development](docs/development.md).
 
 As an application dependency:
 
 ```sh
-npm install --save-exact @cybergarage/orbit@0.8.1
+npm install --save-exact @cybergarage/orbit@0.9.0
 ```
 
 Or as a command-line application:
 
 ```sh
-npm install --global @cybergarage/orbit@0.8.1
+npm install --global @cybergarage/orbit@0.9.0
 orbit --help
 ```
 

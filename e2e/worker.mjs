@@ -51,6 +51,7 @@ if (contextPolicy && config.contextTriggerRatio !== undefined) {
   contextPolicy.profile.trigger = Math.floor(inputBudget * config.contextTriggerRatio)
   contextPolicy.profile.target = Math.min(contextPolicy.profile.target, contextPolicy.profile.trigger - 1)
 }
+
 if (contextPolicy) fs.writeFileSync('/output/context-policy.json', JSON.stringify(contextPolicy, null, 2))
 const agent = new Agent({
   contextPolicy,

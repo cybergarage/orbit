@@ -7,7 +7,7 @@ import path from 'node:path'
 // Set before dynamically importing host.mjs, which resolves its image at import.
 process.env.ORBIT_E2E_IMAGE ??= 'orbit-e2e:coding-workflows-agent'
 const {command, docker, image, ollamaMetadata, repo, runAgent, writeJSON} = await import('../host.mjs')
-const {workflowContextWindow, workflowResultStatus, caseIds, checkFiles, checkFilesAndGrade, makeCase, runtimePassed, source} =
+const {caseIds, checkFiles, checkFilesAndGrade, makeCase, runtimePassed, source, workflowContextWindow, workflowResultStatus} =
   await import('./cases.mjs')
 const {gradeCodingWorkflow} = await import('./grade.mjs')
 const {readElapsed, readRounds} = await import('../strategy.mjs')

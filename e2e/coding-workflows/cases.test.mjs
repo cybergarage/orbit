@@ -7,14 +7,14 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {
-  workflowContextWindow,
-  workflowResultStatus,
   caseIds,
   caseResolved,
   checkFiles,
   checkFilesAndGrade,
   makeCase,
   runtimePassed,
+  workflowContextWindow,
+  workflowResultStatus,
 } from './cases.mjs'
 
 describe('Coding workflow fixtures (no inference or Docker)', () => {

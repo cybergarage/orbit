@@ -80,6 +80,8 @@ routing contract belongs in an ADR, and its implemented structure appears in
 
 - [Managed Execution](execution.md): run APIs, one-operation approval, required journal, recovery and migration.
 
+- [Durable scheduled work](scheduled-work.md): single-owner host schedules, stable request IDs and interrupted-attempt recovery.
+
 - [Explicit Skill selection](skills.md): source-identified, one-Run instructions and historical snapshots.
 - [Settings](settings.md)
 - [Model context capacity](model-context-capacity.md)

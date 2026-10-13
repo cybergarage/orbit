@@ -63,7 +63,7 @@ describe('E2E host control (no model or Docker)', () => {
   })
 
   it('accepts only diagnostic compaction trigger ratios above the product default', () => {
-    expect(readContextTriggerRatio(undefined)).to.equal(undefined)
+    expect(readContextTriggerRatio()).to.equal(undefined)
     expect(readContextTriggerRatio('0.8')).to.equal(0.8)
     for (const value of ['0.65', '0.95', 'NaN', 'Infinity', '0', '1'])
       expect(() => readContextTriggerRatio(value)).to.throw('Context trigger ratio')

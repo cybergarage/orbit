@@ -1,5 +1,57 @@
 # Changelog
 
+## 0.9.0 — 2026-10-14
+
+Source release for the current application-development runtime. GitHub
+release creation and npm publication are separate steps.
+
+### Added
+
+- Add public `DurableWorkStore` and scheduling types for single-owner local
+  hosts. Persist schedules, occurrences, stable request IDs, attempts, approvals,
+  cancellation and results. Interrupted read work can return to the queue;
+  uncertain opaque effects require explicit reconciliation. See
+  [Durable scheduled work](docs/scheduled-work.md).
+- Add the optional `apple` provider, `AppleFoundationModelsAgent` and
+  `AppleHelperClient`, with a separately compiled Swift helper included in the
+  package. Support local text generation and alternating text turns on eligible
+  Macs; tools, streaming and structured generation remain unsupported. See
+  [Apple Foundation Models](docs/apple-foundation-models.md).
+- Add Orbit branding and links to the Orbit App and Orbit Nest projects.
+
+### Fixed
+
+- Support Windows storage registration, writer coordination, migration and
+  managed execution with explicit file-flush acknowledgements. Use writable
+  file handles for synchronization and preserve native realpath identity,
+  including expanded Windows short paths. Explicit unsupported directory-sync
+  guarantees still fail; errors are not silently ignored. See
+  [Platform acknowledgement](docs/session-storage.md#platform-acknowledgement).
+
+### Upgrade notes
+
+- Pin application dependencies to `@cybergarage/orbit@0.9.0` and retain the
+  application lockfile. The consumer example now targets this version.
+- Existing v0.8.1 execution APIs remain available. This release does not add a
+  Session or execution-journal format migration. Existing or interrupted data
+  still requires the applicable [storage maintenance](docs/session-storage.md)
+  procedure before changing writers.
+- Windows defaults to `file-sync`; Linux and macOS retain
+  `file-and-directory-sync`. Hosts requiring the stronger level must request it
+  explicitly and handle rejection on unsupported platforms. File-only
+  acknowledgement does not establish namespace durability across power loss.
+- Scheduling supplies host storage primitives, not a background daemon or
+  calendar/timezone recurrence. Apple model use requires explicit native setup
+  and a text-only configuration; other provider installations remain portable.
+
+### Validation scope
+
+Deterministic tests and an independently installed package consumer validate the
+runtime and distribution surface. Live-provider quality, deployment recovery
+and physical power-loss behavior require separate qualification. The existing
+stale-lock reclamation race remains documented in
+[Development](docs/development.md#tests-and-validation).
+
 ## 0.8.1 — 2026-10-02
 
 Source release with compatible public execution APIs. npm publication remains
