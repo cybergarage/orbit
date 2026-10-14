@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-10-14
 decision-date: 2026-10-14
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-10-14
+implementation-commits:
+  - cdc1a18fd6d7a86ef469c232c42e722d72916984
 superseded-by: []
 ---
 
@@ -81,14 +82,42 @@ boundaries with no dependency or schema upgrade.
 
 ## Implementation and Confirmation
 
-Tests use synthetic temporary repositories and catalogs. Validation evidence is
-recorded with implementation confirmation; local tests do not establish physical
-power-loss or cross-platform qualification.
+The local core scope completed in
+`cdc1a18fd6d7a86ef469c232c42e722d72916984`, based on upstream
+`59fbbf37033426365a41bd831244241b92c7ba3e`. On Apple M4 with Node
+26.10.0, headers, build, source/test type checks and lint passed; lint reported
+zero errors. The focused lifecycle suite passed 43 tests, and the selected broad
+suite passed 983 tests. All executed filesystem tests used synthetic temporary
+repositories and catalogs.
+
+An independent reviewer reproduced two regressions: unavailable archived
+membership was classified active, and failed archive could remove a concurrently
+resumed runtime mapping. Both have failing-before-fix synthetic tests and passed
+after correction; the reviewer confirmed the fixes without further findings.
+
+The no-backup restriction kept these complete files outside the broad run:
+
+- `test/apps/cli/storage-reset.test.ts`
+- `test/apps/cli/storage.test.ts`
+- `test/core/execution/context-compaction.test.ts`
+- `test/core/execution/context-projection-format.test.ts`
+- `test/core/execution/context-projection-migration.test.ts`
+- `test/core/execution/graph-maintenance.test.ts`
+
+Whole-file exclusions also omit non-backup cases. The SQLite test titled
+"persists operations and takes a consistent SQLite backup while WAL is live"
+and the `compaction-migration-interruption.mjs` subprocess case were filtered
+out separately. These backup tests create only synthetic temporary fixtures:
+SQLite copies, versioned transcript backups, dummy backup content, and synthetic
+Graph baseline snapshots. They do not copy real development conversations.
+They were not executed; the unrestricted suite is not claimed to pass.
+Local tests do not establish physical power-loss or cross-platform qualification.
 
 ## Follow-up Work
 
-CLI exposure is issue #6 and is outside this scope. Publication requires explicit
-approval (provided separately on 2026-10-14). Power-loss and cross-platform qualification remain outside local M4 tests.
+CLI exposure is issue #6 and is outside this scope. Power-loss and cross-platform
+qualification remain outside local M4 tests. Backup-test coverage remains
+unverified under the execution restriction.
 
 ## References
 
