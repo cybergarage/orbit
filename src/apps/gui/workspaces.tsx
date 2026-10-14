@@ -322,7 +322,9 @@ function TaskForm({
     <form
       onSubmit={(event) => {
         event.preventDefault()
-        onCreate({
+        // The parent action catches failures and renders the error banner.
+        // eslint-disable-next-line no-void
+        void onCreate({
           next: Date.parse(`${first}Z`),
           task: {instructions, name, permissions: 'workspace-read', version: 1, workspace},
           ...(repeating ? {interval: Number(seconds) * 1000} : {}),
@@ -403,7 +405,7 @@ function TaskForm({
           <Icon name="cancel" />
           Cancel
         </button>
-        <button className="selected" disabled={busy}>
+        <button className="selected" disabled={busy} type="submit">
           <Icon name="check" />
           {busy ? 'Creating…' : 'Create task'}
         </button>
