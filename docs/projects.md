@@ -245,3 +245,40 @@ operation results are historical acknowledgements and cannot recreate a project.
 and `all` archive filters. Omission means all for compatibility. It filters before
 pagination, using the existing exclusive session-ID cursor. Session archive
 preserves project membership and does not retire memories.
+
+## CLI project lifecycle
+
+The CLI uses the same persistent `projects.sqlite` catalog as the GUI, without
+connecting a model or MCP server:
+
+```sh
+orbit project list --archive all
+orbit project list --archive archived
+orbit project sessions <PROJECT_ID> --archive archived
+orbit project archive <PROJECT_ID>
+orbit project unarchive <PROJECT_ID>
+orbit project delete <PROJECT_ID> --force
+```
+
+All mutations require an exact Project ID. Unarchive restores active Project
+availability. Archiving a Project retains its directory, memories and conversation
+memberships; it does not change individual sessions' archive states. Lists default
+to all archive states; `--archive active|archived|all` selects a state.
+`project list` prints a JSON array ordered by ID. `project sessions` prints a JSON
+page with membership, session and unavailable status plus an optional
+`nextCursor`. Use `--after` with the last Project ID or returned session cursor
+and `--limit` (1 to 200). Filters apply before pagination.
+
+Project deletion removes only an empty catalog Project and its memories and
+committed reservations. Any remaining conversation membership, including archived
+or unavailable conversations across storage pairs, or pending creation reservation
+blocks deletion. Explicitly move or delete conversations first. After using
+`orbit delete` or `orbit session delete`, `orbit project sessions <PROJECT_ID>`
+reconciles completed deletion markers before retrying Project deletion.
+Working-directory and source files are never removed.
+
+Interactive deletion names the exact Project and scope and defaults to No.
+Non-interactive deletion requires `--force`; it does not bypass catalog revision,
+reservation or dependency checks. A revision change during confirmation fails
+rather than deleting a changed target. Unknown IDs, busy/closed/unavailable
+catalogs and storage failures produce a failure exit status.

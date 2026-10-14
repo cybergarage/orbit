@@ -12,6 +12,7 @@ import {selectSessionSummary} from '../session-selection.js'
 
 export interface SessionInformationCommandOptions {
   all?: boolean
+  archive?: 'active' | 'all' | 'archived'
   cwd?: string
   idOnly?: boolean
   json?: boolean
@@ -55,6 +56,7 @@ export default class SessionInformationCommand extends Command {
   static description = 'Show saved session information'
   static examples = [
     '<%= config.bin %> <%= command.id %> <SESSION_ID>',
+    '<%= config.bin %> <%= command.id %> -- <SESSION_ID>',
     '<%= config.bin %> <%= command.id %> --last',
     '<%= config.bin %> <%= command.id %> --last --all --id-only',
     '<%= config.bin %> <%= command.id %> <SESSION_ID> --json',
@@ -63,6 +65,10 @@ export default class SessionInformationCommand extends Command {
     all: Flags.boolean({
       default: false,
       description: 'Search all working directories (requires --last)',
+    }),
+    archive: Flags.string({
+      description: 'Select archive state (omission includes all)',
+      options: ['active', 'archived', 'all'],
     }),
     'id-only': Flags.boolean({
       default: false,
@@ -83,6 +89,7 @@ export default class SessionInformationCommand extends Command {
     try {
       await runSessionInformationCommand(args.session, {
         all: flags.all,
+        archive: flags.archive as SessionInformationCommandOptions['archive'],
         idOnly: flags['id-only'],
         json: flags.json,
         last: flags.last,

@@ -7,7 +7,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 import type {AgentOptions} from '../../core/chat.js'
-import type {Session, SessionSummary} from '../../core/index.js'
+import type {Message, Session, SessionSummary} from '../../core/index.js'
 
 import {resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadSystemContexts} from '../../core/context.js'
@@ -15,18 +15,21 @@ import {Agent, runInteractiveSession, SessionRepository} from '../../core/index.
 import {selectOllamaModel} from '../../core/models/adapters/ollama.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
+import {withProjectCatalog} from '../project-catalog.js'
 import {selectSessionSummary} from '../session-selection.js'
 
 type AgentClass = typeof Agent
 
 export interface ResumeSessionCommandOptions extends AgentOptions {
   all?: boolean
+  archive?: 'active' | 'all' | 'archived'
   cwd?: string
   last?: boolean
 }
 
 export interface ResumeSessionCommandDependencies {
   agentClass?: AgentClass
+  assertProjectActive?: (id: string) => Promise<unknown>
   contextLoader?: typeof loadSystemContexts
   ollamaModelSelector?: typeof selectOllamaModel
   repository?: SessionRepository
@@ -45,6 +48,10 @@ export async function runResumeSessionCommand(
   const repository = deps.repository ?? new SessionRepository()
   const launchCwd = path.resolve(options.cwd ?? process.cwd())
   const summary = await selectSessionSummary(repository, sessionId, options, launchCwd)
+  const assertProjectActive =
+    deps.assertProjectActive ??
+    ((id: string) => withProjectCatalog(repository, (service) => service.requireActive(id), true))
+  await assertProjectActive(summary.id)
   await requireDirectory(summary.cwd)
   const session = openSession(repository, summary)
 
@@ -58,7 +65,7 @@ export async function runResumeSessionCommand(
     )
     const systemPrompt = metadata.systemPrompt ?? (await loadContextText(metadata.cwd, deps.contextLoader))
     await (deps.sessionRunner ?? runInteractiveSession)({
-      agentClass: deps.agentClass ?? Agent,
+      agentClass: guardedResumeAgent(deps.agentClass ?? Agent, () => assertProjectActive(summary.id)),
       cwd: metadata.cwd,
       debug: resolvedOptions.debug,
       executionPolicy: resolvedOptions.executionPolicy,
@@ -96,6 +103,10 @@ export default class Resume extends Command {
       default: false,
       description: 'Search all working directories (requires --last)',
     }),
+    archive: Flags.string({
+      description: 'Select archive state (omission includes all)',
+      options: ['active', 'archived', 'all'],
+    }),
     last: Flags.boolean({
       default: false,
       description: 'Resume the most recently updated eligible session',
@@ -108,6 +119,7 @@ export default class Resume extends Command {
       await runResumeSessionCommand(args.session, {
         ...toAgentOptions(flags),
         all: flags.all,
+        archive: flags.archive as ResumeSessionCommandOptions['archive'],
         last: flags.last,
       })
     } catch (error) {
@@ -157,4 +169,14 @@ async function requireDirectory(cwd: string): Promise<void> {
   } catch {}
 
   throw new Error(`Saved session working directory does not exist: ${cwd}`)
+}
+
+/** Recheck membership for each fresh invocation; already admitted work may finish. */
+function guardedResumeAgent(BaseAgent: AgentClass, assertActive: () => Promise<unknown>): AgentClass {
+  return class extends BaseAgent {
+    override async invoke(...args: Parameters<Agent['invoke']>): Promise<Message> {
+      await assertActive()
+      return super.invoke(...args)
+    }
+  }
 }

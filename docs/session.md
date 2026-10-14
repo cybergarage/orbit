@@ -576,5 +576,52 @@ idle threads before acquiring the same registered writer claim used by other
 session mutations. A competing writer or transition fails rather than overwriting
 state; retry after it settles. Repeated settled requests are idempotent. Missing
 sessions fail. Delete retains its destructive behavior and retained markers;
-archive metadata cannot resurrect a deleted identity. CLI commands are separate
-work in issue #6.
+archive metadata cannot resurrect a deleted identity. The CLI exposes these
+operations as described below.
+
+## CLI archive and restoration
+
+Use exact saved session IDs:
+
+```sh
+orbit session list --archive archived
+orbit session archive <SESSION_ID>
+orbit session unarchive <SESSION_ID>
+orbit session delete <SESSION_ID> --force
+```
+
+Unarchive is the restore operation. Archive and unarchive retain history and do
+not prompt. An open writer, quarantined or unsettled run, or unavailable storage
+prevents the transition. Close the owning process or settle the run first;
+these commands never cancel a run. Delete permanently removes conversation
+history, diagnostics and execution journals through the existing `orbit delete`
+implementation. Interactive deletion defaults to No; non-interactive deletion
+requires `--force`, which does not bypass integrity or writer checks.
+
+`session list` prints a JSON page containing `data`, `errors` and an optional
+`nextCursor`. Pass that cursor with `--cursor`; use `--limit` from 1 to 200.
+Listing/storage errors fail the command instead of printing a successful partial
+listing. `--archive active|archived|all` filters before pagination; omission
+includes all states for compatibility. Project-assigned and unassigned sessions
+are included. For a particular Project, use `orbit project sessions`.
+
+Inspection (`orbit session <SESSION_ID>`) remains available for archived history.
+`session --last` and `resume --last` accept the same archive filter. Their existing
+`--all` flag continues to search all working directories and still requires
+`--last`. Exact IDs may also use `--archive` to assert the requested state.
+Explicit resume of an archived session preserves its archive state. CLI resume
+checks Project membership before opening history: an archived Project must be
+unarchived first, and unavailable membership or catalog failures block resume.
+
+
+If an exact session ID matches a subcommand name (for example `list`, `archive`,
+`unarchive` or `delete`), inspect it with `orbit session -- <SESSION_ID>`.
+Place output flags before the separator, for example `orbit session --json -- list`.
+The separator keeps the ID positional rather than treating it as a command.
+Exact inspection, resume, archive and unarchive tolerate unrelated damaged
+history; they still reject damaged metadata belonging to the requested identity.
+Discovery/listing errors remain failures.
+
+Resumed CLI Agents recheck Project eligibility before every new invocation.
+Archiving the Project from another terminal blocks subsequent inputs; already
+admitted work may finish. Unarchiving permits new inputs again.

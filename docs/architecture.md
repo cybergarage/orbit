@@ -341,6 +341,13 @@ Archive metadata lives outside immutable conversation history; project deletion
 never traverses a working directory. See [Projects](projects.md#core-project-deletion)
 and [Sessions](session.md#persistent-core-session-archive) for the public contracts.
 
+CLI lifecycle commands share `ProjectService`, the registered session repository
+archive API and `SessionDeletionService`. The CLI catalog adapter opens the same
+SQLite catalog as the GUI and closes its worker after each operation; lifecycle
+inspection does not initialize providers. Session delete remains an alias of the
+existing deletion command. See [CLI Reference](cli.md), [Projects](projects.md#cli-project-lifecycle)
+and [Sessions](session.md#cli-archive-and-restoration).
+
 ### Bundled GUI local scheduling
 
 `src/apps/gui/local-scheduler.ts` adapts the single-owner `DurableWorkStore` for
