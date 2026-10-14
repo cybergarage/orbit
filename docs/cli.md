@@ -326,6 +326,8 @@ DESCRIPTION
 EXAMPLES
   $ orbit session <SESSION_ID>
 
+  $ orbit session -- <SESSION_ID>
+
   $ orbit session --last
 
   $ orbit session --last --all --id-only

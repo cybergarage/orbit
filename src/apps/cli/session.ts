@@ -56,6 +56,7 @@ export default class SessionInformationCommand extends Command {
   static description = 'Show saved session information'
   static examples = [
     '<%= config.bin %> <%= command.id %> <SESSION_ID>',
+    '<%= config.bin %> <%= command.id %> -- <SESSION_ID>',
     '<%= config.bin %> <%= command.id %> --last',
     '<%= config.bin %> <%= command.id %> --last --all --id-only',
     '<%= config.bin %> <%= command.id %> <SESSION_ID> --json',

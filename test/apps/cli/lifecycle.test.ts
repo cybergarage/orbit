@@ -8,6 +8,9 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import {promisify} from 'node:util'
+import {stub} from 'sinon'
+
+import type {AgentOptions, Model} from '../../../src/core/index.js'
 
 import {runDeleteSessionCommand} from '../../../src/apps/cli/delete.js'
 import {runProjectCommand} from '../../../src/apps/cli/project.js'
@@ -18,7 +21,15 @@ import {runSessionListCommand} from '../../../src/apps/cli/session/list.js'
 import {runSessionUnarchiveCommand} from '../../../src/apps/cli/session/unarchive.js'
 import {withProjectCatalog} from '../../../src/apps/project-catalog.js'
 import {selectSessionSummary} from '../../../src/apps/session-selection.js'
-import {MemoryProjectStore, ProjectService} from '../../../src/core/index.js'
+import {
+  Agent,
+  MemoryProjectStore,
+  Message,
+  MessageType,
+  OperatorType,
+  ProjectService,
+  State,
+} from '../../../src/core/index.js'
 import {SessionRepository} from '../../session-storage-fixture.js'
 
 async function rejects(action: Promise<unknown>, message: string) {
@@ -102,12 +113,148 @@ describe('CLI project and session lifecycle', () => {
     await rejects(cli(['session', 'delete', 'cli-history']), '--force')
     await cli(['session', 'delete', 'cli-history', '--force'])
     expect(await cliRepository.findById('cli-history')).to.be.undefined
+    for (const id of ['list', 'archive', 'unarchive', 'delete']) {
+      const reserved = cliRepository.create({cwd: root, id})
+      // eslint-disable-next-line no-await-in-loop
+      await reserved.close()
+      // eslint-disable-next-line no-await-in-loop
+      expect((await cli(['session', '--', id])).stdout).contains(`Session ID: ${id}`)
+      // eslint-disable-next-line no-await-in-loop
+      expect(JSON.parse((await cli(['session', '--json', '--', id])).stdout).id).equals(id)
+    }
+
     await cli(['project', 'archive', p!.id])
     expect(JSON.parse((await cli(['project', 'list', '--archive', 'archived'])).stdout)).length(1)
     await cli(['project', 'unarchive', p!.id])
     await rejects(cli(['project', 'delete', p!.id]), '--force')
     await cli(['project', 'delete', p!.id, '--force'])
     expect(JSON.parse((await cli(['project', 'list'])).stdout)).length(0)
+  })
+
+  it('isolates exact healthy-session operations from unrelated damaged history', async () => {
+    const healthy = await saved('healthy')
+    const broken = await saved('broken')
+    await saved('bad-sidecar')
+    const bytes = await fs.readFile(healthy.file)
+    await fs.writeFile(broken.file, 'Synthetic malformed transcript\n')
+    await fs.writeFile(path.join(repository.rootDir, '.coordination', 'bad-sidecar.archive.json'), 'invalid')
+    await rejects(runSessionListCommand({}, repository), 'Session listing failed')
+    expect((await selectSessionSummary(repository, 'healthy', {}, root)).id).equals('healthy')
+    await runSessionArchiveCommand('healthy', repository)
+    await runSessionUnarchiveCommand('healthy', repository)
+    let resumed = false
+    await runResumeSessionCommand(
+      'healthy',
+      {},
+      {
+        repository,
+        async sessionRunner() {
+          resumed = true
+        },
+        settingsLoader: async () => ({}),
+        stdinIsTTY: true,
+        stdoutIsTTY: true,
+      },
+    )
+    expect(resumed).equals(true)
+    expect(await fs.readFile(healthy.file)).deep.equals(bytes)
+    await fs.writeFile(path.join(repository.rootDir, '.coordination', 'healthy.archive.json'), 'invalid')
+    await rejects(selectSessionSummary(repository, 'healthy', {}, root), 'SyntaxError')
+    await rejects(runSessionArchiveCommand('healthy', repository), 'SyntaxError')
+    await rejects(runSessionUnarchiveCommand('healthy', repository), 'SyntaxError')
+  })
+
+  it('finds an exact healthy target on a later page despite unrelated listing errors', async () => {
+    const healthy = await saved('later-target')
+    const page = stub(repository, 'listPage')
+    page
+      .onFirstCall()
+      .resolves({data: [], errors: [{file: 'unrelated.jsonl', message: 'Synthetic damage'}], nextCursor: '200'})
+    page.onSecondCall().resolves({data: [healthy], errors: [{file: 'unrelated.jsonl', message: 'Synthetic damage'}]})
+    try {
+      expect((await selectSessionSummary(repository, healthy.id, {}, root)).id).equals(healthy.id)
+      expect(page.secondCall.args[0]?.cursor).equals('200')
+    } finally {
+      page.restore()
+    }
+  })
+
+  it('rechecks Project state for each invocation, including archival during resume setup', async () => {
+    const p = await withProjectCatalog(repository, (service) =>
+      service.create({name: 'Guarded', operationId: randomUUID()}),
+    )
+    await saved('guarded')
+    await withProjectCatalog(repository, (service) =>
+      service.changeMembership('guarded', {
+        expectedRevision: 0,
+        operationId: randomUUID(),
+        projectId: p!.id,
+        sourceProjectId: null,
+      }),
+    )
+    let agentCalls = 0
+    class SyntheticAgent extends Agent {
+      constructor(options: AgentOptions = {}) {
+        super({
+          ...options,
+          deps: {
+            createModel: (): Model => ({
+              getModel: () => 'synthetic',
+              getName: () => OperatorType.Model,
+              getProvider: () => 'openai',
+              async invoke() {
+                return new Message(MessageType.Assistant, {content: 'Synthetic reply'})
+              },
+            }),
+          },
+        })
+      }
+
+      override async invoke(): Promise<Message> {
+        agentCalls++
+        return new Message(MessageType.Assistant, {content: 'Synthetic reply'})
+      }
+    }
+    await runResumeSessionCommand(
+      'guarded',
+      {},
+      {
+        agentClass: SyntheticAgent,
+        repository,
+        async sessionRunner(options) {
+          const GuardedAgent = options.agentClass
+          const agent = new GuardedAgent({
+            cwd: root,
+            model: {name: 'synthetic', provider: 'openai'},
+            state: new State(options.session),
+          })
+          const input = [new Message(MessageType.User, {content: 'Synthetic input'})]
+          try {
+            const before = await fs.readFile(options.session!.getFile()!)
+            await rejects(agent.invoke(input), 'Project is archived')
+            expect(agentCalls).equals(0)
+            expect(await fs.readFile(options.session!.getFile()!)).deep.equals(before)
+            await withProjectCatalog(repository, (service) => runProjectCommand(service, 'unarchive', p!.id))
+            await agent.invoke(input)
+            expect(agentCalls).equals(1)
+            await withProjectCatalog(repository, (service) => runProjectCommand(service, 'archive', p!.id))
+            await rejects(agent.invoke(input), 'Project is archived')
+            expect(agentCalls).equals(1)
+            await withProjectCatalog(repository, (service) => runProjectCommand(service, 'unarchive', p!.id))
+            await agent.invoke(input)
+            expect(agentCalls).equals(2)
+          } finally {
+            await agent.close()
+          }
+        },
+        async settingsLoader() {
+          await withProjectCatalog(repository, (service) => runProjectCommand(service, 'archive', p!.id))
+          return {}
+        },
+        stdinIsTTY: true,
+        stdoutIsTTY: true,
+      },
+    )
   })
 
   it('archives and restores the same transcript across restart and repeated operations', async () => {

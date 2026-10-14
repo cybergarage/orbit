@@ -612,3 +612,16 @@ Inspection (`orbit session <SESSION_ID>`) remains available for archived history
 Explicit resume of an archived session preserves its archive state. CLI resume
 checks Project membership before opening history: an archived Project must be
 unarchived first, and unavailable membership or catalog failures block resume.
+
+
+If an exact session ID matches a subcommand name (for example `list`, `archive`,
+`unarchive` or `delete`), inspect it with `orbit session -- <SESSION_ID>`.
+Place output flags before the separator, for example `orbit session --json -- list`.
+The separator keeps the ID positional rather than treating it as a command.
+Exact inspection, resume, archive and unarchive tolerate unrelated damaged
+history; they still reject damaged metadata belonging to the requested identity.
+Discovery/listing errors remain failures.
+
+Resumed CLI Agents recheck Project eligibility before every new invocation.
+Archiving the Project from another terminal blocks subsequent inputs; already
+admitted work may finish. Unarchiving permits new inputs again.

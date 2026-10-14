@@ -4,10 +4,9 @@
 import {Args, Command} from '@oclif/core'
 
 import {SessionRepository} from '../../../core/index.js'
-import {runSessionListCommand} from './list.js'
 
 export async function runSessionUnarchiveCommand(id: string, repository = new SessionRepository()) {
-  await runSessionListCommand({}, repository)
+  repository.isArchived(id)
   return repository.setArchived(id, false)
 }
 

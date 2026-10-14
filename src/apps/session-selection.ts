@@ -70,12 +70,11 @@ async function latestEligibleSession(repository: SessionRepository, options: Ses
 }
 
 async function exactSession(repository: SessionRepository, id: string) {
+  repository.isArchived(id)
   let cursor: string | undefined
   do {
     // eslint-disable-next-line no-await-in-loop
     const page = await repository.listPage({cursor, limit: 200})
-    if (page.errors.length > 0)
-      throw new Error(`Session selection failed: ${page.errors.map((error) => error.message).join('; ')}`)
     const session = page.data.find((item) => item.id === id)
     if (session) return session
     cursor = page.nextCursor

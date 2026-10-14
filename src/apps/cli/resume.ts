@@ -7,7 +7,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 import type {AgentOptions} from '../../core/chat.js'
-import type {Session, SessionSummary} from '../../core/index.js'
+import type {Message, Session, SessionSummary} from '../../core/index.js'
 
 import {resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadSystemContexts} from '../../core/context.js'
@@ -48,10 +48,10 @@ export async function runResumeSessionCommand(
   const repository = deps.repository ?? new SessionRepository()
   const launchCwd = path.resolve(options.cwd ?? process.cwd())
   const summary = await selectSessionSummary(repository, sessionId, options, launchCwd)
-  await (
+  const assertProjectActive =
     deps.assertProjectActive ??
     ((id: string) => withProjectCatalog(repository, (service) => service.requireActive(id), true))
-  )(summary.id)
+  await assertProjectActive(summary.id)
   await requireDirectory(summary.cwd)
   const session = openSession(repository, summary)
 
@@ -65,7 +65,7 @@ export async function runResumeSessionCommand(
     )
     const systemPrompt = metadata.systemPrompt ?? (await loadContextText(metadata.cwd, deps.contextLoader))
     await (deps.sessionRunner ?? runInteractiveSession)({
-      agentClass: deps.agentClass ?? Agent,
+      agentClass: guardedResumeAgent(deps.agentClass ?? Agent, () => assertProjectActive(summary.id)),
       cwd: metadata.cwd,
       debug: resolvedOptions.debug,
       executionPolicy: resolvedOptions.executionPolicy,
@@ -169,4 +169,14 @@ async function requireDirectory(cwd: string): Promise<void> {
   } catch {}
 
   throw new Error(`Saved session working directory does not exist: ${cwd}`)
+}
+
+/** Recheck membership for each fresh invocation; already admitted work may finish. */
+function guardedResumeAgent(BaseAgent: AgentClass, assertActive: () => Promise<unknown>): AgentClass {
+  return class extends BaseAgent {
+    override async invoke(...args: Parameters<Agent['invoke']>): Promise<Message> {
+      await assertActive()
+      return super.invoke(...args)
+    }
+  }
 }
