@@ -10,6 +10,7 @@ import {SessionEntryType} from './entries.js'
 export type SessionStatus = 'cancelled' | 'completed' | 'failed' | 'interrupted' | 'new'
 
 export interface SessionInformation {
+  archived?: boolean
   createdAt: string
   cwd: string
   file?: string

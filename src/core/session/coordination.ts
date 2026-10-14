@@ -406,7 +406,7 @@ export function recoverSessionWriter(scope: SessionScope, conditions: OfflineSto
   }
 }
 
-function inspectRecoveryEvidence(scope: SessionScope): void {
+export function inspectRecoveryEvidence(scope: SessionScope): void {
   const marker = path.join(scope.journalRoot, 'deletions', scope.sessionId + '.json')
   if (exists(marker)) {
     const value = JSON.parse(fs.readFileSync(marker, 'utf8'))

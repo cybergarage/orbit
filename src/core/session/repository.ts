@@ -20,14 +20,18 @@ import type {SessionInformation} from './information.js'
 import {sessionsDir} from '../app.js'
 import {deletionMarker} from '../execution/deletion.js'
 import {Message} from '../message/index.js'
+import {readSessionArchive, writeSessionArchive} from './archive.js'
 import {parseSessionFile} from './codec.js'
 import {
   canonicalStoragePath,
   initializeSessionStorage,
+  inspectRecoveryEvidence,
   inspectSessionStorage,
+  inspectTranscript,
   resumeSessionStorage,
   sessionScope,
   validateSessionId,
+  WriterClaim,
 } from './coordination.js'
 import {SESSION_FORMAT_VERSION, SessionEntryType} from './entries.js'
 import {createSessionInformationFromSource} from './information.js'
@@ -61,6 +65,7 @@ export interface SessionListError {
 }
 
 export interface SessionListOptions {
+  archive?: 'active' | 'all' | 'archived'
   cursor?: string
   limit?: number
 }
@@ -163,6 +168,10 @@ export class SessionRepository {
     return inspectSessionStorage(this.rootDir, this.journalRoot)
   }
 
+  isArchived(sessionId: string): boolean {
+    return readSessionArchive(this.rootDir, sessionId)
+  }
+
   list(): SessionSummary[] {
     if (!fs.existsSync(this.rootDir)) return []
     return findSessionFiles(this.rootDir, this.journalRoot)
@@ -171,6 +180,8 @@ export class SessionRepository {
   }
 
   async listPage(options: SessionListOptions = {}): Promise<SessionListResult> {
+    if (options.archive !== undefined && !['active', 'all', 'archived'].includes(options.archive))
+      throw new Error('Invalid session archive filter')
     const limit = options.limit ?? 50
     if (!Number.isSafeInteger(limit) || limit <= 0 || limit > 200) {
       throw new Error('Session list limit must be an integer between 1 and 200.')
@@ -188,10 +199,11 @@ export class SessionRepository {
     const errors: SessionListError[] = []
     const summaries = (
       await Promise.all(
-        files.map(async (file) => {
+        files.map(async (file): Promise<SessionSummary | undefined> => {
           try {
             const source = await fsPromises.readFile(file, 'utf8')
-            return summaryFromParsed(parseSessionFile(source, file), file)
+            const parsed = parseSessionFile(source, file)
+            return {...summaryFromParsed(parsed, file), archived: this.isArchived(parsed.header.id)}
           } catch (error) {
             errors.push({file, message: error instanceof Error ? error.message : String(error)})
           }
@@ -199,7 +211,13 @@ export class SessionRepository {
       )
     )
       .filter((summary): summary is SessionSummary => summary !== undefined)
-      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+      .filter(
+        (summary) =>
+          options.archive === undefined ||
+          options.archive === 'all' ||
+          summary.archived === (options.archive === 'archived'),
+      )
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id))
     const data = summaries.slice(offset, offset + limit)
     const nextOffset = offset + data.length
     return {
@@ -241,7 +259,7 @@ export class SessionRepository {
   readSummary(file: string): SessionSummary {
     const resolvedFile = path.resolve(file)
     const parsed = parseSessionFile(fs.readFileSync(resolvedFile, 'utf8'), resolvedFile)
-    return summaryFromParsed(parsed, resolvedFile)
+    return {...summaryFromParsed(parsed, resolvedFile), archived: this.isArchived(parsed.header.id)}
   }
 
   resumeStorage(conditions: OfflineStorageConditions, options: RegistrationResumeOptions = {}): void {
@@ -250,6 +268,22 @@ export class SessionRepository {
 
   scope(id: string): SessionScope {
     return sessionScope(this.rootDir, this.journalRoot, id)
+  }
+
+  async setArchived(sessionId: string, archived: boolean): Promise<SessionSummary> {
+    if (typeof archived !== 'boolean') throw new Error('Invalid session archive state')
+    const scope = this.scope(sessionId)
+    const guard = WriterClaim.acquire(scope, () => {})
+    try {
+      const session = await this.findById(sessionId)
+      if (!session) throw new Error('Session not found')
+      inspectTranscript(scope, session.file)
+      inspectRecoveryEvidence(scope)
+      await writeSessionArchive(scope, archived)
+      return {...session, archived}
+    } finally {
+      guard.release()
+    }
   }
 
   private assertNotDeleted(id: string): void {

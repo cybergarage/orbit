@@ -17,10 +17,227 @@ import {
   OrbitApplicationService,
   PLUGIN_SCHEMA,
   PluginCatalog,
+  SkillCatalog,
 } from '../../../src/core/index.js'
 import {SessionRepository} from '../../session-storage-fixture.js'
 
 describe('Project application runtime', () => {
+  it('archives project and unassigned history with filters before pagination and never deletes source files', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-lifecycle-app-'))
+    const repository = new SessionRepository({rootDir: path.join(root, 'sessions')})
+    const store = new MemoryProjectStore()
+    const logs = new MemorySessionLogStore()
+    const service = new OrbitApplicationService({
+      contexts: [],
+      createAgent: () => ({
+        async close() {},
+        async invoke() {
+          return new Message(MessageType.Assistant, {content: 'Synthetic reply'})
+        },
+      }),
+      cwd: root,
+      logStore: logs,
+      model: 'synthetic',
+      projectStore: store,
+      provider: 'openai',
+      repository,
+      settings: {},
+      settingsSources: [],
+    })
+    try {
+      await fs.writeFile(path.join(root, 'source.txt'), 'Synthetic source')
+      const project = await service.projects!.create({directory: root, name: 'Synthetic', operationId: randomUUID()})
+      const assigned = await service.createProjectThread(project.id, {operationId: randomUUID()})
+      const assignedActive = await service.createProjectThread(project.id, {operationId: randomUUID()})
+      const unassigned = service.createThread()
+      const unassignedActive = service.createThread()
+      const membership = await service.projects!.membership(assigned.id)
+      const transcript = (await repository.findById(assigned.id))!.file
+      const bytes = await fs.readFile(transcript)
+      await service.archiveSession(assigned.id)
+      await service.archiveSession(unassigned.id)
+      expect(await service.projects!.membership(assigned.id)).deep.equals(membership)
+      expect(await fs.readFile(transcript)).deep.equals(bytes)
+      expect(
+        (await service.projects!.listSessions(project.id, {archive: 'archived', limit: 1})).data.map(
+          (item) => item.session!.id,
+        ),
+      ).deep.equals([assigned.id])
+      expect(
+        (await service.projects!.listSessions(project.id, {archive: 'active', limit: 1})).data.map(
+          (item) => item.session!.id,
+        ),
+      ).deep.equals([assignedActive.id])
+      const recent = await service.listUnassignedSessions({archive: 'active', limit: 1})
+      expect(recent.data.map((item) => item.id)).deep.equals([unassignedActive.id])
+      expect(recent.nextCursor).to.be.undefined
+      expect(
+        (await service.listUnassignedSessions({archive: 'archived', limit: 1})).data.map((item) => item.id),
+      ).deep.equals([unassigned.id])
+      expect((await service.listSessions({archive: 'all'})).data).length(4)
+      await service.unarchiveSession(assigned.id)
+      expect((await service.projects!.listSessions(project.id, {archive: 'active'})).data).length(2)
+      try {
+        await service.deleteProject(project.id, {expectedRevision: 1, operationId: randomUUID()})
+        throw new Error('Expected nonempty refusal')
+      } catch (error) {
+        expect(String(error)).contains('Move or delete')
+      }
+
+      await service.deleteSession(assigned.id)
+      await service.deleteSession(assignedActive.id)
+      await service.deleteProject(project.id, {expectedRevision: 1, operationId: randomUUID()})
+      expect(await store.query({id: project.id, kind: 'project'})).equals(null)
+      expect(await fs.readFile(path.join(root, 'source.txt'), 'utf8')).equals('Synthetic source')
+    } finally {
+      await service.close()
+      await fs.rm(root, {force: true, recursive: true})
+    }
+  })
+
+  it('rejects run admission during archive without interrupting a run', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-archive-race-'))
+    let release!: () => void
+    let closing!: () => void
+    const started = new Promise<void>((resolve) => {
+      closing = resolve
+    })
+    const settle = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const service = new OrbitApplicationService({
+      contexts: [],
+      createAgent: () => ({
+        async close() {
+          closing()
+          await settle
+        },
+        async invoke() {
+          throw new Error('Must not dispatch')
+        },
+      }),
+      cwd: root,
+      logStore: new MemorySessionLogStore(),
+      model: 'synthetic',
+      provider: 'openai',
+      repository: new SessionRepository({rootDir: path.join(root, 'sessions')}),
+      settings: {},
+      settingsSources: [],
+    })
+    try {
+      const thread = service.createThread()
+      const archive = service.archiveSession(thread.id)
+      await started
+      try {
+        await service.startRun(thread.id, 'Synthetic input')
+        throw new Error('Expected refusal')
+      } catch (error) {
+        expect(String(error)).contains('lifecycle change')
+      }
+
+      release()
+      expect((await archive).archived).equals(true)
+    } finally {
+      release()
+      await service.close()
+      await fs.rm(root, {force: true, recursive: true})
+    }
+  })
+
+  it('retains a concurrently resumed runtime when archive loses writer admission', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-archive-runtime-race-'))
+    const oldCatalog = new SkillCatalog([])
+    const resumedCatalog = new SkillCatalog([])
+    let entered!: () => void
+    let release!: () => void
+    const settling = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    const settled = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    oldCatalog.settle = async () => {
+      entered()
+      await settled
+    }
+
+    let resolutions = 0
+    const service = new OrbitApplicationService({
+      contexts: [],
+      createAgent: () => ({
+        async close() {},
+        async invoke() {
+          return new Message(MessageType.Assistant, {content: 'Synthetic reply'})
+        },
+      }),
+      cwd: root,
+      logStore: new MemorySessionLogStore(),
+      model: 'synthetic',
+      projectStore: new MemoryProjectStore(),
+      provider: 'openai',
+      repository: new SessionRepository({rootDir: path.join(root, 'sessions')}),
+      resolveProjectRuntime: async (cwd) => ({
+        cwd,
+        settings: {},
+        skillCatalog: resolutions++ === 0 ? oldCatalog : resumedCatalog,
+      }),
+      settings: {},
+      settingsSources: [],
+    })
+    try {
+      const project = await service.projects!.create({name: 'Synthetic', operationId: randomUUID()})
+      const thread = await service.createProjectThread(project.id, {operationId: randomUUID()})
+      const archive = service.archiveSession(thread.id).then(
+        () => {},
+        (error: unknown) => error,
+      )
+      await settling
+      await service.resumeSession(thread.id)
+      const runtimes = (service as unknown as {threadRuntime: Map<string, AgentOptions>}).threadRuntime
+      const resumed = runtimes.get(thread.id)
+      expect(resumed?.skillCatalog).equals(resumedCatalog)
+      release()
+      expect(String(await archive)).contains('already open')
+      expect(service.getThread(thread.id)).not.to.be.undefined
+      expect(runtimes.get(thread.id)).equals(resumed)
+    } finally {
+      release()
+      await service.close()
+      await fs.rm(root, {force: true, recursive: true})
+    }
+  })
+
+  it('refuses active and quarantined application archive without closing the thread', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-archive-busy-'))
+    const service = new OrbitApplicationService({
+      contexts: [],
+      cwd: root,
+      logStore: new MemorySessionLogStore(),
+      model: 'synthetic',
+      provider: 'openai',
+      repository: new SessionRepository({rootDir: path.join(root, 'sessions')}),
+      settings: {},
+      settingsSources: [],
+    })
+    const original = service.getThread.bind(service)
+    try {
+      for (const thread of [{status: 'running'}, {run: {quarantined: true}, status: 'idle'}]) {
+        service.getThread = (() => thread) as unknown as typeof service.getThread
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await service.archiveSession('synthetic')
+          throw new Error('Expected refusal')
+        } catch (error) {
+          expect(String(error)).contains('active or quarantined')
+        }
+      }
+    } finally {
+      service.getThread = original
+      await service.close()
+      await fs.rm(root, {force: true, recursive: true})
+    }
+  })
+
   it('isolates workspace settings and instructions, keeps unassigned creation synchronous, and restores saved models', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-project-app-'))
     const repository = new SessionRepository({rootDir: path.join(root, 'sessions')})

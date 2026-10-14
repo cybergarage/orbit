@@ -82,6 +82,7 @@ const reservationSchema = z
   .strict()
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/u)
 const mutationSchema = z.discriminatedUnion('kind', [
+  z.object({expectedRevision: revision, id: uuid, kind: z.literal('delete')}).strict(),
   z.object({directory, expectedRevision: z.literal(0), id: uuid, kind: z.literal('create'), name}).strict(),
   z
     .object({archived: z.boolean(), directory, expectedRevision: revision, id: uuid, kind: z.literal('update'), name})
@@ -171,6 +172,7 @@ export interface CatalogBackend {
     },
   ): CatalogRows[T][]
   put<T extends CatalogTable>(table: T, key: string, row: CatalogRows[T]): void
+  remove(table: CatalogTable, key: string): void
   transaction<T>(work: () => T, write: boolean): T
 }
 
@@ -345,6 +347,24 @@ export class CatalogEngine {
           updatedAt: now,
         }
         this.backend.put('projects', m.id, project)
+        return project
+      }
+
+      case 'delete': {
+        const project = this.project(m.id)
+        if (project.revision !== m.expectedRevision) conflict()
+        const reservations = this.backend.list('reservations', {projectId: m.id})
+        if (
+          this.backend.list('memberships', {limit: 1, projectId: m.id}).length > 0 ||
+          reservations.some((item) => item.state === 'pending')
+        )
+          throw new ProjectStoreError(
+            'conflict',
+            'Move or delete all project sessions and complete pending reservations before deleting the project',
+          )
+        for (const entry of this.backend.list('memories', {projectId: m.id})) this.backend.remove('memories', entry.id)
+        for (const reservation of reservations) this.backend.remove('reservations', reservation.id)
+        this.backend.remove('projects', m.id)
         return project
       }
 

@@ -34,8 +34,7 @@ Right-click a Project, or select its **…** button, for **New Chat**,
 directory; changing the directory affects only future conversations. Archive
 hides the Project from the active list and blocks new Project work; existing
 runs finish. The **Project** heading's **…** menu switches between active and
-archived Projects. Archived Projects offer **Unarchive project**. There is no
-hard Project deletion operation.
+archived Projects. Archived Projects offer **Unarchive project**. Core project deletion is available through the application service; GUI deletion controls are not exposed.
 
 Right-click any conversation, or use its **…** button, and choose
 **Move to project…**. Select an active Project or **Unassigned** to attach, move,
@@ -219,3 +218,30 @@ GUI REST endpoints include `/api/projects/:id/memory`, `/memory/excerpts`,
 schema checks protect them. `project.memory.changed` carries entry revision and
 Project generation metadata. **Refresh notes** reloads authoritative entries;
 a stale revision never silently overwrites another edit.
+
+## Core project deletion
+
+Use `service.deleteProject(id, {expectedRevision, operationId})` or
+`service.projects.delete(id, options)` with the exact project UUID, observed
+revision and a new UUID operation ID. An exact retry returns the original
+project result even after deletion; changed input conflicts. A fresh operation
+for a missing or already deleted ID fails with `missing`.
+
+Deletion rejects any remaining project membership, including archived, active,
+quarantined and unavailable sessions in any storage pair, and pending creation
+reservations. Move or explicitly delete conversations first. No session deletion
+is invoked implicitly. Successful deletion atomically removes the project,
+its active/retired memories and committed reservations. Detached membership
+revisions and prior operation results remain for retry and conflict detection.
+Working directories and source files are never accessed or deleted.
+
+The catalog transaction serializes deletion with membership, reservation,
+memory and project changes. A failed transaction leaves the project intact;
+an uncertain acknowledgement must be retried with the same operation ID.
+Deleted projects disappear from catalog queries after restart. Earlier create
+operation results are historical acknowledgements and cannot recreate a project.
+
+`projects.listSessions(id, {archive, after, limit})` supports `active`, `archived`
+and `all` archive filters. Omission means all for compatibility. It filters before
+pagination, using the existing exclusive session-ID cursor. Session archive
+preserves project membership and does not retire memories.

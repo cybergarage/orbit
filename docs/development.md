@@ -385,3 +385,60 @@ marker sections in that file; edit command definitions rather than generated
 sections. `make oclif-docs` uses the same npm script. The root README is maintained
 by hand as the framework introduction. Review generated differences before
 committing them.
+
+## Test complexity and SonarQube Cloud
+
+ESLint disables only its cyclomatic `complexity` rule for
+`test/**/*.{ts,mjs}`, `e2e/**/*.test.mjs`, and `e2e/**/*.e2e.mjs` in
+[`eslint.config.mjs`](../eslint.config.mjs). Production complexity, other test
+lint rules, security/reliability checks, and coverage settings remain in scope.
+This ESLint override does not configure SonarQube Cloud.
+
+Orbit currently receives a SonarQube Cloud check through its GitHub integration,
+without a repository scanner workflow or properties file. This indicates
+automatic analysis; the analysis-method setting itself is server-owned. Automatic
+analysis ignores `sonar-project.properties`; `.sonarcloud.properties` supports a
+limited set of scope settings, not `sonar.issue.ignore.multicriteria`. Do not add
+an ineffective rule-ignore property to either file or switch analysis methods
+without a separate integration decision. See the official
+[automatic analysis documentation](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/automatic-analysis).
+
+Sonar's source/test classification should keep test code analyzed as test code,
+not exclude it from analysis. The repository's unit-test root is `test`, with
+integration and E2E scripts under `e2e`. Preserve the existing source/test and
+coverage scope when adding rule-specific exceptions. No scope exclusions or
+coverage exclusions are configured by this change.
+
+If Sonar reports test-only cognitive complexity, the supported automatic-analysis
+option is project **Administration > General Settings > Analysis Scope > Issues >
+Ignore Issues on Multiple Criteria**. Add the exact rule and file-path pair:
+
+| Rule key | File path pattern | Purpose |
+| --- | --- | --- |
+| `typescript:S3776` | `test/**/*` | Exempt only cognitive complexity inside the unit-test tree |
+
+Preserve existing criteria and use a separate entry for every rule/path pair;
+`resourceKey` does not accept comma-separated paths. Add `typescript:S1541`
+(cyclomatic complexity) with `test/**/*` only if that rule is actually reported
+for tests. Do not use `*` as the rule key or a production path as the file pattern.
+The official [advanced exclusions documentation](https://docs.sonarsource.com/sonarqube-cloud/managing-your-projects/project-analysis/setting-analysis-scope/advanced-exclusions)
+describes this server-side configuration. Account/project settings were not
+changed by the repository update.
+
+As inspected on PR #7 on 2026-10-14, Sonar reported `typescript:S3776` only in
+production `src/core/projects/service.ts`, not in tests; `typescript:S1541` was
+not reported. That production finding stays visible. Test findings were
+`typescript:S5906` (dedicated assertion matchers), which this complexity policy
+does not suppress. `typescript:S7503` (an async function without await) was also
+reported in production. Consult the current PR analysis for changing counts.
+
+The workflows use official `actions/checkout@v7` and `actions/setup-node@v7`
+releases on GitHub-hosted runners. Their Node 24 action runtime is independent
+of Orbit's tested Node versions; self-hosted runners need at least v2.327.1.
+Checkout's fork-PR guard does not affect the existing push/workflow-dispatch
+triggers. Setup-node v7 removes the dummy `NODE_AUTH_TOKEN` fallback, so npm
+publication configures its registry only immediately before publication, using
+the existing token; public dependency installation and tests run before that
+configuration. No release or publication workflow is dispatched by this update.
+See the official [checkout README](https://github.com/actions/checkout) and
+[setup-node README](https://github.com/actions/setup-node) for migration details.
