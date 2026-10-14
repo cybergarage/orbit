@@ -30,8 +30,9 @@ independent of this release.
 The [v0.9.0 GitHub source release](https://github.com/cybergarage/orbit/releases/tag/v0.9.0)
 was published on 2026-10-14 after its
 [release validation](https://github.com/cybergarage/orbit/actions/runs/38442641049)
-passed. npm publication remains pending; do not assume the npm package or
-`latest` tag has changed from the source release alone.
+passed. Version 0.9.0 was also published to npm on 2026-10-14. Its published
+tarball matches the independently validated release artifact, and the npm
+`latest` tag was confirmed as `0.9.0` after publication.
 
 The 1.0 milestone is a plan, not available functionality or a promised date.
 Application completion should provide evidence for 1.0 readiness: representative
