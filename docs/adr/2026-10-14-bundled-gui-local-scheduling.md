@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-10-14
 decision-date: 2026-10-14
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-10-14
+implementation-commits:
+  - f1707929573f1cabfdef9b32a67d4a08680d5678
 superseded-by: []
 ---
 
@@ -118,3 +119,23 @@ not wired into this GUI scope. No CLI Issue #6 change is included.
 - [GUI architecture](2026-08-22-gui-application.md)
 - [Codex recorder source](https://github.com/openai/codex/blob/b741e480e203f037ca726bc2a76d99a8e8668e66/codex-rs/rollout/src/recorder.rs)
 - [Pi session source](https://github.com/badlogic/pi-mono/blob/4c6fb7cfe8c538a668726f6f8b3554098c39faee/packages/coding-agent/src/core/session-manager.ts)
+
+## Completion evidence
+
+Local implementation commit `f1707929573f1cabfdef9b32a67d4a08680d5678`
+passed the full 1,134-test suite, build, lint, source/test type checks and header
+checks. After final presentation corrections, all 43 focused GUI tests and the
+build/type/header checks passed again. Native browser verification covered
+desktop and compact navigation, menus, dialog focus, repeated creation clicks,
+pause/resume, cancellation, reconciliation, persistence and host restart using
+isolated synthetic tasks with dispatch disabled. No real scheduled task ran.
+
+An independent diff review reported no remaining blocking regressions. PR #7 was
+confirmed merged at `3265f14310cb8b3c06d315048d2ace85ac42100b`; the local branch
+retains the released implementation base without duplicating those core changes.
+Publication and live-provider execution remain outside this local verification.
+
+Before publication, only the two GUI commits were replayed onto merged main
+`3265f14310cb8b3c06d315048d2ace85ac42100b`. The replayed tree was byte-for-byte
+equivalent to the verified original tree; this completion record then updated
+the implementation hash. The three-dot publication diff contains only GUI scope.
