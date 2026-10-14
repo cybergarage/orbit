@@ -7,6 +7,7 @@ import {type MouseEvent as ReactMouseEvent, type ReactNode, useEffect, useRef, u
 
 import type {Project, ProjectMembership, SessionSummary} from '../../core/index.js'
 
+import {Icon} from './icons.js'
 import {moveSidebarSession, type SidebarApi, SidebarModel, type SidebarSession} from './sidebar-model.js'
 
 type MenuTarget = {kind: 'catalog'} | {kind: 'project'; project: Project} | {kind: 'session'; session: SidebarSession}
@@ -185,6 +186,7 @@ export function Sidebar(props: Props) {
               onContextMenu={(event) => openMenu(event, {kind: 'session', session})}
               title={session.preview || session.id}
             >
+              <Icon name="chat" />
               <span className="session-title">{session.preview || `${session.provider ?? 'Orbit'} session`}</span>
               {session.pendingProjectCreation && <span className="session-meta">Project creation incomplete</span>}
             </button>
@@ -193,7 +195,7 @@ export function Sidebar(props: Props) {
               className="row-action"
               onClick={(event) => openMenu(event, {kind: 'session', session})}
             >
-              …
+              <Icon name="more" />
             </button>
             {session.pendingProjectId && (
               <button
@@ -249,13 +251,13 @@ export function Sidebar(props: Props) {
   return (
     <>
       <button className="primary new-chat" disabled={busy} onClick={() => act(() => props.onCreate(null))}>
-        ＋ New Chat
+        <Icon name="compose" /> New chat
       </button>
       <nav aria-label="Projects and sessions" className="sidebar-navigation">
         {(model.enabled || model.catalogError) && (
           <>
             <div className="sidebar-heading">
-              <span>Project</span>
+              <span>PROJECTS</span>
               <button
                 aria-label="Create project"
                 disabled={busy}
@@ -264,10 +266,10 @@ export function Sidebar(props: Props) {
                   editProject()
                 }}
               >
-                ＋
+                <Icon name="plus" />
               </button>
               <button aria-label="Project options" onClick={(event) => openMenu(event, {kind: 'catalog'})}>
-                …
+                <Icon name="more" />
               </button>
             </div>
             {model.archived && <p className="sidebar-status">Archived projects</p>}
@@ -281,7 +283,7 @@ export function Sidebar(props: Props) {
                     onContextMenu={(event) => openMenu(event, {kind: 'project', project})}
                   >
                     <span aria-hidden="true">{model.expanded.has(project.id) ? '▾' : '▸'}</span>
-                    <SidebarIcon kind="folder" />
+                    <Icon name="folder" />
                     <span>{project.name}</span>
                   </button>
                   <button
@@ -297,14 +299,14 @@ export function Sidebar(props: Props) {
                     }
                     title={`New Chat in ${project.name}`}
                   >
-                    <SidebarIcon kind="compose" />
+                    <Icon name="compose" />
                   </button>
                   <button
                     aria-label={`Project actions for ${project.name}`}
                     className="row-action"
                     onClick={(event) => openMenu(event, {kind: 'project', project})}
                   >
-                    …
+                    <Icon name="more" />
                   </button>
                 </div>
                 {model.expanded.has(project.id) && renderGroup(project.id)}
@@ -555,11 +557,17 @@ function ActionMenu({children, menu, onClose}: {children: ReactNode; menu: Menu;
   )
 }
 
-function SidebarDialog({children, onClose, title}: {children: ReactNode; onClose: () => void; title: string}) {
+export function SidebarDialog({children, onClose, title}: {children: ReactNode; onClose: () => void; title: string}) {
   const ref = useRef<HTMLDivElement>(null)
   const close = useRef(onClose)
   close.current = onClose
   useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null
+    ref.current
+      ?.querySelector<HTMLElement>(
+        'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled)',
+      )
+      ?.focus()
     const keydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
@@ -569,7 +577,7 @@ function SidebarDialog({children, onClose, title}: {children: ReactNode; onClose
       if (event.key !== 'Tab') return
       const inputs = [
         ...ref.current!.querySelectorAll<HTMLElement>(
-          'button:not(:disabled), input:not(:disabled), select:not(:disabled)',
+          'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled)',
         ),
       ]
       if (inputs.length === 0) {
@@ -597,7 +605,10 @@ function SidebarDialog({children, onClose, title}: {children: ReactNode; onClose
     }
 
     document.addEventListener('keydown', keydown)
-    return () => document.removeEventListener('keydown', keydown)
+    return () => {
+      document.removeEventListener('keydown', keydown)
+      if (previous?.isConnected) previous.focus()
+    }
   }, [])
   return (
     <div className="dialog-backdrop" role="presentation">
@@ -612,30 +623,5 @@ function SidebarDialog({children, onClose, title}: {children: ReactNode; onClose
         {children}
       </div>
     </div>
-  )
-}
-
-function SidebarIcon({kind}: {kind: 'compose' | 'folder'}) {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="16"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="1.6"
-      viewBox="0 0 24 24"
-      width="16"
-    >
-      {kind === 'folder' ? (
-        <path d="M3 7V5h6l2 3h10v3M3 7v13h16l3-9H7l-4 9" />
-      ) : (
-        <>
-          <path d="M14 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-9" />
-          <path d="m16 3 5 5-10 10-5 1 1-5Z" />
-        </>
-      )}
-    </svg>
   )
 }

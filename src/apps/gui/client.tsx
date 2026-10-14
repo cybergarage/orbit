@@ -27,6 +27,7 @@ import type {
 
 import {DEFAULT_RUN_LIMITS, parseRunLimits} from '../../core/execution/limits.js'
 import {BudgetPanel} from './budget-panel.js'
+import {Icon} from './icons.js'
 import {ProjectMemoryPanel} from './project-memory-panel.js'
 import {
   acceptGuiRun,
@@ -44,12 +45,43 @@ import {
 } from './run-presentation.js'
 import {copySessionId, selectedSessionSummary} from './session-information.js'
 import {Sidebar} from './sidebar.js'
+import {Brand, ScheduledWorkspace, SettingsWorkspace} from './workspaces.js'
 
 const token = document.querySelector<HTMLMetaElement>('meta[name="orbit-token"]')?.content ?? ''
 
 // Session selection coordinates conversation, backfill, live logs, and deletion in one renderer boundary.
 // eslint-disable-next-line complexity
 function App() {
+  const [page, setPage] = useState('home')
+  const [drawer, setDrawer] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const samplePending = useRef(false)
+  const preferencesPending = useRef(false)
+  const [preferencesBusy, setPreferencesBusy] = useState(false)
+  useEffect(() => {
+    const dismiss = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape' && !event.defaultPrevented && !document.querySelector('[role=menu], [role=dialog]')) {
+        setDrawer(false)
+        setDetailsOpen(false)
+        setAdvancedOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', dismiss)
+    return () => document.removeEventListener('keydown', dismiss)
+  }, [])
+  useEffect(() => {
+    if (!drawer) return
+    const sidebar = [...document.querySelectorAll<HTMLElement>('.sidebar')].find(
+      (element) => element.getClientRects().length > 0,
+    )
+    sidebar?.querySelector<HTMLElement>('button:not(:disabled)')?.focus()
+    return () => {
+      const toggle = document.querySelector<HTMLElement>('.drawer-toggle')
+      if (toggle?.getClientRects().length) toggle.focus()
+    }
+  }, [drawer])
   const [runtime, setRuntime] = useState<RuntimeSnapshot>()
   const [contextNotices, setContextNotices] = useState<Record<string, string>>({})
   const [sessions, setSessions] = useState<SessionSummary[]>([])
@@ -214,7 +246,7 @@ function App() {
   }, [thread?.id])
 
   useEffect(() => {
-    messagesEnd.current?.scrollIntoView({behavior: 'smooth'})
+    if (thread?.messages.length || runStatus !== undefined) messagesEnd.current?.scrollIntoView({behavior: 'smooth'})
   }, [thread?.messages.length])
 
   useEffect(() => {
@@ -397,6 +429,9 @@ function App() {
   }
 
   const updatePreferences = async (update: Partial<GuiPreferences>) => {
+    if (preferencesPending.current) return
+    preferencesPending.current = true
+    setPreferencesBusy(true)
     try {
       const next = await api<GuiPreferences>('/api/preferences', {
         body: JSON.stringify(update),
@@ -406,6 +441,9 @@ function App() {
       setPreferences(next)
     } catch (nextError) {
       showError(setError)(nextError)
+    } finally {
+      preferencesPending.current = false
+      setPreferencesBusy(false)
     }
   }
 
@@ -459,354 +497,421 @@ function App() {
   }, [refreshThread, runActive, runPresentation.phase, selectedThreadIdValue])
 
   return (
-    <main className={`app ${preferences.debugPanelVisible ? '' : 'debug-hidden'}`}>
-      <aside className="pane sidebar">
-        <div className="brand">
-          <span className="brand-mark">O</span>
-          <span>ORBIT</span>
+    <main
+      className={`app page-${page} ${drawer ? 'drawer-open' : ''} ${detailsOpen ? 'details-open' : ''} ${advancedOpen ? 'advanced-open' : ''}`}
+    >
+      {page !== 'home' && error && (
+        <div className="global-error-banner error-banner" role="alert">
+          {error}
         </div>
-        <Sidebar
-          api={api}
-          onCopy={(session) => copyId(session).catch(showError(setError))}
-          onCreate={createThread}
-          onDelete={setSessionToDelete}
-          onDetails={openSessionDetails}
-          onEnabled={setProjectsEnabled}
-          onMenuClosed={() => setSessionMenu(undefined)}
-          onMoved={async (sessionId, nextMembership) => {
-            if (selectedThreadId.current === sessionId) {
-              // Membership changes close the idle host thread; reopen it before the next send.
-              setMembershipThread(undefined)
-              const resumed = await api<ThreadSnapshot>(
-                `${nextMembership.projectId ? `/api/projects/${encodeURIComponent(nextMembership.projectId)}` : '/api'}/sessions/${encodeURIComponent(sessionId)}/resume`,
-                {method: 'POST'},
-              )
-              if (selectedThreadId.current !== sessionId) return
-              setThread(resumed)
-              setMembership(nextMembership)
-              setMembershipThread(sessionId)
-              setMemorySelections((current) => {
-                const next = {...current}
-                delete next[sessionId]
-                return next
-              })
-            }
-
-            setNotice('Conversation moved. Its directory and history were retained.')
-          }}
-          onRememberFocus={(element) => {
-            sessionDetailsReturnFocus.current = element
-          }}
-          onSelect={selectSession}
-          onSessions={setSessions}
-          requestedMenu={sessionMenu}
-          revision={sidebarRevision}
-          selectedId={thread?.id}
-        />
-        <div className="sidebar-footer">
-          <label className="toggle-row">
-            <span>Logs</span>
-            <input
-              checked={preferences.debugPanelVisible}
-              onChange={(event) => updatePreferences({debugPanelVisible: event.target.checked})}
-              type="checkbox"
-            />
-          </label>
-        </div>
-      </aside>
-
-      <section className="pane conversation">
-        <header className="topbar">
-          <div className="title">{thread === undefined ? 'New conversation' : sessionTitle(thread, sessions)}</div>
-          <div className="topbar-actions">
-            <span className="badge">
-              {thread?.provider ?? runtime?.provider ?? '…'} · {thread?.model ?? runtime?.model ?? '…'} · Context:{' '}
-              {runtime?.contextMode ?? 'disabled'} {thread ? contextNotices[thread.id] : ''}
-            </span>
-            {selectedSession === undefined ? null : (
-              <button
-                aria-expanded={sessionMenu?.session.id === selectedSession.id}
-                aria-haspopup="menu"
-                aria-label="Session actions"
-                className="icon-button"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  sessionDetailsReturnFocus.current = event.currentTarget
-                  const bounds = event.currentTarget.getBoundingClientRect()
-                  setSessionMenu({
-                    session: selectedSession,
-                    x: Math.max(8, Math.min(bounds.right - 196, window.innerWidth - 204)),
-                    y: Math.max(8, Math.min(bounds.bottom + 6, window.innerHeight - 230)),
-                  })
-                }}
-                title="Session actions"
-              >
-                ⋯
-              </button>
-            )}
-          </div>
-        </header>
-        {error === undefined ? null : <div className="error-banner">{error}</div>}
-        {thread?.run?.approvals.map((approval) => (
-          <section aria-label="Operation confirmation" className="tool-card" key={approval.id}>
-            <strong>Confirm one operation</strong>
-            <pre>{JSON.stringify(approval.preview, null, 2)}</pre>
-            <p>
-              Expires {new Date(approval.expiresAt).toLocaleTimeString()}. This is not permission for the entire
-              session.
-            </p>
-            <button onClick={() => replyApproval(approval.id, approval.digest, false)}>Deny</button>
-            <button onClick={() => replyApproval(approval.id, approval.digest, true)}>Approve once</button>
-          </section>
-        ))}
-        {thread?.run?.projectContext && (
-          <div role="status">
-            Recorded memory: {thread.run.projectContext.entryIds.length} notes · {thread.run.projectContext.tokens}{' '}
-            tokens · {thread.run.projectContext.digest.slice(0, 12)}
-          </div>
-        )}
-        {thread?.run?.result ? (
-          <div role="status">
-            {thread.run.result.outcome === 'budget-exceeded'
-              ? 'Run stopped at its limit.'
-              : `Run: ${thread.run.result.outcome}.`}{' '}
-            Recording: {thread.run.result.recording.status}.{' '}
-            {thread.run.result.quiescence ? '' : 'Work may still be active; conflicting resources remain reserved.'}
-          </div>
-        ) : null}
-
-        {thread && membershipThread === thread.id && membership?.projectId && (
-          <ProjectMemoryPanel
-            api={api}
-            disabled={runActive}
-            key={`${thread.id}/${membership.projectId}`}
-            messages={thread.messages}
-            onChange={(selection) => setMemorySelections((current) => ({...current, [thread.id]: selection}))}
-            onError={showError(setError)}
-            onSource={async (sessionId) => {
-              const resumed = await api<ThreadSnapshot>(
-                `/api/projects/${membership.projectId}/sessions/${sessionId}/resume`,
-                {method: 'POST'},
-              )
-              selectedThreadId.current = resumed.id
-              setThread(resumed)
+      )}
+      <nav aria-label="Primary navigation" className="primary-navigation">
+        {(['home', 'scheduled', 'settings'] as const).map((value) => (
+          <button
+            aria-current={page === value ? 'page' : undefined}
+            key={value}
+            onClick={() => {
+              setPage(value)
+              setDrawer(false)
             }}
-            projectId={membership.projectId}
-            selection={memorySelections[thread.id] ?? {mode: 'curated'}}
-            threadId={thread.id}
-          />
-        )}
-        <div aria-busy={runActive} className="messages">
-          {thread === undefined || (thread.messages.length === 0 && runStatus === undefined) ? (
-            <div className="empty">
-              <div>
-                <strong>What should Orbit work on?</strong>
-                <br />
-                Start a new chat or open a recent session.
-              </div>
-            </div>
-          ) : (
-            thread.messages.map((message) => <MessageView key={message.id} message={message} />)
-          )}
-          {runStatus === undefined ? null : (
-            <div aria-live="polite" className={`run-status ${runPresentation.phase}`} role="status">
-              <div className="message-label">Orbit</div>
-              <div className="run-status-body">
-                {runActive ? <span aria-hidden="true" className="run-status-dot" /> : null}
-                <span>{runStatus}</span>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEnd} />
-        </div>
-        <div className="composer-wrap">
-          {thread && (
-            <BudgetPanel
-              active={runActive}
-              limits={nextLimits}
-              onChange={(key, value) =>
-                setLimitOverrides((current) => ({...current, [thread.id]: {...current[thread.id], [key]: value}}))
+          >
+            <Icon name={value === 'scheduled' ? 'schedule' : value} />
+            <span>{value[0].toUpperCase() + value.slice(1)}</span>
+          </button>
+        ))}
+      </nav>
+      <button
+        aria-expanded={drawer}
+        aria-label="Toggle context list"
+        className="drawer-toggle"
+        onClick={() => setDrawer(!drawer)}
+      >
+        <Icon name="chat" />
+        {page === 'home' ? 'Chats' : page === 'scheduled' ? 'Tasks' : 'Settings'}
+      </button>
+      {drawer && (
+        <button aria-label="Dismiss context list" className="drawer-backdrop" onClick={() => setDrawer(false)} />
+      )}
+      {page === 'scheduled' && <ScheduledWorkspace api={api} closeDrawer={() => setDrawer(false)} />}
+      {page === 'settings' && (
+        <SettingsWorkspace
+          busy={preferencesBusy}
+          closeDrawer={() => setDrawer(false)}
+          preferences={preferences}
+          runtime={runtime}
+          update={updatePreferences}
+        />
+      )}
+      <div className="home-workspace" style={{display: page === 'home' ? 'contents' : 'none'}}>
+        <aside className="pane sidebar">
+          <Brand />
+          <Sidebar
+            api={api}
+            onCopy={(session) => copyId(session).catch(showError(setError))}
+            onCreate={createThread}
+            onDelete={setSessionToDelete}
+            onDetails={openSessionDetails}
+            onEnabled={setProjectsEnabled}
+            onMenuClosed={() => setSessionMenu(undefined)}
+            onMoved={async (sessionId, nextMembership) => {
+              if (selectedThreadId.current === sessionId) {
+                // Membership changes close the idle host thread; reopen it before the next send.
+                setMembershipThread(undefined)
+                const resumed = await api<ThreadSnapshot>(
+                  `${nextMembership.projectId ? `/api/projects/${encodeURIComponent(nextMembership.projectId)}` : '/api'}/sessions/${encodeURIComponent(sessionId)}/resume`,
+                  {method: 'POST'},
+                )
+                if (selectedThreadId.current !== sessionId) return
+                setThread(resumed)
+                setMembership(nextMembership)
+                setMembershipThread(sessionId)
+                setMemorySelections((current) => {
+                  const next = {...current}
+                  delete next[sessionId]
+                  return next
+                })
               }
-              onContinue={() => submit(thread.run?.runId).catch(showError(setError))}
-              snapshot={thread.run}
-            />
-          )}
 
-          <details>
-            <summary>Skills · pending {(pendingSkills[thread?.id ?? ''] ?? []).length}</summary>
-            <button
-              disabled={runActive}
-              onClick={() => api<SkillListing>('/api/skills').then(setSkillList).catch(showError(setError))}
-            >
-              Refresh Skill catalog
-            </button>
-            <button
-              disabled={runActive || !thread}
-              onClick={() => thread && setPendingSkills((current) => ({...current, [thread.id]: []}))}
-            >
-              Clear pending Skills
-            </button>
-            {skillList.candidates.map((candidate) => (
-              <label key={candidate.id} style={{display: 'block'}}>
-                <input
-                  checked={(pendingSkills[thread?.id ?? ''] ?? []).some(
-                    (s) => s.id === candidate.id && s.digest === candidate.digest,
-                  )}
-                  disabled={runActive || !thread}
-                  onChange={(event) => {
-                    if (!thread) return
-                    const {checked} = event.target
-                    setPendingSkills((current) => ({
-                      ...current,
-                      [thread.id]: checked
-                        ? [
-                            ...(current[thread.id] ?? []).filter((s) => s.id !== candidate.id),
-                            {digest: candidate.digest, id: candidate.id},
-                          ]
-                        : (current[thread.id] ?? []).filter((s) => s.id !== candidate.id),
-                    }))
-                  }}
-                  type="checkbox"
-                />
-                {candidate.name} — {candidate.file} — {candidate.description}
-                {candidate.plugin && <span> · Plugin: {candidate.plugin.id}</span>}
-                {candidate.allowedTools !== undefined && (
-                  <span> · Suggested tools (no permission grant): {candidate.allowedTools}</span>
-                )}
-                {candidate.license !== undefined && <span> · License: {candidate.license}</span>}
-                {candidate.compatibility !== undefined && <span> · Compatibility: {candidate.compatibility}</span>}
-              </label>
-            ))}
-            {skillList.issues.map((issue, index) => (
-              <div key={index}>{issue}</div>
-            ))}
-            {thread?.run?.skills && (
-              <p>
-                {thread.run.result ? 'Finished' : thread.run.skills.resolved ? 'Resolved' : 'Loading'} Skills:{' '}
-                {thread.run.skills.requested.map((s) => s.id).join(', ')}
-              </p>
-            )}
-            <button
-              disabled={!thread}
-              onClick={() =>
-                thread &&
-                api(`/api/sessions/${encodeURIComponent(thread.id)}/skills`)
-                  .then((value) => setSkillHistory(JSON.stringify(value, null, 2)))
-                  .catch(showError(setError))
-              }
-            >
-              Inspect saved Skill sources
-            </button>
-            {skillHistory && <pre>{skillHistory}</pre>}
-          </details>
-          <div className={`composer ${runActive ? 'drafting' : ''}`}>
-            <textarea
-              aria-describedby="composer-instructions"
-              aria-label="Message Orbit"
-              disabled={thread === undefined}
-              onChange={(event) => setPrompt(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey && !runActive) {
-                  event.preventDefault()
-                  submit().catch(() => {})
-                }
-              }}
-              placeholder={
-                thread === undefined
-                  ? 'Create or select a chat first'
-                  : runActive
-                    ? 'Draft your next message…'
-                    : 'Ask Orbit anything…'
-              }
-              value={prompt}
-            />
-            <div className="composer-actions">
-              <span id="composer-instructions">
-                {runActive
-                  ? 'Orbit is working · Send this draft when it finishes'
-                  : 'Enter to send · Shift+Enter for a new line'}
+              setNotice('Conversation moved. Its directory and history were retained.')
+            }}
+            onRememberFocus={(element) => {
+              sessionDetailsReturnFocus.current = element
+            }}
+            onSelect={async (session, projectId) => {
+              await selectSession(session, projectId)
+              setDrawer(false)
+            }}
+            onSessions={setSessions}
+            requestedMenu={sessionMenu}
+            revision={sidebarRevision}
+            selectedId={thread?.id}
+          />
+        </aside>
+
+        <section className="pane conversation">
+          <header className="topbar">
+            <div className="title">{thread === undefined ? 'New chat' : sessionTitle(thread, sessions)}</div>
+            <div className="topbar-actions">
+              <button aria-expanded={detailsOpen} onClick={() => setDetailsOpen(!detailsOpen)}>
+                Details
+              </button>
+              <button aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(!advancedOpen)}>
+                Advanced
+              </button>
+              <span className="badge">
+                {thread?.provider ?? runtime?.provider ?? '…'} / {thread?.model ?? runtime?.model ?? '…'}
               </span>
-              {runActive ? (
+              {selectedSession === undefined ? null : (
                 <button
-                  aria-label={runPresentation.phase === GuiRunPhase.Stopping ? 'Stopping response' : 'Stop response'}
-                  className="send stop"
-                  disabled={runId === undefined || runPresentation.phase === GuiRunPhase.Stopping}
-                  onClick={stop}
-                  title={runId === undefined ? 'Stop is unavailable for this recovered run' : 'Stop response'}
+                  aria-expanded={sessionMenu?.session.id === selectedSession.id}
+                  aria-haspopup="menu"
+                  aria-label="Session actions"
+                  className="icon-button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    sessionDetailsReturnFocus.current = event.currentTarget
+                    const bounds = event.currentTarget.getBoundingClientRect()
+                    setSessionMenu({
+                      session: selectedSession,
+                      x: Math.max(8, Math.min(bounds.right - 196, window.innerWidth - 204)),
+                      y: Math.max(8, Math.min(bounds.bottom + 6, window.innerHeight - 230)),
+                    })
+                  }}
+                  title="Session actions"
                 >
-                  ■
-                </button>
-              ) : (
-                <button
-                  aria-label="Send message"
-                  className="send"
-                  disabled={
-                    thread === undefined ||
-                    prompt.trim().length === 0 ||
-                    (projectsEnabled && membershipThread !== thread.id)
-                  }
-                  onClick={() => submit().catch(showError(setError))}
-                  title="Send message"
-                >
-                  ↑
+                  <Icon name="more" />
                 </button>
               )}
             </div>
-          </div>
-        </div>
-      </section>
-
-      {preferences.debugPanelVisible ? (
-        <aside className="diagnostics">
-          <header className="topbar">
-            <div className="title">Logs{thread === undefined ? '' : ` · ${thread.id.slice(0, 8)}`}</div>
-            <div className="filters">
-              <select onChange={(event) => setEventFilter(event.target.value)} value={eventFilter}>
-                <option value="all">All levels</option>
-                <option value="info">Info</option>
-                <option value="debug">Debug</option>
-                <option value="warn">Warn</option>
-                <option value="error">Error</option>
-              </select>
-              <select onChange={(event) => setCategoryFilter(event.target.value)} value={categoryFilter}>
-                <option value="all">All categories</option>
-                <option value="lifecycle">Lifecycle</option>
-                <option value="model">Model</option>
-                <option value="tool">Tool</option>
-                <option value="mcp">MCP</option>
-                <option value="storage">Storage</option>
-                <option value="runtime">Runtime</option>
-                <option value="security">Security</option>
-              </select>
-              <select
-                aria-label="Global diagnostic capture"
-                onChange={(event) => updatePreferences({diagnosticCapture: event.target.value as DiagnosticCapture})}
-                value={preferences.diagnosticCapture}
-              >
-                <option value="full">Global: Full (15 min)</option>
-                <option value="metadata">Global: Metadata</option>
-                <option value="off">Global: Off</option>
-              </select>
-            </div>
           </header>
-          <div className="events">
-            {thread === undefined ? <div className="empty">Select a session to view its logs.</div> : null}
-            {thread !== undefined && visibleLogs.length === 0 ? (
-              <div className="empty">No logs for this session.</div>
-            ) : null}
-            {visibleLogs.map((record) => (
-              <details className={`event ${record.level}`} key={record.id}>
-                <summary>
-                  <span className="event-time">{formatTime(record.timestamp)}</span>
-                  <span className="event-type">{record.eventType}</span>
-                  <span className="event-level">{record.level}</span>
-                </summary>
-                <pre>{JSON.stringify(record, null, 2)}</pre>
-              </details>
-            ))}
+          {error === undefined ? null : <div className="error-banner">{error}</div>}
+          {thread?.run?.approvals.map((approval) => (
+            <section aria-label="Operation confirmation" className="tool-card" key={approval.id}>
+              <strong>Confirm one operation</strong>
+              <pre>{JSON.stringify(approval.preview, null, 2)}</pre>
+              <p>
+                Expires {new Date(approval.expiresAt).toLocaleTimeString()}. This is not permission for the entire
+                session.
+              </p>
+              <button onClick={() => replyApproval(approval.id, approval.digest, false)}>Deny</button>
+              <button onClick={() => replyApproval(approval.id, approval.digest, true)}>Approve once</button>
+            </section>
+          ))}
+          {thread?.run?.projectContext && (
+            <div role="status">
+              Recorded memory: {thread.run.projectContext.entryIds.length} notes · {thread.run.projectContext.tokens}{' '}
+              tokens · {thread.run.projectContext.digest.slice(0, 12)}
+            </div>
+          )}
+          {thread?.run?.result ? (
+            <div role="status">
+              {thread.run.result.outcome === 'budget-exceeded'
+                ? 'Run stopped at its limit.'
+                : `Run: ${thread.run.result.outcome}.`}{' '}
+              Recording: {thread.run.result.recording.status}.{' '}
+              {thread.run.result.quiescence ? '' : 'Work may still be active; conflicting resources remain reserved.'}
+            </div>
+          ) : null}
+
+          <div className="home-details">
+            <p className="muted">
+              Context: {runtime?.contextMode ?? 'disabled'} {thread ? contextNotices[thread.id] : ''}
+            </p>
+            {thread && membershipThread === thread.id && membership?.projectId && (
+              <ProjectMemoryPanel
+                api={api}
+                disabled={runActive}
+                key={`${thread.id}/${membership.projectId}`}
+                messages={thread.messages}
+                onChange={(selection) => setMemorySelections((current) => ({...current, [thread.id]: selection}))}
+                onError={showError(setError)}
+                onSource={async (sessionId) => {
+                  const resumed = await api<ThreadSnapshot>(
+                    `/api/projects/${membership.projectId}/sessions/${sessionId}/resume`,
+                    {method: 'POST'},
+                  )
+                  selectedThreadId.current = resumed.id
+                  setThread(resumed)
+                }}
+                projectId={membership.projectId}
+                selection={memorySelections[thread.id] ?? {mode: 'curated'}}
+                threadId={thread.id}
+              />
+            )}
           </div>
-        </aside>
-      ) : null}
+          <div aria-busy={runActive} className="messages">
+            {thread === undefined || (thread.messages.length === 0 && runStatus === undefined) ? (
+              <div className="empty">
+                <div className="empty-content">
+                  <p>Start a conversation, or reopen a saved chat from your project.</p>
+                  <button
+                    className="sample-task"
+                    onClick={async () => {
+                      if (samplePending.current) return
+                      samplePending.current = true
+                      try {
+                        if (!thread) await createThread(null)
+                        setPrompt('Review the local GUI and suggest the smallest useful interface.')
+                      } finally {
+                        samplePending.current = false
+                      }
+                    }}
+                  >
+                    Start with a sample task
+                  </button>
+                  <p className="muted">
+                    Project context and settings stay close. Advanced controls open only when you need them.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              thread.messages.map((message) => <MessageView key={message.id} message={message} />)
+            )}
+            {runStatus === undefined ? null : (
+              <div aria-live="polite" className={`run-status ${runPresentation.phase}`} role="status">
+                <div className="message-label">Orbit</div>
+                <div className="run-status-body">
+                  {runActive ? <span aria-hidden="true" className="run-status-dot" /> : null}
+                  <span>{runStatus}</span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEnd} />
+          </div>
+          <div className="composer-wrap">
+            <div className="advanced-controls">
+              {thread && (
+                <BudgetPanel
+                  active={runActive}
+                  limits={nextLimits}
+                  onChange={(key, value) =>
+                    setLimitOverrides((current) => ({...current, [thread.id]: {...current[thread.id], [key]: value}}))
+                  }
+                  onContinue={() => submit(thread.run?.runId).catch(showError(setError))}
+                  snapshot={thread.run}
+                />
+              )}
+
+              <details>
+                <summary>Skills · pending {(pendingSkills[thread?.id ?? ''] ?? []).length}</summary>
+                <button
+                  disabled={runActive}
+                  onClick={() => api<SkillListing>('/api/skills').then(setSkillList).catch(showError(setError))}
+                >
+                  Refresh Skill catalog
+                </button>
+                <button
+                  disabled={runActive || !thread}
+                  onClick={() => thread && setPendingSkills((current) => ({...current, [thread.id]: []}))}
+                >
+                  Clear pending Skills
+                </button>
+                {skillList.candidates.map((candidate) => (
+                  <label key={candidate.id} style={{display: 'block'}}>
+                    <input
+                      checked={(pendingSkills[thread?.id ?? ''] ?? []).some(
+                        (s) => s.id === candidate.id && s.digest === candidate.digest,
+                      )}
+                      disabled={runActive || !thread}
+                      onChange={(event) => {
+                        if (!thread) return
+                        const {checked} = event.target
+                        setPendingSkills((current) => ({
+                          ...current,
+                          [thread.id]: checked
+                            ? [
+                                ...(current[thread.id] ?? []).filter((s) => s.id !== candidate.id),
+                                {digest: candidate.digest, id: candidate.id},
+                              ]
+                            : (current[thread.id] ?? []).filter((s) => s.id !== candidate.id),
+                        }))
+                      }}
+                      type="checkbox"
+                    />
+                    {candidate.name} — {candidate.file} — {candidate.description}
+                    {candidate.plugin && <span> · Plugin: {candidate.plugin.id}</span>}
+                    {candidate.allowedTools !== undefined && (
+                      <span> · Suggested tools (no permission grant): {candidate.allowedTools}</span>
+                    )}
+                    {candidate.license !== undefined && <span> · License: {candidate.license}</span>}
+                    {candidate.compatibility !== undefined && <span> · Compatibility: {candidate.compatibility}</span>}
+                  </label>
+                ))}
+                {skillList.issues.map((issue, index) => (
+                  <div key={index}>{issue}</div>
+                ))}
+                {thread?.run?.skills && (
+                  <p>
+                    {thread.run.result ? 'Finished' : thread.run.skills.resolved ? 'Resolved' : 'Loading'} Skills:{' '}
+                    {thread.run.skills.requested.map((s) => s.id).join(', ')}
+                  </p>
+                )}
+                <button
+                  disabled={!thread}
+                  onClick={() =>
+                    thread &&
+                    api(`/api/sessions/${encodeURIComponent(thread.id)}/skills`)
+                      .then((value) => setSkillHistory(JSON.stringify(value, null, 2)))
+                      .catch(showError(setError))
+                  }
+                >
+                  Inspect saved Skill sources
+                </button>
+                {skillHistory && <pre>{skillHistory}</pre>}
+              </details>
+            </div>
+            <div className={`composer ${runActive ? 'drafting' : ''}`}>
+              <textarea
+                aria-describedby="composer-instructions"
+                aria-label="Message Orbit"
+                disabled={thread === undefined}
+                onChange={(event) => setPrompt(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey && !runActive) {
+                    event.preventDefault()
+                    submit().catch(() => {})
+                  }
+                }}
+                placeholder={
+                  thread === undefined
+                    ? 'Create or select a chat first'
+                    : runActive
+                      ? 'Draft your next message…'
+                      : 'Ask Orbit to help with this project…'
+                }
+                value={prompt}
+              />
+              <div className="composer-actions">
+                <span id="composer-instructions">
+                  {runActive
+                    ? 'Orbit is working · Send this draft when it finishes'
+                    : 'Enter to send · Shift+Enter for a new line'}
+                </span>
+                {runActive ? (
+                  <button
+                    aria-label={runPresentation.phase === GuiRunPhase.Stopping ? 'Stopping response' : 'Stop response'}
+                    className="send stop"
+                    disabled={runId === undefined || runPresentation.phase === GuiRunPhase.Stopping}
+                    onClick={stop}
+                    title={runId === undefined ? 'Stop is unavailable for this recovered run' : 'Stop response'}
+                  >
+                    ■
+                  </button>
+                ) : (
+                  <button
+                    aria-label="Send message"
+                    className="send"
+                    disabled={
+                      thread === undefined ||
+                      prompt.trim().length === 0 ||
+                      (projectsEnabled && membershipThread !== thread.id)
+                    }
+                    onClick={() => submit().catch(showError(setError))}
+                    title="Send message"
+                  >
+                    <Icon name="send" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="composer-status muted">
+              {runActive ? runStatus : selectedSession ? 'Ready · Conversation saved locally' : 'Ready'}
+            </p>
+          </div>
+        </section>
+
+        {preferences.debugPanelVisible && detailsOpen ? (
+          <aside className="diagnostics">
+            <header className="topbar">
+              <div className="title">Logs{thread === undefined ? '' : ` · ${thread.id.slice(0, 8)}`}</div>
+              <div className="filters">
+                <select onChange={(event) => setEventFilter(event.target.value)} value={eventFilter}>
+                  <option value="all">All levels</option>
+                  <option value="info">Info</option>
+                  <option value="debug">Debug</option>
+                  <option value="warn">Warn</option>
+                  <option value="error">Error</option>
+                </select>
+                <select onChange={(event) => setCategoryFilter(event.target.value)} value={categoryFilter}>
+                  <option value="all">All categories</option>
+                  <option value="lifecycle">Lifecycle</option>
+                  <option value="model">Model</option>
+                  <option value="tool">Tool</option>
+                  <option value="mcp">MCP</option>
+                  <option value="storage">Storage</option>
+                  <option value="runtime">Runtime</option>
+                  <option value="security">Security</option>
+                </select>
+                <select
+                  aria-label="Global diagnostic capture"
+                  onChange={(event) => updatePreferences({diagnosticCapture: event.target.value as DiagnosticCapture})}
+                  value={preferences.diagnosticCapture}
+                >
+                  <option value="full">Global: Full (15 min)</option>
+                  <option value="metadata">Global: Metadata</option>
+                  <option value="off">Global: Off</option>
+                </select>
+              </div>
+            </header>
+            <div className="events">
+              {thread === undefined ? <div className="empty">Select a session to view its logs.</div> : null}
+              {thread !== undefined && visibleLogs.length === 0 ? (
+                <div className="empty">No logs for this session.</div>
+              ) : null}
+              {visibleLogs.map((record) => (
+                <details className={`event ${record.level}`} key={record.id}>
+                  <summary>
+                    <span className="event-time">{formatTime(record.timestamp)}</span>
+                    <span className="event-type">{record.eventType}</span>
+                    <span className="event-level">{record.level}</span>
+                  </summary>
+                  <pre>{JSON.stringify(record, null, 2)}</pre>
+                </details>
+              ))}
+            </div>
+          </aside>
+        ) : null}
+      </div>
       <SessionDetailsDialog
         onClose={closeSessionDetails}
         onCopy={(session) => copyId(session).catch(showError(setError))}

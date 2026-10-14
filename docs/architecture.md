@@ -340,3 +340,14 @@ and registered session writer ownership for persistent archive transitions.
 Archive metadata lives outside immutable conversation history; project deletion
 never traverses a working directory. See [Projects](projects.md#core-project-deletion)
 and [Sessions](session.md#persistent-core-session-archive) for the public contracts.
+
+### Bundled GUI local scheduling
+
+`src/apps/gui/local-scheduler.ts` adapts the single-owner `DurableWorkStore` for
+validated workspace-read tasks. The token-protected GUI routes save schedules,
+pause/resume future occurrences, query history, request cooperative cancellation
+and reconcile uncertain outcomes. Dispatch is opt-in with `gui --scheduled-work`;
+no daemon or Docker runtime is involved. `scheduled-executor.ts` uses a dedicated
+bounded managed Agent and the application session repository, with workspace-read
+tools, denied non-read effects and no MCP startup. Unknown results suspend further
+dispatch. See [Local GUI](gui.md#local-scheduled-tasks) for the maintained contract.

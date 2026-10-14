@@ -116,6 +116,7 @@ USAGE
     [--debug] [--execution-policy workspace-confirm|unrestricted] [--journal-level file-and-directory-sync|file-sync]
     [--lang en|ja] [--model <value>] [--ollama-host <value>] [--openai-api-key-env <value>] [--provider
     anthropic|apple|ollama|openai] [--skill-root <value>...] [--metrics-port <value>] [--port <value>]
+    [--scheduled-work]
 
 FLAGS
   --anthropic-api-key-env=<value>  Environment variable name for the Anthropic API key
@@ -135,6 +136,7 @@ FLAGS
   --port=<value>                   Loopback port (uses an available port by default)
   --provider=<option>              LLM provider (overrides workspace setting)
                                    <options: anthropic|apple|ollama|openai>
+  --scheduled-work                 Enable dispatch of saved local scheduled work for this process
   --skill-root=<value>...          Explicit Skill root ID=DIRECTORY (repeatable); replaces the workspace default
 
 DESCRIPTION
