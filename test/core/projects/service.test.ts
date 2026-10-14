@@ -40,6 +40,22 @@ describe('Project session coordination', () => {
     await fs.rm(root, {force: true, recursive: true})
   })
 
+  it('filters unavailable memberships using their retained archive metadata', async () => {
+    const project = await service.create({name: 'Synthetic archive filter', operationId: randomUUID()})
+    const session = await service.createSession(project.id, randomUUID(), async () => ({}))
+    const id = session.getId()
+    await session.close()
+    await repository.setArchived(id, true)
+    await service.markDeleting(id)
+    const archived = await service.listSessions(project.id, {archive: 'archived', limit: 1})
+    expect(archived.data).length(1)
+    expect(archived.data[0]).include({session: null, unavailable: true})
+    expect(archived.data[0].membership.sessionId).equals(id)
+    expect((await service.listSessions(project.id, {archive: 'active'})).data).length(0)
+    await repository.setArchived(id, false)
+    expect((await service.listSessions(project.id, {archive: 'active'})).data).length(1)
+  })
+
   it('synchronizes project creation and reconciles an exact retry without a second session', async () => {
     const project = await service.create({name: 'Project', operationId: randomUUID()})
     const operationId = randomUUID()

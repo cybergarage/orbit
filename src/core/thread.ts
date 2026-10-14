@@ -245,6 +245,7 @@ export class ThreadManager {
   private readonly activeRuns = new Map<string, ActiveRun>()
   private closed = false
   private closePromise?: Promise<void>
+  private readonly closingIdleThreads = new Set<string>()
   private readonly createAgent: ThreadAgentFactory
   private readonly eventHandlers = new Set<ThreadEventHandler>()
   private readonly loggerFactory?: SessionLoggerFactory
@@ -287,6 +288,27 @@ export class ThreadManager {
         )
     })
     return this.closePromise
+  }
+
+  /** Lifecycle mutations must never cancel a run that raced an idle close. */
+  async closeIdleThread(threadId: string): Promise<boolean> {
+    const thread = this.threads.get(threadId)
+    if (!thread) return false
+    if (
+      this.closingIdleThreads.has(threadId) ||
+      this.getActiveRunForThread(threadId) ||
+      this.getThread(threadId)?.run?.quarantined
+    )
+      throw new InvalidInputError('Thread must be idle and settled before lifecycle changes')
+    this.closingIdleThreads.add(threadId)
+    try {
+      await thread.agent.close()
+      await thread.session.close()
+      this.threads.delete(threadId)
+      return true
+    } finally {
+      this.closingIdleThreads.delete(threadId)
+    }
   }
 
   async closeThread(threadId: string): Promise<boolean> {
@@ -688,6 +710,7 @@ export class ThreadManager {
   }
 
   private requireThread(id: string): ManagedThread {
+    if (this.closingIdleThreads.has(id)) throw new InvalidInputError('Thread lifecycle change is in progress')
     const thread = this.threads.get(id)
     if (thread === undefined) {
       throw new InvalidInputError(`Unknown thread: ${id}`)

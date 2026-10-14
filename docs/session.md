@@ -544,3 +544,37 @@ reader deployment, synchronization and record-size compatibility.
 ### Transcript v3 and interrupted context
 
 [Verified interrupted context](interrupted-context.md) adds synchronized `context_projection` records and projection-aware checkpoints. Raw access remains observational; the synchronous model-context builder refuses dependent histories. Valid v1/v2 records retain their checks in v3. The separate v2-to-v3 migration preserves every data-entry byte and old Graph position; torn v3 tails refuse writer admission pending offline inspection. Backups and unresolved migration artifacts are retained.
+
+## Persistent core session archive
+
+`service.archiveSession(id)` and `service.unarchiveSession(id)` return the
+retained session summary with `archived: true` or `false`. The registered
+repository also exposes `setArchived(id, boolean)` for hosts that have already
+closed idle writers. Archive preserves transcript bytes, ID, working directory,
+project membership, diagnostic logs and execution journal. It never calls Delete.
+Explicit resume remains available; unarchive restores the original active listing.
+
+Archive state persists in version-1 `.coordination/<id>.archive.json` metadata.
+Existing sessions without metadata default to active; transcript format and
+history are unchanged. Existing callers may omit the optional summary field.
+Readers report malformed archive metadata as a listing error, never as active.
+The sidecar is atomically replaced after file synchronization and its directory
+is synchronized on Unix. Windows acknowledges file synchronization only.
+An interrupted write leaves the previous or new complete state; retry sets the
+requested state again. No backup or recovery directory is created.
+
+`listSessions({archive: 'active' | 'archived' | 'all', cursor, limit})` filters
+before pagination. Omission defaults to all to preserve existing callers.
+`listUnassignedSessions(options)` applies membership and archive filters before
+pagination. Project-assigned listing is documented in [Projects](projects.md).
+Cursors are live-list offsets (project listings use exclusive IDs), not frozen
+snapshots; changing archive state during pagination can change subsequent pages.
+
+Active/open writers, quarantined or durably unsettled runs, migration ownership
+and deleting/deleted sessions block archive and unarchive. The application closes
+idle threads before acquiring the same registered writer claim used by other
+session mutations. A competing writer or transition fails rather than overwriting
+state; retry after it settles. Repeated settled requests are idempotent. Missing
+sessions fail. Delete retains its destructive behavior and retained markers;
+archive metadata cannot resurrect a deleted identity. CLI commands are separate
+work in issue #6.

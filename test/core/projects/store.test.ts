@@ -52,6 +52,90 @@ for (const adapter of ['memory', 'sqlite'] as const) {
       await fs.rm(root, {force: true, recursive: true})
     })
 
+    it('deletes only empty projects atomically and preserves exact retry results', async () => {
+      const project = await create(store)
+      const pairId = randomUUID()
+      const memoryId = randomUUID()
+      await store.mutate(randomUUID(), {
+        entry: {
+          body: 'Synthetic note',
+          edited: false,
+          id: memoryId,
+          projectId: project.id,
+          retired: false,
+          sources: [],
+          title: 'Note',
+        },
+        expectedRevision: 0,
+        kind: 'memory',
+      })
+      await store.mutate(randomUUID(), {
+        expectedRevision: 0,
+        kind: 'membership',
+        pairId,
+        projectId: project.id,
+        sessionId: 'synthetic',
+        unavailable: true,
+      })
+      const mutation: ProjectMutation = {expectedRevision: 1, id: project.id, kind: 'delete'}
+      const operation = randomUUID()
+      await refuses(store.mutate(operation, mutation), 'conflict')
+      expect(await store.query({id: memoryId, kind: 'memory'})).not.equals(null)
+      expect(await store.query({id: operation, kind: 'operation'})).equals(null)
+      await store.mutate(randomUUID(), {
+        expectedRevision: 1,
+        kind: 'membership',
+        pairId,
+        projectId: null,
+        sessionId: 'synthetic',
+        unavailable: true,
+      })
+      await refuses(store.mutate(randomUUID(), {...mutation, expectedRevision: 0}), 'conflict')
+      const result = await store.mutate(operation, mutation)
+      expect(await store.query({id: project.id, kind: 'project'})).equals(null)
+      expect(await store.query({id: memoryId, kind: 'memory'})).equals(null)
+      expect(await store.query({kind: 'membership', pairId, sessionId: 'synthetic'})).include({
+        projectId: null,
+        revision: 2,
+      })
+      expect(await store.mutate(operation, mutation)).deep.equals(result)
+      await refuses(store.mutate(operation, {...mutation, expectedRevision: 2}), 'conflict')
+      await refuses(store.mutate(randomUUID(), mutation), 'missing')
+      await refuses(
+        store.mutate(randomUUID(), {
+          archived: false,
+          directory: null,
+          expectedRevision: 1,
+          id: project.id,
+          kind: 'update',
+          name: 'Late edit',
+        }),
+        'missing',
+      )
+    })
+
+    it('rejects pending reservations and cleans committed reservation records after detachment', async () => {
+      const project = await create(store)
+      const pairId = randomUUID()
+      const id = randomUUID()
+      await store.mutate(randomUUID(), {
+        kind: 'reserve',
+        reservation: {cwd: root, id, pairId, projectId: project.id, projectRevision: 1, sessionId: 'synthetic'},
+      })
+      await refuses(store.mutate(randomUUID(), {expectedRevision: 1, id: project.id, kind: 'delete'}), 'conflict')
+      await store.mutate(randomUUID(), {kind: 'commit-reservation', reservationId: id})
+      await store.mutate(randomUUID(), {
+        expectedRevision: 1,
+        kind: 'membership',
+        pairId,
+        projectId: null,
+        sessionId: 'synthetic',
+        unavailable: false,
+      })
+      await store.mutate(randomUUID(), {expectedRevision: 1, id: project.id, kind: 'delete'})
+      expect(await store.query({id, kind: 'reservation'})).equals(null)
+    })
+
     it('keeps identity independent of directory and paginates with a stable ID cursor', async () => {
       const a = await create(store)
       const b = await create(store)
@@ -219,9 +303,24 @@ for (const adapter of ['memory', 'sqlite'] as const) {
       const a = await create(store)
       const b = await create(store)
       const pairId = randomUUID()
-      const membership: ProjectMutation = {expectedRevision: 0, kind: 'membership', pairId, projectId: a.id, sessionId: 'source', unavailable: false}
+      const membership: ProjectMutation = {
+        expectedRevision: 0,
+        kind: 'membership',
+        pairId,
+        projectId: a.id,
+        sessionId: 'source',
+        unavailable: false,
+      }
       await store.mutate(randomUUID(), membership)
-      const entry = {body: 'Source fact', edited: false, id: randomUUID(), projectId: a.id, retired: false, sources: [{digest: 'c'.repeat(64), messageId: 'message', pairId, sessionId: 'source'}], title: 'Fact'}
+      const entry = {
+        body: 'Source fact',
+        edited: false,
+        id: randomUUID(),
+        projectId: a.id,
+        retired: false,
+        sources: [{digest: 'c'.repeat(64), messageId: 'message', pairId, sessionId: 'source'}],
+        title: 'Fact',
+      }
       await store.mutate(randomUUID(), {entry, expectedRevision: 0, kind: 'memory'})
       await store.mutate(randomUUID(), {...membership, expectedRevision: 1, projectId: b.id})
       await store.mutate(randomUUID(), {...membership, expectedRevision: 2})
@@ -257,6 +356,84 @@ describe('SQLite project persistence', () => {
 
   afterEach(async () => {
     await fs.rm(root, {force: true, recursive: true})
+  })
+
+  it('rolls back interrupted deletion and serializes competing deletion and attachment', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-delete-fault-'))
+    const file = path.join(root, 'projects.sqlite')
+    const store = await SqliteProjectStore.open({file})
+    const competing = await SqliteProjectStore.open({file})
+    try {
+      const project = await create(store)
+      const memoryId = randomUUID()
+      await store.mutate(randomUUID(), {
+        entry: {
+          body: 'Synthetic note',
+          edited: false,
+          id: memoryId,
+          projectId: project.id,
+          retired: false,
+          sources: [],
+          title: 'Note',
+        },
+        expectedRevision: 0,
+        kind: 'memory',
+      })
+      const db = new Database(file)
+      db.exec(
+        "CREATE TRIGGER synthetic_failure BEFORE DELETE ON projects BEGIN SELECT RAISE(ABORT, 'Synthetic deletion failure'); END;",
+      )
+      db.close()
+      const operation = randomUUID()
+      const deletion: ProjectMutation = {expectedRevision: 1, id: project.id, kind: 'delete'}
+      await refuses(store.mutate(operation, deletion), 'storage')
+      expect(await store.query({id: project.id, kind: 'project'})).not.equals(null)
+      expect(await store.query({id: memoryId, kind: 'memory'})).not.equals(null)
+      expect(await store.query({id: operation, kind: 'operation'})).equals(null)
+      const repair = new Database(file)
+      repair.exec('DROP TRIGGER synthetic_failure')
+      repair.close()
+      const results = await Promise.allSettled([
+        store.mutate(operation, deletion),
+        competing.mutate(randomUUID(), {
+          expectedRevision: 0,
+          kind: 'membership',
+          pairId: randomUUID(),
+          projectId: project.id,
+          sessionId: 'synthetic',
+          unavailable: false,
+        }),
+      ])
+      expect(results.filter((result) => result.status === 'fulfilled')).length(1)
+      const retained = await store.query({id: project.id, kind: 'project'})
+      expect(retained === null).equals(results[0].status === 'fulfilled')
+      if (retained) expect(await store.query({id: memoryId, kind: 'memory'})).not.equals(null)
+      else expect(await store.query({id: memoryId, kind: 'memory'})).equals(null)
+    } finally {
+      await store.close()
+      await competing.close()
+      await fs.rm(root, {force: true, recursive: true})
+    }
+  })
+
+  it('persists deletion and its retry acknowledgement across reopening', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-delete-reopen-'))
+    const file = path.join(root, 'projects.sqlite')
+    let store = await SqliteProjectStore.open({file})
+    try {
+      const project = await create(store)
+      const operationId = randomUUID()
+      const mutation: ProjectMutation = {expectedRevision: 1, id: project.id, kind: 'delete'}
+      const result = await store.mutate(operationId, mutation)
+      await store.close()
+      store = await SqliteProjectStore.open({file})
+      expect(await store.query({id: project.id, kind: 'project'})).equals(null)
+      expect(await store.query({kind: 'projects', limit: 50})).deep.equals([])
+      expect(await store.mutate(operationId, mutation)).deep.equals(result)
+    } finally {
+      await store.close()
+      await fs.rm(root, {force: true, recursive: true})
+    }
   })
 
   it('exports opt-in adapters through the public API', async () => {

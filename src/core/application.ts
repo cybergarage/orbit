@@ -314,6 +314,10 @@ export class OrbitApplicationService {
     })
   }
 
+  async archiveSession(sessionId: string): Promise<SessionSummary> {
+    return this.setSessionArchived(sessionId, true)
+  }
+
   cancelRun(runId: string): boolean {
     return this.threadManager.cancelRun(runId)
   }
@@ -436,6 +440,11 @@ export class OrbitApplicationService {
     )
   }
 
+  async deleteProject(id: string, options: {expectedRevision: number; operationId: string}) {
+    if (!this.projects) throw new ProjectStoreError('missing', 'Project store is not configured')
+    return this.projects.delete(id, options)
+  }
+
   async deleteSession(sessionId: string): Promise<boolean> {
     await this.projects?.markDeleting(sessionId)
     const deleted = await this.deletionService.delete(sessionId)
@@ -490,6 +499,34 @@ export class OrbitApplicationService {
   async listSkills(signal?: AbortSignal, threadId?: string) {
     const catalog = threadId ? this.catalogForThread(threadId) : this.skillCatalog
     return catalog ? catalog.list(signal) : {candidates: [], complete: true, issues: ['No Skill catalog configured']}
+  }
+
+  async listUnassignedSessions(options: SessionListOptions = {}): Promise<SessionListResult> {
+    const limit = options.limit ?? 50
+    const offset = options.cursor === undefined ? 0 : Number(options.cursor)
+    if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || limit < 1 || limit > 200)
+      throw new Error('Invalid session pagination')
+    const data: SessionSummary[] = []
+    const errors: SessionListResult['errors'] = []
+    let cursor: string | undefined
+    do {
+      // eslint-disable-next-line no-await-in-loop
+      const page = await this.repository.listPage({archive: options.archive, cursor, limit: 200})
+      errors.push(...page.errors)
+      for (const session of page.data) {
+        // eslint-disable-next-line no-await-in-loop
+        if (!(await this.projects?.membership(session.id))?.projectId) data.push(session)
+      }
+
+      cursor = page.nextCursor
+    } while (cursor !== undefined)
+
+    const page = data.slice(offset, offset + limit)
+    return {
+      data: page,
+      errors,
+      ...(offset + page.length < data.length ? {nextCursor: String(offset + page.length)} : {}),
+    }
   }
 
   pluginInspection(threadId?: string) {
@@ -778,6 +815,10 @@ export class OrbitApplicationService {
     return () => this.runListeners.delete(handler)
   }
 
+  async unarchiveSession(sessionId: string): Promise<SessionSummary> {
+    return this.setSessionArchived(sessionId, false)
+  }
+
   updatePreferences(update: Partial<GuiPreferences>): GuiPreferences {
     if (update.diagnosticCapture !== undefined) {
       this.diagnostics.setCapture(update.diagnosticCapture)
@@ -970,6 +1011,17 @@ export class OrbitApplicationService {
       ...eventContext(event),
       type: event.type.replaceAll('-', '.'),
     })
+  }
+
+  private async setSessionArchived(sessionId: string, archived: boolean): Promise<SessionSummary> {
+    const thread = this.getThread(sessionId)
+    if (thread?.status === 'running' || thread?.run?.quarantined)
+      throw new Error('Cannot archive or unarchive an active or quarantined session')
+    const runtime = this.threadRuntime.get(sessionId)
+    await this.threadManager.closeIdleThread(sessionId)
+    await runtime?.skillCatalog?.settle()
+    if (this.threadRuntime.get(sessionId) === runtime) this.threadRuntime.delete(sessionId)
+    return this.repository.setArchived(sessionId, archived)
   }
 
   private withDisplayMessages(thread: ThreadSnapshot): ThreadSnapshot {

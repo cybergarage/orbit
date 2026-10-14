@@ -38,6 +38,9 @@ export class MemoryProjectStore implements ProjectStore {
       put: (table, key, row) => {
         this.rows.set(`${table}/${key}`, structuredClone(row))
       },
+      remove: (table, key) => {
+        this.rows.delete(`${table}/${key}`)
+      },
       transaction: (work, write) => {
         const before = write ? structuredClone(this.rows) : this.rows
         try {

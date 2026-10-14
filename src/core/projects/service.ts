@@ -125,6 +125,14 @@ export class ProjectService {
     }
   }
 
+  async delete(id: string, options: {expectedRevision: number; operationId: string}): Promise<Project> {
+    return (await this.store.mutate(options.operationId, {
+      expectedRevision: options.expectedRevision,
+      id,
+      kind: 'delete',
+    })) as Project
+  }
+
   async finishDeletion(sessionId: string): Promise<void> {
     const membership = await this.membership(sessionId)
     if (membership?.projectId)
@@ -139,12 +147,28 @@ export class ProjectService {
       })
   }
 
-  async listSessions(projectId: string, options: {after?: string; limit?: number} = {}) {
+  async listSessions(
+    projectId: string,
+    options: {after?: string; archive?: 'active' | 'all' | 'archived'; limit?: number} = {},
+  ) {
     if (!(await this.store.query({id: projectId, kind: 'project'})))
       throw new ProjectStoreError('missing', 'Project not found')
     const {pairId} = this.repository.scope('project-list')
     const limit = options.limit ?? 50
-    const members = await this.store.query({after: options.after, kind: 'memberships', limit, pairId, projectId})
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 200)
+      throw new ProjectStoreError('invalid', 'Invalid session list limit')
+    if (options.archive !== undefined && !['active', 'all', 'archived'].includes(options.archive))
+      throw new ProjectStoreError('invalid', 'Invalid session archive filter')
+    const members: ProjectMembership[] = []
+    let {after} = options
+    while (true) {
+      // eslint-disable-next-line no-await-in-loop
+      const page = await this.store.query({after, kind: 'memberships', limit: 200, pairId, projectId})
+      members.push(...page)
+      if (page.length < 200) break
+      after = page.at(-1)!.sessionId
+    }
+
     const data = []
     for (const membership of members) {
       // A CLI deletion never opens the catalog; reconcile its acknowledged marker here.
@@ -174,6 +198,7 @@ export class ProjectService {
             if (error instanceof ProjectStoreError && error.code === 'missing') return null
             throw error
           })
+      const archived = this.repository.isArchived(membership.sessionId)
       const session = source
         ? {
             ...createSessionInformationFromSource({
@@ -185,13 +210,16 @@ export class ProjectService {
               originator: source.parsed.header.originator,
               provider: source.parsed.header.provider,
             }),
+            archived,
             file: source.file,
           }
         : null
-      data.push({membership, session, unavailable: !session})
+      if (options.archive === undefined || options.archive === 'all' || archived === (options.archive === 'archived'))
+        data.push({membership, session, unavailable: !session})
     }
 
-    return {data, ...(members.length === limit ? {nextCursor: members.at(-1)!.sessionId} : {})}
+    const page = data.slice(0, limit)
+    return {data: page, ...(data.length > limit ? {nextCursor: page.at(-1)!.membership.sessionId} : {})}
   }
 
   async markDeleting(sessionId: string): Promise<void> {

@@ -163,6 +163,9 @@ function initialize(): CatalogEngine {
         )
         .run(...values)
     },
+    remove(table, key) {
+      db!.prepare(`DELETE FROM ${table} WHERE key = ?`).run(key)
+    },
     transaction: (work, write) => (write ? db!.transaction(work).immediate() : db!.transaction(work).deferred()),
   }
   return new CatalogEngine(backend)
