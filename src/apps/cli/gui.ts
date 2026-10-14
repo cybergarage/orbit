@@ -7,6 +7,7 @@ import process from 'node:process'
 
 import {type AgentOptions, resolveAgentOptions, resolveWorkspaceAgentOptions} from '../../core/chat.js'
 import {loadSystemContexts} from '../../core/context.js'
+import {DurableWorkStore} from '../../core/execution/scheduled-work.js'
 import {
   loadWorkspaceSettingsWithSources,
   Message,
@@ -18,13 +19,15 @@ import {
   SqliteProjectStore,
 } from '../../core/index.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
+import {LocalScheduler} from '../gui/local-scheduler.js'
+import {scheduledExecutor} from '../gui/scheduled-executor.js'
 import {startGuiServer} from '../gui/server.js'
 import {startMetricsServer} from '../metrics/server.js'
 import {productExtensions} from '../plugins.js'
 import {ensureStartupStorage} from '../storage-startup.js'
 
 export async function runGuiCommand(
-  options: AgentOptions & {metricsPort?: number; port?: number; version?: string},
+  options: AgentOptions & {metricsPort?: number; port?: number; scheduledWork?: boolean; version?: string},
   deps: {storagePreflight?: typeof ensureStartupStorage} = {},
 ): Promise<void> {
   await (deps.storagePreflight ?? ensureStartupStorage)()
@@ -89,15 +92,30 @@ export async function runGuiCommand(
     await projectStore.close()
     throw error
   })
-  const server = await startGuiServer({port: options.port, service}).catch(async (error: unknown) => {
+  const scheduleRoot = path.join(path.dirname(service.runtime.sessionRoot), 'gui-scheduled')
+  let scheduler: LocalScheduler
+  try {
+    scheduler = new LocalScheduler(
+      new DurableWorkStore(path.join(scheduleRoot, 'work.json')),
+      scheduledExecutor(service.runtime, path.join(scheduleRoot, 'journals'), service.repository),
+    )
+  } catch (error) {
+    await service.close()
+    throw error
+  }
+
+  const server = await startGuiServer({port: options.port, scheduler, service}).catch(async (error: unknown) => {
+    await scheduler.close()
     await service.close()
     throw error
   })
+  if (options.scheduledWork) scheduler.start()
   const metricsServer =
     options.metricsPort === undefined
       ? undefined
       : await startMetricsServer(metrics!, options.metricsPort).catch(async (error: unknown) => {
           await server.close()
+          await scheduler.close()
           await service.close()
           throw error
         })
@@ -110,6 +128,7 @@ export async function runGuiCommand(
       await server.close()
     } finally {
       try {
+        await scheduler.close()
         await metricsServer?.close()
       } finally {
         await service.close()
@@ -133,6 +152,10 @@ export default class Gui extends Command {
       min: 0,
       required: false,
     }),
+    'scheduled-work': Flags.boolean({
+      default: false,
+      description: 'Enable dispatch of saved local scheduled work for this process',
+    }),
   }
 
   async run(): Promise<void> {
@@ -142,6 +165,7 @@ export default class Gui extends Command {
         ...toAgentOptions(flags),
         metricsPort: flags['metrics-port'],
         port: flags.port,
+        scheduledWork: flags['scheduled-work'],
         version: this.config.version,
       })
     } catch (error) {

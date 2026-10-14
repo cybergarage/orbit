@@ -1,12 +1,13 @@
 # Local GUI
 
 Orbit includes a local web interface for inspecting and running durable agent
-sessions. The interface has three areas:
-
-- a left sidebar with **New Chat**, a **Project** tree, and **Recent** sessions;
-- a center conversation pane with message history, a prompt composer, and run
-  cancellation;
-- an optional log pane scoped to the selected session.
+sessions. The interface has three columns: a 64px Home/Scheduled/Settings navigation rail,
+a 280px context list, and the selected workspace. Settings stays at the bottom
+of the rail. On compact windows the context list opens as a dismissible drawer.
+Home retains the existing conversation, project menus, send/stop and individual
+operation approvals. Details and Advanced reveal memory, logs, Skills and limits.
+Settings exposes the existing diagnostic capture controls and runtime information;
+it does not edit providers or credentials.
 
 Message history and logs scroll independently within the window, including
 after reopening a session with a long saved history. The log list does not push
@@ -215,3 +216,39 @@ when reopening a session after a server restart.
 Unknown work, failed recording or unverifiable old history can prevent continuation.
 Orbit displays the reason; retain the old conversation and inspect logs or start a
 new chat with your task and known progress. See [execution recovery](execution.md#continue-after-a-budget-stop).
+
+## Local scheduled tasks
+
+Scheduled supports one-shot UTC timestamps and fixed intervals of at least one
+second. Task creation requires an absolute, existing workspace, bounded name and
+instructions, schema version 1 and the explicit `workspace-read` permission.
+No calendar or cron recurrence is supported. Creation replay keys are persisted
+atomically with the schedule and reject conflicting retries.
+
+The GUI host saves tasks by default, with dispatch disabled. Explicitly start
+`orbit gui --scheduled-work` to opt into dispatch for that process. No daemon,
+login item or Docker container is installed. Exit, sleep and poweroff stop work;
+missed fixed intervals coalesce on restart. The interface keeps these process
+conditions in its local scheduling help.
+
+The local adapter uses [DurableWorkStore](scheduled-work.md), owns one execution
+at a time, and caps saved tasks at 100 with the store's 16 MiB history bound.
+A dedicated managed Agent retains its actual session and operation journal,
+allows only read/list/glob/grep within the selected workspace, denies other
+effects, and never starts inherited MCP servers or approves operations. Model
+execution uses the host's configured provider/model and the selected workspace's
+provider settings; task instructions cannot expand permissions. Runs are bounded
+to two minutes, 12 model calls, 12 tool rounds and 64 tool requests.
+
+Pause affects future occurrences; queued and active work are unaffected.
+Cancel durably records the request before signalling cooperative stop of one
+occurrence, and remains pending until the owning executor settles. A restart
+retains that cancellation even if the read attempt was interrupted. Uncertain outcomes stop further dispatch and never
+replay automatically. Reconciliation requires explicit confirmation that external
+execution stopped plus evidence, and closes the occurrence as failed. It does
+not assert success. Interrupted read attempts can resume after a process restart
+using their stable request identity.
+
+State lives in the `gui-scheduled` directory beside session storage. Corrupt or
+unsupported saved payloads/effects/approval grants fail closed. This host does
+not support scheduled write/command/send actions or unattended blanket approvals.
