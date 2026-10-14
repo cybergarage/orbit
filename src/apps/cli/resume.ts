@@ -15,18 +15,21 @@ import {Agent, runInteractiveSession, SessionRepository} from '../../core/index.
 import {selectOllamaModel} from '../../core/models/adapters/ollama.js'
 import {loadWorkspaceSettings} from '../../core/settings.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
+import {withProjectCatalog} from '../project-catalog.js'
 import {selectSessionSummary} from '../session-selection.js'
 
 type AgentClass = typeof Agent
 
 export interface ResumeSessionCommandOptions extends AgentOptions {
   all?: boolean
+  archive?: 'active' | 'all' | 'archived'
   cwd?: string
   last?: boolean
 }
 
 export interface ResumeSessionCommandDependencies {
   agentClass?: AgentClass
+  assertProjectActive?: (id: string) => Promise<unknown>
   contextLoader?: typeof loadSystemContexts
   ollamaModelSelector?: typeof selectOllamaModel
   repository?: SessionRepository
@@ -45,6 +48,10 @@ export async function runResumeSessionCommand(
   const repository = deps.repository ?? new SessionRepository()
   const launchCwd = path.resolve(options.cwd ?? process.cwd())
   const summary = await selectSessionSummary(repository, sessionId, options, launchCwd)
+  await (
+    deps.assertProjectActive ??
+    ((id: string) => withProjectCatalog(repository, (service) => service.requireActive(id), true))
+  )(summary.id)
   await requireDirectory(summary.cwd)
   const session = openSession(repository, summary)
 
@@ -96,6 +103,10 @@ export default class Resume extends Command {
       default: false,
       description: 'Search all working directories (requires --last)',
     }),
+    archive: Flags.string({
+      description: 'Select archive state (omission includes all)',
+      options: ['active', 'archived', 'all'],
+    }),
     last: Flags.boolean({
       default: false,
       description: 'Resume the most recently updated eligible session',
@@ -108,6 +119,7 @@ export default class Resume extends Command {
       await runResumeSessionCommand(args.session, {
         ...toAgentOptions(flags),
         all: flags.all,
+        archive: flags.archive as ResumeSessionCommandOptions['archive'],
         last: flags.last,
       })
     } catch (error) {

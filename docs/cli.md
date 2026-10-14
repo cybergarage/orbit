@@ -29,8 +29,13 @@ USAGE
 * [`orbit help [COMMAND]`](#orbit-help-command)
 * [`orbit mcp list`](#orbit-mcp-list)
 * [`orbit plugins list`](#orbit-plugins-list)
+* [`orbit project ACTION [PROJECT]`](#orbit-project-action-project)
 * [`orbit resume [SESSION]`](#orbit-resume-session)
 * [`orbit session [SESSION]`](#orbit-session-session)
+* [`orbit session archive SESSION`](#orbit-session-archive-session)
+* [`orbit session delete SESSION`](#orbit-session-delete-session)
+* [`orbit session list`](#orbit-session-list)
+* [`orbit session unarchive SESSION`](#orbit-session-unarchive-session)
 * [`orbit skills`](#orbit-skills)
 * [`orbit storage ACTION [SESSION]`](#orbit-storage-action-session)
 * [`orbit tools`](#orbit-tools)
@@ -209,6 +214,43 @@ DESCRIPTION
 
 _See code: [src/cli/plugins/list.ts](https://github.com/cybergarage/orbit/blob/v0.9.0/src/apps/cli/plugins/list.ts)_
 
+## `orbit project ACTION [PROJECT]`
+
+List projects or archive, unarchive, or permanently delete an empty project
+
+```
+USAGE
+  $ orbit project ACTION [PROJECT] [--after <value>] [--archive active|archived|all] [--force] [--limit
+    <value>]
+
+ARGUMENTS
+  ACTION     (list|sessions|archive|unarchive|delete)
+  [PROJECT]  Exact project ID (required except for list)
+
+FLAGS
+  --after=<value>     Exclusive project/session ID cursor for listings
+  --archive=<option>  Archive state for listings (omission includes all)
+                      <options: active|archived|all>
+  --force             Confirm empty-project deletion without prompting
+  --limit=<value>     Listing page size
+
+DESCRIPTION
+  List projects or archive, unarchive, or permanently delete an empty project
+
+EXAMPLES
+  $ orbit project list --archive archived
+
+  $ orbit project sessions <PROJECT_ID> --archive all
+
+  $ orbit project archive <PROJECT_ID>
+
+  $ orbit project unarchive <PROJECT_ID>
+
+  $ orbit project delete <PROJECT_ID> --force
+```
+
+_See code: [src/cli/project.ts](https://github.com/cybergarage/orbit/blob/v0.9.0/src/apps/cli/project.ts)_
+
 ## `orbit resume [SESSION]`
 
 Resume a saved interactive session
@@ -218,7 +260,8 @@ USAGE
   $ orbit resume [SESSION] [--plugin <value>...] [--plugin-data-dir <value>] [--anthropic-api-key-env
     <value>] [--debug] [--execution-policy workspace-confirm|unrestricted] [--journal-level
     file-and-directory-sync|file-sync] [--lang en|ja] [--model <value>] [--ollama-host <value>] [--openai-api-key-env
-    <value>] [--provider anthropic|apple|ollama|openai] [--skill-root <value>...] [--all] [--last]
+    <value>] [--provider anthropic|apple|ollama|openai] [--skill-root <value>...] [--all] [--archive
+    active|archived|all] [--last]
 
 ARGUMENTS
   [SESSION]  Exact ID of the saved session to resume
@@ -226,6 +269,8 @@ ARGUMENTS
 FLAGS
   --all                            Search all working directories (requires --last)
   --anthropic-api-key-env=<value>  Environment variable name for the Anthropic API key
+  --archive=<option>               Select archive state (omission includes all)
+                                   <options: active|archived|all>
   --debug                          Enable debug logging
   --execution-policy=<option>      Operation policy; unrestricted still enforces budgets and recording
                                    <options: workspace-confirm|unrestricted>
@@ -262,16 +307,18 @@ Show saved session information
 
 ```
 USAGE
-  $ orbit session [SESSION] [--all] [--id-only] [--json] [--last]
+  $ orbit session [SESSION] [--all] [--archive active|archived|all] [--id-only] [--json] [--last]
 
 ARGUMENTS
   [SESSION]  Exact ID of the saved session to inspect
 
 FLAGS
-  --all      Search all working directories (requires --last)
-  --id-only  Print only the full session ID
-  --json     Print the session summary as JSON
-  --last     Inspect the most recently updated eligible session
+  --all               Search all working directories (requires --last)
+  --archive=<option>  Select archive state (omission includes all)
+                      <options: active|archived|all>
+  --id-only           Print only the full session ID
+  --json              Print the session summary as JSON
+  --last              Inspect the most recently updated eligible session
 
 DESCRIPTION
   Show saved session information
@@ -287,6 +334,96 @@ EXAMPLES
 ```
 
 _See code: [src/cli/session.ts](https://github.com/cybergarage/orbit/blob/v0.9.0/src/apps/cli/session.ts)_
+
+## `orbit session archive SESSION`
+
+Archive a saved session while preserving its identity and history
+
+```
+USAGE
+  $ orbit session archive SESSION
+
+ARGUMENTS
+  SESSION  Exact saved session ID
+
+DESCRIPTION
+  Archive a saved session while preserving its identity and history
+
+EXAMPLES
+  $ orbit session archive <SESSION_ID>
+```
+
+_See code: [src/cli/session/archive.ts](https://github.com/cybergarage/orbit/blob/v0.9.0/src/apps/cli/session/archive.ts)_
+
+## `orbit session delete SESSION`
+
+Permanently delete a saved session
+
+```
+USAGE
+  $ orbit session delete SESSION [--force] [--journal-level file-and-directory-sync|file-sync]
+
+ARGUMENTS
+  SESSION  ID of the saved session to delete
+
+FLAGS
+  --force                   Delete without asking for confirmation
+  --journal-level=<option>  Persistent journal acknowledgement level; unsupported levels fail admission
+                            <options: file-and-directory-sync|file-sync>
+
+DESCRIPTION
+  Permanently delete a saved session
+
+EXAMPLES
+  $ orbit session delete <SESSION_ID>
+
+  $ orbit session delete <SESSION_ID> --force
+```
+
+_See code: [src/cli/session/delete.ts](https://github.com/cybergarage/orbit/blob/v0.9.0/src/apps/cli/session/delete.ts)_
+
+## `orbit session list`
+
+List saved sessions including their archive state
+
+```
+USAGE
+  $ orbit session list [--archive active|archived|all] [--cursor <value>] [--limit <value>]
+
+FLAGS
+  --archive=<option>  Archive state (omission includes all)
+                      <options: active|archived|all>
+  --cursor=<value>    Continuation cursor from the previous page
+  --limit=<value>     Page size
+
+DESCRIPTION
+  List saved sessions including their archive state
+
+EXAMPLES
+  $ orbit session list --archive archived
+```
+
+_See code: [src/cli/session/list.ts](https://github.com/cybergarage/orbit/blob/v0.9.0/src/apps/cli/session/list.ts)_
+
+## `orbit session unarchive SESSION`
+
+Unarchive a saved session while preserving its identity and history
+
+```
+USAGE
+  $ orbit session unarchive SESSION
+
+ARGUMENTS
+  SESSION  Exact saved session ID
+
+DESCRIPTION
+  Unarchive a saved session while preserving its identity and history
+
+EXAMPLES
+  $ orbit session unarchive <SESSION_ID>
+```
+
+_See code: [src/cli/session/unarchive.ts](https://github.com/cybergarage/orbit/blob/v0.9.0/src/apps/cli/session/unarchive.ts)_
 
 ## `orbit skills`
 

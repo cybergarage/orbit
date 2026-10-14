@@ -3,10 +3,11 @@
 
 import type {SessionRepository, SessionSummary} from '../core/index.js'
 
-const interactiveOriginators = ['orbit-interactive', 'orbit-thread-manager']
+const interactiveOriginators = new Set(['orbit-interactive', 'orbit-thread-manager'])
 
 export interface SessionSelectionOptions {
   all?: boolean
+  archive?: 'active' | 'all' | 'archived'
   last?: boolean
 }
 
@@ -19,12 +20,18 @@ export async function selectSessionSummary(
   validateSessionSelection(sessionId, options)
   const summary =
     sessionId === undefined
-      ? await repository.findLatest({
-          ...(options.all === true ? {} : {cwd: launchCwd}),
-          originators: interactiveOriginators,
-        })
-      : await repository.findById(sessionId)
-  if (summary !== undefined) return summary
+      ? await latestEligibleSession(repository, options, launchCwd)
+      : await exactSession(repository, sessionId)
+  if (summary !== undefined) {
+    if (
+      options.archive !== undefined &&
+      options.archive !== 'all' &&
+      summary.archived !== (options.archive === 'archived')
+    )
+      throw new Error(`Session does not match archive filter: ${summary.id}`)
+    return summary
+  }
+
   if (sessionId !== undefined) throw new Error(`Unknown session: ${sessionId}`)
   if (options.all === true) throw new Error('No saved interactive sessions found.')
   throw new Error(`No saved interactive sessions found for ${launchCwd}.`)
@@ -42,4 +49,35 @@ export function validateSessionSelection(sessionId: string | undefined, options:
   if (options.all === true && options.last !== true) {
     throw new Error('--all requires --last.')
   }
+}
+
+async function latestEligibleSession(repository: SessionRepository, options: SessionSelectionOptions, cwd: string) {
+  let cursor: string | undefined
+  do {
+    // eslint-disable-next-line no-await-in-loop
+    const page = await repository.listPage({archive: options.archive, cursor, limit: 200})
+    if (page.errors.length > 0)
+      throw new Error(`Session selection failed: ${page.errors.map((error) => error.message).join('; ')}`)
+    const session = page.data.find(
+      (item) =>
+        (options.all === true || item.cwd === cwd) &&
+        item.originator !== undefined &&
+        interactiveOriginators.has(item.originator),
+    )
+    if (session) return session
+    cursor = page.nextCursor
+  } while (cursor !== undefined)
+}
+
+async function exactSession(repository: SessionRepository, id: string) {
+  let cursor: string | undefined
+  do {
+    // eslint-disable-next-line no-await-in-loop
+    const page = await repository.listPage({cursor, limit: 200})
+    if (page.errors.length > 0)
+      throw new Error(`Session selection failed: ${page.errors.map((error) => error.message).join('; ')}`)
+    const session = page.data.find((item) => item.id === id)
+    if (session) return session
+    cursor = page.nextCursor
+  } while (cursor !== undefined)
 }
