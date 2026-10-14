@@ -12,6 +12,11 @@ export default [
   ...oclif,
   prettier,
   {
+    files: ['test/**/*.{ts,mjs}', 'e2e/**/*.test.mjs', 'e2e/**/*.e2e.mjs'],
+    // Test setup and fault matrices can be complex; other checks still apply.
+    rules: {complexity: 'off'},
+  },
+  {
     files: ['e2e/**/*.mjs'],
     // Trials and cleanup deliberately serialize access to the local model;
     // external JSON field names must match Ollama and SWE-bench wire formats.
