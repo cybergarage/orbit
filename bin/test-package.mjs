@@ -35,6 +35,12 @@ try {
   for (const required of [
     'dist/index.js',
     'dist/index.d.ts',
+    'dist/core/session/title.js',
+    'dist/core/session/title.d.ts',
+    'dist/core/session/repository.d.ts',
+    'dist/core/session/information.d.ts',
+    'dist/core/projects/service.js',
+    'dist/core/projects/service.d.ts',
     'native/apple-foundation-models/main.swift',
     'bin/test-apple-foundation-models.mjs',
     'dist/apps/gui/public/client.js',
@@ -82,8 +88,81 @@ export function executionApi(run: RunContext, managed: ManagedToolOptions, execu
 }
 `,
   )
+  await writeFile(
+    path.join(consumer, 'src/rename-api-probe.ts'),
+    `// Copyright (c) 2026 The Orbit Authors
+// SPDX-License-Identifier: Apache-2.0
+import assert from 'node:assert/strict'
+import {randomUUID} from 'node:crypto'
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import {
+  createSessionInformation, Message, MessageType, ProjectService,
+  SessionRepository, SqliteProjectStore,
+} from '@cybergarage/orbit'
+import type {
+  Project, ProjectMutation, SessionInformation, SessionRenameOptions, SessionSummary,
+} from '@cybergarage/orbit'
+
+const root = path.resolve('rename-consumer')
+await fs.mkdir(root, {recursive: true})
+const repository = new SessionRepository({rootDir: path.join(root, 'sessions')})
+repository.initializeStorage({allWritersStopped: true, automaticRestartersDisabled: true, exclusiveStorageControl: true})
+const session = repository.create({cwd: root, model: 'synthetic-model', provider: 'ollama'})
+session.appendMessages([new Message(MessageType.User, {content: 'Synthetic conversation preview'})])
+const id = session.getId()
+const file = session.getFile()!
+await session.close()
+const transcript = await fs.readFile(file)
+const before = (await repository.findById(id))!
+const input: SessionRenameOptions = {expectedRevision: 0, operationId: randomUUID(), title: 'Consumer title'}
+const renamed: SessionSummary = await repository.rename(id, input)
+const title: string | undefined = renamed.title
+const revision: number | undefined = renamed.titleRevision
+assert.equal(title, 'Consumer title')
+assert.equal(revision, 1)
+assert.equal(renamed.id, before.id)
+assert.equal(renamed.cwd, before.cwd)
+assert.equal(renamed.provider, before.provider)
+assert.equal(renamed.model, before.model)
+assert.deepEqual(await repository.rename(id, input), renamed)
+await assert.rejects(repository.rename(id, {...input, title: 'Changed retry'}), /input changed/)
+await assert.rejects(repository.rename(id, {...input, operationId: randomUUID()}), /revision changed/)
+const reopened = new SessionRepository({rootDir: repository.rootDir})
+assert.equal((await reopened.findById(id))?.title, title)
+assert.deepEqual(await reopened.rename(id, input), renamed)
+const opened = reopened.open(file)
+const information: SessionInformation = createSessionInformation(opened)
+assert.equal(information.title, title)
+assert.equal(information.titleRevision, revision)
+await opened.close()
+const cleared = await reopened.rename(id, {expectedRevision: 1, operationId: randomUUID(), title: null})
+assert.equal(cleared.title, undefined)
+assert.equal(cleared.titleRevision, 2)
+assert.deepEqual(await fs.readFile(file), transcript)
+
+const store = await SqliteProjectStore.open({file: path.join(root, 'projects.sqlite')})
+try {
+  const projects = new ProjectService(store, repository, {async closeThread() {}, getThread() {return undefined}}, root)
+  const project = await projects.create({directory: root, name: 'Consumer project', operationId: randomUUID()})
+  const renameInput = {expectedRevision: project.revision, name: 'Renamed consumer project', operationId: randomUUID()}
+  const mutation: ProjectMutation = {id: project.id, kind: 'rename', expectedRevision: renameInput.expectedRevision, name: renameInput.name}
+  assert.equal(mutation.kind, 'rename')
+  const saved: Project = await projects.rename(project.id, renameInput)
+  assert.equal(saved.name, renameInput.name)
+  assert.equal(saved.defaultDirectory, project.defaultDirectory)
+  assert.equal(saved.revision, project.revision + 1)
+  assert.deepEqual(await projects.rename(project.id, renameInput), saved)
+  await assert.rejects(projects.rename(project.id, {...renameInput, name: 'Changed retry'}), {code: 'conflict'})
+  await assert.rejects(projects.rename(project.id, {...renameInput, operationId: randomUUID()}), {code: 'conflict'})
+  assert.equal((await store.query({id: project.id, kind: 'project'}))?.name, saved.name)
+} finally {await store.close()}
+console.log('Package Rename consumer verified: public declarations, Session title metadata, exact retries and revision conflicts.')
+`,
+  )
   runNpm(['run', 'build'], consumer)
   runNpm(['test'], consumer)
+  execFileSync(process.execPath, [path.join(consumer, 'dist/rename-api-probe.js')], {cwd: consumer, stdio: 'inherit'})
   const catalogProbe = path.join(consumer, 'catalog-probe.mjs')
   await writeFile(
     catalogProbe,

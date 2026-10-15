@@ -241,8 +241,10 @@ workflows require an explicit manual dispatch.
    `npm run test:package`. The latter packs a real tarball and installs it into
    an independent TypeScript consumer with no source-path aliases. It checks
    imports, CLI help, durable sessions, run retries, approval/denial, cancellation,
-   logs and restart/resume without provider credentials. It needs registry access
-   to install dependencies. It does not test live models or production storage.
+   logs and restart/resume without provider credentials. It also compiles and runs
+   a public-API Rename consumer against the installed tarball, checking Session
+   title metadata, Project names, expected-revision conflicts and exact retries.
+   It needs registry access to install dependencies. It does not test live models or production storage.
 3. Run `npm run docs:commands` after building to regenerate the oclif
    sections in `docs/cli.md`. Review all generated changes and run `git diff --check`.
 4. Commit the reviewed change and create/push `v<package-version>` for that

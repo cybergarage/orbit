@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.9.1 — Unreleased
+
+Source preparation only. No v0.9.1 tag, GitHub release or npm publication has
+been created.
+
+### Added
+
+- Add Project deletion and persistent Session archive, plus CLI commands for
+  Project and Session lifecycle operations.
+- Add revisioned Project and Session display names through the public library,
+  CLI and embedded GUI. Rename retries are bound to operation IDs and expected
+  revisions; names do not replace durable IDs or rewrite conversation history.
+- Add Home, Scheduled and Settings workspaces to the embedded GUI, including
+  opt-in local scheduling and the existing core scheduling controls.
+
+### Fixed
+
+- Align the embedded GUI with the approved conversation layout. Group Session
+  information, model/context, next-run limits and Skills, and logs in a shared
+  Details panel that docks on wide windows and overlays compact windows.
+- Present operation approvals in a native modal dialog. Preserve pending
+  approval on dismissal, prevent duplicate or expired decisions, contain
+  keyboard focus and keep important Run states visible with Details closed.
+
+### Upgrade notes
+
+- The prepared consumer example pins `@cybergarage/orbit@0.9.1`. Until npm
+  publication, use `npm run test:package` to install and validate its local
+  tarball instead of resolving 0.9.1 from the registry.
+- Session `title` and `titleRevision` metadata and the rename APIs are included
+  in this source version. Hosts should refresh stale revisions and retry only
+  the same operation payload after an uncertain response.
+- Existing 0.9.0 publication records remain historical. Stop writers and follow
+  the documented storage maintenance procedure when changing runtime versions;
+  a package upgrade does not authorize mixed-version writers.
+
 ## 0.9.0 — 2026-10-14
 
 Source release for the current application-development runtime. GitHub
