@@ -7,6 +7,7 @@ implementation-completed-date: 2026-10-15
 implementation-commits:
   - 5307d79530d1a53233befd72c230614c44cb2ecf
   - ba2dab20bf0472852f1c1e81ff64e4102af7cdff
+  - 5bb0f8040768fe12d4a346069d263cddd8e3cbf9
 superseded-by: []
 ---
 
@@ -117,6 +118,18 @@ The local aggregate command excluded six entire files that create backups:
 backup test and `compaction-migration-interruption.mjs` case. Whole-file
 exclusions omit some non-backup cases as well. The unrestricted local test suite
 is not claimed. The pending remote CI must be assessed at the final PR HEAD.
+
+The first remote analysis reported 5.9% new-code duplication and Reliability C.
+The remote unit test also exposed a new HTTP fixture that implicitly constructed
+a provider Agent and therefore required a credential. These were not accepted
+as final validation. `5bb0f8040768fe12d4a346069d263cddd8e3cbf9` factors the
+three integration cases onto one synthetic fixture with an explicit fake Agent,
+handles the returned GUI action promises, preserves programmatic dialog focus,
+clarifies labels/conditions and marks static CLI metadata readonly. The final
+87 related tests pass with OpenAI and Anthropic API-key environment variables
+removed. Build, source/test types and headers pass; lint has zero errors and
+104 warnings. Chrome reconfirmed initial input focus and title save/display.
+Remote analysis and full CI must be rechecked on the subsequent PR HEAD.
 
 ## Follow-up Work
 
