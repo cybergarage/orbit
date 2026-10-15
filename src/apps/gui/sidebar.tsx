@@ -24,6 +24,7 @@ interface Props {
   onEnabled: (enabled: boolean) => void
   onMenuClosed: () => void
   onMoved: (sessionId: string, membership: ProjectMembership) => Promise<void>
+  onProjects: (projects: Project[]) => void
   onRememberFocus: (element: HTMLElement) => void
   onRenamed: (session: SessionSummary) => Promise<void>
   onSelect: (session: SessionSummary, projectId: null | string) => Promise<void>
@@ -64,6 +65,9 @@ export function Sidebar(props: Props) {
   useEffect(() => {
     props.onEnabled(model.enabled)
   }, [model.enabled, props.onEnabled])
+  useEffect(() => {
+    props.onProjects(model.projects)
+  }, [version, model, props.onProjects])
   useEffect(() => {
     props.onSessions(Object.values(model.groups).flatMap((group) => group.sessions))
   }, [version, model, props.onSessions])

@@ -5,7 +5,13 @@ sessions. The interface has three columns: a 64px Home/Scheduled/Settings naviga
 a 280px context list, and the selected workspace. Settings stays at the bottom
 of the rail. On compact windows the context list opens as a dismissible drawer.
 Home retains the existing conversation, project menus, send/stop and individual
-operation approvals. Details and Advanced reveal memory, logs, Skills and limits.
+operation approvals. **Details** opens one shared right panel with **Conversation**
+(session information, model and Project context), **Run settings** (next-run limits
+and Skills, with recorded settings kept separate), and **Logs**. It docks beside
+the conversation on wide windows and overlays it on compact windows. Project
+conversations are indented; user messages appear on the right and Orbit replies
+on the left. The header shows the selected conversation and its Project.
+Approval, error, limit and reconnection states remain visible when Details is closed.
 Settings exposes the existing diagnostic capture controls and runtime information;
 it does not edit providers or credentials.
 
@@ -78,8 +84,7 @@ selectable ID can be copied manually.
 
 The details dialog shows status, creation and update times, working directory,
 originator, current provider and model, and transcript file. The UUID is not
-shown permanently in the sidebar or conversation header; the diagnostics pane
-may continue to use its first eight characters as a compact visual cue. Local
+shown permanently in the sidebar or conversation header. Local
 paths can disclose private workspace information, so review the dialog before
 sharing screenshots or copied details.
 
@@ -107,7 +112,8 @@ without failing the entire page.
 
 ## Session logs and diagnostics
 
-The log pane can be shown or hidden from the sidebar. It loads a bounded
+Open **Details → Logs** to inspect logs. Settings controls diagnostic display.
+The log list loads a bounded
 backfill from the active and rotated JSONL segments under
 `~/.orbit/logs/<session-id>/` and then receives live records through
 Server-Sent Events. Selecting another session clears the prior records, and
@@ -180,7 +186,13 @@ and token-delta streaming are follow-up features rather than part of this releas
 
 ## Operation confirmation
 
-Each pending operation displays its bound preview and Approve/Deny controls.
+Each pending operation opens a centered **Confirm one operation** dialog showing
+its operation and target, full bound preview, expiry, **Deny** and **Approve once**.
+Background clicks never approve. **Close** or Escape dismisses the dialog while
+leaving approval pending; **Review operation** reopens it. Focus stays within the
+open dialog and returns to the pending-operation action on dismissal. Decisions
+are disabled while submitting or after expiry. Closing Details also never grants
+approval.
 Replies use the startup capability and the pending request ID/digest. Repeating
 the same decision is idempotent; an opposite, stale or wrong-run decision fails.
 The composer retains a request ID across uncertain HTTP replies and refreshes
@@ -201,7 +213,7 @@ source validation, compatibility and retained-history behavior.
 
 ## Run limits and continuation
 
-Open **Limits for the next run** below the conversation to change tool rounds,
+Open **Details → Run settings → Limits for the next run** to change tool rounds,
 model calls, tool requests or elapsed minutes. Settings apply to the next Send or
 Continue action, including per-workspace defaults. Each aggregate field defaults
 to **Unlimited**; select **Limited** to enter a numeric ceiling. They cannot alter active work.
@@ -252,3 +264,13 @@ using their stable request identity.
 State lives in the `gui-scheduled` directory beside session storage. Corrupt or
 unsupported saved payloads/effects/approval grants fail closed. This host does
 not support scheduled write/command/send actions or unattended blanket approvals.
+
+## Synthetic GUI regression checks
+
+After building, `node e2e/gui-details.e2e.mjs` verifies the shared Details panel,
+compact layouts, approval dismissal and decisions, expiry, Rename and resume
+using a temporary repository and an injected model. It reads no real user history.
+Install the Playwright dependency under `e2e/coding-workflows/browser` first, or
+set `ORBIT_PLAYWRIGHT_MODULE` to an existing Playwright ES module. Optional
+`ORBIT_CHROMIUM_PATH` selects an existing browser and `ORBIT_GUI_EVIDENCE` selects
+the screenshot/result directory (default `/tmp/orbit-gui-details-evidence`).
