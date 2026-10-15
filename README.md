@@ -31,6 +31,12 @@ optional Apple text provider. See the [changelog](CHANGELOG.md) for additions
 and upgrade notes. To use the source checkout, follow
 [Development](docs/development.md).
 
+The source checkout is preparing **0.9.1**, with Project and Session lifecycle
+commands, revisioned display names, local scheduling, and the updated embedded
+GUI. Version 0.9.1 has not been published. The install commands below continue
+to target the published 0.9.0 package; use the source development instructions
+or `npm run test:package` to validate the prepared source version.
+
 The [v0.9.0 GitHub source release](https://github.com/cybergarage/orbit/releases/tag/v0.9.0)
 and [npm package](https://www.npmjs.com/package/@cybergarage/orbit/v/0.9.0)
 are available.
