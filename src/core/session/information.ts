@@ -20,6 +20,8 @@ export interface SessionInformation {
   preview?: string
   provider?: ProviderName
   status: SessionStatus
+  title?: string
+  titleRevision?: number
   updatedAt: string
 }
 
@@ -30,6 +32,8 @@ export interface SessionInformationOverrides {
 
 interface SessionInformationSource extends Omit<SessionMetadata, 'rootMessageId' | 'systemPrompt'> {
   entries: SessionEntry[]
+  title?: string
+  titleRevision?: number
 }
 
 export function createSessionInformation(
@@ -40,6 +44,7 @@ export function createSessionInformation(
     {
       ...session.getMetadata(),
       entries: session.getEntries(),
+      ...session.getTitle(),
     },
     overrides,
   )
@@ -66,13 +71,17 @@ export function createSessionInformationFromSource(
     ...(source.originator === undefined ? {} : {originator: source.originator}),
     ...(previewEntry?.type === SessionEntryType.Message ? {preview: previewEntry.message.contents[0]} : {}),
     ...(provider === undefined ? {} : {provider}),
+    ...(source.title === undefined ? {} : {title: source.title}),
     status: sessionStatus(source.entries, lastTurnEvent),
+    titleRevision: source.titleRevision ?? 0,
     updatedAt: lastEntry?.timestamp ?? source.createdAt,
   }
 }
 
 export function formatSessionInformation(information: SessionInformation): string {
   const lines = [
+    `Name: ${sessionDisplayName(information)}`,
+    `Title revision: ${information.titleRevision ?? 0}`,
     `Session ID: ${information.id}`,
     `Status: ${information.status}`,
     `Created: ${information.createdAt}`,
@@ -100,4 +109,8 @@ function sessionStatus(entries: SessionEntry[], lastTurnEvent: SessionTurnEventE
   if (lastTurnEvent?.phase === 'failed') return 'failed'
   if (entries.length > 0) return 'interrupted'
   return 'new'
+}
+
+export function sessionDisplayName(session: Pick<SessionInformation, 'preview' | 'provider' | 'title'>): string {
+  return session.title || session.preview || `${session.provider ?? 'Orbit'} session`
 }

@@ -7,12 +7,13 @@ import {type MouseEvent as ReactMouseEvent, type ReactNode, useEffect, useRef, u
 
 import type {Project, ProjectMembership, SessionSummary} from '../../core/index.js'
 
+import {sessionDisplayName} from '../../core/session/information.js'
 import {Icon} from './icons.js'
 import {moveSidebarSession, type SidebarApi, SidebarModel, type SidebarSession} from './sidebar-model.js'
 
 type MenuTarget = {kind: 'catalog'} | {kind: 'project'; project: Project} | {kind: 'session'; session: SidebarSession}
 type Menu = MenuTarget & {x: number; y: number}
-type Editor = {directory: string; name: string; project?: Project}
+type Editor = {directory: string; name: string; project?: Project; renameOnly?: boolean}
 type Move = {destination: string; membership: null | ProjectMembership; projects: Project[]; session: SessionSummary}
 interface Props {
   api: SidebarApi
@@ -24,6 +25,7 @@ interface Props {
   onMenuClosed: () => void
   onMoved: (sessionId: string, membership: ProjectMembership) => Promise<void>
   onRememberFocus: (element: HTMLElement) => void
+  onRenamed: (session: SessionSummary) => Promise<void>
   onSelect: (session: SessionSummary, projectId: null | string) => Promise<void>
   onSessions: (sessions: SessionSummary[]) => void
   requestedMenu?: {session: SessionSummary; x: number; y: number}
@@ -38,6 +40,7 @@ export function Sidebar(props: Props) {
   const [model] = useState(() => new SidebarModel(props.api, () => redraw((value) => value + 1)))
   const [menu, setMenu] = useState<Menu>()
   const [editor, setEditor] = useState<Editor>()
+  const [rename, setRename] = useState<{name: string; session: SessionSummary}>()
   const [move, setMove] = useState<Move>()
   const [busy, setBusy] = useState(false)
   const busyRef = useRef(false)
@@ -79,6 +82,7 @@ export function Sidebar(props: Props) {
   const closeDialog = () => {
     if (busyRef.current) return
     setEditor(undefined)
+    setRename(undefined)
     setMove(undefined)
     setError(undefined)
     restoreFocus()
@@ -111,25 +115,31 @@ export function Sidebar(props: Props) {
     }
   }
 
-  const editProject = (project?: Project) => {
+  const editProject = (project?: Project, renameOnly = false) => {
     closeMenu()
     setError(undefined)
-    setEditor({directory: project?.defaultDirectory ?? '', name: project?.name ?? '', project})
+    setEditor({directory: project?.defaultDirectory ?? '', name: project?.name ?? '', project, renameOnly})
   }
 
   const writeProject = async (value: Editor, archived = value.project?.archived ?? false) => {
     const {project} = value
-    const body = {
-      directory: value.directory.trim() || null,
-      name: value.name.trim(),
-      ...(project ? {archived, expectedRevision: project.revision} : {}),
-    }
-    const path = project ? `/api/projects/${encodeURIComponent(project.id)}` : '/api/projects'
+    const nameOnly = project && value.directory === (project.defaultDirectory ?? '') && archived === project.archived
+    const body = project
+      ? {
+          ...(value.name.trim() === project.name ? {} : {name: value.name.trim()}),
+          ...(value.directory === (project.defaultDirectory ?? '') ? {} : {directory: value.directory.trim() || null}),
+          ...(archived === project.archived ? {} : {archived}),
+          expectedRevision: project.revision,
+        }
+      : {directory: value.directory.trim() || null, name: value.name.trim()}
+    if (nameOnly) body.name = value.name.trim()
+    const renameSuffix = nameOnly ? '/rename' : ''
+    const path = project ? `/api/projects/${encodeURIComponent(project.id)}${renameSuffix}` : '/api/projects'
     const key = JSON.stringify([path, body])
     await props.api(path, {
       body: JSON.stringify({...body, operationId: operationId(key)}),
       headers: {'Content-Type': 'application/json'},
-      method: project ? 'PATCH' : 'POST',
+      method: project && !nameOnly ? 'PATCH' : 'POST',
     })
     operations.current.delete(key)
     setEditor(undefined)
@@ -173,6 +183,11 @@ export function Sidebar(props: Props) {
     }
   }
 
+  const projectTitle = editor?.project ? 'Project settings' : 'Create project'
+  const editorTitle = editor?.renameOnly ? 'Rename project' : projectTitle
+  const projectAction = editor?.project ? 'Save changes' : 'Create project'
+  const editorAction = editor?.renameOnly ? 'Save name' : projectAction
+
   const renderGroup = (projectId: null | string) => {
     const group = model.groups[projectId ?? '']
     return (
@@ -184,14 +199,14 @@ export function Sidebar(props: Props) {
               disabled={session.pendingProjectCreation}
               onClick={() => props.onSelect(session, projectId)}
               onContextMenu={(event) => openMenu(event, {kind: 'session', session})}
-              title={session.preview || session.id}
+              title={sessionDisplayName(session)}
             >
               <Icon name="chat" />
-              <span className="session-title">{session.preview || `${session.provider ?? 'Orbit'} session`}</span>
+              <span className="session-title">{sessionDisplayName(session)}</span>
               {session.pendingProjectCreation && <span className="session-meta">Project creation incomplete</span>}
             </button>
             <button
-              aria-label={`Actions for ${session.preview || session.id}`}
+              aria-label={`Actions for ${sessionDisplayName(session)}`}
               className="row-action"
               onClick={(event) => openMenu(event, {kind: 'session', session})}
             >
@@ -333,7 +348,7 @@ export function Sidebar(props: Props) {
         </div>
         {renderGroup(null)}
       </nav>
-      {error && !editor && !move && (
+      {error && !editor && !move && !rename && (
         <div className="sidebar-status" role="alert">
           {error}
           <button onClick={() => setError(undefined)}>Dismiss</button>
@@ -369,6 +384,9 @@ export function Sidebar(props: Props) {
               >
                 New Chat
               </button>
+              <button disabled={busy} onClick={() => editProject(menu.project, true)} role="menuitem">
+                Rename project…
+              </button>
               <button disabled={busy} onClick={() => editProject(menu.project)} role="menuitem">
                 Project settings…
               </button>
@@ -391,6 +409,21 @@ export function Sidebar(props: Props) {
           )}
           {menu.kind === 'session' && (
             <>
+              <button
+                disabled={busy || menu.session.pendingProjectCreation}
+                onClick={() => {
+                  const {session} = menu
+                  closeMenu()
+                  return act(async () => {
+                    const current = await props.api<SessionSummary>(`/api/sessions/${encodeURIComponent(session.id)}`)
+                    setRename({name: current.title ?? '', session: current})
+                  })
+                }}
+                role="menuitem"
+              >
+                Rename session…
+              </button>
+
               <button
                 onClick={() => {
                   closeMenu()
@@ -433,8 +466,53 @@ export function Sidebar(props: Props) {
           )}
         </ActionMenu>
       )}
+      {rename && (
+        <SidebarDialog onClose={closeDialog} title="Rename session">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              return act(async () => {
+                const body = {expectedRevision: rename.session.titleRevision ?? 0, title: rename.name.trim() || null}
+                const path = `/api/sessions/${encodeURIComponent(rename.session.id)}`
+                const key = JSON.stringify([path, body])
+                const updated = await props.api<SessionSummary>(path, {
+                  body: JSON.stringify({...body, operationId: operationId(key)}),
+                  headers: {'Content-Type': 'application/json'},
+                  method: 'PATCH',
+                })
+                operations.current.delete(key)
+                await props.onRenamed(updated)
+                setRename(undefined)
+                await model.refresh()
+                globalThis.setTimeout(restoreFocus, 0)
+              })
+            }}
+          >
+            <label>
+              <span>Name</span>
+              <input
+                aria-label="Session name"
+                disabled={busy}
+                maxLength={256}
+                onChange={(event) => setRename({...rename, name: event.target.value})}
+                value={rename.name}
+              />
+            </label>
+            <p>Leave empty to use the original conversation preview. Active conversations cannot be renamed.</p>
+            {error && <p role="alert">{error}</p>}
+            <div className="dialog-actions">
+              <button disabled={busy} onClick={closeDialog} type="button">
+                Cancel
+              </button>
+              <button disabled={busy} type="submit">
+                Save name
+              </button>
+            </div>
+          </form>
+        </SidebarDialog>
+      )}
       {editor && (
-        <SidebarDialog onClose={closeDialog} title={editor.project ? 'Project settings' : 'Create project'}>
+        <SidebarDialog onClose={closeDialog} title={editorTitle}>
           <form
             onSubmit={(event) => {
               event.preventDefault()
@@ -453,24 +531,28 @@ export function Sidebar(props: Props) {
                 value={editor.name}
               />
             </label>
-            <label>
-              Default directory
-              <input
-                aria-label="Project directory"
-                disabled={busy}
-                onChange={(event) => setEditor({...editor, directory: event.target.value})}
-                placeholder="Use startup directory"
-                value={editor.directory}
-              />
-            </label>
-            <p>The default directory applies to new chats. Existing chats retain their recorded directory.</p>
+            {!editor.renameOnly && (
+              <>
+                <label>
+                  Default directory
+                  <input
+                    aria-label="Project directory"
+                    disabled={busy}
+                    onChange={(event) => setEditor({...editor, directory: event.target.value})}
+                    placeholder="Use startup directory"
+                    value={editor.directory}
+                  />
+                </label>
+                <p>The default directory applies to new chats. Existing chats retain their recorded directory.</p>
+              </>
+            )}
             {error && <p role="alert">{error}</p>}
             <div className="dialog-actions">
               <button disabled={busy} onClick={closeDialog} type="button">
                 Cancel
               </button>
               <button disabled={busy || !editor.name.trim()} type="submit">
-                {editor.project ? 'Save changes' : 'Create project'}
+                {editorAction}
               </button>
             </div>
           </form>
@@ -478,7 +560,7 @@ export function Sidebar(props: Props) {
       )}
       {move && (
         <SidebarDialog onClose={closeDialog} title="Move to project">
-          <div className="dialog-session">{move.session.preview || move.session.id}</div>
+          <div className="dialog-session">{sessionDisplayName(move.session)}</div>
           <p>
             Moving retains the recorded directory and all previous messages. Linked memories in the old Project stop
             being used. Active or quarantined conversations cannot be moved.

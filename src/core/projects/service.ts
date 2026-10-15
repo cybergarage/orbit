@@ -210,6 +210,7 @@ export class ProjectService {
               originator: source.parsed.header.originator,
               provider: source.parsed.header.provider,
             }),
+            ...this.repository.getTitle(membership.sessionId),
             archived,
             file: source.file,
           }
@@ -248,6 +249,15 @@ export class ProjectService {
     return this.store.query({kind: 'membership', pairId: this.repository.scope(sessionId).pairId, sessionId})
   }
 
+  async rename(id: string, options: {expectedRevision: number; name: string; operationId: string}): Promise<Project> {
+    return (await this.store.mutate(options.operationId, {
+      expectedRevision: options.expectedRevision,
+      id,
+      kind: 'rename',
+      name: options.name,
+    })) as Project
+  }
+
   async requireActive(sessionId: string): Promise<null | ProjectMembership> {
     const member = await this.membership(sessionId)
     if (
@@ -267,17 +277,27 @@ export class ProjectService {
 
   async update(
     id: string,
-    options: {archived: boolean; directory: null | string; expectedRevision: number; name: string; operationId: string},
+    options: {
+      archived?: boolean
+      directory?: null | string
+      expectedRevision: number
+      name?: string
+      operationId: string
+    },
   ): Promise<Project> {
-    if (options.directory !== null && !(await this.store.query({id: options.operationId, kind: 'operation'})))
+    if (
+      options.directory !== undefined &&
+      options.directory !== null &&
+      !(await this.store.query({id: options.operationId, kind: 'operation'}))
+    )
       await this.directory(options.directory)
     return (await this.store.mutate(options.operationId, {
-      archived: options.archived,
-      directory: options.directory,
+      ...(options.archived === undefined ? {} : {archived: options.archived}),
+      ...(options.directory === undefined ? {} : {directory: options.directory}),
       expectedRevision: options.expectedRevision,
       id,
       kind: 'update',
-      name: options.name,
+      ...(options.name === undefined ? {} : {name: options.name}),
     })) as Project
   }
 

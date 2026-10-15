@@ -57,10 +57,11 @@ export interface ProjectCatalogSnapshot {
 }
 
 export type ProjectMutation =
-  | {archived: boolean; directory: null | string; expectedRevision: number; id: string; kind: 'update'; name: string}
+  | {archived?: boolean; directory?: null | string; expectedRevision: number; id: string; kind: 'update'; name?: string}
   | {directory: null | string; expectedRevision: 0; id: string; kind: 'create'; name: string}
   | {entry: Omit<ProjectMemoryEntry, 'createdAt' | 'revision' | 'updatedAt'>; expectedRevision: number; kind: 'memory'}
   | {expectedRevision: number; id: string; kind: 'delete'}
+  | {expectedRevision: number; id: string; kind: 'rename'; name: string}
   | {
       expectedRevision: number
       kind: 'membership'

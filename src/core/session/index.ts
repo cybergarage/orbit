@@ -47,7 +47,7 @@ export type {
 } from './entries.js'
 export {SessionHeader} from './header.js'
 export type {SessionHeaderOptions} from './header.js'
-export {createSessionInformation, formatSessionInformation} from './information.js'
+export {createSessionInformation, formatSessionInformation, sessionDisplayName} from './information.js'
 export type {SessionInformation, SessionInformationOverrides, SessionStatus} from './information.js'
 export type {ContextProjectionEntry, InterruptedCall, ProjectionEvidence} from './interrupted-context.js'
 export {
@@ -79,6 +79,7 @@ export type {
 export {Session} from './session.js'
 
 export type {AppendMessageOptions, RecordTurnContextOptions, RecordTurnEventOptions, SessionOptions} from './session.js'
+export type {SessionRenameOptions, SessionTitle} from './title.js'
 export type {InterruptionPolicy} from './verified-context.js'
 export {DEFAULT_PROJECTION_LIMITS, parseInterruptionPolicy} from './verified-context.js'
 export type {SessionWriterLease} from './writer-lease.js'

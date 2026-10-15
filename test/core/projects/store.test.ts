@@ -52,6 +52,31 @@ for (const adapter of ['memory', 'sqlite'] as const) {
       await fs.rm(root, {force: true, recursive: true})
     })
 
+    it('renames atomically without changing directory or archive state and preserves replay after later updates', async () => {
+      const project = await create(store)
+      await store.mutate(randomUUID(), {
+        archived: true,
+        directory: root,
+        expectedRevision: 1,
+        id: project.id,
+        kind: 'update',
+      })
+      const operationId = randomUUID()
+      const mutation = {expectedRevision: 2, id: project.id, kind: 'rename' as const, name: '  日本語 project  '}
+      const renamed = (await store.mutate(operationId, mutation)) as Project
+      expect(renamed).include({archived: true, defaultDirectory: root, name: '日本語 project', revision: 3})
+      expect(renamed.memoryGeneration).equals(project.memoryGeneration)
+      await refuses(store.mutate(randomUUID(), mutation), 'conflict')
+      await refuses(store.mutate(operationId, {...mutation, name: 'Different'}), 'conflict')
+      await store.mutate(randomUUID(), {archived: false, expectedRevision: 3, id: project.id, kind: 'update'})
+      expect(await store.mutate(operationId, mutation)).deep.equals(renamed)
+      expect(await store.query({id: project.id, kind: 'project'})).include({
+        archived: false,
+        defaultDirectory: root,
+        name: renamed.name,
+      })
+    })
+
     it('deletes only empty projects atomically and preserves exact retry results', async () => {
       const project = await create(store)
       const pairId = randomUUID()

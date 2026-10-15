@@ -358,3 +358,12 @@ no daemon or Docker runtime is involved. `scheduled-executor.ts` uses a dedicate
 bounded managed Agent and the application session repository, with workspace-read
 tools, denied non-read effects and no MCP startup. Unknown results suspend further
 dispatch. See [Local GUI](gui.md#local-scheduled-tasks) for the maintained contract.
+
+Display name changes share these lifecycle boundaries. Project rename uses a
+revisioned catalog transaction that preserves omitted settings. Session title
+metadata uses an atomic, synchronized sidecar and the existing registered writer
+claim; transcripts retain their original bytes and formats. Repository summaries,
+Project lists, Session information and Thread snapshots project the same title
+revision. CLI and capability-protected GUI routes call these core operations.
+See [editable display names](session.md#editable-display-names) and
+[Project rename](projects.md#renaming-projects).

@@ -22,6 +22,7 @@ import type {
 } from './entries.js'
 import type {ContextProjectionEntry} from './interrupted-context.js'
 import type {SessionRecorder} from './recorder.js'
+import type {SessionTitle} from './title.js'
 import type {SessionWriterLease} from './writer-lease.js'
 
 import {Message as CoreMessage} from '../message/index.js'
@@ -59,6 +60,7 @@ export interface SessionOptions {
   messages?: Message[]
   metadata?: Partial<SessionMetadata>
   recorder?: SessionRecorder
+  titleReader?: () => SessionTitle
 }
 
 export class Session {
@@ -75,6 +77,7 @@ export class Session {
   private readonly metadata: SessionMetadata
   private readonly recorder?: SessionRecorder
   private releaseEphemeral?: () => void
+  private readonly titleReader: SessionOptions['titleReader']
 
   // Metadata hydration keeps all optional persisted fields explicit at this public construction boundary.
   // eslint-disable-next-line complexity
@@ -100,6 +103,7 @@ export class Session {
         options.recorder.scope.journalRoot !== options.journalRoot)
     )
       throw new Error('Session metadata must match recorder identity and journal binding')
+    this.titleReader = options.titleReader
     this.recorder = options.recorder
     this.journalRoot = options.journalRoot
     this.entries = structuredClone(options.entries ?? [])
@@ -284,6 +288,10 @@ export class Session {
 
   getSkillContexts(): SessionSkillEntry[] {
     return structuredClone(this.entries.filter((entry): entry is SessionSkillEntry => entry.type === 'skill_context'))
+  }
+
+  getTitle(): SessionTitle {
+    return this.titleReader?.() ?? {titleRevision: 0}
   }
 
   hasManagedLease(): boolean {
