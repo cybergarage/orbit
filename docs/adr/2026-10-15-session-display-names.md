@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-10-15
 decision-date: 2026-10-15
-implementation-status: not-started
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-10-15
+implementation-commits:
+  - 5307d79530d1a53233befd72c230614c44cb2ecf
 superseded-by: []
 ---
 
@@ -79,10 +80,34 @@ Unconditional last-write-wins updates hide stale-editor conflicts and are reject
 
 ## Implementation and Confirmation
 
-Not implemented. Accepted under the user’s explicit implementation request on
-2026-10-15. Review confirms the archive writer claim, deletion checks and catalog
+Accepted under the user's explicit implementation request on 2026-10-15.
+Review confirmed the archive writer claim, deletion checks and catalog
 transaction are reusable without changing transcript formats. Revision conflicts
-and latest-operation retry limits are explicit; no material design question remains.
+and latest-operation retry limits are explicit.
+
+Implementation completed in `5307d79530d1a53233befd72c230614c44cb2ecf`.
+On Apple M4 / Node 26.10.0, headers, build, source/test type checks and
+formatting/lint passed (zero errors; 107 warnings). The final synthetic-only
+aggregate run passed 1,030 tests after title deletion cleanup was included.
+The preceding focused core/CLI/GUI run passed 87 tests. Real compiled CLI
+subprocesses verified Japanese names, clearing, operation replay, input flags,
+reserved command-like IDs and unchanged transcript bytes.
+
+Chrome verification used an isolated synthetic SQLite catalog and session root:
+Project settings and explicit Project Rename, Session Rename/save, cancel,
+clear-to-preview, matching sidebar/header/details, and name retention after a
+GUI server process restart. No real state was copied or used as a fixture.
+No backups or Docker images were created by the local validation workflow.
+
+The local aggregate command excluded six entire files that create backups:
+`test/apps/cli/storage-reset.test.ts`, `test/apps/cli/storage.test.ts`,
+`test/core/execution/context-compaction.test.ts`,
+`test/core/execution/context-projection-format.test.ts`,
+`test/core/execution/context-projection-migration.test.ts`, and
+`test/core/execution/graph-maintenance.test.ts`. It also filtered the SQLite
+backup test and `compaction-migration-interruption.mjs` case. Whole-file
+exclusions omit some non-backup cases as well. The unrestricted local test suite
+is not claimed. The pending remote CI must be assessed at the final PR HEAD.
 
 ## Follow-up Work
 

@@ -290,7 +290,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                        |
 | ---------- | ---------- | -------------- | ----------------------------------------------------------------------------------------------- |
-| 2026-10-15 | accepted | in-progress | [Project and Session Display Names](2026-10-15-session-display-names.md) |
+| 2026-10-15 | accepted | completed | [Project and Session Display Names](2026-10-15-session-display-names.md) |
 | 2026-10-14 | accepted | completed | [Bundled GUI Local Scheduling](2026-10-14-bundled-gui-local-scheduling.md) |
 | 2026-10-04 | accepted | completed | [Windows Storage Acknowledgement](2026-10-04-windows-storage-acknowledgement.md) |
 | 2026-10-02 | accepted | completed | [Run-bound Public Operation Executor](2026-10-02-public-operation-executor.md) |
