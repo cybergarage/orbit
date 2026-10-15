@@ -7,7 +7,7 @@ import {randomUUID} from 'node:crypto'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import sinon from 'sinon'
+import {restore, stub} from 'sinon'
 
 import {runProjectCommand} from '../../../src/apps/cli/project.js'
 import {startGuiServer} from '../../../src/apps/gui/server.js'
@@ -21,12 +21,34 @@ import {
 } from '../../../src/core/index.js'
 import {SessionRepository} from '../../session-storage-fixture.js'
 
+function deferred() {
+  let resolve!: () => void
+  const promise = new Promise<void>((done) => {
+    resolve = done
+  })
+  return {promise, resolve}
+}
+
 describe('Rename HTTP and application integration', () => {
-  it('uses authenticated shared APIs, keeps list/detail/open names consistent, preserves moves and rejects stale input', async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-rename-http-'))
-    const repository = new SessionRepository({rootDir: path.join(root, 'sessions')})
-    const service = new OrbitApplicationService({
+  let root: string
+  let repository: SessionRepository
+  let service: OrbitApplicationService
+  let closeAgent: () => Promise<void>
+  let releaseClose: () => void
+
+  beforeEach(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-rename-integration-'))
+    repository = new SessionRepository({rootDir: path.join(root, 'sessions')})
+    closeAgent = async () => {}
+    releaseClose = () => {}
+    service = new OrbitApplicationService({
       contexts: [],
+      createAgent: () => ({
+        close: () => closeAgent(),
+        async invoke() {
+          throw new Error('Synthetic fixture must not dispatch')
+        },
+      }),
       cwd: root,
       logStore: new MemorySessionLogStore(),
       model: 'synthetic',
@@ -36,6 +58,16 @@ describe('Rename HTTP and application integration', () => {
       settings: {},
       settingsSources: [],
     })
+  })
+
+  afterEach(async () => {
+    releaseClose()
+    restore()
+    await service.close()
+    await fs.rm(root, {force: true, recursive: true})
+  })
+
+  it('uses authenticated shared APIs, keeps list/detail/open names consistent, preserves moves and rejects stale input', async () => {
     const server = await startGuiServer({service})
     const base = `http://${server.host}:${server.port}/api`
     const headers = {'Content-Type': 'application/json', 'X-Orbit-Token': server.token}
@@ -44,7 +76,7 @@ describe('Rename HTTP and application integration', () => {
     try {
       const project = await service.projects!.create({directory: root, name: 'Original', operationId: randomUUID()})
       // Name-only rename must not inspect an unrelated unavailable directory.
-      const directoryCheck = sinon.stub(fs, 'stat').rejects(new Error('Synthetic offline directory'))
+      const directoryCheck = stub(fs, 'stat').rejects(new Error('Synthetic offline directory'))
       const renamed = (await runProjectCommand(service.projects!, 'rename', project.id, {
         name: '  日本語 project  ',
       })) as typeof project
@@ -95,97 +127,52 @@ describe('Rename HTTP and application integration', () => {
       expect((await request(`/sessions/${thread.id}`, input)).status).not.equals(200)
       expect((await fetch(`${base}/sessions/${thread.id}`, {headers})).status).equals(404)
     } finally {
-      sinon.restore()
       await server.close()
-      await service.close()
-      await fs.rm(root, {force: true, recursive: true})
     }
   })
 
   it('blocks run admission during rename and reopens the idle conversation', async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-rename-race-'))
-    let release!: () => void
-    let closing!: () => void
-    const started = new Promise<void>((resolve) => {
-      closing = resolve
-    })
-    const settle = new Promise<void>((resolve) => {
-      release = resolve
-    })
-    const service = new OrbitApplicationService({
-      contexts: [],
-      createAgent: () => ({
-        async close() {
-          closing()
-          await settle
-        },
-        async invoke() {
-          throw new Error('Must not dispatch')
-        },
-      }),
-      cwd: root,
-      logStore: new MemorySessionLogStore(),
-      model: 'synthetic',
-      provider: 'openai',
-      repository: new SessionRepository({rootDir: path.join(root, 'sessions')}),
-      settings: {},
-      settingsSources: [],
-    })
-    try {
-      const thread = service.createThread()
-      const rename = service.renameSession(thread.id, {
-        expectedRevision: 0,
-        operationId: randomUUID(),
-        title: 'Idle title',
-      })
-      await started
-      let refused: unknown
-      try {
-        await service.startRun(thread.id, 'Synthetic input')
-      } catch (error) {
-        refused = error
-      }
-
-      expect(String(refused)).contains('lifecycle change')
-      release()
-      expect(await rename).include({title: 'Idle title', titleRevision: 1})
-      expect(service.getThread(thread.id)).include({status: 'idle', title: 'Idle title'})
-    } finally {
-      release()
-      await service.close()
-      await fs.rm(root, {force: true, recursive: true})
+    const closing = deferred()
+    const settled = deferred()
+    closeAgent = () => {
+      closing.resolve()
+      return settled.promise
     }
+
+    releaseClose = settled.resolve
+    const thread = service.createThread()
+    const rename = service.renameSession(thread.id, {
+      expectedRevision: 0,
+      operationId: randomUUID(),
+      title: 'Idle title',
+    })
+    await closing.promise
+    let refused: unknown
+    try {
+      await service.startRun(thread.id, 'Synthetic input')
+    } catch (error) {
+      refused = error
+    }
+
+    expect(String(refused)).contains('lifecycle change')
+    settled.resolve()
+    expect(await rename).include({title: 'Idle title', titleRevision: 1})
+    expect(service.getThread(thread.id)).include({status: 'idle', title: 'Idle title'})
   })
 
   it('refuses running and quarantined threads before closing ownership', async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-rename-busy-'))
-    const service = new OrbitApplicationService({
-      contexts: [],
-      cwd: root,
-      logStore: new MemorySessionLogStore(),
-      model: 'synthetic',
-      provider: 'openai',
-      repository: new SessionRepository({rootDir: path.join(root, 'sessions')}),
-      settings: {},
-      settingsSources: [],
-    })
-    try {
-      for (const thread of [{status: 'running'}, {run: {quarantined: true}, status: 'idle'}]) {
-        const stub = sinon.stub(service, 'getThread').returns(thread as ThreadSnapshot)
-        let error: unknown
-        try {
-          // eslint-disable-next-line no-await-in-loop
-          await service.renameSession('synthetic', {expectedRevision: 0, operationId: randomUUID(), title: 'Busy'})
-        } catch (error_) {
-          error = error_
-        }
-
-        expect(String(error)).contains('active or quarantined')
-        stub.restore()
+    for (const thread of [{status: 'running'}, {run: {quarantined: true}, status: 'idle'}]) {
+      const snapshot = stub(service, 'getThread').returns(thread as ThreadSnapshot)
+      let rejected: unknown
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await service.renameSession('synthetic', {expectedRevision: 0, operationId: randomUUID(), title: 'Busy'})
+      } catch (error) {
+        rejected = error
       }
-    } finally {
-      await service.close()
-      await fs.rm(root, {force: true, recursive: true})
+
+      expect(String(rejected)).contains('active or quarantined')
+      snapshot.restore()
     }
   })
 })

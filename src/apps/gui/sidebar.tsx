@@ -133,9 +133,8 @@ export function Sidebar(props: Props) {
         }
       : {directory: value.directory.trim() || null, name: value.name.trim()}
     if (nameOnly) body.name = value.name.trim()
-    const path = project
-      ? `/api/projects/${encodeURIComponent(project.id)}${nameOnly ? '/rename' : ''}`
-      : '/api/projects'
+    const renameSuffix = nameOnly ? '/rename' : ''
+    const path = project ? `/api/projects/${encodeURIComponent(project.id)}${renameSuffix}` : '/api/projects'
     const key = JSON.stringify([path, body])
     await props.api(path, {
       body: JSON.stringify({...body, operationId: operationId(key)}),
@@ -183,6 +182,11 @@ export function Sidebar(props: Props) {
       globalThis.setTimeout(restoreFocus, 0)
     }
   }
+
+  const projectTitle = editor?.project ? 'Project settings' : 'Create project'
+  const editorTitle = editor?.renameOnly ? 'Rename project' : projectTitle
+  const projectAction = editor?.project ? 'Save changes' : 'Create project'
+  const editorAction = editor?.renameOnly ? 'Save name' : projectAction
 
   const renderGroup = (projectId: null | string) => {
     const group = model.groups[projectId ?? '']
@@ -410,7 +414,7 @@ export function Sidebar(props: Props) {
                 onClick={() => {
                   const {session} = menu
                   closeMenu()
-                  act(async () => {
+                  return act(async () => {
                     const current = await props.api<SessionSummary>(`/api/sessions/${encodeURIComponent(session.id)}`)
                     setRename({name: current.title ?? '', session: current})
                   })
@@ -467,7 +471,7 @@ export function Sidebar(props: Props) {
           <form
             onSubmit={(event) => {
               event.preventDefault()
-              act(async () => {
+              return act(async () => {
                 const body = {expectedRevision: rename.session.titleRevision ?? 0, title: rename.name.trim() || null}
                 const path = `/api/sessions/${encodeURIComponent(rename.session.id)}`
                 const key = JSON.stringify([path, body])
@@ -485,10 +489,9 @@ export function Sidebar(props: Props) {
             }}
           >
             <label>
-              Name
+              <span>Name</span>
               <input
                 aria-label="Session name"
-                autoFocus
                 disabled={busy}
                 maxLength={256}
                 onChange={(event) => setRename({...rename, name: event.target.value})}
@@ -509,10 +512,7 @@ export function Sidebar(props: Props) {
         </SidebarDialog>
       )}
       {editor && (
-        <SidebarDialog
-          onClose={closeDialog}
-          title={editor.renameOnly ? 'Rename project' : editor.project ? 'Project settings' : 'Create project'}
-        >
+        <SidebarDialog onClose={closeDialog} title={editorTitle}>
           <form
             onSubmit={(event) => {
               event.preventDefault()
@@ -552,7 +552,7 @@ export function Sidebar(props: Props) {
                 Cancel
               </button>
               <button disabled={busy || !editor.name.trim()} type="submit">
-                {editor.renameOnly ? 'Save name' : editor.project ? 'Save changes' : 'Create project'}
+                {editorAction}
               </button>
             </div>
           </form>

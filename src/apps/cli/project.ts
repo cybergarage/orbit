@@ -78,12 +78,12 @@ export async function runProjectCommand(
 }
 
 export default class ProjectCommand extends Command {
-  static args = {
+  static readonly args = {
     action: Args.string({options: ['list', 'sessions', 'rename', 'archive', 'unarchive', 'delete'], required: true}),
     project: Args.string({description: 'Exact project ID (required except for list)'}),
   }
-  static description = 'List or rename projects, archive, unarchive, or permanently delete an empty project'
-  static examples = [
+  static readonly description = 'List or rename projects, archive, unarchive, or permanently delete an empty project'
+  static readonly examples = [
     '<%= config.bin %> project list --archive archived',
     '<%= config.bin %> project sessions <PROJECT_ID> --archive all',
     '<%= config.bin %> project rename <PROJECT_ID> --name "Design project"',
@@ -91,7 +91,7 @@ export default class ProjectCommand extends Command {
     '<%= config.bin %> project unarchive <PROJECT_ID>',
     '<%= config.bin %> project delete <PROJECT_ID> --force',
   ]
-  static flags = {
+  static readonly flags = {
     after: Flags.string({description: 'Exclusive project/session ID cursor for listings'}),
     archive: Flags.string({
       description: 'Archive state for listings (omission includes all)',

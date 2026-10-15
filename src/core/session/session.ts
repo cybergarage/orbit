@@ -77,7 +77,7 @@ export class Session {
   private readonly metadata: SessionMetadata
   private readonly recorder?: SessionRecorder
   private releaseEphemeral?: () => void
-  private readonly titleReader?: SessionOptions['titleReader']
+  private readonly titleReader: SessionOptions['titleReader']
 
   // Metadata hydration keeps all optional persisted fields explicit at this public construction boundary.
   // eslint-disable-next-line complexity

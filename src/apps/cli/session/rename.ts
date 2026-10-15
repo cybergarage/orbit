@@ -22,13 +22,13 @@ export async function runSessionRenameCommand(
 }
 
 export default class SessionRename extends Command {
-  static args = {
+  static readonly args = {
     session: Args.string({description: 'Exact saved session ID', required: true}),
     title: Args.string({description: 'New display name; quote spaces'}),
   }
-  static description = 'Rename a saved session without changing its conversation history'
-  static examples = ['<%= config.bin %> <%= command.id %> <SESSION_ID> "Design review"']
-  static flags = {
+  static readonly description = 'Rename a saved session without changing its conversation history'
+  static readonly examples = ['<%= config.bin %> <%= command.id %> <SESSION_ID> "Design review"']
+  static readonly flags = {
     clear: Flags.boolean({description: 'Clear the title and display the original preview'}),
     'expected-revision': Flags.integer({description: 'Expected title revision', min: 0}),
     'operation-id': Flags.string({description: 'Stable operation UUID for an exact retry'}),
