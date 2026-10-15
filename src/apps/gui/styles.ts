@@ -91,7 +91,8 @@ button, input, textarea { color:inherit; }
 .approval-operation pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:40vh; overflow:auto; }
 .approval-dialog .dialog-actions button { min-height:40px; background:white; color:#222935; border-color:#d9dfe7; }
 .approval-dialog .dialog-actions .approve-once { color:white; background:#2c2c2c; border-color:#2c2c2c; }
-.approval-backdrop { z-index:40; }
+.approval-dialog::backdrop { background:#22293555; }
+.approval-status { display:block; margin:0 0 14px; color:#626d7c; font-size:13px; line-height:1.45; }
 button:focus-visible, .diagnostics:focus-visible, .approval-dialog:focus-visible, textarea:focus-visible { outline:2px solid #3265ad; outline-offset:2px; }
 @media (max-width:1250px) {
  .app.details-open { grid-template-columns:64px 280px minmax(0,1fr); }

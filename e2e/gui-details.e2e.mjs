@@ -1,7 +1,7 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-/* global document, getComputedStyle, innerWidth */
+/* global document, Event, getComputedStyle, innerWidth */
 // Build first. Install e2e/coding-workflows/browser dependencies or point
 // ORBIT_PLAYWRIGHT_MODULE to an existing Playwright ES module. No live model is used.
 import assert from 'node:assert/strict'
@@ -99,8 +99,12 @@ try {
   let {run} = await operation()
   const dialog = page.getByRole('dialog', {name:'Confirm one operation'})
   await screenshot('approval-dialog')
-  await page.locator('.approval-backdrop').click({position:{x:4,y:4}})
+  assert(await dialog.evaluate((el)=>el.matches(':modal')))
+  await page.mouse.click(4,4)
   assert(await dialog.isVisible())
+  await page.locator('.conversation .topbar button[aria-controls]').evaluate((el)=>el.focus())
+  assert(await dialog.evaluate((el)=>el.contains(document.activeElement)))
+  await dialog.focus()
   await page.keyboard.press('Tab')
   assert.equal(await dialog.locator('summary').evaluate((el)=>el === document.activeElement),true)
   await page.keyboard.press('Tab')
@@ -114,6 +118,10 @@ try {
   assert.equal((await api(`/api/runs/${run.runId}`,undefined,'GET')).approvals.length,1)
   await page.getByRole('button',{name:'Review operation'}).click()
   await dialog.getByRole('button',{exact:true,name:'Close'}).click()
+  assert.equal((await api(`/api/runs/${run.runId}`,undefined,'GET')).approvals.length,1)
+  await page.getByRole('button',{name:'Review operation'}).click()
+  assert.equal(await dialog.evaluate((el)=>el.dispatchEvent(new Event('cancel',{cancelable:true}))),false)
+  await dialog.waitFor({state:'detached'})
   assert.equal((await api(`/api/runs/${run.runId}`,undefined,'GET')).approvals.length,1)
   await page.getByRole('button',{name:'Review operation'}).click()
   let submissions = 0

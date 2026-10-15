@@ -35,7 +35,7 @@ const render = (now: number, busy = false, request: ApprovalRequest | undefined 
 describe('GUI approval dialog', () => {
   it('shows the bound operation and target and escapes untrusted preview text', () => {
     const markup = render(1000)
-    expect(markup).contains('role="dialog"').contains('aria-modal="true"')
+    expect(markup).contains('<dialog').contains('aria-modal="true"')
     expect(markup).contains('Target: /synthetic/answer.txt').contains('Operation preview')
     expect(markup).contains('&lt;script&gt;untrusted&lt;/script&gt;').not.contains('<script>')
     expect(markup.match(/disabled=""/g) ?? []).length(0)
@@ -44,9 +44,9 @@ describe('GUI approval dialog', () => {
 
   it('disables both decisions at the expiry boundary and while a decision is pending', () => {
     expect(render(2000).match(/disabled=""/g)).length(2)
-    expect(render(2000)).contains('This request has expired')
+    expect(render(2000)).contains('<output').contains('This request has expired')
     expect(render(1000, true).match(/disabled=""/g)).length(2)
-    expect(render(1000, true)).contains('Submitting decision')
+    expect(render(1000, true)).contains('<output').contains('Submitting decision')
   })
 
   it('renders no approval controls without an authoritative request', () => {

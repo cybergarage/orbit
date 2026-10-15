@@ -683,8 +683,8 @@ function App() {
           </header>
           {error === undefined ? null : <div className="error-banner">{error}</div>}
           {thread?.run?.approvals.length ? (
-            <div className="important-status" role="status">
-              Approval required · Run paused{' '}
+            <div className="important-status">
+              <output>Approval required · Run paused</output>
               <button className="outlined" onClick={() => setDismissedApproval(new Set())}>
                 Review operation
               </button>
@@ -694,14 +694,18 @@ function App() {
             (thread.run.result.outcome !== 'completed' ||
               thread.run.result.recording.status === 'failed' ||
               !thread.run.result.quiescence) && (
-              <div className="important-status" role="status">
-                {thread.run.result.outcome === 'budget-exceeded'
-                  ? budgetStatus(thread.run)
-                  : `Run: ${thread.run.result.outcome}.`}{' '}
-                {thread.run.result.quiescence ? '' : 'Work may still be active; conflicting resources remain reserved.'}
-                {thread.run.result.recording.status === 'failed'
-                  ? ' Recording failed. Inspect logs before continuing.'
-                  : ''}
+              <div className="important-status">
+                <output>
+                  {thread.run.result.outcome === 'budget-exceeded'
+                    ? budgetStatus(thread.run)
+                    : `Run: ${thread.run.result.outcome}.`}{' '}
+                  {thread.run.result.quiescence
+                    ? ''
+                    : 'Work may still be active; conflicting resources remain reserved.'}
+                  {thread.run.result.recording.status === 'failed'
+                    ? ' Recording failed. Inspect logs before continuing.'
+                    : ''}
+                </output>
                 {thread.run.result.outcome === 'budget-exceeded' && (
                   <button className="outlined" onClick={() => setDetailsOpen(true)}>
                     Review limits
