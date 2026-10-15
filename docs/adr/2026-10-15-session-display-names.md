@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-10-15
-decision-date: null
+decision-date: 2026-10-15
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -78,8 +78,10 @@ Unconditional last-write-wins updates hide stale-editor conflicts and are reject
 
 ## Implementation and Confirmation
 
-Not implemented. The user explicitly requests implementation through Draft PR;
-the proposal will be reviewed against the existing lifecycle invariants first.
+Not implemented. Accepted under the user’s explicit implementation request on
+2026-10-15. Review confirms the archive writer claim, deletion checks and catalog
+transaction are reusable without changing transcript formats. Revision conflicts
+and latest-operation retry limits are explicit; no material design question remains.
 
 ## Follow-up Work
 
