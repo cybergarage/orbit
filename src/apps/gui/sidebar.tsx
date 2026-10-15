@@ -123,14 +123,11 @@ export function Sidebar(props: Props) {
 
   const writeProject = async (value: Editor, archived = value.project?.archived ?? false) => {
     const {project} = value
-    const nameOnly =
-      project && value.directory.trim() === (project.defaultDirectory ?? '') && archived === project.archived
+    const nameOnly = project && value.directory === (project.defaultDirectory ?? '') && archived === project.archived
     const body = project
       ? {
           ...(value.name.trim() === project.name ? {} : {name: value.name.trim()}),
-          ...(value.directory.trim() === (project.defaultDirectory ?? '')
-            ? {}
-            : {directory: value.directory.trim() || null}),
+          ...(value.directory === (project.defaultDirectory ?? '') ? {} : {directory: value.directory.trim() || null}),
           ...(archived === project.archived ? {} : {archived}),
           expectedRevision: project.revision,
         }
