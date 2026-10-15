@@ -4,7 +4,6 @@
 // Synthetic-only browser fixture. Build first; no user settings, history, or providers are loaded.
 import {randomUUID} from 'node:crypto'
 import fs from 'node:fs/promises'
-import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -60,28 +59,23 @@ export async function startDetailsFixture() {
     resolveProjectRuntime: async () => ({model: 'synthetic-model', provider: 'ollama', settings: {}}),
     settingsSources: [],
   })
-  const server = await startGuiServer({service, token: 'synthetic-details-capability'})
-  const streams = new Set()
-  const proxy = http.createServer((request, response) => {
-    const upstream = http.request({headers: {...request.headers, host: `${server.host}:${server.port}`, ...(request.headers.origin ? {origin: `http://${server.host}:${server.port}`} : {})}, host: server.host, method: request.method, path: request.url, port: server.port}, (reply) => {
-      response.writeHead(reply.statusCode, reply.headers)
-      reply.pipe(response)
-    })
-    if (request.url.startsWith('/api/events')) {
-      streams.add(response)
-      response.on('close', () => {streams.delete(response); upstream.destroy()})
-    }
-
-    upstream.on('error', () => {if (!response.headersSent) response.writeHead(502); response.end()})
-    request.pipe(upstream)
-  })
-  await new Promise((resolve) => {proxy.listen(0, '127.0.0.1', resolve)})
-  return {async close() {
-    for (const stream of streams) stream.end()
-    proxy.closeAllConnections()
-    await new Promise((resolve) => {proxy.close(resolve)})
-    await server.close()
-    await service.close()
-    await fs.rm(root, {force: true, recursive: true})
-  }, disconnectStreams() {for (const stream of streams) stream.end()}, root, server: {...server, port: proxy.address().port}, service}
+  const token = 'synthetic-details-capability'
+  let server = await startGuiServer({service, token})
+  return {
+    async close() {
+      await server.close()
+      await service.close()
+      await fs.rm(root, {force: true, recursive: true})
+    },
+    async disconnectStreams() {
+      // Restart only the transport; keep the isolated service and session state.
+      const {port} = server
+      await server.close()
+      await new Promise((resolve) => {setTimeout(resolve, 500)})
+      server = await startGuiServer({port, service, token})
+    },
+    root,
+    server,
+    service,
+  }
 }

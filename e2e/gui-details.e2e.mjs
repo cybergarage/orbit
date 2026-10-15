@@ -176,9 +176,10 @@ try {
   await projectRename.getByRole('button',{exact:true,name:'Save name'}).click()
   await page.locator('.conversation-heading .muted').filter({hasText:'Synthetic renamed project'}).waitFor()
   check('Project Rename updates the selected conversation header')
-  fixture.disconnectStreams()
+  const reconnect = fixture.disconnectStreams()
   await page.getByText('The event stream disconnected. Reconnecting…', {exact:true}).waitFor()
   await page.getByText('The event stream disconnected. Reconnecting…', {exact:true}).waitFor({state:'detached'})
+  await reconnect
   assert.equal(await page.locator('.conversation-heading .title').textContent(),'Synthetic renamed conversation')
   check('Event stream disconnect/reconnect restores authoritative state and retains Rename')
   await page.getByRole('button',{exact:true,name:'Details'}).click()
