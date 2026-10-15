@@ -20,6 +20,7 @@ import type {SessionInformation} from './information.js'
 import {sessionsDir} from '../app.js'
 import {deletionMarker} from '../execution/deletion.js'
 import {Message} from '../message/index.js'
+import {ProjectStoreError} from '../projects/types.js'
 import {readSessionArchive, writeSessionArchive} from './archive.js'
 import {parseSessionFile} from './codec.js'
 import {
@@ -38,6 +39,7 @@ import {createSessionInformationFromSource} from './information.js'
 import {sessionFilePath} from './paths.js'
 import {SessionRecorder} from './recorder.js'
 import {Session} from './session.js'
+import {readSessionTitle, type SessionRenameOptions, type SessionTitle, writeSessionTitle} from './title.js'
 
 export interface CreateSessionOptions {
   createdAt?: string
@@ -119,6 +121,7 @@ export class SessionRepository {
       journalRoot: this.journalRoot,
       metadata: metadataFromHeader(header, file),
       recorder,
+      titleReader: () => this.getTitle(id),
     })
   }
 
@@ -158,6 +161,10 @@ export class SessionRepository {
       if (summary !== undefined) return summary
       cursor = page.nextCursor
     } while (cursor !== undefined)
+  }
+
+  getTitle(sessionId: string): SessionTitle {
+    return readSessionTitle(this.rootDir, sessionId)
   }
 
   initializeStorage(conditions: OfflineStorageConditions): void {
@@ -203,7 +210,11 @@ export class SessionRepository {
           try {
             const source = await fsPromises.readFile(file, 'utf8')
             const parsed = parseSessionFile(source, file)
-            return {...summaryFromParsed(parsed, file), archived: this.isArchived(parsed.header.id)}
+            return {
+              ...summaryFromParsed(parsed, file),
+              archived: this.isArchived(parsed.header.id),
+              ...this.getTitle(parsed.header.id),
+            }
           } catch (error) {
             errors.push({file, message: error instanceof Error ? error.message : String(error)})
           }
@@ -253,13 +264,35 @@ export class SessionRepository {
       messages,
       metadata: metadataFromHeader(parsed.header, resolvedFile),
       recorder,
+      titleReader: () => this.getTitle(parsed.header.id),
     })
   }
 
   readSummary(file: string): SessionSummary {
     const resolvedFile = path.resolve(file)
     const parsed = parseSessionFile(fs.readFileSync(resolvedFile, 'utf8'), resolvedFile)
-    return {...summaryFromParsed(parsed, resolvedFile), archived: this.isArchived(parsed.header.id)}
+    return {
+      ...summaryFromParsed(parsed, resolvedFile),
+      archived: this.isArchived(parsed.header.id),
+      ...this.getTitle(parsed.header.id),
+    }
+  }
+
+  async rename(sessionId: string, options: SessionRenameOptions): Promise<SessionSummary> {
+    const scope = this.scope(sessionId)
+    const guard = WriterClaim.acquire(scope, () => {})
+    try {
+      const session = await this.findById(sessionId)
+      if (!session) throw new ProjectStoreError('missing', 'Session not found')
+      inspectTranscript(scope, session.file)
+      inspectRecoveryEvidence(scope)
+      const metadata = writeSessionTitle(scope, options)
+      const summary = {...session}
+      delete summary.title
+      return {...summary, ...metadata}
+    } finally {
+      guard.release()
+    }
   }
 
   resumeStorage(conditions: OfflineStorageConditions, options: RegistrationResumeOptions = {}): void {

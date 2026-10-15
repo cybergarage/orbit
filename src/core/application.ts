@@ -19,6 +19,7 @@ import type {WorkflowExpectation} from './selection/binding.js'
 import type {WorkflowAuthority} from './selection/service.js'
 import type {WorkflowStore} from './selection/store.js'
 import type {SessionListOptions, SessionListResult, SessionRepository, SessionSummary} from './session/index.js'
+import type {SessionRenameOptions} from './session/title.js'
 import type {WorkspaceSettings, WorkspaceSettingsSource} from './settings.js'
 import type {SkillSelection} from './skills/index.js'
 import type {
@@ -481,6 +482,10 @@ export class OrbitApplicationService {
     return this.threadManager.getRun(id)
   }
 
+  async getSessionInformation(sessionId: string): Promise<SessionSummary | undefined> {
+    return this.repository.findById(sessionId)
+  }
+
   async getSessionLogs(sessionId: string, query: LogQuery = {}): Promise<LogPage | undefined> {
     const known =
       this.threadManager.getThread(sessionId) !== undefined || (await this.findSession(sessionId)) !== undefined
@@ -636,6 +641,29 @@ export class OrbitApplicationService {
     }
 
     return undefined
+  }
+
+  async renameSession(sessionId: string, options: SessionRenameOptions): Promise<SessionSummary> {
+    const thread = this.getThread(sessionId)
+    if (thread?.status === 'running' || thread?.run?.quarantined)
+      throw new ProjectStoreError('busy', 'Cannot rename an active or quarantined session')
+    const runtime = this.threadRuntime.get(sessionId)
+    await this.threadManager.closeIdleThread(sessionId)
+    await runtime?.skillCatalog?.settle()
+    if (this.threadRuntime.get(sessionId) === runtime) this.threadRuntime.delete(sessionId)
+    let summary: SessionSummary
+    try {
+      summary = await this.repository.rename(sessionId, options)
+    } catch (error) {
+      // A rejected edit must not discard the conversation the user already has open.
+      // Another owner can still prevent reopening; preserve the original mutation error.
+      if (thread) await this.resumeSession(sessionId).catch(() => {})
+      throw error
+    }
+
+    if (thread) await this.resumeSession(sessionId)
+    this.diagnostics.emit({data: {sessionId, titleRevision: summary.titleRevision}, type: 'session.renamed'})
+    return summary
   }
 
   replyApproval(id: string, reply: Omit<ApprovalReply, 'responderScope'>): Promise<'recorded'> {

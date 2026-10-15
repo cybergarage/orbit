@@ -26,6 +26,7 @@ import type {
 } from '../../core/index.js'
 
 import {DEFAULT_RUN_LIMITS, parseRunLimits} from '../../core/execution/limits.js'
+import {sessionDisplayName} from '../../core/session/information.js'
 import {BudgetPanel} from './budget-panel.js'
 import {Icon} from './icons.js'
 import {ProjectMemoryPanel} from './project-memory-panel.js'
@@ -130,6 +131,11 @@ function App() {
   const refreshVersions = useRef(new Map<string, number>())
   const selectedThreadId = useRef<string | undefined>(undefined)
 
+  const receiveSessions = useCallback((updated: SessionSummary[]) => {
+    setSessions(updated)
+    setSessionToInspect((current) => updated.find((item) => item.id === current?.id) ?? current)
+  }, [])
+
   const loadSessions = useCallback(async () => setSidebarRevision((current) => current + 1), [])
 
   const refreshThread = useCallback(async (threadId: string) => {
@@ -193,6 +199,7 @@ function App() {
         refreshThread(event.threadId).catch(() => {})
       if (
         event.type === 'project.changed' ||
+        event.type === 'session.renamed' ||
         event.type === 'run.completed' ||
         event.type === 'session.created' ||
         event.type === 'session.resumed'
@@ -453,6 +460,9 @@ function App() {
     }
 
     setSessionToInspect(session)
+    api<SessionSummary>(`/api/sessions/${encodeURIComponent(session.id)}`)
+      .then((updated) => setSessionToInspect((current) => (current?.id === updated.id ? updated : current)))
+      .catch(showError(setError))
   }
 
   const copyId = async (session: SessionSummary) => {
@@ -577,11 +587,16 @@ function App() {
             onRememberFocus={(element) => {
               sessionDetailsReturnFocus.current = element
             }}
+            onRenamed={async (session) => {
+              setSessions((current) => [...current.filter((item) => item.id !== session.id), session])
+              setSessionToInspect((current) => (current?.id === session.id ? session : current))
+              if (selectedThreadId.current === session.id) await refreshThread(session.id)
+            }}
             onSelect={async (session, projectId) => {
               await selectSession(session, projectId)
               setDrawer(false)
             }}
-            onSessions={setSessions}
+            onSessions={receiveSessions}
             requestedMenu={sessionMenu}
             revision={sidebarRevision}
             selectedId={thread?.id}
@@ -972,6 +987,7 @@ function SessionDetailsDialog({
           </button>
         </div>
         <dl>
+          <SessionDetail label="Name" value={sessionDisplayName(session)} />
           <SessionDetail label="Status" value={session.status} />
           <SessionDetail label="Created" value={formatFullDate(session.createdAt)} />
           <SessionDetail label="Updated" value={formatFullDate(session.updatedAt)} />
@@ -1016,7 +1032,7 @@ function DeleteSessionDialog({
           This deletes the transcript, diagnostic logs and execution journal/key. A minimal deletion marker remains to
           prevent reuse of the session ID. Active or unconfirmed runs must be resolved first.
         </p>
-        <div className="dialog-session">{session.preview ?? session.id}</div>
+        <div className="dialog-session">{sessionDisplayName(session)}</div>
         <div className="dialog-actions">
           <button onClick={onCancel}>Cancel</button>
           <button autoFocus className="danger" onClick={() => onConfirm(session)}>
@@ -1072,7 +1088,13 @@ async function api<T = unknown>(pathname: string, init: RequestInit = {}): Promi
 }
 
 function sessionTitle(thread: ThreadSnapshot, sessions: SessionSummary[]): string {
-  return sessions.find((session) => session.id === thread.id)?.preview ?? 'Orbit session'
+  const saved = sessions.find((session) => session.id === thread.id)
+  const titleSource = (saved?.titleRevision ?? -1) >= (thread.titleRevision ?? -1) ? saved : thread
+  return sessionDisplayName({
+    preview: saved?.preview ?? thread.messages.find((message) => message.type === 'user')?.contents[0],
+    provider: saved?.provider ?? thread.provider,
+    title: titleSource?.title,
+  })
 }
 
 function formatTime(timestamp: string): string {

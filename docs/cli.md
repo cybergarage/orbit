@@ -35,6 +35,7 @@ USAGE
 * [`orbit session archive SESSION`](#orbit-session-archive-session)
 * [`orbit session delete SESSION`](#orbit-session-delete-session)
 * [`orbit session list`](#orbit-session-list)
+* [`orbit session rename SESSION [TITLE]`](#orbit-session-rename-session-title)
 * [`orbit session unarchive SESSION`](#orbit-session-unarchive-session)
 * [`orbit skills`](#orbit-skills)
 * [`orbit storage ACTION [SESSION]`](#orbit-storage-action-session)
@@ -216,31 +217,36 @@ _See code: [src/cli/plugins/list.ts](https://github.com/cybergarage/orbit/blob/v
 
 ## `orbit project ACTION [PROJECT]`
 
-List projects or archive, unarchive, or permanently delete an empty project
+List or rename projects, archive, unarchive, or permanently delete an empty project
 
 ```
 USAGE
-  $ orbit project ACTION [PROJECT] [--after <value>] [--archive active|archived|all] [--force] [--limit
-    <value>]
+  $ orbit project ACTION [PROJECT] [--after <value>] [--archive active|archived|all] [--expected-revision
+    <value>] [--force] [--limit <value>] [--name <value>] [--operation-id <value>]
 
 ARGUMENTS
-  ACTION     (list|sessions|archive|unarchive|delete)
+  ACTION     (list|sessions|rename|archive|unarchive|delete)
   [PROJECT]  Exact project ID (required except for list)
 
 FLAGS
-  --after=<value>     Exclusive project/session ID cursor for listings
-  --archive=<option>  Archive state for listings (omission includes all)
-                      <options: active|archived|all>
-  --force             Confirm empty-project deletion without prompting
-  --limit=<value>     Listing page size
+  --after=<value>              Exclusive project/session ID cursor for listings
+  --archive=<option>           Archive state for listings (omission includes all)
+                               <options: active|archived|all>
+  --expected-revision=<value>  Expected project revision (rename only)
+  --force                      Confirm empty-project deletion without prompting
+  --limit=<value>              Listing page size
+  --name=<value>               New project display name (rename only)
+  --operation-id=<value>       Stable rename operation UUID for retries
 
 DESCRIPTION
-  List projects or archive, unarchive, or permanently delete an empty project
+  List or rename projects, archive, unarchive, or permanently delete an empty project
 
 EXAMPLES
   $ orbit project list --archive archived
 
   $ orbit project sessions <PROJECT_ID> --archive all
+
+  $ orbit project rename <PROJECT_ID> --name "Design project"
 
   $ orbit project archive <PROJECT_ID>
 
@@ -406,6 +412,32 @@ EXAMPLES
 ```
 
 _See code: [src/cli/session/list.ts](https://github.com/cybergarage/orbit/blob/v0.9.0/src/apps/cli/session/list.ts)_
+
+## `orbit session rename SESSION [TITLE]`
+
+Rename a saved session without changing its conversation history
+
+```
+USAGE
+  $ orbit session rename SESSION [TITLE] [--clear] [--expected-revision <value>] [--operation-id <value>]
+
+ARGUMENTS
+  SESSION  Exact saved session ID
+  [TITLE]  New display name; quote spaces
+
+FLAGS
+  --clear                      Clear the title and display the original preview
+  --expected-revision=<value>  Expected title revision
+  --operation-id=<value>       Stable operation UUID for an exact retry
+
+DESCRIPTION
+  Rename a saved session without changing its conversation history
+
+EXAMPLES
+  $ orbit session rename <SESSION_ID> "Design review"
+```
+
+_See code: [src/cli/session/rename.ts](https://github.com/cybergarage/orbit/blob/v0.9.0/src/apps/cli/session/rename.ts)_
 
 ## `orbit session unarchive SESSION`
 

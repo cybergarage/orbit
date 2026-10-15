@@ -6,12 +6,13 @@ import {z} from 'zod'
 
 import type {OrbitApplicationService} from '../../core/application.js'
 
+import {displayNameSchema} from '../../core/display-name.js'
 import {ProjectStoreError} from '../../core/projects/types.js'
 
 const id = z.string().uuid()
 const sessionId = z.string().regex(/^[A-Za-z0-9_-]{1,160}$/u)
 const projectInput = z
-  .object({directory: z.string().min(1).max(4096).nullable(), name: z.string().trim().min(1).max(256), operationId: id})
+  .object({directory: z.string().min(1).max(4096).nullable(), name: displayNameSchema, operationId: id})
   .strict()
 const moveInput = z
   .object({
@@ -58,7 +59,21 @@ export function projectRoutes(service: OrbitApplicationService): Router {
   router.patch('/projects/:projectId', async (request, response) => {
     const project = await catalog().update(
       id.parse(request.params.projectId),
-      projectInput.extend({archived: z.boolean(), expectedRevision: z.number().int().positive()}).parse(request.body),
+      projectInput
+        .partial({directory: true, name: true})
+        .extend({archived: z.boolean().optional(), expectedRevision: z.number().int().positive()})
+        .parse(request.body),
+    )
+    changed(project.id, project.revision)
+    response.json(project)
+  })
+  router.post('/projects/:projectId/rename', async (request, response) => {
+    const project = await catalog().rename(
+      id.parse(request.params.projectId),
+      z
+        .object({expectedRevision: z.number().int().positive(), name: displayNameSchema, operationId: id})
+        .strict()
+        .parse(request.body),
     )
     changed(project.id, project.revision)
     response.json(project)

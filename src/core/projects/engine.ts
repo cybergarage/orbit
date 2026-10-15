@@ -17,6 +17,7 @@ import type {
   ProjectReservation,
 } from './types.js'
 
+import {displayNameSchema} from '../display-name.js'
 import {ProjectStoreError} from './types.js'
 
 const uuid = z.string().uuid()
@@ -44,7 +45,7 @@ const projectSchema = z
     defaultDirectory: directory,
     id: uuid,
     memoryGeneration: revision,
-    name,
+    name: z.string().trim().min(1).max(256),
     revision,
     updatedAt: timestamp,
   })
@@ -83,9 +84,19 @@ const reservationSchema = z
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/u)
 const mutationSchema = z.discriminatedUnion('kind', [
   z.object({expectedRevision: revision, id: uuid, kind: z.literal('delete')}).strict(),
-  z.object({directory, expectedRevision: z.literal(0), id: uuid, kind: z.literal('create'), name}).strict(),
+  z.object({expectedRevision: revision, id: uuid, kind: z.literal('rename'), name: displayNameSchema}).strict(),
   z
-    .object({archived: z.boolean(), directory, expectedRevision: revision, id: uuid, kind: z.literal('update'), name})
+    .object({directory, expectedRevision: z.literal(0), id: uuid, kind: z.literal('create'), name: displayNameSchema})
+    .strict(),
+  z
+    .object({
+      archived: z.boolean().optional(),
+      directory: directory.optional(),
+      expectedRevision: revision,
+      id: uuid,
+      kind: z.literal('update'),
+      name: displayNameSchema.optional(),
+    })
     .strict(),
   z
     .object({
@@ -403,6 +414,23 @@ export class CatalogEngine {
         return entry
       }
 
+      case 'rename': // falls through
+
+      case 'update': {
+        const before = this.project(m.id)
+        if (before.revision !== m.expectedRevision) conflict()
+        const project = {
+          ...before,
+          ...(m.kind === 'update' && m.archived !== undefined ? {archived: m.archived} : {}),
+          ...(m.kind === 'update' && m.directory !== undefined ? {defaultDirectory: m.directory} : {}),
+          ...(m.name === undefined ? {} : {name: m.name}),
+          revision: before.revision + 1,
+          updatedAt: now,
+        }
+        this.backend.put('projects', m.id, project)
+        return project
+      }
+
       case 'reserve': {
         const r = m.reservation
         const project = this.project(r.projectId, true)
@@ -413,21 +441,6 @@ export class CatalogEngine {
         const pending: ProjectReservation = {...r, state: 'pending'}
         this.backend.put('reservations', r.id, pending)
         return pending
-      }
-
-      case 'update': {
-        const before = this.project(m.id)
-        if (before.revision !== m.expectedRevision) conflict()
-        const project = {
-          ...before,
-          archived: m.archived,
-          defaultDirectory: m.directory,
-          name: m.name,
-          revision: before.revision + 1,
-          updatedAt: now,
-        }
-        this.backend.put('projects', m.id, project)
-        return project
       }
     }
   }

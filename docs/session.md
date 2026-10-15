@@ -625,3 +625,52 @@ Discovery/listing errors remain failures.
 Resumed CLI Agents recheck Project eligibility before every new invocation.
 Archiving the Project from another terminal blocks subsequent inputs; already
 admitted work may finish. Unarchiving permits new inputs again.
+
+## Editable display names
+
+`SessionRepository.rename(id, {title, expectedRevision, operationId})` changes
+only the display name. `title` is a trimmed name of 1–256 UTF-16 units without
+control characters, or `null` to restore the original preview. Japanese and
+internal spaces are supported. New and old conversations without metadata have
+no title and `titleRevision: 0`. `getTitle(id)`, saved summaries, Session
+information and Thread snapshots expose the same title and title revision.
+`sessionDisplayName()` chooses title, first user-message preview, then the
+provider's default session label. Renaming leaves transcript bytes, IDs,
+conversation activity timestamps, archive and Project membership unchanged.
+
+The registered session coordination directory holds a versioned title sidecar.
+Session deletion removes this title metadata under the same writer claim,
+including retries after an interrupted deletion.
+Updates acquire the same writer claim as archive and inspect transcript identity
+and settled recovery evidence. Open writers, active/quarantined runs, pending
+maintenance and deletion evidence prevent updates. The application service
+`renameSession()` closes idle ownership and reopens an already open conversation;
+it never cancels a run. A rejected stale edit also restores idle ownership when
+available.
+
+Pass the observed `titleRevision` as `expectedRevision` and a stable operation
+UUID. An exact retry of the latest operation returns the same revision after
+synchronization. Changing its input conflicts. After a newer rename, the old
+operation conflicts; refresh before submitting another edit. No automatic retry
+may overwrite a newer name. Errors after publication can leave the new name
+committed; retry the same operation before deciding whether it failed.
+
+```sh
+orbit session rename <SESSION_ID> "Design review"
+orbit session rename <SESSION_ID> --clear
+orbit session rename <SESSION_ID> "Design review" --expected-revision 0 --operation-id <UUID>
+```
+
+The CLI defaults to the current title revision and a fresh UUID. For an exact
+retry supply both original flags. `orbit session <SESSION_ID> --json` and
+`orbit session list` include title metadata. Close the owning GUI/CLI writer
+before using a separate CLI process to rename.
+
+In the local GUI, choose **Rename session…** from the conversation actions,
+enter a name and choose **Save name**. Empty input restores the preview. The
+sidebar, open conversation header and Session details display the same name.
+The capability-protected `GET /api/sessions/:id` returns saved information;
+`PATCH /api/sessions/:id` accepts exactly the three rename fields above.
+Validation fails with 400, missing sessions with 404 and stale edits with 409.
+The existing writer/integrity failures remain storage errors. Cancel and reopen
+the editor after a conflict to load the latest name and revision.

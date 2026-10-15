@@ -29,7 +29,8 @@ operation, synchronizing its metadata again before acknowledgement; reject chang
 input or stale revisions. After another rename commits, an old retry conflicts
 instead of overwriting newer input. Metadata changes require the registered writer
 claim and transcript/recovery inspection. The application closes idle ownership
-first and refuses running or quarantined sessions. Deletion markers remain final.
+first and refuses running or quarantined sessions. Deletion markers remain final;
+Session deletion removes title metadata under the same claim and retry boundary.
 
 Project rename is a dedicated catalog mutation under existing transaction,
 revision and durable operation replay semantics. It changes only name, revision

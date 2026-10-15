@@ -40,6 +40,25 @@ describe('Project session coordination', () => {
     await fs.rm(root, {force: true, recursive: true})
   })
 
+  it('retains renamed session metadata across Project moves and matches repository lists', async () => {
+    const a = await service.create({name: 'A', operationId: randomUUID()})
+    const b = await service.create({name: 'B', operationId: randomUUID()})
+    const session = await service.createSession(a.id, randomUUID(), async () => ({}))
+    const id = session.getId()
+    await session.close()
+    const renamed = await repository.rename(id, {expectedRevision: 0, operationId: randomUUID(), title: 'Moved title'})
+    expect((await service.listSessions(a.id)).data[0].session).deep.equals(renamed)
+    await service.changeMembership(id, {
+      expectedRevision: 1,
+      operationId: randomUUID(),
+      projectId: b.id,
+      sourceProjectId: a.id,
+    })
+    expect((await service.listSessions(a.id)).data).length(0)
+    expect((await service.listSessions(b.id)).data[0].session).deep.equals(renamed)
+    expect((await repository.listPage()).data[0]).deep.equals(renamed)
+  })
+
   it('filters unavailable memberships using their retained archive metadata', async () => {
     const project = await service.create({name: 'Synthetic archive filter', operationId: randomUUID()})
     const session = await service.createSession(project.id, randomUUID(), async () => ({}))

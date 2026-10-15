@@ -78,7 +78,7 @@ describe('session information command', () => {
 
     const parsed = JSON.parse(output) as Record<string, unknown>
     expect(parsed).to.include({cwd: root, id: 'json-session', originator: 'orbit-interactive'})
-    expect(parsed).to.have.all.keys('archived', 'createdAt', 'cwd', 'file', 'id', 'originator', 'status', 'updatedAt')
+    expect(parsed).to.have.all.keys('archived', 'createdAt', 'cwd', 'file', 'id', 'originator', 'status', 'titleRevision', 'updatedAt')
     expect(output).not.to.include('private workspace instructions')
     expect(output).not.to.include('private assistant output')
     await fs.rm(root, {force: true, recursive: true})

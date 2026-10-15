@@ -15,6 +15,7 @@ import {ExecutionRequestError} from '../../core/execution/run.js'
 import {DiagnosticCapture, InvalidInputError} from '../../core/index.js'
 import {parseMemorySelection} from '../../core/projects/memory-context.js'
 import {ProjectStoreError} from '../../core/projects/types.js'
+import {sessionRenameSchema} from '../../core/session/title.js'
 import {memoryRoutes} from './memory-routes.js'
 import {projectRoutes} from './project-routes.js'
 import {schedulingRoutes} from './scheduling-routes.js'
@@ -112,6 +113,15 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
     const limitValue = stringQuery(request.query.limit)
     const limit = limitValue === undefined ? undefined : Number(limitValue)
     response.json(await options.service.listSessions({cursor, limit}))
+  })
+  app.get('/api/sessions/:sessionId', async (request, response) => {
+    const session = await options.service.getSessionInformation(request.params.sessionId)
+    return session ? response.json(session) : response.status(404).json({error: 'Session not found.'})
+  })
+  app.patch('/api/sessions/:sessionId', async (request, response) => {
+    response.json(
+      await options.service.renameSession(request.params.sessionId, sessionRenameSchema.parse(request.body)),
+    )
   })
   app.get('/api/sessions/:sessionId/logs', async (request, response) => {
     const query = logQuerySchema.parse(request.query)

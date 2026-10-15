@@ -47,7 +47,26 @@ describe('GUI session information', () => {
       cwd: '/active',
       model: 'active-model',
       provider: 'openai',
+      titleRevision: 0,
       updatedAt: '2026-08-25T00:02:00.000Z',
+    })
+  })
+
+  it('uses the newer title revision including an explicit cleared title', () => {
+    const saved: SessionSummary = {
+      createdAt: '2026-10-15T00:00:00.000Z',
+      cwd: '/synthetic',
+      file: '/synthetic/session.jsonl',
+      id: 'synthetic',
+      status: 'new',
+      titleRevision: 2,
+      updatedAt: '2026-10-15T00:00:00.000Z',
+    }
+    const thread: ThreadSnapshot = {...saved, messages: [], status: 'idle', title: 'Stale title', titleRevision: 1}
+    expect(selectedSessionSummary(thread, [saved])?.title).to.be.undefined
+    expect(selectedSessionSummary({...thread, title: 'New title', titleRevision: 3}, [saved])).include({
+      title: 'New title',
+      titleRevision: 3,
     })
   })
 

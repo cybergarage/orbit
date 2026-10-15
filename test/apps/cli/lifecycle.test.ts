@@ -106,6 +106,23 @@ describe('CLI project and session lifecycle', () => {
         cwd: process.cwd(),
         env: {...process.env, ORBIT_LOG_DIR: path.join(root, 'logs')},
       })
+    const originalBytes = await fs.readFile(session.getFile()!)
+    const renameArgs = [
+      'session',
+      'rename',
+      'cli-history',
+      '日本語 CLI session',
+      '--expected-revision',
+      '0',
+      '--operation-id',
+      randomUUID(),
+    ]
+    expect(JSON.parse((await cli(renameArgs)).stdout)).include({title: '日本語 CLI session', titleRevision: 1})
+    expect(JSON.parse((await cli(renameArgs)).stdout)).property('titleRevision', 1)
+    expect(JSON.parse((await cli(['session', '--json', 'cli-history'])).stdout)).property('title', '日本語 CLI session')
+    expect(JSON.parse((await cli(['session', 'rename', 'cli-history', '--clear'])).stdout)).not.property('title')
+    await rejects(cli(['session', 'rename', 'cli-history', '']), 'Invalid')
+    expect(await fs.readFile(session.getFile()!)).deep.equals(originalBytes)
     await cli(['session', 'archive', 'cli-history'])
     const listed = JSON.parse((await cli(['session', 'list', '--archive', 'archived'])).stdout)
     expect(listed.data.map((item: {id: string}) => item.id)).deep.equals(['cli-history'])
@@ -113,7 +130,7 @@ describe('CLI project and session lifecycle', () => {
     await rejects(cli(['session', 'delete', 'cli-history']), '--force')
     await cli(['session', 'delete', 'cli-history', '--force'])
     expect(await cliRepository.findById('cli-history')).to.be.undefined
-    for (const id of ['list', 'archive', 'unarchive', 'delete']) {
+    for (const id of ['list', 'archive', 'unarchive', 'delete', 'rename']) {
       const reserved = cliRepository.create({cwd: root, id})
       // eslint-disable-next-line no-await-in-loop
       await reserved.close()
@@ -123,6 +140,20 @@ describe('CLI project and session lifecycle', () => {
       expect(JSON.parse((await cli(['session', '--json', '--', id])).stdout).id).equals(id)
     }
 
+    const projectRename = [
+      'project',
+      'rename',
+      p!.id,
+      '--name',
+      '日本語 CLI project',
+      '--expected-revision',
+      '1',
+      '--operation-id',
+      randomUUID(),
+    ]
+    expect(JSON.parse((await cli(projectRename)).stdout)).include({name: '日本語 CLI project', revision: 2})
+    expect(JSON.parse((await cli(projectRename)).stdout)).property('revision', 2)
+    await rejects(cli(['project', 'rename', p!.id]), '--name')
     await cli(['project', 'archive', p!.id])
     expect(JSON.parse((await cli(['project', 'list', '--archive', 'archived'])).stdout)).length(1)
     await cli(['project', 'unarchive', p!.id])

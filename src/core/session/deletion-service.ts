@@ -12,6 +12,7 @@ import {readDeletionMarker, writeDeletionMarker} from '../execution/deletion.js'
 import {syncDirectory} from '../execution/journal.js'
 import {inspectTranscript, WriterClaim} from './coordination.js'
 import {assertSupportedSyncLevel, defaultFileSyncLevel} from './durability.js'
+import {removeSessionTitle} from './title.js'
 
 export interface SessionThreadCloser {
   closeThread(threadId: string): Promise<boolean>
@@ -59,6 +60,7 @@ export class SessionDeletionService {
 
       await fs.rm(path.join(root, sessionId), {force: true, recursive: true})
       if (this.level === 'file-and-directory-sync') await syncDirectory(root)
+      removeSessionTitle(scope)
       await writeDeletionMarker(root, sessionId, 'completed', this.level)
       return session ?? {id: sessionId}
     } catch (error) {

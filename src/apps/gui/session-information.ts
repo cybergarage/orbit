@@ -17,11 +17,14 @@ export function selectedSessionSummary(
   if (file === undefined) return
   const model = thread.model ?? saved?.model
   const provider = thread.provider ?? saved?.provider
+  const titleSource = (saved?.titleRevision ?? -1) >= (thread.titleRevision ?? -1) ? saved : thread
   return {
     createdAt: saved?.createdAt ?? thread.createdAt,
     cwd: thread.cwd,
     file,
     id: thread.id,
+    ...(titleSource?.title === undefined ? {} : {title: titleSource.title}),
+    titleRevision: titleSource?.titleRevision ?? 0,
     ...(model === undefined ? {} : {model}),
     ...(saved?.originator === undefined ? {} : {originator: saved.originator}),
     ...(saved?.preview === undefined ? {} : {preview: saved.preview}),

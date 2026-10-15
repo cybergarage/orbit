@@ -142,6 +142,11 @@ The durable ordered record of messages, turn context, and turn events used to
 reconstruct history and model context. Session records are distinct from
 runtime logs.
 
+A Session's optional editable title is organizational metadata, distinct from
+message content and identity. Displays use title, original preview, then a default
+label. Title revision checks prevent stale editors from overwriting newer names;
+see [editable display names](../session.md#editable-display-names).
+
 ### Skill selection
 
 An ordered choice of catalog source IDs and expected content digests for one Run.

@@ -73,6 +73,8 @@ export interface ThreadSnapshot {
   provider?: ProviderName
   run?: RunSnapshot
   status: ThreadStatus
+  title?: string
+  titleRevision?: number
   updatedAt: string
 }
 
@@ -728,6 +730,7 @@ export class ThreadManager {
     const metadata = thread.session.getMetadata()
     return {
       ...(thread.agent.getExecutionLimits ? {executionLimits: thread.agent.getExecutionLimits()} : {}),
+      ...thread.session.getTitle(),
       createdAt: thread.createdAt,
       cwd: metadata.cwd,
       ...(thread.session.getFile() === undefined ? {} : {file: thread.session.getFile()}),

@@ -282,3 +282,29 @@ Non-interactive deletion requires `--force`; it does not bypass catalog revision
 reservation or dependency checks. A revision change during confirmation fails
 rather than deleting a changed target. Unknown IDs, busy/closed/unavailable
 catalogs and storage failures produce a failure exit status.
+
+## Renaming projects
+
+`ProjectService.rename(id, {name, expectedRevision, operationId})` updates only
+the display name, revision and update timestamp in the catalog transaction.
+Membership, archive state, directory and memory generation are preserved.
+Renaming does not require the existing directory to be available. Names are
+trimmed, contain 1–256 UTF-16 units and exclude control characters; Japanese and
+internal spaces are supported. Existing revision and durable operation replay
+rules apply, including exact retries after intervening updates.
+
+```sh
+orbit project rename <PROJECT_ID> --name "Design project"
+orbit project rename <PROJECT_ID> --name "Design project" --expected-revision 1 --operation-id <UUID>
+```
+
+The CLI defaults to the observed revision and a new operation UUID. Supply both
+original flags for an exact retry. Stale revisions fail instead of overwriting
+another editor's changes.
+
+The GUI's **Rename project…** menu and **Project settings…** name-only save calls the same service through
+`POST /api/projects/:id/rename`. It accepts `name`, `expectedRevision` and
+`operationId`. Settings updates through `PATCH /api/projects/:id` also accept
+partial `name`, `directory` and `archived` fields; omitted values are preserved
+inside the catalog transaction. Changing the directory affects only future
+conversations. A name-only save never resubmits directory/archive state.

@@ -14,8 +14,11 @@ export interface ProjectCommandOptions {
   after?: string
   archive?: 'active' | 'all' | 'archived'
   confirm?: (project: Project) => Promise<boolean>
+  expectedRevision?: number
   force?: boolean
   limit?: number
+  name?: string
+  operationId?: string
 }
 
 export async function runProjectCommand(
@@ -24,6 +27,11 @@ export async function runProjectCommand(
   id: string | undefined = undefined,
   options: ProjectCommandOptions = {},
 ): Promise<unknown> {
+  if (
+    action !== 'rename' &&
+    (options.name !== undefined || options.expectedRevision !== undefined || options.operationId !== undefined)
+  )
+    throw new Error('Rename flags require project rename.')
   if (options.archive !== undefined && !['active', 'all', 'archived'].includes(options.archive))
     throw new Error('Invalid archive filter.')
   if (options.force && action !== 'delete') throw new Error('--force is only available for deletion.')
@@ -40,12 +48,21 @@ export async function runProjectCommand(
 
   if (!id) throw new Error(`Project ${action} requires an exact project ID.`)
   if (action === 'sessions') return service.listSessions(id, options)
-  if (!['archive', 'delete', 'unarchive'].includes(action)) throw new Error(`Unknown project action: ${action}`)
+  if (!['archive', 'delete', 'rename', 'unarchive'].includes(action))
+    throw new Error(`Unknown project action: ${action}`)
   if (options.archive !== undefined || options.after !== undefined || options.limit !== undefined)
     throw new Error('Listing flags require project list or project sessions.')
   const project = await service.store.query({id, kind: 'project'})
   if (!project) throw new Error(`Unknown project: ${id}`)
-  const operation = {expectedRevision: project.revision, operationId: randomUUID()}
+  const operation = {
+    expectedRevision: options.expectedRevision ?? project.revision,
+    operationId: options.operationId ?? randomUUID(),
+  }
+  if (action === 'rename') {
+    if (options.name === undefined) throw new Error('Project rename requires --name.')
+    return service.rename(id, {...operation, name: options.name})
+  }
+
   if (action === 'delete') {
     const confirmed = options.force === true || (await (options.confirm ?? confirmProjectDeletion)(project))
     if (!confirmed) return {deleted: false, project}
@@ -62,13 +79,14 @@ export async function runProjectCommand(
 
 export default class ProjectCommand extends Command {
   static args = {
-    action: Args.string({options: ['list', 'sessions', 'archive', 'unarchive', 'delete'], required: true}),
+    action: Args.string({options: ['list', 'sessions', 'rename', 'archive', 'unarchive', 'delete'], required: true}),
     project: Args.string({description: 'Exact project ID (required except for list)'}),
   }
-  static description = 'List projects or archive, unarchive, or permanently delete an empty project'
+  static description = 'List or rename projects, archive, unarchive, or permanently delete an empty project'
   static examples = [
     '<%= config.bin %> project list --archive archived',
     '<%= config.bin %> project sessions <PROJECT_ID> --archive all',
+    '<%= config.bin %> project rename <PROJECT_ID> --name "Design project"',
     '<%= config.bin %> project archive <PROJECT_ID>',
     '<%= config.bin %> project unarchive <PROJECT_ID>',
     '<%= config.bin %> project delete <PROJECT_ID> --force',
@@ -79,8 +97,11 @@ export default class ProjectCommand extends Command {
       description: 'Archive state for listings (omission includes all)',
       options: ['active', 'archived', 'all'],
     }),
+    'expected-revision': Flags.integer({description: 'Expected project revision (rename only)', min: 1}),
     force: Flags.boolean({description: 'Confirm empty-project deletion without prompting'}),
     limit: Flags.integer({description: 'Listing page size', max: 200, min: 1}),
+    name: Flags.string({description: 'New project display name (rename only)'}),
+    'operation-id': Flags.string({description: 'Stable rename operation UUID for retries'}),
   }
 
   async run(): Promise<void> {
@@ -90,6 +111,8 @@ export default class ProjectCommand extends Command {
         runProjectCommand(service, args.action, args.project, {
           ...flags,
           archive: flags.archive as ProjectCommandOptions['archive'],
+          expectedRevision: flags['expected-revision'],
+          operationId: flags['operation-id'],
         }),
       )
       this.log(JSON.stringify(result, null, 2))
