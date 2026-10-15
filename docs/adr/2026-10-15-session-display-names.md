@@ -6,6 +6,7 @@ implementation-status: completed
 implementation-completed-date: 2026-10-15
 implementation-commits:
   - 5307d79530d1a53233befd72c230614c44cb2ecf
+  - ba2dab20bf0472852f1c1e81ff64e4102af7cdff
 superseded-by: []
 ---
 
@@ -89,7 +90,7 @@ Implementation completed in `5307d79530d1a53233befd72c230614c44cb2ecf`.
 On Apple M4 / Node 26.10.0, headers, build, source/test type checks and
 formatting/lint passed (zero errors; 107 warnings). The final synthetic-only
 aggregate run passed 1,030 tests after title deletion cleanup was included.
-The preceding focused core/CLI/GUI run passed 87 tests. Real compiled CLI
+The focused core/CLI/GUI run passed 87 tests. Real compiled CLI
 subprocesses verified Japanese names, clearing, operation replay, input flags,
 reserved command-like IDs and unchanged transcript bytes.
 
@@ -98,6 +99,14 @@ Project settings and explicit Project Rename, Session Rename/save, cancel,
 clear-to-preview, matching sidebar/header/details, and name retention after a
 GUI server process restart. No real state was copied or used as a fixture.
 No backups or Docker images were created by the local validation workflow.
+
+A final GUI refinement in `ba2dab20bf0472852f1c1e81ff64e4102af7cdff`
+compares untouched directory input without trimming before deciding on a
+name-only mutation. Chrome verified a synthetic Project whose existing directory
+ends in a space: both the directory bytes and archive state survived a name-only
+Project settings save. Build, source/test types, formatting/lint and the 87-case
+related suite were rerun for this final code. The 1,030-case aggregate result
+above precedes this GUI-only comparison refinement; final-HEAD CI is separate.
 
 The local aggregate command excluded six entire files that create backups:
 `test/apps/cli/storage-reset.test.ts`, `test/apps/cli/storage.test.ts`,
