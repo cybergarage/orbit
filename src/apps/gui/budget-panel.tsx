@@ -36,12 +36,14 @@ export function budgetStatus(snapshot: RunSnapshot): string {
 
 export function BudgetPanel({
   active,
+  expanded = false,
   limits,
   onChange,
   onContinue,
   snapshot,
 }: {
   active: boolean
+  expanded?: boolean
   limits: RunLimits
   onChange: (key: keyof RunLimits, value: ExecutionLimit) => void
   onContinue: () => void
@@ -60,7 +62,7 @@ export function BudgetPanel({
           </p>
         </div>
       )}
-      <details open={stopped || undefined}>
+      <details open={expanded || stopped || undefined}>
         <summary>Limits for the next run</summary>
         {(Object.entries(labels) as [keyof typeof labels, string][]).map(([key, label]) => {
           const limit = limits[key]

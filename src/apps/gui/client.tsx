@@ -14,6 +14,7 @@ import type {
   GuiPreferences,
   LogPage,
   LogRecord,
+  Project,
   ProjectMembership,
   ProjectMemorySelection,
   RuntimeSnapshot,
@@ -27,7 +28,8 @@ import type {
 
 import {DEFAULT_RUN_LIMITS, parseRunLimits} from '../../core/execution/limits.js'
 import {sessionDisplayName} from '../../core/session/information.js'
-import {BudgetPanel} from './budget-panel.js'
+import {ApprovalDialog} from './approval-dialog.js'
+import {BudgetPanel, budgetStatus, canContinueBudget} from './budget-panel.js'
 import {Icon} from './icons.js'
 import {ProjectMemoryPanel} from './project-memory-panel.js'
 import {
@@ -56,7 +58,26 @@ function App() {
   const [page, setPage] = useState('home')
   const [drawer, setDrawer] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [projects, setProjects] = useState<Project[]>([])
+  const receiveProjects = useCallback((updated: Project[]) => {
+    setProjects((current) => [
+      ...current.filter((project) => !updated.some((item) => item.id === project.id)),
+      ...updated,
+    ])
+  }, [])
+  const detailsButton = useRef<HTMLButtonElement>(null)
+  const detailsPanel = useRef<HTMLElement>(null)
+  const [dismissedApproval, setDismissedApproval] = useState<Set<string>>(new Set())
+  const [approvalBusy, setApprovalBusy] = useState(false)
+  const approvalPending = useRef(new Set<string>())
+  const [clock, setClock] = useState(Date.now())
+  const closeDetails = useCallback(() => {
+    setDetailsOpen(false)
+    detailsButton.current?.focus()
+  }, [])
+  useEffect(() => {
+    if (detailsOpen) detailsPanel.current?.focus()
+  }, [detailsOpen])
   const samplePending = useRef(false)
   const preferencesPending = useRef(false)
   const [preferencesBusy, setPreferencesBusy] = useState(false)
@@ -65,7 +86,7 @@ function App() {
       if (event.key === 'Escape' && !event.defaultPrevented && !document.querySelector('[role=menu], [role=dialog]')) {
         setDrawer(false)
         setDetailsOpen(false)
-        setAdvancedOpen(false)
+        detailsButton.current?.focus()
       }
     }
 
@@ -98,6 +119,12 @@ function App() {
   }
 
   const [thread, setThread] = useState<ThreadSnapshot>()
+  useEffect(() => {
+    if (!thread?.run?.approvals.length) return
+    setClock(Date.now())
+    const timer = globalThis.setInterval(() => setClock(Date.now()), 1000)
+    return () => globalThis.clearInterval(timer)
+  }, [thread?.run?.approvals.length])
   useEffect(() => setSkillHistory(''), [thread?.id])
   const [logs, setLogs] = useState<LogRecord[]>([])
   const [preferences, setPreferences] = useState<GuiPreferences>({
@@ -331,7 +358,11 @@ function App() {
   }
 
   const replyApproval = async (requestId: string, digest: string, approve: boolean) => {
-    if (!thread?.run) return
+    if (!thread?.run || approvalPending.current.has(requestId)) return
+    const request = thread.run.approvals.find((item) => item.id === requestId)
+    if (!request || request.expiresAt <= Date.now()) return
+    approvalPending.current.add(requestId)
+    setApprovalBusy(true)
     try {
       await api(`/api/runs/${encodeURIComponent(thread.run.runId)}/approvals`, {
         body: JSON.stringify({approve, digest, requestId}),
@@ -341,6 +372,10 @@ function App() {
       await refreshThread(thread.id)
     } catch (nextError) {
       showError(setError)(nextError)
+      await refreshThread(thread.id).catch(() => {})
+    } finally {
+      approvalPending.current.delete(requestId)
+      setApprovalBusy(false)
     }
   }
 
@@ -508,7 +543,7 @@ function App() {
 
   return (
     <main
-      className={`app page-${page} ${drawer ? 'drawer-open' : ''} ${detailsOpen ? 'details-open' : ''} ${advancedOpen ? 'advanced-open' : ''}`}
+      className={`app page-${page} ${drawer ? 'drawer-open' : ''} ${detailsOpen && page === 'home' ? 'details-open' : ''}`}
     >
       {page !== 'home' && error && (
         <div className="global-error-banner error-banner" role="alert">
@@ -584,6 +619,7 @@ function App() {
 
               setNotice('Conversation moved. Its directory and history were retained.')
             }}
+            onProjects={receiveProjects}
             onRememberFocus={(element) => {
               sessionDetailsReturnFocus.current = element
             }}
@@ -605,17 +641,23 @@ function App() {
 
         <section className="pane conversation">
           <header className="topbar">
-            <div className="title">{thread === undefined ? 'New chat' : sessionTitle(thread, sessions)}</div>
+            <div className="conversation-heading">
+              <div className="title">{thread === undefined ? 'New chat' : sessionTitle(thread, sessions)}</div>
+              <div className="muted">
+                {membershipThread === thread?.id && membership?.projectId
+                  ? (projects.find((project) => project.id === membership.projectId)?.name ?? 'Project')
+                  : 'Unassigned'}
+              </div>
+            </div>
             <div className="topbar-actions">
-              <button aria-expanded={detailsOpen} onClick={() => setDetailsOpen(!detailsOpen)}>
+              <button
+                aria-controls="conversation-details"
+                aria-expanded={detailsOpen}
+                onClick={() => (detailsOpen ? closeDetails() : setDetailsOpen(true))}
+                ref={detailsButton}
+              >
                 Details
               </button>
-              <button aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(!advancedOpen)}>
-                Advanced
-              </button>
-              <span className="badge">
-                {thread?.provider ?? runtime?.provider ?? '…'} / {thread?.model ?? runtime?.model ?? '…'}
-              </span>
               {selectedSession === undefined ? null : (
                 <button
                   aria-expanded={sessionMenu?.session.id === selectedSession.id}
@@ -640,60 +682,42 @@ function App() {
             </div>
           </header>
           {error === undefined ? null : <div className="error-banner">{error}</div>}
-          {thread?.run?.approvals.map((approval) => (
-            <section aria-label="Operation confirmation" className="tool-card" key={approval.id}>
-              <strong>Confirm one operation</strong>
-              <pre>{JSON.stringify(approval.preview, null, 2)}</pre>
-              <p>
-                Expires {new Date(approval.expiresAt).toLocaleTimeString()}. This is not permission for the entire
-                session.
-              </p>
-              <button onClick={() => replyApproval(approval.id, approval.digest, false)}>Deny</button>
-              <button onClick={() => replyApproval(approval.id, approval.digest, true)}>Approve once</button>
-            </section>
-          ))}
-          {thread?.run?.projectContext && (
-            <div role="status">
-              Recorded memory: {thread.run.projectContext.entryIds.length} notes · {thread.run.projectContext.tokens}{' '}
-              tokens · {thread.run.projectContext.digest.slice(0, 12)}
-            </div>
-          )}
-          {thread?.run?.result ? (
-            <div role="status">
-              {thread.run.result.outcome === 'budget-exceeded'
-                ? 'Run stopped at its limit.'
-                : `Run: ${thread.run.result.outcome}.`}{' '}
-              Recording: {thread.run.result.recording.status}.{' '}
-              {thread.run.result.quiescence ? '' : 'Work may still be active; conflicting resources remain reserved.'}
+          {thread?.run?.approvals.length ? (
+            <div className="important-status" role="status">
+              Approval required · Run paused{' '}
+              <button className="outlined" onClick={() => setDismissedApproval(new Set())}>
+                Review operation
+              </button>
             </div>
           ) : null}
-
-          <div className="home-details">
-            <p className="muted">
-              Context: {runtime?.contextMode ?? 'disabled'} {thread ? contextNotices[thread.id] : ''}
-            </p>
-            {thread && membershipThread === thread.id && membership?.projectId && (
-              <ProjectMemoryPanel
-                api={api}
-                disabled={runActive}
-                key={`${thread.id}/${membership.projectId}`}
-                messages={thread.messages}
-                onChange={(selection) => setMemorySelections((current) => ({...current, [thread.id]: selection}))}
-                onError={showError(setError)}
-                onSource={async (sessionId) => {
-                  const resumed = await api<ThreadSnapshot>(
-                    `/api/projects/${membership.projectId}/sessions/${sessionId}/resume`,
-                    {method: 'POST'},
-                  )
-                  selectedThreadId.current = resumed.id
-                  setThread(resumed)
-                }}
-                projectId={membership.projectId}
-                selection={memorySelections[thread.id] ?? {mode: 'curated'}}
-                threadId={thread.id}
-              />
+          {thread?.run?.result &&
+            (thread.run.result.outcome !== 'completed' ||
+              thread.run.result.recording.status === 'failed' ||
+              !thread.run.result.quiescence) && (
+              <div className="important-status" role="status">
+                {thread.run.result.outcome === 'budget-exceeded'
+                  ? budgetStatus(thread.run)
+                  : `Run: ${thread.run.result.outcome}.`}{' '}
+                {thread.run.result.quiescence ? '' : 'Work may still be active; conflicting resources remain reserved.'}
+                {thread.run.result.recording.status === 'failed'
+                  ? ' Recording failed. Inspect logs before continuing.'
+                  : ''}
+                {thread.run.result.outcome === 'budget-exceeded' && (
+                  <button className="outlined" onClick={() => setDetailsOpen(true)}>
+                    Review limits
+                  </button>
+                )}
+                {canContinueBudget(thread.run) && (
+                  <button
+                    className="outlined"
+                    disabled={runActive}
+                    onClick={() => submit(thread.run?.runId).catch(showError(setError))}
+                  >
+                    Continue with next-run limits
+                  </button>
+                )}
+              </div>
             )}
-          </div>
           <div aria-busy={runActive} className="messages">
             {thread === undefined || (thread.messages.length === 0 && runStatus === undefined) ? (
               <div className="empty">
@@ -715,7 +739,7 @@ function App() {
                     Start with a sample task
                   </button>
                   <p className="muted">
-                    Project context and settings stay close. Advanced controls open only when you need them.
+                    Project context and settings stay close. Details open only when you need them.
                   </p>
                 </div>
               </div>
@@ -734,87 +758,6 @@ function App() {
             <div ref={messagesEnd} />
           </div>
           <div className="composer-wrap">
-            <div className="advanced-controls">
-              {thread && (
-                <BudgetPanel
-                  active={runActive}
-                  limits={nextLimits}
-                  onChange={(key, value) =>
-                    setLimitOverrides((current) => ({...current, [thread.id]: {...current[thread.id], [key]: value}}))
-                  }
-                  onContinue={() => submit(thread.run?.runId).catch(showError(setError))}
-                  snapshot={thread.run}
-                />
-              )}
-
-              <details>
-                <summary>Skills · pending {(pendingSkills[thread?.id ?? ''] ?? []).length}</summary>
-                <button
-                  disabled={runActive}
-                  onClick={() => api<SkillListing>('/api/skills').then(setSkillList).catch(showError(setError))}
-                >
-                  Refresh Skill catalog
-                </button>
-                <button
-                  disabled={runActive || !thread}
-                  onClick={() => thread && setPendingSkills((current) => ({...current, [thread.id]: []}))}
-                >
-                  Clear pending Skills
-                </button>
-                {skillList.candidates.map((candidate) => (
-                  <label key={candidate.id} style={{display: 'block'}}>
-                    <input
-                      checked={(pendingSkills[thread?.id ?? ''] ?? []).some(
-                        (s) => s.id === candidate.id && s.digest === candidate.digest,
-                      )}
-                      disabled={runActive || !thread}
-                      onChange={(event) => {
-                        if (!thread) return
-                        const {checked} = event.target
-                        setPendingSkills((current) => ({
-                          ...current,
-                          [thread.id]: checked
-                            ? [
-                                ...(current[thread.id] ?? []).filter((s) => s.id !== candidate.id),
-                                {digest: candidate.digest, id: candidate.id},
-                              ]
-                            : (current[thread.id] ?? []).filter((s) => s.id !== candidate.id),
-                        }))
-                      }}
-                      type="checkbox"
-                    />
-                    {candidate.name} — {candidate.file} — {candidate.description}
-                    {candidate.plugin && <span> · Plugin: {candidate.plugin.id}</span>}
-                    {candidate.allowedTools !== undefined && (
-                      <span> · Suggested tools (no permission grant): {candidate.allowedTools}</span>
-                    )}
-                    {candidate.license !== undefined && <span> · License: {candidate.license}</span>}
-                    {candidate.compatibility !== undefined && <span> · Compatibility: {candidate.compatibility}</span>}
-                  </label>
-                ))}
-                {skillList.issues.map((issue, index) => (
-                  <div key={index}>{issue}</div>
-                ))}
-                {thread?.run?.skills && (
-                  <p>
-                    {thread.run.result ? 'Finished' : thread.run.skills.resolved ? 'Resolved' : 'Loading'} Skills:{' '}
-                    {thread.run.skills.requested.map((s) => s.id).join(', ')}
-                  </p>
-                )}
-                <button
-                  disabled={!thread}
-                  onClick={() =>
-                    thread &&
-                    api(`/api/sessions/${encodeURIComponent(thread.id)}/skills`)
-                      .then((value) => setSkillHistory(JSON.stringify(value, null, 2)))
-                      .catch(showError(setError))
-                  }
-                >
-                  Inspect saved Skill sources
-                </button>
-                {skillHistory && <pre>{skillHistory}</pre>}
-              </details>
-            </div>
             <div className={`composer ${runActive ? 'drafting' : ''}`}>
               <textarea
                 aria-describedby="composer-instructions"
@@ -875,58 +818,248 @@ function App() {
           </div>
         </section>
 
-        {preferences.debugPanelVisible && detailsOpen ? (
-          <aside className="diagnostics">
-            <header className="topbar">
-              <div className="title">Logs{thread === undefined ? '' : ` · ${thread.id.slice(0, 8)}`}</div>
-              <div className="filters">
-                <select onChange={(event) => setEventFilter(event.target.value)} value={eventFilter}>
-                  <option value="all">All levels</option>
-                  <option value="info">Info</option>
-                  <option value="debug">Debug</option>
-                  <option value="warn">Warn</option>
-                  <option value="error">Error</option>
-                </select>
-                <select onChange={(event) => setCategoryFilter(event.target.value)} value={categoryFilter}>
-                  <option value="all">All categories</option>
-                  <option value="lifecycle">Lifecycle</option>
-                  <option value="model">Model</option>
-                  <option value="tool">Tool</option>
-                  <option value="mcp">MCP</option>
-                  <option value="storage">Storage</option>
-                  <option value="runtime">Runtime</option>
-                  <option value="security">Security</option>
-                </select>
-                <select
-                  aria-label="Global diagnostic capture"
-                  onChange={(event) => updatePreferences({diagnosticCapture: event.target.value as DiagnosticCapture})}
-                  value={preferences.diagnosticCapture}
-                >
-                  <option value="full">Global: Full (15 min)</option>
-                  <option value="metadata">Global: Metadata</option>
-                  <option value="off">Global: Off</option>
-                </select>
-              </div>
-            </header>
-            <div className="events">
-              {thread === undefined ? <div className="empty">Select a session to view its logs.</div> : null}
-              {thread !== undefined && visibleLogs.length === 0 ? (
-                <div className="empty">No logs for this session.</div>
-              ) : null}
-              {visibleLogs.map((record) => (
-                <details className={`event ${record.level}`} key={record.id}>
-                  <summary>
-                    <span className="event-time">{formatTime(record.timestamp)}</span>
-                    <span className="event-type">{record.eventType}</span>
-                    <span className="event-level">{record.level}</span>
-                  </summary>
-                  <pre>{JSON.stringify(record, null, 2)}</pre>
-                </details>
-              ))}
-            </div>
-          </aside>
+        {detailsOpen ? (
+          <>
+            <button aria-label="Close details overlay" className="details-backdrop" onClick={closeDetails} />
+            <aside
+              aria-label="Conversation details"
+              className="diagnostics"
+              id="conversation-details"
+              ref={detailsPanel}
+              tabIndex={-1}
+            >
+              <h2>Details</h2>
+              <section aria-labelledby="details-conversation">
+                <h3 id="details-conversation">Conversation</h3>
+                <p>
+                  {membershipThread === thread?.id && membership?.projectId
+                    ? (projects.find((project) => project.id === membership.projectId)?.name ?? 'Project')
+                    : 'Unassigned'}{' '}
+                  · {thread ? sessionTitle(thread, sessions) : 'New chat'}
+                </p>
+                <p>
+                  Model · {thread?.provider ?? runtime?.provider ?? '…'} / {thread?.model ?? runtime?.model ?? '…'}
+                </p>
+                {selectedSession && (
+                  <details>
+                    <summary>Session information</summary>
+                    <dl>
+                      <SessionDetail label="Name" value={sessionDisplayName(selectedSession)} />
+                      <SessionDetail label="Status" value={selectedSession.status} />
+                      <SessionDetail label="Working directory" value={selectedSession.cwd} />
+                      <SessionDetail label="Session ID" value={selectedSession.id} />
+                    </dl>
+                    <button className="outlined" onClick={() => copyId(selectedSession).catch(showError(setError))}>
+                      Copy ID
+                    </button>
+                  </details>
+                )}
+                <div className="home-details">
+                  <p className="muted">
+                    Context: {runtime?.contextMode ?? 'disabled'} {thread ? contextNotices[thread.id] : ''}
+                  </p>
+                  {thread && membershipThread === thread.id && membership?.projectId && (
+                    <ProjectMemoryPanel
+                      api={api}
+                      disabled={runActive}
+                      key={`${thread.id}/${membership.projectId}`}
+                      messages={thread.messages}
+                      onChange={(selection) => setMemorySelections((current) => ({...current, [thread.id]: selection}))}
+                      onError={showError(setError)}
+                      onSource={async (sessionId) => {
+                        const resumed = await api<ThreadSnapshot>(
+                          `/api/projects/${membership.projectId}/sessions/${sessionId}/resume`,
+                          {method: 'POST'},
+                        )
+                        selectedThreadId.current = resumed.id
+                        setThread(resumed)
+                      }}
+                      projectId={membership.projectId}
+                      selection={memorySelections[thread.id] ?? {mode: 'curated'}}
+                      threadId={thread.id}
+                    />
+                  )}
+                </div>
+                {thread?.run?.projectContext && (
+                  <div role="status">
+                    Recorded memory: {thread.run.projectContext.entryIds.length} notes ·{' '}
+                    {thread.run.projectContext.tokens} tokens · {thread.run.projectContext.digest.slice(0, 12)}
+                  </div>
+                )}
+              </section>
+              <section aria-labelledby="details-run-settings">
+                <h3 id="details-run-settings">Run settings</h3>
+                <p>For the next run</p>
+                {runActive && <p className="muted">The current run keeps its recorded limits and Skills.</p>}
+                <div className="advanced-controls">
+                  {thread && (
+                    <BudgetPanel
+                      active={runActive}
+                      expanded
+                      limits={nextLimits}
+                      onChange={(key, value) =>
+                        setLimitOverrides((current) => ({
+                          ...current,
+                          [thread.id]: {...current[thread.id], [key]: value},
+                        }))
+                      }
+                      onContinue={() => submit(thread.run?.runId).catch(showError(setError))}
+                      snapshot={thread.run}
+                    />
+                  )}
+
+                  <details>
+                    <summary>Skills · pending {(pendingSkills[thread?.id ?? ''] ?? []).length}</summary>
+                    <button
+                      disabled={runActive}
+                      onClick={() => api<SkillListing>('/api/skills').then(setSkillList).catch(showError(setError))}
+                    >
+                      Refresh Skill catalog
+                    </button>
+                    <button
+                      disabled={runActive || !thread}
+                      onClick={() => thread && setPendingSkills((current) => ({...current, [thread.id]: []}))}
+                    >
+                      Clear pending Skills
+                    </button>
+                    {skillList.candidates.map((candidate) => (
+                      <label key={candidate.id} style={{display: 'block'}}>
+                        <input
+                          checked={(pendingSkills[thread?.id ?? ''] ?? []).some(
+                            (s) => s.id === candidate.id && s.digest === candidate.digest,
+                          )}
+                          disabled={runActive || !thread}
+                          onChange={(event) => {
+                            if (!thread) return
+                            const {checked} = event.target
+                            setPendingSkills((current) => ({
+                              ...current,
+                              [thread.id]: checked
+                                ? [
+                                    ...(current[thread.id] ?? []).filter((s) => s.id !== candidate.id),
+                                    {digest: candidate.digest, id: candidate.id},
+                                  ]
+                                : (current[thread.id] ?? []).filter((s) => s.id !== candidate.id),
+                            }))
+                          }}
+                          type="checkbox"
+                        />
+                        {candidate.name} — {candidate.file} — {candidate.description}
+                        {candidate.plugin && <span> · Plugin: {candidate.plugin.id}</span>}
+                        {candidate.allowedTools !== undefined && (
+                          <span> · Suggested tools (no permission grant): {candidate.allowedTools}</span>
+                        )}
+                        {candidate.license !== undefined && <span> · License: {candidate.license}</span>}
+                        {candidate.compatibility !== undefined && (
+                          <span> · Compatibility: {candidate.compatibility}</span>
+                        )}
+                      </label>
+                    ))}
+                    {skillList.issues.map((issue, index) => (
+                      <div key={index}>{issue}</div>
+                    ))}
+                    {thread?.run?.skills && (
+                      <p>
+                        {thread.run.result ? 'Finished' : thread.run.skills.resolved ? 'Resolved' : 'Loading'} Skills:{' '}
+                        {thread.run.skills.requested.map((s) => s.id).join(', ')}
+                      </p>
+                    )}
+                    <button
+                      disabled={!thread}
+                      onClick={() =>
+                        thread &&
+                        api(`/api/sessions/${encodeURIComponent(thread.id)}/skills`)
+                          .then((value) => setSkillHistory(JSON.stringify(value, null, 2)))
+                          .catch(showError(setError))
+                      }
+                    >
+                      Inspect saved Skill sources
+                    </button>
+                    {skillHistory && <pre>{skillHistory}</pre>}
+                  </details>
+                </div>
+                {thread?.run && (
+                  <details>
+                    <summary>{thread.run.result ? 'Last run' : 'Current run'} · recorded settings</summary>
+                    <pre>
+                      {JSON.stringify({limits: thread.run.limits, skills: thread.run.skills?.requested ?? []}, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </section>
+              <section aria-labelledby="details-logs">
+                <h3 id="details-logs">Logs</h3>
+                {preferences.debugPanelVisible ? (
+                  <>
+                    <header className="topbar">
+                      <div className="filters">
+                        <select onChange={(event) => setEventFilter(event.target.value)} value={eventFilter}>
+                          <option value="all">All levels</option>
+                          <option value="info">Info</option>
+                          <option value="debug">Debug</option>
+                          <option value="warn">Warn</option>
+                          <option value="error">Error</option>
+                        </select>
+                        <select onChange={(event) => setCategoryFilter(event.target.value)} value={categoryFilter}>
+                          <option value="all">All categories</option>
+                          <option value="lifecycle">Lifecycle</option>
+                          <option value="model">Model</option>
+                          <option value="tool">Tool</option>
+                          <option value="mcp">MCP</option>
+                          <option value="storage">Storage</option>
+                          <option value="runtime">Runtime</option>
+                          <option value="security">Security</option>
+                        </select>
+                        <select
+                          aria-label="Global diagnostic capture"
+                          onChange={(event) =>
+                            updatePreferences({diagnosticCapture: event.target.value as DiagnosticCapture})
+                          }
+                          value={preferences.diagnosticCapture}
+                        >
+                          <option value="full">Global: Full (15 min)</option>
+                          <option value="metadata">Global: Metadata</option>
+                          <option value="off">Global: Off</option>
+                        </select>
+                      </div>
+                    </header>
+                    <div className="events">
+                      {thread === undefined ? <div className="empty">Select a session to view its logs.</div> : null}
+                      {thread !== undefined && visibleLogs.length === 0 ? (
+                        <div className="empty">No logs for this session.</div>
+                      ) : null}
+                      {visibleLogs.map((record) => (
+                        <details className={`event ${record.level}`} key={record.id}>
+                          <summary>
+                            <span className="event-time">{formatTime(record.timestamp)}</span>
+                            <span className="event-type">{record.eventType}</span>
+                            <span className="event-level">{record.level}</span>
+                          </summary>
+                          <pre>{JSON.stringify(record, null, 2)}</pre>
+                        </details>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="muted">Diagnostic display is disabled in Settings.</p>
+                )}
+              </section>
+              <button className="outlined close-details" onClick={closeDetails}>
+                Close details
+              </button>
+            </aside>
+          </>
         ) : null}
       </div>
+      <ApprovalDialog
+        approval={page === 'home' ? thread?.run?.approvals.find((item) => !dismissedApproval.has(item.id)) : undefined}
+        busy={approvalBusy}
+        error={error}
+        now={clock}
+        onClose={(id) => setDismissedApproval((current) => new Set([id, ...current]))}
+        onReply={replyApproval}
+        returnFocus={() => document.querySelector<HTMLButtonElement>('.important-status button')?.focus()}
+      />
       <SessionDetailsDialog
         onClose={closeSessionDetails}
         onCopy={(session) => copyId(session).catch(showError(setError))}
@@ -1098,9 +1231,12 @@ function sessionTitle(thread: ThreadSnapshot, sessions: SessionSummary[]): strin
 }
 
 function formatTime(timestamp: string): string {
-  return new Intl.DateTimeFormat(undefined, {hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(
-    new Date(timestamp),
-  )
+  return new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    hour12: false,
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(new Date(timestamp))
 }
 
 function formatFullDate(timestamp: string): string {
