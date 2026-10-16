@@ -1,9 +1,32 @@
 # Changelog
 
-## 0.9.1 — Unreleased
+## 0.9.2 — Unreleased
 
-Source preparation only. No v0.9.1 tag, GitHub release or npm publication has
+Source preparation only. No v0.9.2 tag, GitHub release or npm publication has
 been created.
+
+### Fixed
+
+- Keep coordination guard and owner creation descriptors open until identity
+  verification and unlink complete. This prevents false identity-change failures
+  on bind mounts that change path inode identity after the last handle closes.
+- Release owned descriptors on acquisition, cleanup and transcript-maintenance
+  failures while retaining uncertain or replaced coordination evidence. Device,
+  inode, file type, link count and owner-token checks remain enforced.
+
+### Upgrade notes
+
+- This patch does not change storage formats or migrate existing data. Stop all
+  writers before upgrading; mixed-version writers remain unsupported.
+- Existing retained guards are not removed automatically. If a previous failure
+  left coordination evidence, inspect it under the documented offline recovery
+  conditions rather than deleting guards or weakening identity checks.
+- The consumer example pins `@cybergarage/orbit@0.9.2` for local tarball validation
+  until publication. Orbit App adoption is a separate dependency update.
+
+## 0.9.1 — 2026-10-15
+
+Published to npm and as the v0.9.1 GitHub release.
 
 ### Added
 
@@ -26,9 +49,8 @@ been created.
 
 ### Upgrade notes
 
-- The prepared consumer example pins `@cybergarage/orbit@0.9.1`. Until npm
-  publication, use `npm run test:package` to install and validate its local
-  tarball instead of resolving 0.9.1 from the registry.
+- Version 0.9.1 is published with the Project/Session lifecycle and display-name
+  APIs. Applications should pin their exact dependency and validate upgrades.
 - Session `title` and `titleRevision` metadata and the rename APIs are included
   in this source version. Hosts should refresh stale revisions and retry only
   the same operation payload after an uncertain response.

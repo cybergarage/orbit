@@ -14,7 +14,7 @@ $ npm install -g @cybergarage/orbit
 $ orbit COMMAND
 running command...
 $ orbit (--version)
-@cybergarage/orbit/0.9.1 darwin-arm64 node-v26.10.0
+@cybergarage/orbit/0.9.2 darwin-arm64 node-v26.10.0
 $ orbit --help [COMMAND]
 USAGE
   $ orbit COMMAND
@@ -66,7 +66,7 @@ EXAMPLES
   $ orbit delete <SESSION_ID> --force
 ```
 
-_See code: [src/cli/delete.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/delete.ts)_
+_See code: [src/cli/delete.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/delete.ts)_
 
 ## `orbit exec [PROMPT]`
 
@@ -110,7 +110,7 @@ EXAMPLES
   echo "Write a haiku about TypeScript" | orbit exec
 ```
 
-_See code: [src/cli/exec.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/exec.ts)_
+_See code: [src/cli/exec.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/exec.ts)_
 
 ## `orbit gui`
 
@@ -149,7 +149,7 @@ DESCRIPTION
   Start the local Orbit graphical interface
 ```
 
-_See code: [src/cli/gui.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/gui.ts)_
+_See code: [src/cli/gui.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/gui.ts)_
 
 ## `orbit help [COMMAND]`
 
@@ -194,7 +194,7 @@ EXAMPLES
   $ orbit mcp list --connect
 ```
 
-_See code: [src/cli/mcp/list.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/mcp/list.ts)_
+_See code: [src/cli/mcp/list.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/mcp/list.ts)_
 
 ## `orbit plugins list`
 
@@ -213,7 +213,7 @@ DESCRIPTION
   Inspect explicitly selected local plugins without starting servers
 ```
 
-_See code: [src/cli/plugins/list.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/plugins/list.ts)_
+_See code: [src/cli/plugins/list.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/plugins/list.ts)_
 
 ## `orbit project ACTION [PROJECT]`
 
@@ -255,7 +255,7 @@ EXAMPLES
   $ orbit project delete <PROJECT_ID> --force
 ```
 
-_See code: [src/cli/project.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/project.ts)_
+_See code: [src/cli/project.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/project.ts)_
 
 ## `orbit resume [SESSION]`
 
@@ -305,7 +305,7 @@ EXAMPLES
   $ orbit resume --last --all
 ```
 
-_See code: [src/cli/resume.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/resume.ts)_
+_See code: [src/cli/resume.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/resume.ts)_
 
 ## `orbit session [SESSION]`
 
@@ -341,7 +341,7 @@ EXAMPLES
   $ orbit session <SESSION_ID> --json
 ```
 
-_See code: [src/cli/session.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/session.ts)_
+_See code: [src/cli/session.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/session.ts)_
 
 ## `orbit session archive SESSION`
 
@@ -361,7 +361,7 @@ EXAMPLES
   $ orbit session archive <SESSION_ID>
 ```
 
-_See code: [src/cli/session/archive.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/session/archive.ts)_
+_See code: [src/cli/session/archive.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/session/archive.ts)_
 
 ## `orbit session delete SESSION`
 
@@ -388,7 +388,7 @@ EXAMPLES
   $ orbit session delete <SESSION_ID> --force
 ```
 
-_See code: [src/cli/session/delete.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/session/delete.ts)_
+_See code: [src/cli/session/delete.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/session/delete.ts)_
 
 ## `orbit session list`
 
@@ -411,7 +411,7 @@ EXAMPLES
   $ orbit session list --archive archived
 ```
 
-_See code: [src/cli/session/list.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/session/list.ts)_
+_See code: [src/cli/session/list.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/session/list.ts)_
 
 ## `orbit session rename SESSION [TITLE]`
 
@@ -437,7 +437,7 @@ EXAMPLES
   $ orbit session rename <SESSION_ID> "Design review"
 ```
 
-_See code: [src/cli/session/rename.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/session/rename.ts)_
+_See code: [src/cli/session/rename.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/session/rename.ts)_
 
 ## `orbit session unarchive SESSION`
 
@@ -457,7 +457,7 @@ EXAMPLES
   $ orbit session unarchive <SESSION_ID>
 ```
 
-_See code: [src/cli/session/unarchive.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/session/unarchive.ts)_
+_See code: [src/cli/session/unarchive.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/session/unarchive.ts)_
 
 ## `orbit skills`
 
@@ -477,7 +477,7 @@ DESCRIPTION
   List bounded Skill metadata and source digests without running a model
 ```
 
-_See code: [src/cli/skills.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/skills.ts)_
+_See code: [src/cli/skills.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/skills.ts)_
 
 ## `orbit storage ACTION [SESSION]`
 
@@ -510,7 +510,7 @@ DESCRIPTION
   Inspect, initialize, reset or recover storage under external offline exclusion
 ```
 
-_See code: [src/cli/storage.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/storage.ts)_
+_See code: [src/cli/storage.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/storage.ts)_
 
 ## `orbit tools`
 
@@ -535,5 +535,5 @@ EXAMPLES
   $ orbit tools --connect
 ```
 
-_See code: [src/cli/tools.ts](https://github.com/cybergarage/orbit/blob/v0.9.1/src/apps/cli/tools.ts)_
+_See code: [src/cli/tools.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/tools.ts)_
 <!-- commandsstop -->
