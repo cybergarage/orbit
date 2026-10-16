@@ -79,73 +79,78 @@ export function migrateSessionTranscript(
   )
     throw new Error('Invalid migration identity')
   const guard = beginTranscriptMaintenance(scope, conditions, resume, recovered?.token)
-  const backup = file + '.v1-backup'
-  const target = file + '.v2-pending'
-  let intent: MigrationIntent
-  if (resume) {
-    const value = recovered!
-    if (
-      value.version !== 1 ||
-      value.sessionId !== scope.sessionId ||
-      value.file !== file ||
-      value.token !== guard.token ||
-      !/^[a-f0-9]{64}$/.test(value.sourceDigest) ||
-      !/^[a-f0-9]{64}$/.test(value.targetDigest)
-    )
-      throw new Error('Invalid migration intent; retain exclusion')
-    intent = value
-  } else {
-    inspectTranscript(scope, file)
-    const source = read(file)
-    const parsed = parseSessionFile(source, file)
-    if (parsed.header.version !== 1 || parsed.recovered)
-      throw new Error('Migration requires a complete version-1 transcript')
-    const next = [{...parsed.header, version: 2 as const}, ...parsed.entries.slice(1)]
-      .map((value) => encodeSessionEntry(value))
-      .join('')
-    intent = {
-      file,
-      sessionId: scope.sessionId,
-      sourceDigest: digest(source),
-      targetDigest: digest(next),
-      token: guard.token,
-      version: 1,
+  try {
+    const backup = file + '.v1-backup'
+    const target = file + '.v2-pending'
+    let intent: MigrationIntent
+    if (resume) {
+      const value = recovered!
+      if (
+        value.version !== 1 ||
+        value.sessionId !== scope.sessionId ||
+        value.file !== file ||
+        value.token !== guard.token ||
+        !/^[a-f0-9]{64}$/.test(value.sourceDigest) ||
+        !/^[a-f0-9]{64}$/.test(value.targetDigest)
+      )
+        throw new Error('Invalid migration intent; retain exclusion')
+      intent = value
+    } else {
+      inspectTranscript(scope, file)
+      const source = read(file)
+      const parsed = parseSessionFile(source, file)
+      if (parsed.header.version !== 1 || parsed.recovered)
+        throw new Error('Migration requires a complete version-1 transcript')
+      const next = [{...parsed.header, version: 2 as const}, ...parsed.entries.slice(1)]
+        .map((value) => encodeSessionEntry(value))
+        .join('')
+      intent = {
+        file,
+        sessionId: scope.sessionId,
+        sourceDigest: digest(source),
+        targetDigest: digest(next),
+        token: guard.token,
+        version: 1,
+      }
+      // Persist the plan before touching source, backup or replacement.
+      write(intentFile, JSON.stringify(intent) + '\n')
     }
-    // Persist the plan before touching source, backup or replacement.
-    write(intentFile, JSON.stringify(intent) + '\n')
-  }
 
-  const current = read(file)
-  const currentDigest = digest(current)
-  if (![intent.sourceDigest, intent.targetDigest].includes(currentDigest))
-    throw new Error('Transcript does not match migration intent')
-  if (currentDigest === intent.sourceDigest) {
-    if (fs.existsSync(backup)) {
-      if (digest(read(backup)) !== intent.sourceDigest) throw new Error('Conflicting migration backup')
-      sync(backup)
-    } else write(backup, current)
-    const parsed = parseSessionFile(current, file)
-    const next = [{...parsed.header, version: 2 as const}, ...parsed.entries.slice(1)]
-      .map((value) => encodeSessionEntry(value))
-      .join('')
-    if (digest(next) !== intent.targetDigest) throw new Error('Migration projection changed')
-    if (fs.existsSync(target)) {
-      if (digest(read(target)) !== intent.targetDigest)
-        throw new Error('Interrupted replacement is incomplete; review offline')
-      sync(target)
-    } else write(target, next)
-    fs.renameSync(target, file)
-  }
+    const current = read(file)
+    const currentDigest = digest(current)
+    if (![intent.sourceDigest, intent.targetDigest].includes(currentDigest))
+      throw new Error('Transcript does not match migration intent')
+    if (currentDigest === intent.sourceDigest) {
+      if (fs.existsSync(backup)) {
+        if (digest(read(backup)) !== intent.sourceDigest) throw new Error('Conflicting migration backup')
+        sync(backup)
+      } else write(backup, current)
+      const parsed = parseSessionFile(current, file)
+      const next = [{...parsed.header, version: 2 as const}, ...parsed.entries.slice(1)]
+        .map((value) => encodeSessionEntry(value))
+        .join('')
+      if (digest(next) !== intent.targetDigest) throw new Error('Migration projection changed')
+      if (fs.existsSync(target)) {
+        if (digest(read(target)) !== intent.targetDigest)
+          throw new Error('Interrupted replacement is incomplete; review offline')
+        sync(target)
+      } else write(target, next)
+      fs.renameSync(target, file)
+    }
 
-  if (digest(read(backup)) !== intent.sourceDigest || digest(read(file)) !== intent.targetDigest)
-    throw new Error('Migration evidence mismatch')
-  sync(file)
-  syncSupportedDirectory(path.dirname(file))
-  inspectTranscript(scope, file)
-  // Intent still refuses ordinary admission during guard removal.
-  guard.release()
-  fs.unlinkSync(intentFile)
-  syncSupportedDirectory(path.dirname(intentFile))
+    if (digest(read(backup)) !== intent.sourceDigest || digest(read(file)) !== intent.targetDigest)
+      throw new Error('Migration evidence mismatch')
+    sync(file)
+    syncSupportedDirectory(path.dirname(file))
+    inspectTranscript(scope, file)
+    // Intent still refuses ordinary admission during guard removal.
+    guard.release()
+    fs.unlinkSync(intentFile)
+    syncSupportedDirectory(path.dirname(intentFile))
+  } finally {
+    // Failed migration keeps exclusion evidence but must release its descriptor.
+    guard.close()
+  }
 }
 
 export interface TranscriptMigrationInspection {
@@ -240,63 +245,68 @@ export function migrateSessionTranscriptV3(
 
   const resumeGuard = resume && (Boolean(existing) || fs.existsSync(coordinationPaths(scope).guard))
   const guard = beginTranscriptMaintenance(scope, conditions, resumeGuard, existing?.token)
-  inspectTranscript(scope, file)
-  let source = read(file)
-  if (!Buffer.from(source).equals(fs.readFileSync(file))) throw new Error('Transcript is not lossless UTF-8')
-  let intent = existing
-  if (!intent) {
+  try {
+    inspectTranscript(scope, file)
+    let source = read(file)
+    if (!Buffer.from(source).equals(fs.readFileSync(file))) throw new Error('Transcript is not lossless UTF-8')
+    let intent = existing
+    if (!intent) {
+      const parsed = parseSessionFile(source, file)
+      if (parsed.recovered) throw new Error('Incomplete transcript cannot be migrated')
+      if (parsed.header.version === 3) {
+        sync(file)
+        syncSupportedDirectory(path.dirname(file))
+        guard.release()
+        return 'already-migrated'
+      }
+
+      const target = projectionMigrationTarget(source, file)
+      intent = {
+        file,
+        sessionId: scope.sessionId,
+        sourceDigest: digest(source),
+        sourceVersion: 2,
+        targetDigest: digest(target),
+        targetVersion: 3,
+        token: guard.token,
+        version: 2,
+      }
+      write(intentFile, JSON.stringify(intent) + '\n')
+    }
+
+    if (intent.token !== guard.token) throw new Error('Migration guard token mismatch')
+    const backup = file + '.v2-backup'
+    const pending = file + '.v3-pending'
+    if (digest(source) === intent.sourceDigest) {
+      if (fs.existsSync(backup)) {
+        if (digest(read(backup)) !== intent.sourceDigest) throw new Error('Conflicting v2 backup')
+        sync(backup)
+      } else write(backup, source)
+      const target = projectionMigrationTarget(source, file)
+      if (digest(target) !== intent.targetDigest) throw new Error('Migration target mismatch')
+      if (fs.existsSync(pending)) {
+        if (digest(read(pending)) !== intent.targetDigest)
+          throw new Error('Incomplete v3 replacement requires offline review')
+        sync(pending)
+      } else write(pending, target)
+      fs.renameSync(pending, file)
+      source = read(file)
+    }
+
+    if (digest(source) !== intent.targetDigest || digest(read(backup)) !== intent.sourceDigest)
+      throw new Error('V3 migration evidence mismatch')
     const parsed = parseSessionFile(source, file)
-    if (parsed.recovered) throw new Error('Incomplete transcript cannot be migrated')
-    if (parsed.header.version === 3) {
-      sync(file)
-      syncSupportedDirectory(path.dirname(file))
-      guard.release()
-      return 'already-migrated'
-    }
-
-    const target = projectionMigrationTarget(source, file)
-    intent = {
-      file,
-      sessionId: scope.sessionId,
-      sourceDigest: digest(source),
-      sourceVersion: 2,
-      targetDigest: digest(target),
-      targetVersion: 3,
-      token: guard.token,
-      version: 2,
-    }
-    write(intentFile, JSON.stringify(intent) + '\n')
+    if (parsed.header.version !== 3 || parsed.recovered) throw new Error('Invalid migrated v3 transcript')
+    sync(backup)
+    sync(file)
+    syncSupportedDirectory(path.dirname(file))
+    inspectTranscript(scope, file)
+    guard.release()
+    fs.unlinkSync(intentFile)
+    syncSupportedDirectory(path.dirname(intentFile))
+    return 'migrated'
+  } finally {
+    // Failed migration keeps exclusion evidence but must release its descriptor.
+    guard.close()
   }
-
-  if (intent.token !== guard.token) throw new Error('Migration guard token mismatch')
-  const backup = file + '.v2-backup'
-  const pending = file + '.v3-pending'
-  if (digest(source) === intent.sourceDigest) {
-    if (fs.existsSync(backup)) {
-      if (digest(read(backup)) !== intent.sourceDigest) throw new Error('Conflicting v2 backup')
-      sync(backup)
-    } else write(backup, source)
-    const target = projectionMigrationTarget(source, file)
-    if (digest(target) !== intent.targetDigest) throw new Error('Migration target mismatch')
-    if (fs.existsSync(pending)) {
-      if (digest(read(pending)) !== intent.targetDigest)
-        throw new Error('Incomplete v3 replacement requires offline review')
-      sync(pending)
-    } else write(pending, target)
-    fs.renameSync(pending, file)
-    source = read(file)
-  }
-
-  if (digest(source) !== intent.targetDigest || digest(read(backup)) !== intent.sourceDigest)
-    throw new Error('V3 migration evidence mismatch')
-  const parsed = parseSessionFile(source, file)
-  if (parsed.header.version !== 3 || parsed.recovered) throw new Error('Invalid migrated v3 transcript')
-  sync(backup)
-  sync(file)
-  syncSupportedDirectory(path.dirname(file))
-  inspectTranscript(scope, file)
-  guard.release()
-  fs.unlinkSync(intentFile)
-  syncSupportedDirectory(path.dirname(intentFile))
-  return 'migrated'
 }

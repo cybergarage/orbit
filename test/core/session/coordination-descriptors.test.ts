@@ -7,8 +7,8 @@ import os from 'node:os'
 import path from 'node:path'
 import {stub} from 'sinon'
 
-import {coordinationPaths, WriterClaim} from '../../../src/core/session/coordination.js'
-import {SessionRepository} from '../../session-storage-fixture.js'
+import {beginTranscriptMaintenance, coordinationPaths, WriterClaim} from '../../../src/core/session/coordination.js'
+import {offlineStorage, SessionRepository} from '../../session-storage-fixture.js'
 
 describe('coordination descriptor ownership', () => {
   let root: string
@@ -90,6 +90,28 @@ describe('coordination descriptor ownership', () => {
         fail?.restore()
         track.restore()
         claim?.release()
+      }
+    })
+  }
+
+  for (const resume of [false, true]) {
+    it(`closes maintenance descriptors without deleting evidence on abort (resume=${resume})`, () => {
+      const scope = repository.scope('maintenance')
+      const files = coordinationPaths(scope)
+      const open = fs.openSync.bind(fs)
+      const descriptors: number[] = []
+      const track = stub(fs, 'openSync').callsFake(((file, ...args) => {
+        const fd = open(file, ...args)
+        if (String(file) === files.guard) descriptors.push(fd)
+        return fd
+      }) as typeof fs.openSync)
+      try {
+        const guard = beginTranscriptMaintenance(scope, offlineStorage, resume, 'synthetic-resume-token')
+        guard.close()
+        for (const fd of descriptors) expect(() => fs.fstatSync(fd)).throws()
+        expect(fs.existsSync(files.guard)).equal(true)
+      } finally {
+        track.restore()
       }
     })
   }

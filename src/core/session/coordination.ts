@@ -588,7 +588,7 @@ export function beginTranscriptMaintenance(
   conditions: OfflineStorageConditions,
   resume: boolean,
   resumeToken?: string,
-): {release: () => void; token: string} {
+): {close: () => void; release: () => void; token: string} {
   assertOfflineStorage(conditions)
   validateScope(scope)
   if (cleanup.has(key(scope))) throw new Error('Local writer or cleanup is still owned')
@@ -632,6 +632,9 @@ export function beginTranscriptMaintenance(
     syncDirectory(path.dirname(files.guard))
     const held = artifact!
     return {
+      close() {
+        closeArtifact(held)
+      },
       release() {
         removeArtifact(held)
         syncDirectory(path.dirname(files.guard))
