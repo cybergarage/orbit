@@ -5,6 +5,7 @@ import {expect} from 'chai'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import process from 'node:process'
 import {stub} from 'sinon'
 
 import {beginTranscriptMaintenance, coordinationPaths, WriterClaim} from '../../../src/core/session/coordination.js'
@@ -53,12 +54,40 @@ describe('coordination descriptor ownership', () => {
     const replacement = path.join(root, 'replacement')
     const bytes = fs.readFileSync(files.owner)
     fs.writeFileSync(replacement, bytes)
-    fs.renameSync(replacement, files.owner)
+    try {
+      fs.renameSync(replacement, files.owner)
+    } catch (error) {
+      // Windows may prohibit replacing a file while its creation handle is held.
+      if (process.platform !== 'win32' || (error as NodeJS.ErrnoException).code !== 'EPERM') throw error
+      expect(fs.readFileSync(files.owner).equals(bytes)).equal(true)
+      claim.release()
+      return
+    }
+
     expect(() => claim.release()).throws('identity changed')
     expect(fs.readFileSync(files.owner).equals(bytes)).equal(true)
     // Only this synthetic fixture is removed, then retained cleanup can settle.
     fs.unlinkSync(files.owner)
     claim.release()
+  })
+
+  it('rejects a changed inode even when the owner token is unchanged', () => {
+    const scope = repository.scope('identity-changed')
+    const files = coordinationPaths(scope)
+    const claim = WriterClaim.acquire(scope, () => {})
+    const lstat = fs.lstatSync.bind(fs)
+    const altered = stub(fs, 'lstatSync').callsFake(((file, ...args) => {
+      const stat = lstat(file, ...args)
+      if (String(file) === files.owner) return Object.assign(Object.create(stat), {ino: Number(stat.ino) + 1})
+      return stat
+    }) as typeof fs.lstatSync)
+    try {
+      expect(() => claim.release()).throws('identity changed')
+      expect(fs.existsSync(files.owner)).equal(true)
+    } finally {
+      altered.restore()
+      claim.release()
+    }
   })
 
   for (const failure of ['write', 'unlink']) {
