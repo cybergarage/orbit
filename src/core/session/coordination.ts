@@ -34,6 +34,7 @@ interface Identity {
 }
 interface Artifact {
   bytes?: Buffer
+  fd?: number
   file: string
   identity: Identity
   token?: string
@@ -197,32 +198,48 @@ function alive(pid: number): boolean {
 
 function createArtifact(file: string, value: Owner, retained: (artifact: Artifact) => void): Artifact {
   const fd = fs.openSync(file, 'wx', 0o600)
+  let artifact: Artifact | undefined
   try {
-    const artifact: Artifact = {file, identity: fs.fstatSync(fd)}
+    // Keep the creation handle alive through identity verification and unlink.
+    // Some bind mounts assign a different path inode after the last handle closes.
+    artifact = {fd, file, identity: fs.fstatSync(fd)}
     retained(artifact)
     fs.writeFileSync(fd, JSON.stringify(value) + '\n')
     artifact.token = value.token
     return artifact
-  } finally {
-    fs.closeSync(fd)
+  } catch (error) {
+    if (artifact) closeArtifact(artifact)
+    else fs.closeSync(fd)
+    throw error
   }
 }
 
+function closeArtifact(artifact: Artifact | undefined): void {
+  if (artifact?.fd === undefined) return
+  const {fd} = artifact
+  artifact.fd = undefined
+  fs.closeSync(fd)
+}
+
 function removeArtifact(artifact: Artifact): void {
-  if (!exists(artifact.file)) return
-  const current = fs.lstatSync(artifact.file)
-  if (
-    current.dev !== artifact.identity.dev ||
-    current.ino !== artifact.identity.ino ||
-    !current.isFile() ||
-    current.nlink !== 1
-  )
-    throw new Error('Coordination identity changed; offline maintenance required')
-  if (artifact.bytes && !fs.readFileSync(artifact.file).equals(artifact.bytes))
-    throw new Error('Legacy writer evidence changed during maintenance')
-  if (artifact.token && readOwner(artifact.file)?.token !== artifact.token)
-    throw new Error('Coordination token changed; offline maintenance required')
-  fs.unlinkSync(artifact.file)
+  try {
+    if (!exists(artifact.file)) return
+    const current = fs.lstatSync(artifact.file)
+    if (
+      current.dev !== artifact.identity.dev ||
+      current.ino !== artifact.identity.ino ||
+      !current.isFile() ||
+      current.nlink !== 1
+    )
+      throw new Error('Coordination identity changed; offline maintenance required')
+    if (artifact.bytes && !fs.readFileSync(artifact.file).equals(artifact.bytes))
+      throw new Error('Legacy writer evidence changed during maintenance')
+    if (artifact.token && readOwner(artifact.file)?.token !== artifact.token)
+      throw new Error('Coordination token changed; offline maintenance required')
+    fs.unlinkSync(artifact.file)
+  } finally {
+    closeArtifact(artifact)
+  }
 }
 
 /** Core-only transition owner; callers cannot construct recorder or journal authority from serialized records. */
@@ -291,26 +308,34 @@ export class WriterClaim {
   release(): void {
     if (this.finished) return
     this.cleanupRequested = true
-    const files = coordinationPaths(this.scope)
-    if (!this.guard && this.owner)
-      createArtifact(files.guard, this.token, (a) => {
-        this.guard = a
-      })
-    if (this.owner) {
-      // Never delete a replacement owner, including after an uncertain acknowledgement.
-      if (this.ownerComplete && exists(this.owner.file) && readOwner(this.owner.file)?.token !== this.token.token)
-        throw new Error('Owner token changed; offline maintenance required')
-      removeArtifact(this.owner)
-      this.owner = undefined
-    }
+    try {
+      const files = coordinationPaths(this.scope)
+      if (!this.guard && this.owner)
+        createArtifact(files.guard, this.token, (a) => {
+          this.guard = a
+        })
+      if (this.owner) {
+        // Never delete a replacement owner, including after an uncertain acknowledgement.
+        if (this.ownerComplete && exists(this.owner.file) && readOwner(this.owner.file)?.token !== this.token.token)
+          throw new Error('Owner token changed; offline maintenance required')
+        removeArtifact(this.owner)
+        this.owner = undefined
+      }
 
-    if (this.guard) {
-      removeArtifact(this.guard)
-      this.guard = undefined
-    }
+      if (this.guard) {
+        removeArtifact(this.guard)
+        this.guard = undefined
+      }
 
-    this.finished = true
-    if (cleanup.get(key(this.scope)) === this) cleanup.delete(key(this.scope))
+      this.finished = true
+      if (cleanup.get(key(this.scope)) === this) cleanup.delete(key(this.scope))
+    } finally {
+      try {
+        closeArtifact(this.owner)
+      } finally {
+        closeArtifact(this.guard)
+      }
+    }
   }
 
   retryCleanup(): void {
@@ -574,40 +599,47 @@ export function beginTranscriptMaintenance(
     throw new Error('Session deletion is recorded')
   fs.mkdirSync(path.dirname(files.guard), {mode: 0o700, recursive: true})
   let artifact: Artifact | undefined
-  if (resume) {
-    if (!exists(files.guard) && resumeToken)
-      createArtifact(files.guard, {pid: process.pid, token: resumeToken, version: 1}, () => {})
-    const owner = readOwner(files.guard)
-    if (!owner || (owner.pid !== process.pid && alive(owner.pid))) throw new Error('Unknown or live migration guard')
-    const stat = fs.lstatSync(files.guard)
-    if (!stat.isFile() || stat.nlink !== 1) throw new Error('Invalid migration guard')
-    artifact = {
-      bytes: fs.readFileSync(files.guard),
-      file: files.guard,
-      identity: {dev: stat.dev, ino: stat.ino},
-      token: owner.token,
-    }
-  } else {
-    if (exists(migrationIntentPath(scope))) throw new Error('Pending transcript migration')
-    createArtifact(files.guard, {pid: process.pid, token: randomUUID(), version: 1}, (value) => {
-      artifact = value
-    })
-  }
-
-  const fd = fs.openSync(files.guard, fileSyncAccess())
   try {
-    fs.fsyncSync(fd)
-  } finally {
-    fs.closeSync(fd)
-  }
+    if (resume) {
+      if (!exists(files.guard) && resumeToken)
+        createArtifact(files.guard, {pid: process.pid, token: resumeToken, version: 1}, (value) => {
+          artifact = value
+        })
+      const owner = readOwner(files.guard)
+      if (!owner || (owner.pid !== process.pid && alive(owner.pid))) throw new Error('Unknown or live migration guard')
+      const stat = fs.lstatSync(files.guard)
+      if (!stat.isFile() || stat.nlink !== 1) throw new Error('Invalid migration guard')
+      artifact ??= {
+        bytes: fs.readFileSync(files.guard),
+        file: files.guard,
+        identity: {dev: stat.dev, ino: stat.ino},
+        token: owner.token,
+      }
+    } else {
+      if (exists(migrationIntentPath(scope))) throw new Error('Pending transcript migration')
+      createArtifact(files.guard, {pid: process.pid, token: randomUUID(), version: 1}, (value) => {
+        artifact = value
+      })
+    }
 
-  syncDirectory(path.dirname(files.guard))
-  const held = artifact!
-  return {
-    release() {
-      removeArtifact(held)
-      syncDirectory(path.dirname(files.guard))
-    },
-    token: readOwner(files.guard)!.token,
+    const fd = fs.openSync(files.guard, fileSyncAccess())
+    try {
+      fs.fsyncSync(fd)
+    } finally {
+      fs.closeSync(fd)
+    }
+
+    syncDirectory(path.dirname(files.guard))
+    const held = artifact!
+    return {
+      release() {
+        removeArtifact(held)
+        syncDirectory(path.dirname(files.guard))
+      },
+      token: readOwner(files.guard)!.token,
+    }
+  } catch (error) {
+    closeArtifact(artifact)
+    throw error
   }
 }

@@ -2,9 +2,15 @@ name: tests
 on:
   push:
   workflow_dispatch:
+    inputs:
+      coordination_only:
+        description: Run isolated coordination regression tests without storage migration or backup tests
+        type: boolean
+        default: false
 
 jobs:
   package-consumer:
+    if: ${{ !inputs.coordination_only }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -19,6 +25,7 @@ jobs:
       - run: npm ci
       - run: npm run test:package
   unit-tests:
+    if: ${{ !inputs.coordination_only }}
     strategy:
       matrix:
         node_version: [lts/-1, lts/*, latest]
@@ -35,7 +42,7 @@ jobs:
       - run: npm run build
       - run: npm run test
   windows-unit-tests:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && !inputs.coordination_only
     strategy:
       matrix:
         node_version: [lts/-1, lts/*, latest]
@@ -51,3 +58,22 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run test
+
+  coordination-regression:
+    if: ${{ inputs.coordination_only }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ['20.19.0', '24']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx cross-env TS_NODE_PROJECT=tsconfig.test.json mocha --forbid-only test/core/session/coordination-descriptors.test.ts test/core/execution/recovery-guard.test.ts test/core/session.test.ts
