@@ -78,7 +78,7 @@ describe('coordination descriptor ownership', () => {
     const lstat = fs.lstatSync.bind(fs)
     const altered = stub(fs, 'lstatSync').callsFake(((file, ...args) => {
       const stat = lstat(file, ...args)
-      if (String(file) === files.owner) return Object.assign(Object.create(stat), {ino: Number(stat.ino) + 1})
+      if (String(file) === files.owner) return Object.assign(Object.create(stat), {ino: stat.ino === 0 ? 1 : 0})
       return stat
     }) as typeof fs.lstatSync)
     try {
