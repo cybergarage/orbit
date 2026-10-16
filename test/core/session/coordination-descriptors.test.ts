@@ -72,7 +72,7 @@ describe('coordination descriptor ownership', () => {
         if (/\.(guard|owner)$/u.test(String(file))) descriptors.push(fd)
         return fd
       }) as typeof fs.openSync)
-      let claim: WriterClaim | undefined
+      let claim: undefined | WriterClaim
       let fail: ReturnType<typeof stub> | undefined
       try {
         if (failure === 'write') {
@@ -84,6 +84,7 @@ describe('coordination descriptor ownership', () => {
           expect(() => claim!.release()).throws('unlink failed')
           expect(fs.existsSync(files.owner)).equal(true)
         }
+
         for (const fd of descriptors) expect(() => fs.fstatSync(fd)).throws()
       } finally {
         fail?.restore()
