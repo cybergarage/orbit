@@ -31,26 +31,26 @@ optional Apple text provider. See the [changelog](CHANGELOG.md) for additions
 and upgrade notes. To use the source checkout, follow
 [Development](docs/development.md).
 
-The source checkout is preparing **0.9.1**, with Project and Session lifecycle
-commands, revisioned display names, local scheduling, and the updated embedded
-GUI. Version 0.9.1 has not been published. The install commands below continue
-to target the published 0.9.0 package; use the source development instructions
-or `npm run test:package` to validate the prepared source version.
+Version **0.9.1** is published with Project and Session lifecycle commands,
+revisioned display names, local scheduling, and the updated embedded GUI.
+The source checkout is preparing **0.9.2**, a coordination descriptor-lifetime
+fix for bind-mounted storage. Version 0.9.2 has not been published; use
+`npm run test:package` to validate its local tarball.
 
-The [v0.9.0 GitHub source release](https://github.com/cybergarage/orbit/releases/tag/v0.9.0)
-and [npm package](https://www.npmjs.com/package/@cybergarage/orbit/v/0.9.0)
-are available.
+The [v0.9.1 GitHub source release](https://github.com/cybergarage/orbit/releases/tag/v0.9.1)
+and [npm package](https://www.npmjs.com/package/@cybergarage/orbit/v/0.9.1)
+are available. Install commands below target the published release.
 
 As an application dependency:
 
 ```sh
-npm install --save-exact @cybergarage/orbit@0.9.0
+npm install --save-exact @cybergarage/orbit@0.9.1
 ```
 
 Or as a command-line application:
 
 ```sh
-npm install --global @cybergarage/orbit@0.9.0
+npm install --global @cybergarage/orbit@0.9.1
 orbit --help
 ```
 

@@ -12,7 +12,8 @@ runtime is in its 0.x development series.
 | `0.8.0` | Book publication milestone, with the book and examples identifying their matching Orbit release |
 | `0.8.1` | Published npm package and updated book baseline with a Run-bound operation executor and named execution settings |
 | `0.9.0` | Durable scheduled work, Windows file-flush acknowledgements and an optional Apple text provider |
-| `0.9.1` (unreleased) | Project/Session lifecycle and display names, local GUI scheduling and conversation/approval refinements |
+| `0.9.1` | Project/Session lifecycle and display names, local GUI scheduling and conversation/approval refinements |
+| `0.9.2` (unreleased) | Coordination descriptor ownership on bind mounts, with unchanged storage formats |
 | `1.0.0` | A complete OpenClaw/Hermes-style application built on Orbit, accompanied by an explicit stable API and compatibility contract |
 
 Version 0.8.1 was published to npm on 2026-10-02. Its tarball matches the
@@ -22,7 +23,7 @@ explanations, and EPUB have been updated and checked against that baseline.
 Book storefront publication remains a separate author decision.
 
 Version 0.9.0 adds durable scheduled work, Windows storage compatibility and an
-optional Apple text provider. Its consumer example targets 0.9.0. See the
+optional Apple text provider. Its release consumer example targeted 0.9.0. See the
 [changelog](../CHANGELOG.md#090--2026-10-14) for additions, compatibility and
 platform-specific upgrade notes, and [Development](development.md#releases-and-npm-packages)
 for validation and publication steps. The book's v0.8.1 baseline remains
@@ -35,14 +36,19 @@ passed. Version 0.9.0 was also published to npm on 2026-10-14. Its published
 tarball matches the independently validated release artifact, and the npm
 `latest` tag was confirmed as `0.9.0` after publication.
 
-Version 0.9.1 is prepared in source and has not been tagged, released on GitHub
-or published to npm. Its consumer example pins 0.9.1 for local tarball
-validation. It includes the Project/Session lifecycle and rename APIs, optional
-GUI scheduling and the shared Details/native approval interface. See the
-[unreleased changelog](../CHANGELOG.md#091--unreleased) and the
-[release procedure](development.md#releases-and-npm-packages). Publication and
-registry verification remain separate steps; the current published npm version
-is 0.9.0.
+Version 0.9.1 was published to npm and as a
+[GitHub release](https://github.com/cybergarage/orbit/releases/tag/v0.9.1) on
+2026-10-15. It includes Project/Session lifecycle and rename APIs, optional GUI
+scheduling and the shared Details/native approval interface.
+
+Version 0.9.2 is prepared in source and has not been tagged, released on GitHub
+or published to npm. It fixes coordination descriptor ownership on bind mounts
+without changing storage formats or relaxing identity checks. Its consumer
+example pins 0.9.2 for local tarball validation. Existing retained guards require
+offline inspection; upgrading does not delete them. See the
+[unreleased changelog](../CHANGELOG.md#092--unreleased) and
+[release procedure](development.md#releases-and-npm-packages). The current
+published npm version remains 0.9.1.
 
 The 1.0 milestone is a plan, not available functionality or a promised date.
 Application completion should provide evidence for 1.0 readiness: representative
