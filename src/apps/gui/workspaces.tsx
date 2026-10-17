@@ -1,17 +1,17 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-/* global RequestInit */
-/* eslint-disable n/no-unsupported-features/node-builtins */
-
 import {useCallback, useEffect, useRef, useState} from 'react'
 
+/* global RequestInit */
+/* eslint-disable n/no-unsupported-features/node-builtins */
 import type {GuiPreferences, RuntimeSnapshot} from '../../core/application.js'
 import type {DiagnosticCapture} from '../../core/diagnostics/index.js'
 import type {WorkState} from '../../core/execution/scheduled-work.js'
 import type {LocalTask} from './local-scheduler.js'
 
 import {Icon} from './icons.js'
+import {InitializationPanel} from './initialization-panel.js'
 import {LatestRequest} from './latest-request.js'
 import orbitLogo from './public/assets/orbit-logo-navy-blue.png'
 import {SidebarDialog} from './sidebar.js'
@@ -415,12 +415,14 @@ function TaskForm({
 }
 
 export function SettingsWorkspace({
+  api,
   busy,
   closeDrawer,
   preferences,
   runtime,
   update,
 }: {
+  api: Api
   busy: boolean
   closeDrawer: () => void
   preferences: GuiPreferences
@@ -432,7 +434,7 @@ export function SettingsWorkspace({
     <>
       <aside className="pane sidebar context-list">
         <Brand />
-        {['diagnostics', 'runtime'].map((value) => (
+        {['diagnostics', 'runtime', 'initialization'].map((value) => (
           <button
             className={`nav-row ${tab === value ? 'active' : ''}`}
             key={value}
@@ -442,7 +444,7 @@ export function SettingsWorkspace({
             }}
           >
             <Icon name={value === 'diagnostics' ? 'settings' : 'info'} />
-            {value === 'diagnostics' ? 'Diagnostics' : 'Runtime information'}
+            {value === 'diagnostics' ? 'Diagnostics' : value === 'runtime' ? 'Runtime information' : 'Initialization'}
           </button>
         ))}
       </aside>
@@ -451,7 +453,9 @@ export function SettingsWorkspace({
           <div className="title">Settings</div>
         </header>
         <div className="workspace-content">
-          {tab === 'diagnostics' ? (
+          {tab === 'initialization' ? (
+            <InitializationPanel api={api} />
+          ) : tab === 'diagnostics' ? (
             <>
               <h2>Diagnostics</h2>
               <div className="settings-toggle">

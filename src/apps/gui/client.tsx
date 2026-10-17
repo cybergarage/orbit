@@ -580,6 +580,7 @@ function App() {
       {page === 'scheduled' && <ScheduledWorkspace api={api} closeDrawer={() => setDrawer(false)} />}
       {page === 'settings' && (
         <SettingsWorkspace
+          api={api}
           busy={preferencesBusy}
           closeDrawer={() => setDrawer(false)}
           preferences={preferences}
@@ -653,10 +654,14 @@ function App() {
               <button
                 aria-controls="conversation-details"
                 aria-expanded={detailsOpen}
+                aria-label="Logs"
+                className="icon-button"
                 onClick={() => (detailsOpen ? closeDetails() : setDetailsOpen(true))}
                 ref={detailsButton}
+                title="Logs"
+                type="button"
               >
-                Details
+                <Icon name="logs" />
               </button>
               {selectedSession === undefined ? null : (
                 <button
@@ -675,6 +680,7 @@ function App() {
                     })
                   }}
                   title="Session actions"
+                  type="button"
                 >
                   <Icon name="more" />
                 </button>
@@ -824,15 +830,15 @@ function App() {
 
         {detailsOpen ? (
           <>
-            <button aria-label="Close details overlay" className="details-backdrop" onClick={closeDetails} />
+            <button aria-label="Close logs overlay" className="details-backdrop" onClick={closeDetails} />
             <aside
-              aria-label="Conversation details"
+              aria-label="Conversation logs and details"
               className="diagnostics"
               id="conversation-details"
               ref={detailsPanel}
               tabIndex={-1}
             >
-              <h2>Details</h2>
+              <h2>Logs</h2>
               <section aria-labelledby="details-conversation">
                 <h3 id="details-conversation">Conversation</h3>
                 <p>
@@ -997,14 +1003,22 @@ function App() {
                   <>
                     <header className="topbar">
                       <div className="filters">
-                        <select onChange={(event) => setEventFilter(event.target.value)} value={eventFilter}>
+                        <select
+                          aria-label="Log level"
+                          onChange={(event) => setEventFilter(event.target.value)}
+                          value={eventFilter}
+                        >
                           <option value="all">All levels</option>
                           <option value="info">Info</option>
                           <option value="debug">Debug</option>
                           <option value="warn">Warn</option>
                           <option value="error">Error</option>
                         </select>
-                        <select onChange={(event) => setCategoryFilter(event.target.value)} value={categoryFilter}>
+                        <select
+                          aria-label="Log category"
+                          onChange={(event) => setCategoryFilter(event.target.value)}
+                          value={categoryFilter}
+                        >
                           <option value="all">All categories</option>
                           <option value="lifecycle">Lifecycle</option>
                           <option value="model">Model</option>
@@ -1049,7 +1063,7 @@ function App() {
                 )}
               </section>
               <button className="outlined close-details" onClick={closeDetails}>
-                Close details
+                Close logs
               </button>
             </aside>
           </>

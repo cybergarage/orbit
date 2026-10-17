@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url'
 import {z} from 'zod'
 
 import type {DiagnosticEvent, LogRecord, OrbitApplicationService} from '../../core/index.js'
+import type {InitializationProfile} from '../../core/maintenance/initialization.js'
 import type {LocalScheduler} from './local-scheduler.js'
 
 import {parseRunLimits} from '../../core/execution/limits.js'
@@ -16,6 +17,7 @@ import {DiagnosticCapture, InvalidInputError} from '../../core/index.js'
 import {parseMemorySelection} from '../../core/projects/memory-context.js'
 import {ProjectStoreError} from '../../core/projects/types.js'
 import {sessionRenameSchema} from '../../core/session/title.js'
+import {initializationRoutes} from './initialization-routes.js'
 import {memoryRoutes} from './memory-routes.js'
 import {projectRoutes} from './project-routes.js'
 import {schedulingRoutes} from './scheduling-routes.js'
@@ -24,6 +26,7 @@ import {GUI_LAYOUT_STYLES} from './styles.js'
 export interface GuiServerOptions {
   clientBundle?: string
   host?: string
+  initialization?: InitializationProfile
   port?: number
   scheduler?: LocalScheduler
   service: OrbitApplicationService
@@ -99,6 +102,12 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
   })
 
   app.use('/api', requireToken(token))
+  const initialization = initializationRoutes(options.initialization, async () => {
+    await options.scheduler?.close()
+    await options.service.close()
+  })
+  app.use('/api', initialization.router)
+  app.use('/api', initialization.admission)
   app.use('/api', schedulingRoutes(options.scheduler))
   app.use('/api', projectRoutes(options.service))
   app.use('/api', memoryRoutes(options.service))

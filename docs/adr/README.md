@@ -444,3 +444,7 @@ in c17fc5a3170f6a5dbe800da6522e38870b513e1a with 832 passing tests.
 [Optional Apple Foundation Models adapter](2026-10-03-apple-foundation-models.md) proposes a bounded local Swift process bridge. The draft remains proposed; native text inference was verified on the M4 after user-managed Xcode license acceptance.
 
 [Core lifecycle](2026-10-14-core-lifecycle.md) records the locally authorized empty-project deletion and persistent session archive contract.
+
+[Scoped host initialization](2026-10-17-scoped-initialization.md) records the
+2026-10-17 author-approved settings, saved-data and all scopes shared by CLI and
+embedded GUI, with explicit settings selection and offline permanent deletion.

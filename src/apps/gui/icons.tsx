@@ -15,8 +15,25 @@ import send from './public/assets/4350f.svg'
 import info from './public/assets/baff9.svg'
 import plus from './public/assets/c92b5.svg'
 import more from './public/assets/cca06.svg'
+import logs from './public/assets/logs.svg'
 
-const icons = {cancel, chat, check, compose, folder, home, info, more, once, pause, plus, schedule, send, settings}
+const icons = {
+  cancel,
+  chat,
+  check,
+  compose,
+  folder,
+  home,
+  info,
+  logs,
+  more,
+  once,
+  pause,
+  plus,
+  schedule,
+  send,
+  settings,
+}
 
 export function Icon({name}: {name: keyof typeof icons}) {
   return <img alt="" className={`orbit-icon icon-${name}`} src={icons[name]} />

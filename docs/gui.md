@@ -5,15 +5,25 @@ sessions. The interface has three columns: a 64px Home/Scheduled/Settings naviga
 a 280px context list, and the selected workspace. Settings stays at the bottom
 of the rail. On compact windows the context list opens as a dismissible drawer.
 Home retains the existing conversation, project menus, send/stop and individual
-operation approvals. **Details** opens one shared right panel with **Conversation**
+operation approvals. The **Logs** icon button opens one shared right panel with **Conversation**
 (session information, model and Project context), **Run settings** (next-run limits
 and Skills, with recorded settings kept separate), and **Logs**. It docks beside
 the conversation on wide windows and overlays it on compact windows. Project
 conversations are indented; user messages appear on the right and Orbit replies
-on the left. The header shows the selected conversation and its Project.
-Approval, error, limit and reconnection states remain visible when Details is closed.
-Settings exposes the existing diagnostic capture controls and runtime information;
-it does not edit providers or credentials.
+on the left. The header shows the selected conversation and its Project with
+compact type. It shares the conversation background, with a subtle divider and
+transparent Logs/menu icons that highlight on hover or expansion. Scoped
+header/surface/Logs colors follow the system light/dark preference; this is not an
+application-wide dark theme. User messages remain distinct from the dark surface.
+The Logs pane uses compact section headings, muted metadata, wrapping monospace
+records and separate bounded scrolling for long log entries. Conversation
+information, budgets, Skills and Project memory are retained. The Logs icon has
+the accessible name and tooltip “Logs”; the panel retains conversation details
+and run settings alongside diagnostic logs.
+Approval, error, limit and reconnection states remain visible when Logs is closed.
+Settings exposes diagnostic capture controls, runtime information and
+[Initialization](initialization.md). Provider and credential values are not shown;
+initialization removes only explicitly selected settings files.
 
 Message history and logs scroll independently within the window, including
 after reopening a session with a long saved history. The log list does not push
@@ -112,7 +122,7 @@ without failing the entire page.
 
 ## Session logs and diagnostics
 
-Open **Details → Logs** to inspect logs. Settings controls diagnostic display.
+Open **Logs** and its diagnostic log section to inspect logs. Settings controls diagnostic display.
 The log list loads a bounded
 backfill from the active and rotated JSONL segments under
 `~/.orbit/logs/<session-id>/` and then receives live records through
@@ -191,7 +201,7 @@ its operation and target, full bound preview, expiry, **Deny** and **Approve onc
 Background clicks never approve. **Close** or Escape dismisses the dialog while
 leaving approval pending; **Review operation** reopens it. Focus stays within the
 open dialog and returns to the pending-operation action on dismissal. Decisions
-are disabled while submitting or after expiry. Closing Details also never grants
+are disabled while submitting or after expiry. Closing Logs also never grants
 approval.
 Replies use the startup capability and the pending request ID/digest. Repeating
 the same decision is idempotent; an opposite, stale or wrong-run decision fails.
@@ -213,7 +223,7 @@ source validation, compatibility and retained-history behavior.
 
 ## Run limits and continuation
 
-Open **Details → Run settings → Limits for the next run** to change tool rounds,
+Open **Logs → Run settings → Limits for the next run** to change tool rounds,
 model calls, tool requests or elapsed minutes. Settings apply to the next Send or
 Continue action, including per-workspace defaults. Each aggregate field defaults
 to **Unlimited**; select **Limited** to enter a numeric ceiling. They cannot alter active work.
@@ -267,7 +277,7 @@ not support scheduled write/command/send actions or unattended blanket approvals
 
 ## Synthetic GUI regression checks
 
-After building, `node e2e/gui-details.e2e.mjs` verifies the shared Details panel,
+After building, `node e2e/gui-details.e2e.mjs` verifies the shared Logs panel,
 compact layouts, approval dismissal and decisions, expiry, Rename and resume
 using a temporary repository and an injected model. It reads no real user history.
 Install the Playwright dependency under `e2e/coding-workflows/browser` first, or

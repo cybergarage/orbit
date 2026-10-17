@@ -27,6 +27,7 @@ USAGE
 * [`orbit exec [PROMPT]`](#orbit-exec-prompt)
 * [`orbit gui`](#orbit-gui)
 * [`orbit help [COMMAND]`](#orbit-help-command)
+* [`orbit initialize MODE`](#orbit-initialize-mode)
 * [`orbit mcp list`](#orbit-mcp-list)
 * [`orbit plugins list`](#orbit-plugins-list)
 * [`orbit project ACTION [PROJECT]`](#orbit-project-action-project)
@@ -170,6 +171,29 @@ DESCRIPTION
 ```
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.37/src/commands/help.ts)_
+
+## `orbit initialize MODE`
+
+Permanently initialize selected Orbit settings, saved data, or both; preserve user work
+
+```
+USAGE
+  $ orbit initialize MODE [--confirm-initialize] [--dry-run] [--exclusive-storage-control]
+    [--restarters-disabled] [--settings-file <value>...] [--writers-stopped]
+
+FLAGS
+  --confirm-initialize         Confirm permanent deletion without prompting
+  --dry-run                    Display paths, file counts and retained scope without changes
+  --exclusive-storage-control  Declare external exclusive control, including shared settings
+  --restarters-disabled        Declare automatic restarters disabled
+  --settings-file=<value>...   Explicit settings.json to reset; may contain credentials or affect other projects
+  --writers-stopped            Declare all CLI, GUI, library and older writers stopped
+
+DESCRIPTION
+  Permanently initialize selected Orbit settings, saved data, or both; preserve user work
+```
+
+_See code: [src/cli/initialize.ts](https://github.com/cybergarage/orbit/blob/v0.9.2/src/apps/cli/initialize.ts)_
 
 ## `orbit mcp list`
 

@@ -367,3 +367,12 @@ Project lists, Session information and Thread snapshots project the same title
 revision. CLI and capability-protected GUI routes call these core operations.
 See [editable display names](session.md#editable-display-names) and
 [Project rename](projects.md#renaming-projects).
+
+## Initialization maintenance
+
+`core/maintenance/initialization.ts` plans and executes host-scoped permanent
+initialization. `apps/initialization.ts` owns the shared Orbit CLI/embedded-GUI
+profile, including scheduled work. CLI confirmation and GUI admission drain/close
+remain host responsibilities. The GUI enters maintenance before resource cleanup
+and remains offline after execution. See [Initialization](initialization.md) for
+targets, exclusion, partial failure and the public host contract.

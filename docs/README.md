@@ -113,3 +113,6 @@ repository adopts a dedicated specification lifecycle.
 - [Verified interrupted context](interrupted-context.md): opt-in cancelled nondispatch evidence, derived input and exclusive transcript-v3 migration.
 
 - [Apple Foundation Models](apple-foundation-models.md): optional local Swift helper, prerequisites and text-only capability boundary.
+
+- [Initialization](initialization.md) defines shared CLI/GUI scopes, explicit
+  setting selection and offline permanent deletion without user-work removal.

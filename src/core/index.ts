@@ -125,6 +125,14 @@ export type {
   SessionLogStoreOptions,
   StoreSessionLoggerFactoryOptions,
 } from './logs/index.js'
+export {executeInitialization, planInitialization} from './maintenance/initialization.js'
+export type {
+  InitializationConsent,
+  InitializationMode,
+  InitializationPlan,
+  InitializationProfile,
+  InitializationTarget,
+} from './maintenance/initialization.js'
 export {createMcpClient, createMcpToolManager, createMcpTransport, mcpToolName} from './mcp.js'
 export type {
   McpClient,
@@ -216,6 +224,7 @@ export {
   SessionRepository,
   TurnPhase,
 } from './session/index.js'
+
 export type {
   AppendMessageOptions,
   CreateSessionOptions,
@@ -246,6 +255,7 @@ export type {
   SessionTurnContextEntry,
   SessionTurnEventEntry,
 } from './session/index.js'
+
 export {
   coordinationPaths,
   initializeSessionStorage,
@@ -255,7 +265,6 @@ export {
   resumeSessionStorage,
   retrySessionCleanup,
 } from './session/index.js'
-
 export type {
   OfflineStorageConditions,
   RegistrationResumeOptions,
@@ -281,7 +290,6 @@ export type {
   SummaryFact,
   SummaryTest,
 } from './session/index.js'
-
 export {
   DEFAULT_PROJECTION_LIMITS,
   inspectTranscriptMigration,
@@ -289,6 +297,7 @@ export {
   parseInterruptionPolicy,
   VerifiedContextError,
 } from './session/index.js'
+
 export type {ContextProjectionEntry, InterruptionPolicy} from './session/index.js'
 export type {TranscriptMigrationInspection} from './session/index.js'
 
@@ -299,6 +308,7 @@ export {
   loadWorkspaceSettingsWithSourcesSync,
   mergeWorkspaceSettings,
 } from './settings.js'
+
 export type {
   McpServerSettings,
   McpSettings,
@@ -309,12 +319,11 @@ export type {
   WorkspaceSettings,
   WorkspaceSettingsSource,
 } from './settings.js'
-
 export * from './skills/index.js'
 
 export {State} from './state.js'
-export {serializeMessage, ThreadEventType, ThreadManager, ThreadStatus} from './thread.js'
 
+export {serializeMessage, ThreadEventType, ThreadManager, ThreadStatus} from './thread.js'
 export type {
   CreateThreadOptions,
   ThreadAgent,

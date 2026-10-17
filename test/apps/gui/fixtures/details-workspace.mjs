@@ -23,6 +23,7 @@ export async function startDetailsFixture() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-details-fixture-'))
   const repository = new SessionRepository({rootDir: path.join(root, 'sessions')})
   repository.initializeStorage({allWritersStopped: true, automaticRestartersDisabled: true, exclusiveStorageControl: true})
+  const logs = new MemorySessionLogStore()
   const service = new OrbitApplicationService({
     contexts: [],
     createAgent(options) {
@@ -42,7 +43,7 @@ export async function startDetailsFixture() {
                 return new Message(MessageType.Assistant, {payload: {toolCalls: [{id: randomUUID(), input: {content: 'Synthetic approval result.', path: 'synthetic-answer.txt'}, name: 'write'}]}})
               }
 
-              return new Message(MessageType.Assistant, {content: 'Keep the conversation in focus. Project context, next-run limits, Skills and logs are together in Details.'})
+              return new Message(MessageType.Assistant, {content: 'Keep the conversation in focus. Project context, next-run limits, Skills and logs are together in the Logs panel.'})
             },
           }),
         },
@@ -51,7 +52,7 @@ export async function startDetailsFixture() {
       })
     },
     cwd: root,
-    logStore: new MemorySessionLogStore(),
+    logStore: logs,
     model: 'synthetic-model',
     projectStore: new MemoryProjectStore(),
     provider: 'ollama',
@@ -74,6 +75,7 @@ export async function startDetailsFixture() {
       await new Promise((resolve) => {setTimeout(resolve, 500)})
       server = await startGuiServer({port, service, token})
     },
+    logs,
     root,
     server,
     service,
