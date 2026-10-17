@@ -2,9 +2,9 @@
 status: accepted
 proposed-date: 2026-10-17
 decision-date: 2026-10-17
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-10-17
+implementation-commits: [3f8ed6fa549826d08e7d17ffa9cbe7da1c89c494]
 superseded-by: []
 ---
 
@@ -73,8 +73,18 @@ its own resources. Broadening storage reset was rejected for compatibility.
 
 ## Implementation and Confirmation
 
-Pending implementation and fixture-only checks for scope equality, plans, hostile
-paths, close refusal, interrupted deletion and restart. No live user reset is a test.
+Implemented in 3f8ed6fa549826d08e7d17ffa9cbe7da1c89c494. Headers, build,
+format/lint, 1,186 full regression tests and independent package-consumer
+verification passed locally. Thirteen focused tests include the subsequently
+added request-drain barrier. The actual embedded GUI was exercised with an
+isolated SQLite catalog, scheduler, authenticated HTTP and isolated Electron
+profile: explicit setting selection, preview, stop, confirmation, permanent
+deletion and workspace retention passed without inference. The final panel was
+visually inspected. The first full run had a CLI module-loading failure because
+a concurrent build removed dist; the final full run and package validation ran
+sequentially and passed. Remote exact-head checks are recorded in the PR.
+No user-data reset or credential change was performed. The implementation is
+permanent deletion only; Electron integration and Trash remain follow-up work.
 
 ## Follow-up Work
 
