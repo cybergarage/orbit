@@ -194,6 +194,32 @@ runner for the platform's six-hour default limit. The shared storage Windows
 compatibility matrix is confirmed in the [Windows acknowledgement ADR](adr/2026-10-04-windows-storage-acknowledgement.md);
 platform filesystem and privilege limits remain explicit there.
 
+### Live model smoke tests
+
+After `npm run build`, run `npm run test:models` to exercise the real model
+adapters. These tests are separate from the deterministic `npm test` suite;
+they send real requests and cloud providers may incur API charges.
+
+| Provider | Execution condition | Optional model selection |
+| --- | --- | --- |
+| OpenAI | Nonempty `ORBIT_TEST_OPENAI_API_KEY` | `ORBIT_TEST_OPENAI_MODEL` (otherwise Orbit's default) |
+| Anthropic | Nonempty `ORBIT_TEST_ANTHROPIC_API_KEY` | `ORBIT_TEST_ANTHROPIC_MODEL` (otherwise Orbit's default) |
+| Ollama | Server at `http://127.0.0.1:11434` with an installed model | `ORBIT_TEST_OLLAMA_MODEL` (otherwise the first installed model) |
+
+Missing test keys, a stopped local Ollama server, and an empty local model list
+appear as pending tests. An explicitly selected Ollama model must be installed.
+Choose a text generation model; embedding-only models cannot pass this smoke
+test. Tests never download models or load workspace settings, sessions, or MCP
+servers. Ordinary `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` variables do not enable
+these tests. Once enabled, authentication, API, discovery, and generation errors
+fail the test. Discovery has a three-second deadline; generation has a two-minute
+deadline. Each test checks a nonempty assistant response and provider metadata;
+it does not evaluate tool use or answer quality.
+
+Run `npm run test:models:unit` to verify the execution conditions without model
+services or credentials. The existing `test:e2e:ollama` command remains a separate
+Docker-based coding evaluation with explicitly selected models.
+
 ### Managed execution surface fixtures
 
 After building, run these isolated fixtures from the repository root:
