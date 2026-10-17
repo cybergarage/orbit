@@ -245,11 +245,26 @@ export class DurableWorkStore {
     })
   }
 
-  pause(id: string, paused: boolean): void {
+  pause(id: string, paused: boolean, now = Date.now()): void {
+    if (!Number.isSafeInteger(now) || now < 0) throw new Error('Invalid clock')
     this.change((state) => {
       const schedule = state.schedules.find((s) => s.id === id)
       if (!schedule) throw new Error('Unknown schedule')
+      if (!paused && !schedule.interval) {
+        if (state.occurrences.some((occurrence) => occurrence.scheduleId === id))
+          throw new Error('This one-time occurrence was already created. Create a new task for another occurrence.')
+        if (schedule.next <= now)
+          throw new Error('This one-time schedule has expired. Create a new task with a future time.')
+      }
+
+      if (!paused && schedule.paused && schedule.interval && schedule.next <= now) {
+        const next = schedule.next + (Math.floor((now - schedule.next) / schedule.interval) + 1) * schedule.interval
+        if (!Number.isSafeInteger(next)) throw new Error('Schedule timestamp overflow')
+        schedule.next = next
+      }
+
       schedule.paused = paused
+      if (paused) this.cancelQueued(state, id)
     })
   }
 
@@ -260,6 +275,15 @@ export class DurableWorkStore {
       if (!run || run.status !== 'unknown') throw new Error('Run not uncertain')
       run.status = 'failed'
       run.result = result
+    })
+  }
+
+  removeSchedule(id: string): void {
+    this.change((state) => {
+      const index = state.schedules.findIndex((schedule) => schedule.id === id)
+      if (index === -1) return
+      state.schedules.splice(index, 1)
+      this.cancelQueued(state, id)
     })
   }
 
@@ -296,6 +320,14 @@ export class DurableWorkStore {
     } finally {
       fs.closeSync(fd)
     }
+  }
+
+  private cancelQueued(state: WorkState, scheduleId: string): void {
+    const ids = new Set(
+      state.occurrences.filter((value) => value.scheduleId === scheduleId).map((value) => value.runId),
+    )
+    for (const run of state.runs)
+      if (ids.has(run.id) && (run.status === 'queued' || run.status === 'approval')) run.status = 'cancelled'
   }
 
   private change<T>(update: (state: WorkState) => T): T {

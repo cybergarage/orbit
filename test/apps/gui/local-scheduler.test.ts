@@ -42,6 +42,47 @@ describe('local GUI scheduling host (synthetic only)', () => {
     return host
   }
 
+  it('deletes schedules durably while allowing admitted work to settle and retaining files', async () => {
+    let release!: () => void
+    let admitted!: () => void
+    const started = new Promise<void>((resolve) => {
+      admitted = resolve
+    })
+    const done = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const scheduler = open(async () => {
+      admitted()
+      await done
+      return {result: 'retained result', status: 'succeeded'}
+    })
+    const sentinel = path.join(root, 'workspace.txt')
+    await fs.writeFile(sentinel, 'preserved')
+    const id = await scheduler.create(input(root, 1000))
+    const ticking = scheduler.tick(1000)
+    await started
+    scheduler.remove(id)
+    scheduler.remove(id)
+    expect(scheduler.snapshot().runs[0].status).equal('running')
+    release()
+    await ticking
+    await scheduler.close()
+    host = undefined
+    const restored = open()
+    await restored.tick(9000)
+    expect(restored.snapshot().schedules).length(0)
+    expect(restored.snapshot().runs[0]).include({result: 'retained result', status: 'succeeded'})
+    expect(await fs.readFile(sentinel, 'utf8')).equal('preserved')
+  })
+
+  it('rejects expired one-time enable without admitting work', async () => {
+    const scheduler = open()
+    const id = await scheduler.create(input(root))
+    scheduler.pause(id, true)
+    expect(() => scheduler.pause(id, false, 1000)).to.throw('expired')
+    expect(scheduler.snapshot().schedules[0].paused).equal(true)
+  })
+
   it('persists one-shot history and creation replay across restart', async () => {
     let calls = 0
     const value = input(root)
@@ -189,7 +230,7 @@ describe('local GUI scheduling host (synthetic only)', () => {
     scheduler.pause(id, true)
     await scheduler.tick(5000)
     expect(scheduler.snapshot().runs).length(0)
-    scheduler.pause(id, false)
+    scheduler.pause(id, false, 4000)
     await scheduler.tick(5000)
     expect(scheduler.snapshot().occurrences[0].due).equal(5000)
     expect(scheduler.snapshot().schedules[0].next).equal(6000)
