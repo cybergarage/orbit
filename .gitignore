@@ -25,3 +25,7 @@ PROMPT.md
 
 # Machine-local agent settings
 /.claude/settings.local.json
+
+# Local test credentials (share only .env.test.example with fake values)
+/.env.test.local
+/.env.test.*.local

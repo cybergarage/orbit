@@ -200,6 +200,28 @@ After `npm run build`, run `npm run test:models` to exercise the real model
 adapters. These tests are separate from the deterministic `npm test` suite;
 they send real requests and cloud providers may incur API charges.
 
+Keep test environment files at the repository root using these names:
+
+| File | Purpose | Git |
+| --- | --- | --- |
+| `.env.test.local` | Local test credentials and model overrides | Ignored |
+| `.env.test.<provider>.local` | Optional provider-specific local overrides, such as `.env.test.openai.local` | Ignored |
+| `.env.test.example` | Shared variable names and clearly fake placeholder values | Tracked when added |
+
+Use `.local` as the final suffix for private test environment files. Keep real
+credentials out of example files and restrict local credential files to their
+owner (for example, `chmod 600 .env.test.local` on POSIX systems).
+
+These files are not loaded automatically. In a POSIX shell, load the desired
+file before running the tests:
+
+```sh
+set -a
+. ./.env.test.local
+set +a
+npm run test:models
+```
+
 | Provider | Execution condition | Optional model selection |
 | --- | --- | --- |
 | OpenAI | Nonempty `ORBIT_TEST_OPENAI_API_KEY` | `ORBIT_TEST_OPENAI_MODEL` (otherwise Orbit's default) |
