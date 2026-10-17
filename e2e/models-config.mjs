@@ -14,19 +14,27 @@ export async function localOllamaModel(env = process.env, request = fetch) {
   try {
     response = await request('http://127.0.0.1:11434/api/tags', {signal: AbortSignal.timeout(3000)})
   } catch (error) {
-    if (error.cause?.code === 'ECONNREFUSED') return
+    if (error.cause?.code === 'ECONNREFUSED' && !env.ORBIT_TEST_OLLAMA_MODEL?.trim()) return
     throw error
   }
 
   if (!response.ok) throw new Error(`Local Ollama model discovery failed: HTTP ${response.status}`)
   const {models} = await response.json()
-  const names = models.map((model) => model.model || model.name).filter(Boolean)
+  const names = [...new Set(models.map((model) => model.model || model.name).filter(Boolean))]
   const requested = env.ORBIT_TEST_OLLAMA_MODEL?.trim()
-  if (requested) {
-    const installed = names.find((name) => name === requested || name === `${requested}:latest`)
-    if (!installed) throw new Error('The requested ORBIT_TEST_OLLAMA_MODEL is not installed locally')
-    return installed
+  const installed = requested && names.find((name) => name === requested || name === `${requested}:latest`)
+  if (requested && !installed) throw new Error('The requested ORBIT_TEST_OLLAMA_MODEL is not installed locally')
+
+  for (const model of installed ? [installed] : names) {
+    const details = await request('http://127.0.0.1:11434/api/show', {
+      body: JSON.stringify({model}),
+      headers: {'Content-Type': 'application/json'},
+      method: 'POST',
+      signal: AbortSignal.timeout(3000),
+    })
+    if (!details.ok) throw new Error(`Local Ollama capability discovery failed: HTTP ${details.status}`)
+    if ((await details.json()).capabilities?.includes('tools')) return model
   }
 
-  return names[0]
+  if (requested) throw new Error('The requested ORBIT_TEST_OLLAMA_MODEL does not report tool support')
 }

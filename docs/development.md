@@ -194,7 +194,7 @@ runner for the platform's six-hour default limit. The shared storage Windows
 compatibility matrix is confirmed in the [Windows acknowledgement ADR](adr/2026-10-04-windows-storage-acknowledgement.md);
 platform filesystem and privilege limits remain explicit there.
 
-### Live model smoke tests
+### Live model integration tests
 
 After `npm run build`, run `npm run test:models` to exercise the real model
 adapters. These tests are separate from the deterministic `npm test` suite;
@@ -204,21 +204,42 @@ they send real requests and cloud providers may incur API charges.
 | --- | --- | --- |
 | OpenAI | Nonempty `ORBIT_TEST_OPENAI_API_KEY` | `ORBIT_TEST_OPENAI_MODEL` (otherwise Orbit's default) |
 | Anthropic | Nonempty `ORBIT_TEST_ANTHROPIC_API_KEY` | `ORBIT_TEST_ANTHROPIC_MODEL` (otherwise Orbit's default) |
-| Ollama | Server at `http://127.0.0.1:11434` with an installed model | `ORBIT_TEST_OLLAMA_MODEL` (otherwise the first installed model) |
+| Ollama | Server at `http://127.0.0.1:11434` with an installed tool-capable model | `ORBIT_TEST_OLLAMA_MODEL` (otherwise the first installed model reporting tool support) |
 
-Missing test keys, a stopped local Ollama server, and an empty local model list
-appear as pending tests. An explicitly selected Ollama model must be installed.
-Choose a text generation model; embedding-only models cannot pass this smoke
-test. Tests never download models or load workspace settings, sessions, or MCP
-servers. Ordinary `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` variables do not enable
-these tests. Once enabled, authentication, API, discovery, and generation errors
-fail the test. Discovery has a three-second deadline; generation has a two-minute
-deadline. Each test checks a nonempty assistant response and provider metadata;
-it does not evaluate tool use or answer quality.
+Missing test keys, a stopped local Ollama server, and installations without a
+tool-capable model appear as pending tests. An explicitly selected Ollama model
+requires a running server, must be installed, and must report tool support;
+otherwise discovery fails. Tests never download models or load workspace
+settings, sessions, or MCP servers. Ordinary `OPENAI_API_KEY` and
+`ANTHROPIC_API_KEY` variables do not enable these tests. Once enabled,
+authentication, API, discovery, and generation errors fail the test. Each
+discovery request has a three-second deadline; each generation request has a
+two-minute deadline. The selected provider and model are printed for each suite.
 
-Run `npm run test:models:unit` to verify the execution conditions without model
-services or credentials. The existing `test:e2e:ollama` command remains a separate
-Docker-based coding evaluation with explicitly selected models.
+Each enabled provider runs three scenarios, with five generation requests in
+total and an output cap of 2,048 tokens per request:
+
+- A nonempty assistant response with normalized provider and model metadata,
+  plus output parts when exposed by the adapter.
+- A two-request conversation that recalls a fresh identifier from the first user
+  message after replaying the assistant response.
+- A tool call with checked name, arguments, ID, and optional normalized output part,
+  followed by a tool result and final response. The result contains a fresh code
+  generated after the call, and the final response must include that code without
+  another tool call.
+
+These are bounded integration checks, not broad model-quality evaluations. Tool
+selection and identifier copying still depend on model behavior; failures remain
+visible without automatic retries. The tool is a synthetic lookup: these tests
+exercise adapter serialization and response normalization, not Agent tool
+scheduling or real filesystem/MCP effects. Cancellation forwarding and Ollama
+listener cleanup are checked with injected SDK clients in
+`test/core/model-cancellation.test.ts`, without live requests.
+
+Run `npm run test:models:unit` to verify execution conditions and Ollama capability
+selection without model services or credentials. The existing `test:e2e:ollama`
+command remains a separate Docker-based coding evaluation with explicitly
+selected models.
 
 ### Managed execution surface fixtures
 
