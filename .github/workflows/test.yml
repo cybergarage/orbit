@@ -74,6 +74,9 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-      - run: npm ci
+      - run: npm ci --ignore-scripts
+      - run: npm rebuild better-sqlite3 esbuild
       - run: npm run build
-      - run: npx cross-env TS_NODE_PROJECT=tsconfig.test.json mocha --forbid-only test/core/session/coordination-descriptors.test.ts test/core/execution/recovery-guard.test.ts test/core/session.test.ts
+      - run: node ./node_modules/mocha/bin/mocha.js --forbid-only test/core/session/coordination-descriptors.test.ts test/core/execution/recovery-guard.test.ts test/core/session.test.ts
+        env:
+          TS_NODE_PROJECT: tsconfig.test.json
