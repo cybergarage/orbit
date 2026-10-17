@@ -83,3 +83,30 @@ A future Electron adapter needs a released core version containing these exports
 They are source additions, not APIs in the already published 0.9.2 package. Do not
 change Orbit App's dependency until that release exists and is validated. OS Trash
 would require a separate host operation and a consistent-set restoration contract.
+
+## Orbit App publication and adoption gate
+
+Version 0.9.3 is the planned release for these public exports; it is not yet
+published. Orbit App PR #10 remains pinned to published 0.9.2 and its three
+initialization controls remain disabled. Merging core source does not satisfy
+the application's package dependency.
+
+After explicit release authorization and actual npm publication:
+
+1. Verify the published version, root exports, declarations and tarball against
+   the tested release artifact. Pin the exact version and update the App Worker
+   lockfile/image identity in a separate adoption change.
+2. Supply an App-owned profile and preserve external workspaces and shared
+   context. CLI/embedded-GUI roots must never be reused for Electron data.
+   Separate settings and saved-data fields in the App registry deliberately;
+   deleting its combined state file is not a settings-only reset.
+3. Block admission and scheduled work; interrupt and await title generation;
+   finish or stop the Worker and verify its writer has released storage. Close
+   SQLite and host handles before creating a final metadata-only plan.
+4. Connect preview, final plan identity and explicit permanent confirmation to
+   the released API. Keep controls gated until this adapter is complete.
+5. Test all three modes using new temporary profiles, including shutdown refusal,
+   partial failure, restart, independent storage and retained workspace content.
+   Enable controls only after the published dependency and real adapter pass.
+
+These are adoption steps, not functionality already available in Orbit App.

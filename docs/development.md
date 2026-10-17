@@ -244,6 +244,9 @@ workflows require an explicit manual dispatch.
    logs and restart/resume without provider credentials. It also compiles and runs
    a public-API Rename consumer against the installed tarball, checking Session
    title metadata, Project names, expected-revision conflicts and exact retries.
+   A second public-API consumer compiles initialization types and executes each
+   scope against newly synthesized temporary data, checks refused consent and
+   retained workspaces, and verifies the installed initialization CLI help.
    It needs registry access to install dependencies. It does not test live models or production storage.
 3. Run `npm run docs:commands` after building to regenerate the oclif
    sections in `docs/cli.md`. Review all generated changes and run `git diff --check`.

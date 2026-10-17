@@ -7,14 +7,14 @@ agent, not a messaging gateway or a complete autonomous product.
 
 ## Install and build
 
-This example targets the prepared 0.9.2 source version; its npm package is not
+This example targets the prepared 0.9.3 source version; its npm package is not
 published yet. Use Node.js 20.19 or newer and npm. The commands below apply
-after the 0.9.2 npm package is published. To validate the source checkout before npm
+after the 0.9.3 npm package is published. To validate the source checkout before npm
 publication, run `npm run test:package` from the repository root.
-After the v0.9.2 source tag and npm package are published:
+After the v0.9.3 source tag and npm package are published:
 
 ```sh
-git clone --branch v0.9.2 https://github.com/cybergarage/orbit.git
+git clone --branch v0.9.3 https://github.com/cybergarage/orbit.git
 cd orbit/examples/agent
 npm install
 npm run build

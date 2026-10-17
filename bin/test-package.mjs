@@ -41,6 +41,10 @@ try {
     'dist/core/session/information.d.ts',
     'dist/core/projects/service.js',
     'dist/core/projects/service.d.ts',
+    'dist/core/maintenance/initialization.js',
+    'dist/core/maintenance/initialization.d.ts',
+    'dist/apps/cli/initialize.js',
+    'docs/initialization.md',
     'native/apple-foundation-models/main.swift',
     'bin/test-apple-foundation-models.mjs',
     'dist/apps/gui/public/client.js',
@@ -160,9 +164,72 @@ try {
 console.log('Package Rename consumer verified: public declarations, Session title metadata, exact retries and revision conflicts.')
 `,
   )
+  await writeFile(
+    path.join(consumer, 'src/initialization-api-probe.ts'),
+    `// Copyright (c) 2026 The Orbit Authors
+// SPDX-License-Identifier: Apache-2.0
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import {executeInitialization, planInitialization} from '@cybergarage/orbit'
+import type {
+  InitializationConsent, InitializationMode, InitializationPlan,
+  InitializationProfile, InitializationTarget,
+} from '@cybergarage/orbit'
+
+const consent: InitializationConsent = {
+  allWritersStopped: true, automaticRestartersDisabled: true,
+  confirmation: 'INITIALIZE', exclusiveStorageControl: true,
+}
+const modes: InitializationMode[] = ['settings', 'data', 'all']
+for (const mode of modes) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-package-initialization-'))
+  try {
+    const profile: InitializationProfile = {
+      ownedRoots: [root], preservedPaths: [path.join(root, 'workspace')],
+      settingsFiles: [path.join(root, 'settings.json')],
+      cacheRoots: [path.join(root, 'cache')], scheduledRoots: [path.join(root, 'scheduled')],
+      stores: [{sessionRoot: path.join(root, 'sessions'), journalRoot: path.join(root, 'runs'),
+        logRoot: path.join(root, 'logs'), projectFile: path.join(root, 'projects.sqlite')}],
+    }
+    for (const name of ['workspace', 'cache', 'scheduled', 'sessions', 'runs', 'logs']) {
+      fs.mkdirSync(path.join(root, name))
+      fs.writeFileSync(path.join(root, name, 'fixture.txt'), 'synthetic')
+    }
+    fs.writeFileSync(profile.settingsFiles[0], '{"apiKey":"SYNTHETIC-PACKAGE-SECRET"}')
+    fs.writeFileSync(path.join(root, 'projects.sqlite'), 'synthetic database')
+    const plan: InitializationPlan = planInitialization(profile, mode)
+    const targets: InitializationTarget[] = plan.targets
+    assert.ok(targets.length > 0)
+    assert.equal(plan.disposition, 'permanent')
+    assert.equal(JSON.stringify(plan).includes('SYNTHETIC-PACKAGE-SECRET'), false)
+    // @ts-expect-error Deliberately cross the untyped host boundary to test runtime refusal.
+    assert.throws(() => executeInitialization(plan, {...consent, allWritersStopped: false}), /offline/)
+    assert.equal(fs.existsSync(profile.settingsFiles[0]), true)
+    assert.equal(fs.existsSync(path.join(root, 'sessions', 'fixture.txt')), true)
+    const result = executeInitialization(plan, consent)
+    assert.deepEqual(result.removed, targets.map((target) => target.path))
+    assert.equal(fs.existsSync(profile.settingsFiles[0]), mode === 'data')
+    assert.equal(fs.existsSync(path.join(root, 'sessions')), mode === 'settings')
+    assert.equal(fs.existsSync(path.join(root, 'runs')), mode === 'settings')
+    assert.equal(fs.existsSync(path.join(root, 'logs')), mode === 'settings')
+    assert.equal(fs.existsSync(path.join(root, 'projects.sqlite')), mode === 'settings')
+    assert.equal(fs.existsSync(path.join(root, 'scheduled')), mode === 'settings')
+    assert.equal(fs.existsSync(path.join(root, 'cache')), mode !== 'all')
+    assert.equal(fs.readFileSync(path.join(root, 'workspace', 'fixture.txt'), 'utf8'), 'synthetic')
+    assert.deepEqual(fs.readdirSync(root).sort(),
+      (mode === 'settings' ? ['cache', 'logs', 'projects.sqlite', 'runs', 'scheduled', 'sessions', 'workspace'] :
+        mode === 'data' ? ['cache', 'settings.json', 'workspace'] : ['workspace']).sort())
+  } finally {fs.rmSync(root, {recursive: true, force: true})}
+}
+console.log('Package initialization consumer verified: public types, all scopes, consent and retained workspace.')
+`,
+  )
   runNpm(['run', 'build'], consumer)
   runNpm(['test'], consumer)
   execFileSync(process.execPath, [path.join(consumer, 'dist/rename-api-probe.js')], {cwd: consumer, stdio: 'inherit'})
+  execFileSync(process.execPath, [path.join(consumer, 'dist/initialization-api-probe.js')], {cwd: consumer, stdio: 'inherit'})
   const catalogProbe = path.join(consumer, 'catalog-probe.mjs')
   await writeFile(
     catalogProbe,
@@ -205,6 +272,13 @@ try {
     cwd: consumer,
     stdio: 'inherit',
   })
+  const initializeHelp = execFileSync(process.execPath, ['node_modules/@cybergarage/orbit/bin/run.js', 'initialize', '--help'], {
+    cwd: consumer,
+    encoding: 'utf8',
+  })
+  assert.match(initializeHelp, /--dry-run/u)
+  assert.match(initializeHelp, /--settings-file/u)
+  assert.match(initializeHelp, /--confirm-initialize/u)
   if (process.env.ORBIT_RELEASE_DIR) {
     const destination = path.resolve(process.env.ORBIT_RELEASE_DIR)
     await mkdir(destination, {recursive: true})
