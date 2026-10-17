@@ -99,6 +99,10 @@ describe('GUI scheduling routes', () => {
       expect(scheduler.snapshot().schedules).length(1)
       expect(scheduler.snapshot().enabled).equal(false)
       expect(scheduler.snapshot().schedules[0].paused).equal(true)
+      expect((await fetch(`${origin}/api/schedules/${id}`, {method: 'DELETE'})).status).equal(403)
+      expect((await fetch(`${origin}/api/schedules/${id}`, {headers, method: 'DELETE'})).status).equal(200)
+      expect((await fetch(`${origin}/api/schedules/${id}`, {headers, method: 'DELETE'})).status).equal(200)
+      expect(scheduler.snapshot().schedules).length(0)
     } finally {
       await server.close()
       await scheduler.close()

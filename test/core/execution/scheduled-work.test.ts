@@ -20,6 +20,28 @@ describe('Durable scheduled work', () => {
     fs.rmSync(root, {force: true, recursive: true})
   })
 
+  it('skips disabled recurring slots, cancels queued work, and retains deleted history across restart', () => {
+    const file = path.join(root, 'controls.json')
+    let store = new DurableWorkStore(file)
+    const id = store.schedule({effect: 'read', interval: 1000, next: 1000, payload: {synthetic: true}})
+    store.materialize(1000)
+    store.pause(id, true, 1500)
+    expect(store.snapshot().runs[0].status).equal('cancelled')
+    store.pause(id, false, 5500)
+    expect(store.snapshot().schedules[0].next).equal(6000)
+    store.pause(id, false, 9000)
+    expect(store.snapshot().schedules[0].next).equal(6000)
+    store.materialize(6000)
+    store.removeSchedule(id)
+    store.close()
+    store = new DurableWorkStore(file)
+    expect(store.snapshot().schedules).length(0)
+    expect(store.snapshot().runs.map((run) => run.status)).deep.equal(['cancelled', 'cancelled'])
+    expect(store.snapshot().occurrences).length(2)
+    expect(store.materialize(10_000)).deep.equal([])
+    store.close()
+  })
+
   it('materializes the latest missed occurrence and commits its cursor together', () => {
     const file = path.join(root, 'state.json')
     let store = new DurableWorkStore(file)

@@ -36,6 +36,7 @@ export function ScheduledWorkspace({api, closeDrawer}: {api: Api; closeDrawer: (
   const [pollError, setPollError] = useState<string>()
   const [busy, setBusy] = useState(false)
   const locked = useRef(false)
+  const [confirmDelete, setConfirmDelete] = useState<string>()
   const [confirmCancel, setConfirmCancel] = useState<string>()
   const [reconcile, setReconcile] = useState<string>()
   const [evidence, setEvidence] = useState('')
@@ -116,7 +117,7 @@ export function ScheduledWorkspace({api, closeDrawer}: {api: Api; closeDrawer: (
               >
                 <span>{value.name}</span>
                 <small>{item.interval ? `Every ${item.interval / 60_000} minutes` : 'One time'}</small>
-                <small>{item.paused ? 'Paused' : `Next · ${utc(item.next)}`}</small>
+                <small>{item.paused ? 'Disabled' : `Next · ${utc(item.next)}`}</small>
               </button>
             )
           })}
@@ -158,7 +159,7 @@ export function ScheduledWorkspace({api, closeDrawer}: {api: Api; closeDrawer: (
                 <article className="surface schedule-detail">
                   <h2>{task.name}</h2>
                   <p className="schedule-status">
-                    {oneShotCreated ? 'One-time occurrence created' : schedule.paused ? 'Paused' : 'Active'} ·{' '}
+                    {oneShotCreated ? 'One-time occurrence created' : schedule.paused ? 'Disabled' : 'Active'} ·{' '}
                     {schedule.interval ? `every ${schedule.interval / 60_000} minutes` : 'one time'}
                     {!oneShotCreated && <> · next occurrence {utc(schedule.next)}</>}
                   </p>
@@ -178,14 +179,43 @@ export function ScheduledWorkspace({api, closeDrawer}: {api: Api; closeDrawer: (
                       title={oneShotCreated ? 'Create a new task for another one-time occurrence' : undefined}
                     >
                       <Icon name="pause" />
-                      {schedule.paused ? 'Resume schedule' : 'Pause schedule'}
+                      {schedule.paused ? 'Enable schedule' : 'Disable schedule'}
+                    </button>
+                    <button disabled={busy} onClick={() => setConfirmDelete(schedule.id)}>
+                      Delete schedule
                     </button>
                     <button onClick={() => setSelected(undefined)}>
                       <Icon name="schedule" />
                       All tasks
                     </button>
                   </div>
-                  <p className="muted">Pausing stops future occurrences. Queued and running work is unaffected.</p>
+                  <p className="muted">
+                    Disabling or deleting cancels queued occurrences. Running work may finish; history, chats, and
+                    workspace files are retained. Enabling skips missed recurring occurrences.
+                  </p>
+                  {confirmDelete === schedule.id && (
+                    <div aria-label="Delete schedule" role="alertdialog">
+                      <p>
+                        Delete {task.name}? This removes only the schedule. Run history, chats, and workspace files are
+                        retained. Running work may finish.
+                      </p>
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          act(async () => {
+                            await api(`/api/schedules/${schedule.id}`, {method: 'DELETE'})
+                            setConfirmDelete(undefined)
+                            setSelected(undefined)
+                          })
+                        }
+                      >
+                        Confirm delete
+                      </button>
+                      <button disabled={busy} onClick={() => setConfirmDelete(undefined)}>
+                        Keep schedule
+                      </button>
+                    </div>
+                  )}
                 </article>
               )}
               <article className="surface">

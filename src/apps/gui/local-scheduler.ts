@@ -142,7 +142,7 @@ export class LocalScheduler {
     return id
   }
 
-  pause(id: string, paused: boolean): void {
+  pause(id: string, paused: boolean, now = Date.now()): void {
     this.assertOpen()
     const state = this.store.snapshot()
     const schedule = state.schedules.find((value) => value.id === id)
@@ -155,7 +155,9 @@ export class LocalScheduler {
       throw new ExecutionRequestError(
         'This one-time occurrence was already created. Create a new task for another occurrence.',
       )
-    this.store.pause(id, paused)
+    if (!paused && schedule && !schedule.interval && schedule.next <= now)
+      throw new ExecutionRequestError('This one-time schedule has expired. Create a new task with a future time.')
+    this.store.pause(id, paused, now)
   }
 
   reconcile(id: string, evidence: string, confirmedStopped: true): void {
@@ -163,6 +165,11 @@ export class LocalScheduler {
     if (this.active?.id === id) throw new Error('Execution is still owned by this host')
     if (!evidence.trim() || evidence.length > 2000) throw new Error('Provide bounded reconciliation evidence')
     this.store.reconcile(id, evidence, confirmedStopped)
+  }
+
+  remove(id: string): void {
+    this.assertOpen()
+    this.store.removeSchedule(id)
   }
 
   snapshot() {

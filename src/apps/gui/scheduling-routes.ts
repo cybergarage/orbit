@@ -25,6 +25,10 @@ export function schedulingRoutes(scheduler?: LocalScheduler): Router {
     scheduler!.pause(request.params.id, paused)
     response.json({paused})
   })
+  router.delete('/schedules/:id', (request, response) => {
+    scheduler!.remove(request.params.id)
+    response.json({deleted: true})
+  })
   router.post('/scheduled-runs/:id/cancel', (request, response) => {
     scheduler!.cancel(request.params.id)
     response.status(202).json({requested: true})
