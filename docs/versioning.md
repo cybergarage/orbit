@@ -4,6 +4,10 @@ Orbit is published as `@cybergarage/orbit`. The executable remains `orbit`.
 Use exact dependency versions and commit the application lockfile while the
 runtime is in its 0.x development series.
 
+Current maintainer direction is to keep releases in the **0.9.x** series.
+Version **0.9.3** is the next prepared release. Do not move to 0.10 or 1.0
+without a new explicit version decision; the 1.0 direction below is deferred.
+
 ## Release milestones
 
 | Version | Intended milestone |
@@ -13,8 +17,9 @@ runtime is in its 0.x development series.
 | `0.8.1` | Published npm package and updated book baseline with a Run-bound operation executor and named execution settings |
 | `0.9.0` | Durable scheduled work, Windows file-flush acknowledgements and an optional Apple text provider |
 | `0.9.1` | Project/Session lifecycle and display names, local GUI scheduling and conversation/approval refinements |
-| `0.9.2` (unreleased) | Coordination descriptor ownership on bind mounts, with unchanged storage formats |
-| `1.0.0` | A complete OpenClaw/Hermes-style application built on Orbit, accompanied by an explicit stable API and compatibility contract |
+| `0.9.2` | Coordination descriptor ownership on bind mounts, with unchanged storage formats |
+| `0.9.3` (unreleased) | Shared scoped initialization API, CLI/embedded-GUI workflows and Logs panel refinements |
+| `1.0.0` (deferred) | Historical direction for a complete application and stable compatibility contract; not a current release target |
 
 Version 0.8.1 was published to npm on 2026-10-02. Its tarball matches the
 validated release artifact. The technical book references v0.8.1 at commit
@@ -36,21 +41,31 @@ passed. Version 0.9.0 was also published to npm on 2026-10-14. Its published
 tarball matches the independently validated release artifact, and the npm
 `latest` tag was confirmed as `0.9.0` after publication.
 
-Version 0.9.1 was published to npm and as a
+Version 0.9.1 was published as a
 [GitHub release](https://github.com/cybergarage/orbit/releases/tag/v0.9.1) on
-2026-10-15. It includes Project/Session lifecycle and rename APIs, optional GUI
-scheduling and the shared Details/native approval interface.
+2026-10-15 and to npm on 2026-10-16. It includes Project/Session lifecycle and
+rename APIs, optional GUI scheduling and the shared Details/native approval
+interface.
 
-Version 0.9.2 is prepared in source and has not been tagged, released on GitHub
-or published to npm. It fixes coordination descriptor ownership on bind mounts
-without changing storage formats or relaxing identity checks. Its consumer
-example pins 0.9.2 for local tarball validation. Existing retained guards require
-offline inspection; upgrading does not delete them. See the
-[unreleased changelog](../CHANGELOG.md#092--unreleased) and
-[release procedure](development.md#releases-and-npm-packages). The current
-published npm version remains 0.9.1.
+Version 0.9.2 was published to npm and as a
+[GitHub release](https://github.com/cybergarage/orbit/releases/tag/v0.9.2) on
+2026-10-16. It fixes coordination descriptor ownership on bind mounts without
+changing storage formats or relaxing identity checks. Existing retained guards
+require offline inspection; upgrading does not delete them.
 
-The 1.0 milestone is a plan, not available functionality or a promised date.
+Version 0.9.3 is prepared in source and has not been tagged, released on GitHub
+or published to npm. It adds the public scoped initialization contract and shared
+CLI/embedded-GUI workflow, plus Logs presentation refinements. This compatible,
+opt-in addition stays in the 0.9.x series; no existing public API is removed or
+changed. Existing storage formats and `orbit storage reset` semantics do not change.
+The consumer example pins 0.9.3 for local tarball validation. The current
+published npm version remains 0.9.2. See the
+[unreleased changelog](../CHANGELOG.md#093--unreleased),
+[initialization guide](initialization.md) and
+[release procedure](development.md#releases-and-npm-packages).
+
+The deferred 1.0 milestone is not available functionality, a promised date or
+authorized release work. Current releases remain in 0.9.x.
 Application completion should provide evidence for 1.0 readiness: representative
 workflows, operator recovery, deployment behavior and API usage. The version
 number alone is not evidence that these properties were tested.
@@ -66,10 +81,12 @@ Imports into `dist/core/...` or other internal paths are unsupported integration
 contracts even when Node.js can resolve them. Node.js 20.19+ and native ESM are
 required; no browser-runtime or CommonJS build is promised.
 
-Within a 0.x minor series, patches are intended for compatible corrections.
-Breaking public API changes move to a new minor series and must be described
-with migration guidance. The project still treats 0.x APIs as evolving; pinning
-the exact version makes upgrades a deliberate application decision.
+Within the current 0.9.x series, patches may contain compatible corrections and
+additive, opt-in APIs. Preserve existing contracts and storage behavior.
+Incompatible public API changes require a separate version decision and migration
+guidance; they must not be silently included in a 0.9.x patch. The project still
+treats 0.x APIs as evolving; pinning the exact version makes upgrades a deliberate
+application decision.
 
 Public exports include low-level trusted extension machinery. Their presence
 does not mean an arbitrary direct invocation receives the guarantees of a

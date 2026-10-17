@@ -1,9 +1,49 @@
 # Changelog
 
-## 0.9.2 — Unreleased
+## 0.9.3 — Unreleased
 
-Source preparation only. No v0.9.2 tag, GitHub release or npm publication has
-been created.
+Source preparation only. No v0.9.3 tag, GitHub release or npm publication has
+been created. The published npm version remains 0.9.2.
+
+### Added
+
+- Export `planInitialization`, `executeInitialization` and their public types
+  for trusted hosts. Preview exact target paths, counts and retained scope without
+  returning settings values or conversation contents.
+- Add `orbit initialize settings|data|all` and embedded GUI Settings →
+  Initialization. Both use the same default profile, including GUI scheduled work.
+  Require selected settings sources, explicit permanent confirmation, offline
+  declarations and fresh target identity checks. GUI shutdown drains admitted
+  work and closes runtime resources before its separately confirmed final plan.
+- Validate the initialization API and its declarations from an independently
+  installed package, using only newly synthesized temporary data.
+
+### Changed
+
+- Replace the embedded GUI Details control with an accessible Logs icon and
+  retain the More icon menu. Align header typography, conversation background
+  and divider; refine Logs pane typography, colors, spacing, wrapping and bounded
+  scrolling. Preserve conversation information, limits, Skills and Project memory.
+- Add scoped light/dark colors for the header, conversation surface and Logs
+  pane. This is not a whole-application dark theme.
+
+### Upgrade notes
+
+- This compatible 0.9.x update adds an opt-in public maintenance capability.
+  Existing `orbit storage reset` semantics and storage formats remain unchanged.
+  An upgrade never authorizes initialization or mixed-version writers.
+- Initialization is permanent, non-atomic deletion with no backup or OS Trash.
+  Stop all writers and restarters, maintain exclusive control, and review partial
+  failures before retrying. Working files, shared skills/context, plugin data,
+  environment credentials, Docker and Ollama are retained. See
+  [Initialization](docs/initialization.md) for scope and ownership constraints.
+- The source consumer example pins 0.9.3 for local tarball validation. Orbit App
+  remains pinned to published 0.9.2 with initialization disabled until 0.9.3 is
+  actually published and a separate adoption change is implemented and tested.
+
+## 0.9.2 — 2026-10-16
+
+Published to npm and as the v0.9.2 GitHub release.
 
 ### Fixed
 
@@ -21,8 +61,8 @@ been created.
 - Existing retained guards are not removed automatically. If a previous failure
   left coordination evidence, inspect it under the documented offline recovery
   conditions rather than deleting guards or weakening identity checks.
-- The consumer example pins `@cybergarage/orbit@0.9.2` for local tarball validation
-  until publication. Orbit App adoption is a separate dependency update.
+- The release consumer example pinned `@cybergarage/orbit@0.9.2`. Orbit App
+  adoption remains a separate dependency update.
 
 ## 0.9.1 — 2026-10-15
 
