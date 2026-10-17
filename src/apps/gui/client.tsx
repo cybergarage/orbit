@@ -580,6 +580,7 @@ function App() {
       {page === 'scheduled' && <ScheduledWorkspace api={api} closeDrawer={() => setDrawer(false)} />}
       {page === 'settings' && (
         <SettingsWorkspace
+          api={api}
           busy={preferencesBusy}
           closeDrawer={() => setDrawer(false)}
           preferences={preferences}

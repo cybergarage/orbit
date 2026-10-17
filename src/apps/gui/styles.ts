@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 export const GUI_LAYOUT_STYLES = `
+.initialization-panel select { width:min(100%, 40rem); }
+.initialization-panel fieldset label { display:block; margin:8px 0; }
+.initialization-panel li { overflow-wrap:anywhere; }
 :root { color-scheme:light; background:#f5f6f8; color:#222935; font-size:14px; }
 body { min-width:360px; }
 button { border:0; border-radius:8px; background:transparent; }

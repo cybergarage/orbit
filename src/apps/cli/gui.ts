@@ -22,6 +22,7 @@ import {agentFlags, toAgentOptions} from '../cli-flags.js'
 import {LocalScheduler} from '../gui/local-scheduler.js'
 import {scheduledExecutor} from '../gui/scheduled-executor.js'
 import {startGuiServer} from '../gui/server.js'
+import {orbitInitializationProfile} from '../initialization.js'
 import {startMetricsServer} from '../metrics/server.js'
 import {productExtensions} from '../plugins.js'
 import {ensureStartupStorage} from '../storage-startup.js'
@@ -104,7 +105,12 @@ export async function runGuiCommand(
     throw error
   }
 
-  const server = await startGuiServer({port: options.port, scheduler, service}).catch(async (error: unknown) => {
+  const server = await startGuiServer({
+    initialization: orbitInitializationProfile(service.runtime.settingsSources.map((source) => source.file)),
+    port: options.port,
+    scheduler,
+    service,
+  }).catch(async (error: unknown) => {
     await scheduler.close()
     await service.close()
     throw error
