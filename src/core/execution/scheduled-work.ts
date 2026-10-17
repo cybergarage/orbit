@@ -250,6 +250,13 @@ export class DurableWorkStore {
     this.change((state) => {
       const schedule = state.schedules.find((s) => s.id === id)
       if (!schedule) throw new Error('Unknown schedule')
+      if (!paused && !schedule.interval) {
+        if (state.occurrences.some((occurrence) => occurrence.scheduleId === id))
+          throw new Error('This one-time occurrence was already created. Create a new task for another occurrence.')
+        if (schedule.next <= now)
+          throw new Error('This one-time schedule has expired. Create a new task with a future time.')
+      }
+
       if (!paused && schedule.paused && schedule.interval && schedule.next <= now) {
         const next = schedule.next + (Math.floor((now - schedule.next) / schedule.interval) + 1) * schedule.interval
         if (!Number.isSafeInteger(next)) throw new Error('Schedule timestamp overflow')

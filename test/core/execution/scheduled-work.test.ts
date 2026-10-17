@@ -20,6 +20,20 @@ describe('Durable scheduled work', () => {
     fs.rmSync(root, {force: true, recursive: true})
   })
 
+  it('rejects expired and consumed one-time enable through the public store', () => {
+    const store = new DurableWorkStore(path.join(root, 'one-time-controls.json'))
+    const id = store.schedule({effect: 'read', next: 5000, payload: {synthetic: true}})
+    store.pause(id, true, 1000)
+    store.pause(id, false, 2000)
+    store.pause(id, true, 3000)
+    expect(() => store.pause(id, false, 5000)).to.throw('expired')
+    expect(store.snapshot().schedules[0].paused).equal(true)
+    store.pause(id, false, 4000)
+    store.materialize(5000)
+    expect(() => store.pause(id, false, 6000)).to.throw('already created')
+    store.close()
+  })
+
   it('skips disabled recurring slots, cancels queued work, and retains deleted history across restart', () => {
     const file = path.join(root, 'controls.json')
     let store = new DurableWorkStore(file)

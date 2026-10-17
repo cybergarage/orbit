@@ -15,3 +15,5 @@ The host must stop dispatch when closed or storage is uncertain. This store supp
 Transport request IDs are stable SHA-256-derived UUID-shaped values, separate from occurrence identity and compatible with existing Orbit safeIdentity constraints. Windows does not provide directory fsync through this API; Windows verification covers atomic snapshot process recovery, not physical power-loss durability.
 
 The bundled GUI Tasks page offers Enable, Disable, and a confirmed Delete for the selected schedule. Deletion preserves chats and workspace files. Expired or consumed one-time schedules cannot be enabled; create a new task with a future time. Operation errors stay visible and may be retried.
+
+Disabling or deleting does not revoke already admitted execution. Its existing recovery contract still applies: an interrupted read run can be retried on reopening with its stable request ID, even after its schedule is deleted. No new occurrences are created for a deleted schedule.
