@@ -67,7 +67,8 @@ function initialize(): CatalogEngine {
     throw new ProjectStoreError('storage', 'Required SQLite durability settings unavailable')
   db.transaction(() => {
     const version = db!.pragma('user_version', {simple: true})
-    if (version !== 0 && version !== 1) throw new ProjectStoreError('storage', 'Unsupported project catalog schema')
+    if (version !== 0 && version !== 1 && version !== 2)
+      throw new ProjectStoreError('storage', 'Unsupported project catalog schema')
     if (version === 0) {
       if (
         (
@@ -86,6 +87,15 @@ function initialize(): CatalogEngine {
         CREATE TABLE reservations (key TEXT PRIMARY KEY CHECK(length(key)=36), payload TEXT NOT NULL CHECK(json_valid(payload)), projectId TEXT NOT NULL REFERENCES projects(key), pairId TEXT NOT NULL, sessionId TEXT NOT NULL, UNIQUE(pairId, sessionId));
         CREATE TABLE operations (key TEXT PRIMARY KEY CHECK(length(key)=36), payload TEXT NOT NULL CHECK(json_valid(payload)));
         PRAGMA user_version = 1;
+      `)
+    }
+
+    if (version === 0 || version === 1) {
+      db!.exec(`
+        CREATE TABLE automation (key TEXT PRIMARY KEY, payload TEXT NOT NULL CHECK(json_valid(payload)));
+        CREATE TABLE extractions (key TEXT PRIMARY KEY, payload TEXT NOT NULL CHECK(json_valid(payload)), projectId TEXT NOT NULL REFERENCES projects(key), pairId TEXT NOT NULL, sessionId TEXT NOT NULL);
+        CREATE INDEX extraction_project ON extractions(projectId, key);
+        PRAGMA user_version = 2;
       `)
     }
   }).exclusive()

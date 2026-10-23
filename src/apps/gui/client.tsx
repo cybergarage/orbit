@@ -397,7 +397,7 @@ function App() {
       'Continue the unfinished task, respecting the original constraints. Reassess the current state before taking any action.'
     const skills = content.startsWith('/') ? [] : (pendingSkills[threadId] ?? [])
     const memory = membership?.projectId
-      ? (memorySelections[threadId] ?? {mode: 'curated' as const})
+      ? (memorySelections[threadId] ?? {mode: 'automatic' as const})
       : {mode: 'off' as const}
     const limits = {...limitOverrides[threadId]}
     const selectionKey = JSON.stringify({continueFromRunId, limits, memory, skills})
@@ -885,7 +885,7 @@ function App() {
                         setThread(resumed)
                       }}
                       projectId={membership.projectId}
-                      selection={memorySelections[thread.id] ?? {mode: 'curated'}}
+                      selection={memorySelections[thread.id] ?? {mode: 'automatic'}}
                       threadId={thread.id}
                     />
                   )}

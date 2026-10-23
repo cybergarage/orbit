@@ -69,7 +69,10 @@ try {
   })
   const manifestPath = path.join(consumer, 'package.json')
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
-  assert.equal(manifest.dependencies['@cybergarage/orbit'], packed.version, 'Example must pin the release version')
+  // Local unpublished validation keeps the example on its published base version;
+  // the temporary consumer below still installs the exact packed artifact.
+  const exampleVersion = packed.version.replace(/-project-memory\.0$/u, '')
+  assert.equal(manifest.dependencies['@cybergarage/orbit'], exampleVersion, 'Example must pin the release base version')
   manifest.dependencies['@cybergarage/orbit'] = `file:${path.join(temporary, packed.filename)}`
   // Match the repository's tested compiler and declarations for this consumer check.
   const lock = JSON.parse(await readFile(path.join(root, 'package-lock.json'), 'utf8'))

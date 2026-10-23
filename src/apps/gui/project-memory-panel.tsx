@@ -35,6 +35,9 @@ export function ProjectMemoryPanel({
   selection,
   threadId,
 }: Props) {
+  const [inputLimit, setInputLimit] = useState(100_000)
+  const [outputLimit, setOutputLimit] = useState(16_384)
+  const [callLimit, setCallLimit] = useState(16)
   const [entries, setEntries] = useState<ProjectMemoryEntry[]>([])
   const [cursor, setCursor] = useState<string>()
   const [preview, setPreview] = useState<ProjectContextSnapshot>()
@@ -104,16 +107,104 @@ export function ProjectMemoryPanel({
     <details className="project-memory">
       <summary>Project memory</summary>
       <p>
-        Share curated notes across conversations in this Project. Memory is historical data, never permission to act.
+        Automatically reuse relevant knowledge across conversations in this Project. Memory is historical data, never
+        permission to act.
       </p>
       <fieldset disabled={disabled || busy}>
+        <button
+          onClick={() =>
+            act(async () => {
+              await api(`${base}/automatic`, {
+                body: JSON.stringify({enabled: false}),
+                headers: {'Content-Type': 'application/json'},
+                method: 'POST',
+              })
+            })
+          }
+        >
+          Stop automatic extraction
+        </button>
+        <button
+          onClick={() =>
+            act(async () => {
+              await api(`${base}/automatic`, {
+                body: JSON.stringify({enabled: true}),
+                headers: {'Content-Type': 'application/json'},
+                method: 'POST',
+              })
+            })
+          }
+        >
+          Resume automatic extraction
+        </button>
+        <button
+          onClick={() =>
+            act(async () => {
+              setHistory(JSON.stringify(await api(`${base}/automatic`), null, 2))
+            })
+          }
+        >
+          Processing status and budgets
+        </button>
+        <p>
+          Local bounded extraction uses gemma4:12b without tools. Reservations remain charged after interruption;
+          reported usage can be unknown.
+        </p>
+        <label>
+          Lifetime input-token limit{' '}
+          <input
+            max={10_000_000}
+            min={0}
+            onChange={(event) => setInputLimit(Number(event.target.value))}
+            type="number"
+            value={inputLimit}
+          />
+        </label>
+        <label>
+          Lifetime output-token limit{' '}
+          <input
+            max={1_000_000}
+            min={0}
+            onChange={(event) => setOutputLimit(Number(event.target.value))}
+            type="number"
+            value={outputLimit}
+          />
+        </label>
+        <label>
+          Lifetime call limit{' '}
+          <input
+            max={10_000}
+            min={0}
+            onChange={(event) => setCallLimit(Number(event.target.value))}
+            type="number"
+            value={callLimit}
+          />
+        </label>
+        <button
+          onClick={() =>
+            act(async () => {
+              const prior = await api<{config: null | {enabled: boolean}}>(`${base}/automatic`)
+              await api(`${base}/automatic`, {
+                body: JSON.stringify({
+                  enabled: prior.config?.enabled ?? true,
+                  limits: {maxCalls: callLimit, maxInputTokens: inputLimit, maxOutputTokens: outputLimit},
+                }),
+                headers: {'Content-Type': 'application/json'},
+                method: 'POST',
+              })
+            })
+          }
+        >
+          Apply extraction limits
+        </button>
         <label>
           Use for the next run{' '}
           <select
             aria-label="Project memory mode"
-            onChange={(event) => change({mode: event.target.value as 'curated' | 'off'})}
+            onChange={(event) => change({mode: event.target.value as 'automatic' | 'curated' | 'off'})}
             value={selection.mode}
           >
+            <option value="automatic">Automatic memory</option>
             <option value="curated">Curated memory</option>
             <option value="off">Off</option>
           </select>

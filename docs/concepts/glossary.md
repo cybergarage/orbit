@@ -42,11 +42,15 @@ and the GUI provides Project navigation. See [Projects](../projects.md).
 
 ### Project memory
 
-Explicitly curated knowledge intended for reuse within one Project. It is
+Source-bound or human-authored knowledge intended for reuse within one Project. It is
 historical context, not workspace instructions or permission. The current catalog
 stores revisioned entries and source references. Managed Runs capture bounded
 user-role context with exact journal-v3 evidence, independent of canonical history
-and compaction. Retirement excludes future use while retaining historical data.
+and compaction. Automatic extraction uses bounded, tool-free jobs in the Project
+catalog; request relevance extends the same snapshot path. Retirement excludes
+future use and acts as a reprocessing tombstone while retaining historical data.
+The desktop host validates original storage pairs and captures explicit policy-2
+cross-pair snapshots without changing policy-1 historical evidence.
 
 ### Control plane
 

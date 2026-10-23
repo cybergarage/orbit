@@ -383,6 +383,26 @@ describe('SQLite project persistence', () => {
     await fs.rm(root, {force: true, recursive: true})
   })
 
+  it('upgrades schema 1 additively and resumes after an uncommitted migration', async () => {
+    const file = path.join(root, 'projects.sqlite')
+    const initial = await SqliteProjectStore.open({file})
+    const project = await create(initial, 'Preserved')
+    await initial.close()
+    const legacy = new Database(file)
+    legacy.exec('DROP TABLE extractions; DROP TABLE automation; PRAGMA user_version = 1;')
+    // Emulate process loss before the migration transaction commits: closing rolls back.
+    legacy.exec('BEGIN EXCLUSIVE; CREATE TABLE automation (key TEXT PRIMARY KEY, payload TEXT);')
+    legacy.close()
+    const upgraded = await SqliteProjectStore.open({file})
+    expect(await upgraded.query({id: project.id, kind: 'project'})).deep.equals(project)
+    expect(await upgraded.query({kind: 'extractions', projectId: project.id})).deep.equals([])
+    await upgraded.close()
+    const verified = new Database(file)
+    expect(verified.pragma('user_version', {simple: true})).equals(2)
+    expect(verified.pragma('quick_check', {simple: true})).equals('ok')
+    verified.close()
+  })
+
   it('rolls back interrupted deletion and serializes competing deletion and attachment', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-delete-fault-'))
     const file = path.join(root, 'projects.sqlite')

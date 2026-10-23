@@ -48,6 +48,69 @@ describe('Curated Project memory', () => {
     await fs.rm(root, {force: true, recursive: true})
   })
 
+  it('reconciles a completed journal after restart and reuses A knowledge in B', async () => {
+    const project = await projects.create({name: 'Automatic', operationId: randomUUID()})
+    const session = await projects.createSession(project.id, randomUUID(), async () => ({formatVersion: 3}))
+    const agent = new Agent({
+      cwd: root,
+      deps: {
+        createModel: () => ({
+          getModel: () => 'fixture',
+          getName: () => 'fixture',
+          getProvider: () => 'openai',
+          async invoke() {
+            return new Message(MessageType.Assistant, {content: 'Recorded the decision.'})
+          },
+        }),
+      },
+      logStore: new MemorySessionLogStore(),
+      projectMemory: memory,
+      state: new State(session),
+      toolProfile: 'none',
+    })
+    const handle = await agent.startRun([new Message(MessageType.User, {content: 'Use PostgreSQL for the catalog.'})], {
+      memory: {mode: 'automatic'},
+      requestId: randomUUID(),
+    })
+    expect((await handle.finished).outcome).equals('completed')
+    await agent.close()
+    await session.close()
+    let calls = 0
+    const extract = async (input: string) => {
+      calls++
+      const source = JSON.parse(input).messages.find((message: {role: string}) => message.role === 'user')
+      return {
+        text: JSON.stringify({
+          candidates: [
+            {
+              body: source.text,
+              condition: 'Catalog storage',
+              importance: 3,
+              kind: 'decision',
+              messageId: source.id,
+              quote: source.text,
+              title: 'Database',
+            },
+          ],
+        }),
+      }
+    }
+
+    await memory.reconcileAutomatic(extract)
+    await memory.reconcileAutomatic(extract)
+    expect(calls).equals(1)
+    const next = await projects.createSession(project.id, randomUUID(), async () => ({formatVersion: 3}))
+    const nextId = next.getId()
+    await next.close()
+    const snapshot = await memory.prepare(
+      nextId,
+      randomUUID(),
+      {mode: 'automatic'},
+      {request: 'Which database stores the catalog?'},
+    )
+    expect(snapshot.entries.map((entry) => entry.body)).includes('Use PostgreSQL for the catalog.')
+  })
+
   it('uses whole-entry budgets and preserves exact captures across later edits', async () => {
     const project = await projects.create({name: 'A', operationId: randomUUID()})
     const session = await projects.createSession(project.id, randomUUID(), async () => ({}))
