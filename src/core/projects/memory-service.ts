@@ -1,15 +1,20 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {createHash} from 'node:crypto'
+import {createHash, randomUUID} from 'node:crypto'
 
 import type {ContextPolicy} from '../session/context-policy.js'
+import type {SessionRepository} from '../session/repository.js'
+import type {KnowledgeExtractor} from './automatic-memory.js'
 import type {ProjectSessionHost} from './service.js'
-import type {ProjectMemoryEntry, ProjectMemorySource, ProjectMutation} from './types.js'
+import type {ProjectExtractionJob, ProjectMemoryEntry, ProjectMemorySource, ProjectMutation} from './types.js'
 
+import {inspectExecutionJournal} from '../execution/recovery.js'
 import {Message} from '../message/index.js'
 import {WriterClaim} from '../session/coordination.js'
+import {AutomaticProjectMemory, containsMemorySecret, stableMemoryId} from './automatic-memory.js'
 import {catalogDigest} from './engine.js'
+import {parseProjectContext} from './memory-context.js'
 import {
   parseMemorySelection,
   type ProjectContextSnapshot,
@@ -27,19 +32,58 @@ export interface ProjectMemoryWrite {
 }
 
 export class ProjectMemoryService {
+  private automaticStopped = false
+  private automaticTimer?: ReturnType<typeof setInterval>
+  private automaticWork?: Promise<void>
   private readonly retainedClaims = new Set<WriterClaim>()
 
   constructor(
     private readonly projects: ProjectService,
     private readonly host: ProjectSessionHost,
+    private readonly resolveSource?: (sessionId: string) => SessionRepository | undefined,
   ) {}
 
   async close(): Promise<void> {
+    this.automaticStopped = true
+    clearInterval(this.automaticTimer)
+    await this.automaticWork
     for (const claim of this.retainedClaims) {
       claim.release()
       this.retainedClaims.delete(claim)
     }
   }
+
+  /* eslint-disable no-await-in-loop -- Retry optimistic writes against fresh counters. */
+  async configureAutomatic(
+    projectId: string,
+    enabled: boolean,
+    limits?: {maxCalls: number; maxInputTokens: number; maxOutputTokens: number},
+  ): Promise<void> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const prior = await this.projects.store.query({id: projectId, kind: 'automation'})
+        const config = prior ?? {
+          enabled: true,
+          id: projectId,
+          inputTokens: 0,
+          maxInputTokens: 100_000,
+          maxOutputTokens: 16_384,
+          outputTokens: 0,
+          revision: 0,
+        }
+        await this.projects.store.mutate(randomUUID(), {
+          config: {...config, ...limits, enabled},
+          expectedRevision: config.revision,
+          kind: 'automation',
+        })
+        return
+      } catch (error) {
+        if (!(error instanceof ProjectStoreError) || error.code !== 'conflict' || attempt === 2) throw error
+      }
+    }
+  }
+
+  /* eslint-enable no-await-in-loop */
 
   async create(projectId: string, input: ProjectMemoryWrite): Promise<ProjectMemoryEntry> {
     return this.write(
@@ -67,6 +111,7 @@ export class ProjectMemoryService {
     if (!entry || entry.id !== id || entry.projectId !== projectId)
       throw new ProjectStoreError('missing', 'Project memory not found')
     const changed = {
+      ...(entry.automatic ? {automatic: {...entry.automatic, pending: false}} : {}),
       body: input.body,
       edited: true,
       id,
@@ -96,11 +141,13 @@ export class ProjectMemoryService {
       capture?: boolean
       contextPolicy?: ContextPolicy
       execution?: 'agent' | 'graph'
+      request?: string
       signal?: AbortSignal
     } = {},
   ): Promise<ProjectContextSnapshot> {
     selection = parseMemorySelection(selection)
-    if (selection.mode !== 'curated') throw new ProjectStoreError('invalid', 'Memory preparation requires curated mode')
+    if (!['automatic', 'curated'].includes(selection.mode))
+      throw new ProjectStoreError('invalid', 'Memory preparation requires curated mode')
     const membership = await this.projects.requireActive(sessionId)
     if (!membership?.projectId) throw new ProjectStoreError('missing', 'Curated memory requires a Project')
     const catalog = await this.projects.store.query({
@@ -132,6 +179,7 @@ export class ProjectMemoryService {
         captureId,
         execution: options.execution ?? 'agent',
         ineligible,
+        request: selection.mode === 'automatic' ? options.request : undefined,
         selectedIds: selection.selectedIds,
         tokenBudget,
       })
@@ -148,6 +196,126 @@ export class ProjectMemoryService {
         })
       return snapshot
     })
+  }
+
+  /** Reconciliation, not an observer callback, is the authoritative enqueue path. */
+  /* Catalog and source ownership operations are intentionally serialized to bound open handles. */
+  /* eslint-disable no-await-in-loop */
+  async reconcileAutomatic(extract?: KnowledgeExtractor): Promise<void> {
+    const runner = new AutomaticProjectMemory(
+      this.projects.store,
+      extract ??
+        (async () => {
+          throw new Error('No extractor')
+        }),
+      (job, apply) => this.validateAutomatic(job, apply),
+    )
+    let after: string | undefined
+    do {
+      const projects = await this.projects.store.query({after, archived: false, kind: 'projects', limit: 100})
+      for (const project of projects) {
+        if (this.automaticStopped) return
+        const config = await this.projects.store.query({id: project.id, kind: 'automation'})
+        if (config?.enabled === false) continue
+        if (
+          config &&
+          ((config.calls ?? 0) >= (config.maxCalls ?? 16) ||
+            config.inputTokens + 4096 > config.maxInputTokens ||
+            config.outputTokens + 1024 > config.maxOutputTokens)
+        )
+          continue
+        const status = await this.projects.store.query({kind: 'automation-status', projectId: project.id})
+        let available = status.queue.limit - status.queue.pending
+        let cursor: string | undefined
+        do {
+          const members = await this.projects.store.query({
+            after: cursor,
+            kind: 'memberships',
+            limit: 100,
+            pairId: this.projects.repository.scope('automatic-memory').pairId,
+            projectId: project.id,
+          })
+          for (const member of members) {
+            if (available <= 0) break
+            if (member.unavailable || this.host.getThread(member.sessionId)?.status === 'running') continue
+            const summary = await this.projects.repository.findById(member.sessionId)
+            if (!summary || summary.archived) continue
+            await this.withSources([member.sessionId], undefined, async () => {
+              const inspection = await inspectExecutionJournal(this.projects.repository.journalRoot, member.sessionId)
+              if (!inspection.keyAvailable) return
+              const source = await readProjectSession(this.projects.repository, member.sessionId)
+              if (!source || source.parsed.recovered) return
+              for (const run of inspection.runs) {
+                if (available <= 0) break
+                if (run.issue) continue
+                const terminal = run.records.find((record) => record.kind === 'run-terminal')
+                const context = run.records.find((record) => record.kind === 'project-context')
+                if (
+                  terminal?.data.outcome !== 'completed' ||
+                  terminal.data.quiescence !== true ||
+                  (terminal.data.recording as {status?: string})?.status !== 'acknowledged' ||
+                  !context
+                )
+                  continue
+                const snapshot = parseProjectContext(context.data.snapshot)
+                if (snapshot.projectId !== project.id || snapshot.membershipRevision !== member.revision) continue
+                const id = stableMemoryId([snapshot.pairId, member.sessionId, run.runId, 'extract-v1'])
+                if (await this.projects.store.query({id, kind: 'extraction'})) continue
+                const messages = source.parsed.entries.flatMap((entry) => {
+                  if (entry.type !== 'message' || entry.turnId !== run.runId) return []
+                  const text = new Message(entry.message.type, entry.message).content
+                  if (!text || containsMemorySecret(text) || Buffer.byteLength(text) > 8192) return []
+                  return [{digest: catalogDigest(entry.message), id: entry.message.id, role: entry.message.role, text}]
+                })
+                if (
+                  messages.length === 0 ||
+                  messages.length > 32 ||
+                  Buffer.byteLength(JSON.stringify(messages)) > 12_000
+                )
+                  continue
+                const job: ProjectExtractionJob = {
+                  admissionDigest: snapshot.digest,
+                  attempt: 0,
+                  id,
+                  inputTokens: 0,
+                  membershipRevision: member.revision,
+                  messages,
+                  outputTokens: 0,
+                  pairId: member.pairId,
+                  projectId: project.id,
+                  revision: 0,
+                  runId: run.runId,
+                  sessionId: member.sessionId,
+                  sourceDigest: catalogDigest(messages),
+                  state: 'pending',
+                }
+                await this.projects.store.mutate(stableMemoryId([id, 'enqueue']), {
+                  entries: [],
+                  expectedRevision: 0,
+                  generation: project.memoryGeneration,
+                  job,
+                  kind: 'extraction',
+                })
+                available--
+              }
+            }).catch(() => {})
+          }
+
+          cursor = available > 0 && members.length === 100 ? members.at(-1)!.sessionId : undefined
+        } while (cursor)
+
+        const jobs = await this.projects.store.query({kind: 'extractions', projectId: project.id})
+        if (extract)
+          for (const job of jobs
+            .filter((job) => !['completed', 'discarded'].includes(job.state) && job.attempt < 3)
+            .slice(0, 10)) {
+            if (this.automaticStopped) return
+            await runner.process(job).catch(() => {})
+          }
+      }
+
+      after = projects.length === 100 ? projects.at(-1)!.id : undefined
+    } while (after)
   }
 
   async saveExcerpt(
@@ -212,6 +380,73 @@ export class ProjectMemoryService {
     })
   }
 
+  startAutomatic(extract: KnowledgeExtractor): void {
+    const tick = () => {
+      if (this.automaticWork || this.automaticStopped) return
+      this.automaticWork = this.reconcileAutomatic(extract)
+        .catch(() => {})
+        .finally(() => {
+          this.automaticWork = undefined
+        })
+    }
+
+    this.automaticTimer = setInterval(tick, 5000)
+    this.automaticTimer.unref()
+    tick()
+  }
+
+  /* eslint-enable no-await-in-loop */
+
+  async validateAutomatic(job: ProjectExtractionJob, apply?: () => Promise<void>): Promise<boolean> {
+    return this.withSources([job.sessionId], undefined, async () => {
+      const repository = this.resolveSource?.(job.sessionId) ?? this.projects.repository
+      if (repository.scope(job.sessionId).pairId !== job.pairId) return false
+      const member = await this.projects.store.query({kind: 'membership', pairId: job.pairId, sessionId: job.sessionId})
+      if (member?.projectId !== job.projectId || member.revision !== job.membershipRevision || member.unavailable)
+        return false
+      const summary = await repository.findById(job.sessionId)
+      if (!summary || summary.archived) return false
+      const source = await readProjectSession(repository, job.sessionId)
+      if (!source || source.parsed.recovered || catalogDigest(job.messages) !== job.sourceDigest) return false
+      const inspection = await inspectExecutionJournal(repository.journalRoot, job.sessionId)
+      const run = inspection.runs.find((item) => item.runId === job.runId)
+      const context = run?.records.find((item) => item.kind === 'project-context')
+      const terminal = run?.records.find((item) => item.kind === 'run-terminal')
+      if (
+        !inspection.keyAvailable ||
+        run?.issue ||
+        !context ||
+        terminal?.data.outcome !== 'completed' ||
+        terminal.data.quiescence !== true ||
+        (terminal.data.recording as {status?: string})?.status !== 'acknowledged'
+      )
+        return false
+      const snapshot = parseProjectContext(context.data.snapshot)
+      if (
+        !job.admissionDigest ||
+        snapshot.digest !== job.admissionDigest ||
+        snapshot.projectId !== job.projectId ||
+        snapshot.membershipRevision !== job.membershipRevision
+      )
+        return false
+
+      if (
+        job.messages.some(
+          (message) =>
+            !source.parsed.entries.some(
+              (entry) =>
+                entry.type === 'message' &&
+                entry.message.id === message.id &&
+                catalogDigest(entry.message) === message.digest,
+            ),
+        )
+      )
+        return false
+      await apply?.()
+      return true
+    })
+  }
+
   private async prior(operationId: string): Promise<ProjectMemoryEntry | undefined> {
     const operation = await this.projects.store.query({id: operationId, kind: 'operation'})
     if (!operation) return undefined
@@ -227,14 +462,30 @@ export class ProjectMemoryService {
   ): Promise<Map<string, string>> {
     const ineligible = new Map<string, string>()
     const cache = new Map<string, Awaited<ReturnType<typeof readProjectSession>>>()
+    const archived = new Map<string, boolean>()
     let inspectedBytes = 0
     for (const entry of entries) {
       for (const source of entry.sources) {
         signal?.throwIfAborted()
-        const scope = this.projects.repository.scope(source.sessionId)
+        const repository = this.resolveSource?.(source.sessionId) ?? this.projects.repository
+        const scope = repository.scope(source.sessionId)
+        if (!archived.has(source.sessionId)) {
+          // eslint-disable-next-line no-await-in-loop
+          archived.set(source.sessionId, (await repository.findById(source.sessionId))?.archived ?? false)
+        }
+
+        if (archived.get(source.sessionId)) {
+          ineligible.set(entry.id, 'source-archived')
+          continue
+        }
+
         // Source inspections are sequential to bound aggregate memory and open handles.
         // eslint-disable-next-line no-await-in-loop
-        const member = await this.projects.membership(source.sessionId)
+        const member = await this.projects.store.query({
+          kind: 'membership',
+          pairId: scope.pairId,
+          sessionId: source.sessionId,
+        })
         if (scope.pairId !== source.pairId || member?.projectId !== projectId || member.unavailable) {
           ineligible.set(entry.id, 'source-membership')
           continue
@@ -242,7 +493,7 @@ export class ProjectMemoryService {
 
         if (!cache.has(source.sessionId)) {
           // eslint-disable-next-line no-await-in-loop
-          const read = await readProjectSession(this.projects.repository, source.sessionId).catch((error: unknown) => {
+          const read = await readProjectSession(repository, source.sessionId).catch((error: unknown) => {
             if (error instanceof ProjectStoreError && error.code === 'missing') return null
             throw error
           })
@@ -283,7 +534,11 @@ export class ProjectMemoryService {
         // Acquire in stable session order, never while holding a catalog transaction.
         // eslint-disable-next-line no-await-in-loop
         await this.host.closeThread(id)
-        const claim = WriterClaim.acquire(this.projects.repository.scope(id), () => {}, true)
+        const claim = WriterClaim.acquire(
+          (this.resolveSource?.(id) ?? this.projects.repository).scope(id),
+          () => {},
+          true,
+        )
         claims.push(claim)
         this.retainedClaims.add(claim)
       }

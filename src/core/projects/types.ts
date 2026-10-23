@@ -27,7 +27,50 @@ export interface ProjectMemorySource {
   sessionId: string
 }
 
+export interface ProjectAutomation {
+  calls?: number
+  enabled: boolean
+  id: string
+  inputTokens: number
+  maxCalls?: number
+  maxInputTokens: number
+  maxOutputTokens: number
+  observedInputTokens?: number
+  observedOutputTokens?: number
+  outputTokens: number
+  revision: number
+}
+
+export interface ProjectExtractionJob {
+  admissionDigest?: string
+  attempt: number
+  error?: string
+  id: string
+  inputTokens: number
+  membershipRevision: number
+  messages: {digest: string; id: string; role: string; text: string}[]
+  observedInputTokens?: number
+  observedOutputTokens?: number
+  outputTokens: number
+  pairId: string
+  projectId: string
+  revision: number
+  runId: string
+  sessionId: string
+  sourceDigest: string
+  state: 'completed' | 'discarded' | 'failed' | 'pending' | 'running'
+}
+
 export interface ProjectMemoryEntry {
+  automatic?: {
+    condition: string
+    evidence?: string
+    fingerprint: string
+    importance: number
+    kind: 'constraint' | 'correction' | 'decision' | 'fact'
+    pending: boolean
+    supersedes?: string
+  }
   body: string
   createdAt: string
   edited: boolean
@@ -58,7 +101,15 @@ export interface ProjectCatalogSnapshot {
 
 export type ProjectMutation =
   | {archived?: boolean; directory?: null | string; expectedRevision: number; id: string; kind: 'update'; name?: string}
+  | {config: ProjectAutomation; expectedRevision: number; kind: 'automation'}
   | {directory: null | string; expectedRevision: 0; id: string; kind: 'create'; name: string}
+  | {
+      entries: Omit<ProjectMemoryEntry, 'createdAt' | 'revision' | 'updatedAt'>[]
+      expectedRevision: number
+      generation: number
+      job: ProjectExtractionJob
+      kind: 'extraction'
+    }
   | {entry: Omit<ProjectMemoryEntry, 'createdAt' | 'revision' | 'updatedAt'>; expectedRevision: number; kind: 'memory'}
   | {expectedRevision: number; id: string; kind: 'delete'}
   | {expectedRevision: number; id: string; kind: 'rename'; name: string}
@@ -85,6 +136,8 @@ export type ProjectMutation =
 
 export type ProjectMutationResult =
   | Project
+  | ProjectAutomation
+  | ProjectExtractionJob
   | ProjectMembership
   | ProjectMemoryEntry
   | ProjectReservation
@@ -96,18 +149,35 @@ export interface ProjectOperation {
   result: ProjectMutationResult
 }
 
+export const MAX_PENDING_PROJECT_EXTRACTIONS = 32
+
+export interface ProjectAutomationStatus {
+  config: null | ProjectAutomation
+  entries: ProjectMemoryEntry[]
+  jobs: ProjectExtractionJob[]
+  queue: {limit: number; pending: number}
+}
+
 export type ProjectQuery =
   | {after?: string; archived?: boolean; kind: 'projects'; limit: number}
   | {after?: string; kind: 'memberships'; limit: number; pairId: string; projectId: null | string}
   | {after?: string; kind: 'memories'; limit?: number; projectId: string; retired?: boolean}
+  | {id: string; kind: 'automation'}
+  | {id: string; kind: 'extraction'}
   | {id: string; kind: 'memory'}
   | {id: string; kind: 'operation'}
   | {id: string; kind: 'project'}
   | {id: string; kind: 'reservation'}
+  | {kind: 'automation-status'; projectId: string}
+  | {kind: 'extractions'; projectId: string}
   | {kind: 'membership'; pairId: string; sessionId: string}
   | {kind: 'snapshot'; pairId: string; projectId: string; sessionId: string}
 
 export interface ProjectQueryResults {
+  automation: null | ProjectAutomation
+  'automation-status': ProjectAutomationStatus
+  extraction: null | ProjectExtractionJob
+  extractions: ProjectExtractionJob[]
   membership: null | ProjectMembership
   memberships: ProjectMembership[]
   memories: ProjectMemoryEntry[]

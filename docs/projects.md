@@ -152,7 +152,7 @@ note preserves the original message reference and digest. Titles are limited to
 256 characters; bodies to 8 KiB. The server resolves registered sessions itself
 and rejects invented excerpts and browser-supplied paths.
 
-Project conversations default to **Curated memory** in the GUI. Select notes to
+For optional curated control, choose **Curated memory** in the GUI. Select notes to
 prioritize them, then use **Preview next run** to inspect the exact rendered
 context and exclusions. Selection is whole-entry: explicit selections first,
 then most recently updated entries with ID tie-breaking, at most 16 entries and
@@ -308,3 +308,59 @@ The GUI's **Rename project…** menu and **Project settings…** name-only save 
 partial `name`, `directory` and `archived` fields; omitted values are preserved
 inside the catalog transaction. Changing the directory affects only future
 conversations. A name-only save never resubmits directory/archive state.
+
+## Automatic knowledge
+
+The GUI defaults new Project submissions to **Automatic memory**. Normal use
+requires no manual note registration, note selection or preview. The host
+reconciles completed, quiescent journal runs every five seconds and extracts
+source-bound decisions, constraints, explicit corrections and verified facts.
+Runs without a recorded Project context are not backfilled. Chats have no
+shared knowledge pool. New conversations can start before extraction finishes;
+they retain their admitted snapshot.
+
+The supplementary Project memory panel offers **Stop automatic extraction**,
+**Resume automatic extraction**, **Processing status and budgets**, editing,
+retirement and source navigation. Stopping extraction preserves existing notes;
+choose **Off** to omit memory from the next run. Retirement preserves a
+tombstone so reprocessing cannot recreate the same candidate. Manual edits
+remain authoritative. Weak replacements remain pending and are excluded from
+selection. English words and Japanese character bigrams rank relevance before
+freshness, with importance and whole-entry token limits retained.
+
+Each attempt reserves at most 4,096 input and 1,024 output tokens before model
+inference. Failed and interrupted attempts retain the reservation. Jobs allow
+three attempts, with default lifetime Project limits of 100,000 input and
+16,384 output tokens and 16 calls. A durable queue cap of 32 pending retryable jobs
+postpones capture without blocking ordinary conversations. The typed `automation` catalog mutation can adjust these
+limits without resetting accrued reservations. They are conservative token
+allowances, not measured billing or a monetary cost guarantee. Provider prices
+and provider enforcement may differ. The default tool-free extractor uses installed local `gemma4:12b` over loopback Ollama,
+no tools, JSON output, a 1,024 output-token request limit and a 30-second timeout.
+Known credential patterns are suppressed; detection is not a complete secret
+scanner.
+
+Catalog schema 2 adds `automation` and `extractions` tables transactionally to
+schema 1. Existing Project, membership, memory, operation and reservation rows
+are preserved. Unsupported schemas fail closed. Schema-1-only binaries cannot
+open the upgraded catalog; do not downgrade against it. No backup or relocation
+copy is performed. Saved-data/all initialization removes the catalog through
+the existing target list; settings-only initialization retains knowledge and
+jobs. Reported usage is recorded separately; reported overruns pause extraction.
+Unknown usage retains the full reservation. Stopped in-flight work can settle
+failed/discarded accounting, but cannot apply knowledge or start another call.
+Oversized input is discarded before reserving a call. Limits cannot reset accrued usage.
+
+The desktop app host coordinates canonical source leases across original storage
+pairs and supplies a policy-2 frozen snapshot to disposable workers. Historical
+policy-1 snapshots retain their same-pair validation. Logical Project membership,
+not storageProjectId, defines sharing. The app guide documents its source-helper
+namespace, lifecycle and unpublished local-package validation procedure.
+
+Extractor comparison candidates are selected by relevance across all active
+entries, with at most sixteen whole entries within the input budget. Untargeted
+corrections are pending; lexical evidence of competing same-kind knowledge can
+hold candidates with different titles. This is conservative uncertainty handling,
+not a semantic contradiction oracle: vocabulary changes can miss conflicts and
+generic overlap can hold compatible entries. A user need not supply an old ID;
+the extractor receives related IDs or leaves an uncertain correction pending.

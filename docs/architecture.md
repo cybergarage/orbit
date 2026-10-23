@@ -376,3 +376,17 @@ profile, including scheduled work. CLI confirmation and GUI admission drain/clos
 remain host responsibilities. The GUI enters maintenance before resource cleanup
 and remains offline after execution. See [Initialization](initialization.md) for
 targets, exclusion, partial failure and the public host contract.
+
+### Automatic Project knowledge
+
+Project catalogs now include typed extraction jobs and cumulative token
+reservations. The application host periodically reconciles acknowledged
+completed/quiescent journals, captures source messages under short writer
+ownership, calls a tool-free bounded extractor, and atomically applies
+source-validated candidates. Relevance selection extends the existing exact
+Project snapshot path; execution recovery continues to use its recorded
+snapshot. The desktop host leases canonical original storage pairs, freezes
+policy-2 cross-pair snapshots, and passes them to isolated disposable workers.
+Source-helper recovery uses a separate source-only PID namespace and the normal
+Core ownership rules. Queue and attempt reservations are enforced atomically in
+the catalog. See [Project knowledge](projects.md#automatic-knowledge).

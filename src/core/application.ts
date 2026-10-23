@@ -14,6 +14,7 @@ import type {Logger, LogLevel} from './logger/index.js'
 import type {LogPage, LogQuery, LogRecord, LogStoreHealth, SessionLoggerFactory, SessionLogStore} from './logs/index.js'
 import type {ProviderName} from './models/index.js'
 import type {CompiledProcessorGraph, GraphJSON, GraphValue} from './processor/index.js'
+import type {KnowledgeExtractor} from './projects/automatic-memory.js'
 import type {ProjectStore} from './projects/types.js'
 import type {WorkflowExpectation} from './selection/binding.js'
 import type {WorkflowAuthority} from './selection/service.js'
@@ -45,6 +46,7 @@ import {inspectExecutionJournal} from './execution/recovery.js'
 import {recoveredRunSnapshot} from './execution/run.js'
 import {createCompositeLogger} from './logger/index.js'
 import {FileSessionLogStore, LogEventType, LogOutcome, StoreSessionLoggerFactory} from './logs/index.js'
+import {createOllamaKnowledgeExtractor} from './models/adapters/ollama-knowledge.js'
 import {Message, MessageType, Role} from './models/index.js'
 import {inspectGraphRun} from './processor/graph-inspection.js'
 import {parseProjectContext, type ProjectMemorySelection} from './projects/memory-context.js'
@@ -112,6 +114,7 @@ export interface OrbitApplicationServiceOptions {
   cwd?: string
   diagnostics?: DiagnosticEventBus
   execution?: CoreAgentOptions['execution']
+  knowledgeExtractor?: KnowledgeExtractor
   logger?: Logger
   logLevel?: LogLevel
   logStore?: SessionLogStore
@@ -288,6 +291,10 @@ export class OrbitApplicationService {
       }
       this.projects = new ProjectService(options.projectStore, this.repository, host, options.cwd)
       this.projectMemory = new ProjectMemoryService(this.projects, host)
+      const extract = options.knowledgeExtractor ?? createOllamaKnowledgeExtractor()
+      // Remote pricing is not inferred. Automatic hosted calls require an explicitly
+      // supplied bounded extractor; ordinary provider selection is not a cost consent.
+      if (options.knowledgeExtractor || !options.createAgent) this.projectMemory.startAutomatic(extract)
     }
 
     this.deletionService = new SessionDeletionService(

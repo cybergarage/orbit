@@ -37,6 +37,29 @@ export function memoryRoutes(service: OrbitApplicationService): Router {
     return entry
   }
 
+  router.get('/projects/:projectId/memory/automatic', async (request, response) => {
+    memory()
+    const projectId = id.parse(request.params.projectId)
+    response.json(await service.projects!.store.query({kind: 'automation-status', projectId}))
+  })
+  router.post('/projects/:projectId/memory/automatic', async (request, response) => {
+    const input = z
+      .object({
+        enabled: z.boolean(),
+        limits: z
+          .object({
+            maxCalls: z.number().int().min(0).max(10_000),
+            maxInputTokens: z.number().int().min(0).max(10_000_000),
+            maxOutputTokens: z.number().int().min(0).max(1_000_000),
+          })
+          .strict()
+          .optional(),
+      })
+      .strict()
+      .parse(request.body)
+    await memory().configureAutomatic(id.parse(request.params.projectId), input.enabled, input.limits)
+    response.json({enabled: input.enabled})
+  })
   router.get('/projects/:projectId/memory', async (request, response) => {
     memory()
     const projectId = id.parse(request.params.projectId)

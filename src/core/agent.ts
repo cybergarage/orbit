@@ -1306,7 +1306,8 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         }),
     )
     const memory = options.memory ? parseMemorySelection(options.memory) : undefined
-    if (memory?.mode === 'curated' && !this.projectMemory) throw new Error('Project memory service is not configured')
+    if (memory && memory.mode !== 'off' && !this.projectMemory)
+      throw new Error('Project memory service is not configured')
     const requestId = options.requestId ?? options.turnId ?? uuidv7()
     let evidenceJournal: ExecutionJournal | undefined
     let manager: McpToolManager | undefined
@@ -1372,7 +1373,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           throw new Error('model-does-not-support-verified-context')
         await preflightInterruptedContext(session, run, this.interruptionPolicy)
         const projectContext =
-          memory?.mode === 'curated'
+          memory && memory.mode !== 'off'
             ? parseProjectContext(
                 run.journal.records().find((record) => record.runId === run.id && record.kind === 'project-context')
                   ?.data.snapshot,
@@ -1430,12 +1431,13 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       onApproval: this.execution.onApproval,
       onSnapshot: options.onRunSnapshot,
       requestedSkills: skills,
-      ...(memory?.mode === 'curated'
+      ...(memory && memory.mode !== 'off'
         ? {
             prepareProjectContext: (signal: AbortSignal) =>
               this.projectMemory!.prepare(session.getId(), requestId, memory, {
                 contextPolicy,
                 execution: graph ? 'graph' : 'agent',
+                request: messages.map((message) => message.content).join('\n'),
                 signal,
               }),
           }

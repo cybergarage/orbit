@@ -558,7 +558,7 @@ export class ThreadManager {
         turnId: run.id,
       }
       let response: Message
-      if (options.memory?.mode === 'curated' && !thread.agent.startRun)
+      if (options.memory && options.memory.mode !== 'off' && !thread.agent.startRun)
         throw new Error('Project memory requires managed Agent execution')
       if (options.graph && !thread.agent.startGraphRun) throw new Error('Agent does not support Graph execution')
       if (thread.agent.startRun || options.graph) {

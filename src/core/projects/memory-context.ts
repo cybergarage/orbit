@@ -12,7 +12,7 @@ import {ProjectStoreError} from './types.js'
 export const PROJECT_CONTEXT_RECORD_BYTES = 256 * 1024
 export interface ProjectMemorySelection {
   expectedGeneration?: number
-  mode: 'curated' | 'off'
+  mode: 'automatic' | 'curated' | 'off'
   selectedIds?: string[]
 }
 export interface ProjectContextSnapshot {
@@ -24,7 +24,7 @@ export interface ProjectContextSnapshot {
   generation: number
   membershipRevision: number
   pairId: string
-  policy: 1
+  policy: 1 | 2
   projectId: string
   rendered: string
   sessionId: string
@@ -35,7 +35,7 @@ export function parseMemorySelection(value: unknown): ProjectMemorySelection {
   return z
     .object({
       expectedGeneration: z.number().int().nonnegative().optional(),
-      mode: z.enum(['curated', 'off']),
+      mode: z.enum(['automatic', 'curated', 'off']),
       selectedIds: z
         .array(z.string().uuid())
         .max(16)
@@ -52,6 +52,7 @@ export function renderProjectMemory(projectId: string, entries: ProjectMemoryEnt
     JSON.stringify({
       entries: entries.map((entry) => ({
         body: entry.body,
+        ...(entry.automatic ? {condition: entry.automatic.condition} : {}),
         id: entry.id,
         revision: entry.revision,
         sources: entry.sources,
@@ -79,7 +80,7 @@ export function parseProjectContext(value: unknown): ProjectContextSnapshot {
       generation: integer,
       membershipRevision: integer,
       pairId: id,
-      policy: z.literal(1),
+      policy: z.union([z.literal(1), z.literal(2)]),
       projectId: id,
       rendered: z.string(),
       sessionId: z.string().regex(/^[A-Za-z0-9_-]{1,160}$/u),
@@ -95,7 +96,7 @@ export function parseProjectContext(value: unknown): ProjectContextSnapshot {
       (entry) =>
         entry.projectId !== parsed.projectId ||
         entry.retired ||
-        entry.sources.some((source) => source.pairId !== parsed.pairId),
+        (parsed.policy === 1 && entry.sources.some((source) => source.pairId !== parsed.pairId)),
     ) ||
     new Set(entries.map((entry) => entry.id)).size !== entries.length
   )
@@ -115,8 +116,10 @@ export function selectProjectMemory(
   catalog: ProjectCatalogSnapshot,
   options: {
     captureId: string
+    crossPair?: boolean
     execution: 'agent' | 'graph'
     ineligible?: Map<string, string>
+    request?: string
     selectedIds?: string[]
     tokenBudget?: number
   },
@@ -132,12 +135,36 @@ export function selectProjectMemory(
   for (const id of selectedIds)
     if (!catalog.entries.some((entry) => entry.id === id && !entry.retired))
       throw new ProjectStoreError('invalid', `Selected memory is unavailable: ${id}`)
+  const terms = (text: string): Set<string> => {
+    const normalized = text.normalize('NFKC').toLowerCase()
+    const tokens = normalized.match(/[a-z0-9_]+|[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]+/gu) ?? []
+    return new Set(
+      tokens.flatMap((token) =>
+        /^[a-z0-9_]+$/u.test(token)
+          ? [token]
+          : [...token].flatMap((_, index, chars) =>
+              index + 1 < chars.length ? [chars[index] + chars[index + 1]] : [chars[index]],
+            ),
+      ),
+    )
+  }
+
+  const query = terms(options.request ?? '')
+  const score = (entry: ProjectMemoryEntry): number => {
+    const words = terms(
+      `${entry.title} ${entry.body} ${entry.automatic?.condition ?? ''} ${entry.automatic?.evidence ?? ''}`,
+    )
+    const overlap = [...query].filter((word) => words.has(word)).length
+    return overlap * 10 + (entry.automatic?.importance ?? 1)
+  }
+
   const ordered = [...catalog.entries]
     .filter((entry) => !entry.retired)
     .sort((a, b) => {
       const ai = selectedIds.indexOf(a.id)
       const bi = selectedIds.indexOf(b.id)
       if (ai !== -1 || bi !== -1) return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi)
+      if (options.request && score(a) !== score(b)) return score(b) - score(a)
       return b.updatedAt < a.updatedAt ? -1 : b.updatedAt > a.updatedAt ? 1 : a.id < b.id ? -1 : 1
     })
   const tokenizer = new GptTokenizer()
@@ -146,6 +173,7 @@ export function selectProjectMemory(
   for (const entry of ordered) {
     const reason =
       options.ineligible?.get(entry.id) ??
+      (entry.automatic?.pending ? 'pending-evidence' : undefined) ??
       (entries.length >= 16
         ? 'entry-limit'
         : tokenizer.encode(renderProjectMemory(catalog.project.id, [...entries, entry])).length > budget
@@ -169,7 +197,7 @@ export function selectProjectMemory(
     generation: catalog.project.memoryGeneration,
     membershipRevision: member.revision,
     pairId: member.pairId,
-    policy: 1 as const,
+    policy: options.crossPair ? (2 as const) : (1 as const),
     projectId: catalog.project.id,
     rendered,
     sessionId: member.sessionId,

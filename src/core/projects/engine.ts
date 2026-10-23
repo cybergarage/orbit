@@ -7,6 +7,8 @@ import {z} from 'zod'
 
 import type {
   Project,
+  ProjectAutomation,
+  ProjectExtractionJob,
   ProjectMembership,
   ProjectMemoryEntry,
   ProjectMutation,
@@ -18,7 +20,8 @@ import type {
 } from './types.js'
 
 import {displayNameSchema} from '../display-name.js'
-import {ProjectStoreError} from './types.js'
+import {knowledgeOverlap} from './knowledge-relevance.js'
+import {MAX_PENDING_PROJECT_EXTRACTIONS, ProjectStoreError} from './types.js'
 
 const uuid = z.string().uuid()
 const sessionId = z.string().regex(/^[A-Za-z0-9_-]{1,160}$/u)
@@ -55,6 +58,18 @@ const membershipSchema = z
   .strict()
 const memorySchema = z
   .object({
+    automatic: z
+      .object({
+        condition: z.string().max(512),
+        evidence: z.string().max(2048).optional(),
+        fingerprint: z.string().regex(/^[a-f0-9]{64}$/u),
+        importance: z.number().int().min(0).max(3),
+        kind: z.enum(['decision', 'constraint', 'correction', 'fact']),
+        pending: z.boolean(),
+        supersedes: uuid.optional(),
+      })
+      .strict()
+      .optional(),
     body: z
       .string()
       .min(1)
@@ -82,7 +97,58 @@ const reservationSchema = z
   })
   .strict()
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/u)
+const automationSchema = z
+  .object({
+    calls: revision.optional(),
+    enabled: z.boolean(),
+    id: uuid,
+    inputTokens: revision,
+    maxCalls: revision.max(10_000).optional(),
+    maxInputTokens: revision.max(10_000_000),
+    maxOutputTokens: revision.max(1_000_000),
+    observedInputTokens: revision.optional(),
+    observedOutputTokens: revision.optional(),
+    outputTokens: revision,
+    revision,
+  })
+  .strict()
+const extractionSchema = z
+  .object({
+    admissionDigest: digestSchema.optional(),
+    attempt: revision.max(3),
+    error: z.string().max(256).optional(),
+    id: uuid,
+    inputTokens: revision,
+    membershipRevision: revision,
+    messages: z
+      .array(
+        z.object({digest: digestSchema, id: sessionId, role: z.string().max(32), text: z.string().max(8192)}).strict(),
+      )
+      .min(1)
+      .max(32),
+    observedInputTokens: revision.optional(),
+    observedOutputTokens: revision.optional(),
+    outputTokens: revision,
+    pairId: uuid,
+    projectId: uuid,
+    revision,
+    runId: sessionId,
+    sessionId,
+    sourceDigest: digestSchema,
+    state: z.enum(['pending', 'running', 'completed', 'failed', 'discarded']),
+  })
+  .strict()
 const mutationSchema = z.discriminatedUnion('kind', [
+  z.object({config: automationSchema, expectedRevision: revision, kind: z.literal('automation')}).strict(),
+  z
+    .object({
+      entries: z.array(memorySchema.omit({createdAt: true, revision: true, updatedAt: true})).max(8),
+      expectedRevision: revision,
+      generation: revision,
+      job: extractionSchema,
+      kind: z.literal('extraction'),
+    })
+    .strict(),
   z.object({expectedRevision: revision, id: uuid, kind: z.literal('delete')}).strict(),
   z.object({expectedRevision: revision, id: uuid, kind: z.literal('rename'), name: displayNameSchema}).strict(),
   z
@@ -132,6 +198,10 @@ const mutationSchema = z.discriminatedUnion('kind', [
 ])
 const limit = z.number().int().min(1).max(200)
 const querySchema = z.discriminatedUnion('kind', [
+  z.object({kind: z.literal('automation-status'), projectId: uuid}).strict(),
+  z.object({id: uuid, kind: z.literal('automation')}).strict(),
+  z.object({id: uuid, kind: z.literal('extraction')}).strict(),
+  z.object({kind: z.literal('extractions'), projectId: uuid}).strict(),
   z.object({id: uuid, kind: z.literal('project')}).strict(),
   z.object({after: uuid.optional(), archived: z.boolean().optional(), kind: z.literal('projects'), limit}).strict(),
   z
@@ -162,6 +232,8 @@ const querySchema = z.discriminatedUnion('kind', [
 ])
 
 export interface CatalogRows {
+  automation: ProjectAutomation
+  extractions: ProjectExtractionJob
   memberships: ProjectMembership
   memories: ProjectMemoryEntry
   operations: ProjectOperation
@@ -202,6 +274,8 @@ export function catalogDigest(value: unknown): string {
 
 export function validateCatalogRow<T extends CatalogTable>(table: T, value: unknown): CatalogRows[T] {
   const schemas = {
+    automation: automationSchema,
+    extractions: extractionSchema,
     memberships: membershipSchema,
     memories: memorySchema,
     operations: z
@@ -209,6 +283,8 @@ export function validateCatalogRow<T extends CatalogTable>(table: T, value: unkn
         digest: digestSchema,
         id: uuid,
         result: z.union([
+          automationSchema,
+          extractionSchema,
           projectSchema,
           membershipSchema,
           memorySchema,
@@ -262,6 +338,32 @@ export class CatalogEngine {
     const q = parsed.data
     return this.backend.transaction(() => {
       switch (q.kind) {
+        case 'automation': {
+          return this.backend.get('automation', q.id)
+        }
+
+        case 'automation-status': {
+          this.project(q.projectId)
+          const jobs = this.backend.list('extractions', {projectId: q.projectId})
+          return {
+            config: this.backend.get('automation', q.projectId),
+            entries: this.backend.list('memories', {projectId: q.projectId}),
+            jobs,
+            queue: {
+              limit: MAX_PENDING_PROJECT_EXTRACTIONS,
+              pending: jobs.filter((job) => job.attempt < 3 && !['completed', 'discarded'].includes(job.state)).length,
+            },
+          }
+        }
+
+        case 'extraction': {
+          return this.backend.get('extractions', q.id)
+        }
+
+        case 'extractions': {
+          return this.backend.list('extractions', {projectId: q.projectId})
+        }
+
         case 'membership': {
           return this.backend.get('memberships', membershipKey(q.pairId, q.sessionId))
         }
@@ -318,6 +420,24 @@ export class CatalogEngine {
 
   private apply(m: ProjectMutation, now: string): ProjectMutationResult {
     switch (m.kind) {
+      case 'automation': {
+        this.project(m.config.id, true)
+        const before = this.backend.get('automation', m.config.id)
+        if (
+          (before?.revision ?? 0) !== m.expectedRevision ||
+          m.config.inputTokens !== (before?.inputTokens ?? 0) ||
+          m.config.outputTokens !== (before?.outputTokens ?? 0) ||
+          (m.config.calls ?? 0) !== (before?.calls ?? 0) ||
+          (m.config.observedInputTokens ?? 0) !== (before?.observedInputTokens ?? 0) ||
+          (m.config.observedOutputTokens ?? 0) !== (before?.observedOutputTokens ?? 0)
+        )
+          conflict()
+        const config = {...m.config, revision: m.expectedRevision + 1}
+        this.backend.put('automation', config.id, config)
+        this.bumpMemory(config.id)
+        return config
+      }
+
       case 'capture': {
         const project = this.project(m.projectId, true)
         const member = this.backend.get('memberships', membershipKey(m.pairId, m.sessionId))
@@ -375,8 +495,192 @@ export class CatalogEngine {
           )
         for (const entry of this.backend.list('memories', {projectId: m.id})) this.backend.remove('memories', entry.id)
         for (const reservation of reservations) this.backend.remove('reservations', reservation.id)
+        for (const job of this.backend.list('extractions', {projectId: m.id}))
+          this.backend.remove('extractions', job.id)
+        this.backend.remove('automation', m.id)
         this.backend.remove('projects', m.id)
         return project
+      }
+
+      case 'extraction': {
+        const {job} = m
+        const project = this.project(job.projectId, true)
+        const member = this.backend.get('memberships', membershipKey(job.pairId, job.sessionId))
+        if (
+          job.state !== 'discarded' &&
+          (member?.projectId !== job.projectId || member.unavailable || member.revision !== job.membershipRevision)
+        )
+          conflict()
+        const prior = this.backend.get('extractions', job.id)
+        if ((prior?.revision ?? 0) !== m.expectedRevision) conflict()
+        if (
+          prior &&
+          (prior.sourceDigest !== job.sourceDigest ||
+            prior.admissionDigest !== job.admissionDigest ||
+            prior.runId !== job.runId ||
+            prior.projectId !== job.projectId ||
+            prior.membershipRevision !== job.membershipRevision ||
+            catalogDigest(prior.messages) !== catalogDigest(job.messages))
+        )
+          conflict()
+        const config = this.backend.get('automation', job.projectId) ?? {
+          enabled: true,
+          id: job.projectId,
+          inputTokens: 0,
+          maxInputTokens: 100_000,
+          maxOutputTokens: 16_384,
+          outputTokens: 0,
+          revision: 0,
+        }
+        // A stopped Project may settle already-reserved work, but cannot start or apply it.
+        if (!config.enabled && (!prior || m.entries.length > 0 || !['discarded', 'failed'].includes(job.state)))
+          throw new ProjectStoreError('invalid', 'Automatic memory is stopped')
+        if (
+          !prior &&
+          this.backend
+            .list('extractions', {projectId: job.projectId})
+            .filter((item) => item.attempt < 3 && !['completed', 'discarded'].includes(item.state)).length >=
+            MAX_PENDING_PROJECT_EXTRACTIONS
+        )
+          throw new ProjectStoreError('busy', 'Project extraction queue capacity reached')
+        if (
+          !prior &&
+          (job.state !== 'pending' ||
+            job.attempt !== 0 ||
+            job.inputTokens !== 0 ||
+            job.outputTokens !== 0 ||
+            (job.observedInputTokens ?? 0) !== 0 ||
+            (job.observedOutputTokens ?? 0) !== 0)
+        )
+          conflict()
+        if (prior) {
+          if (['completed', 'discarded'].includes(prior.state)) conflict()
+          const starting = job.state === 'running'
+          if (
+            (job.observedInputTokens ?? 0) < (prior.observedInputTokens ?? 0) ||
+            (job.observedOutputTokens ?? 0) < (prior.observedOutputTokens ?? 0)
+          )
+            conflict()
+          if (
+            starting &&
+            ((job.observedInputTokens ?? 0) !== (prior.observedInputTokens ?? 0) ||
+              (job.observedOutputTokens ?? 0) !== (prior.observedOutputTokens ?? 0))
+          )
+            conflict()
+          if (
+            job.attempt !== prior.attempt + (starting ? 1 : 0) ||
+            job.inputTokens < prior.inputTokens ||
+            job.outputTokens < prior.outputTokens
+          )
+            conflict()
+          if (!starting && !['completed', 'discarded', 'failed'].includes(job.state)) conflict()
+          if (
+            starting &&
+            (job.inputTokens - prior.inputTokens !== 4096 || job.outputTokens - prior.outputTokens !== 1024)
+          )
+            conflict()
+          if (!starting && (job.inputTokens !== prior.inputTokens || job.outputTokens !== prior.outputTokens))
+            conflict()
+          const next = {
+            ...config,
+            calls: (config.calls ?? 0) + (starting ? 1 : 0),
+            enabled: config.enabled && job.error !== 'Extractor usage metadata or limit violation',
+            inputTokens: config.inputTokens + job.inputTokens - prior.inputTokens,
+            observedInputTokens:
+              (config.observedInputTokens ?? 0) + (job.observedInputTokens ?? 0) - (prior.observedInputTokens ?? 0),
+            observedOutputTokens:
+              (config.observedOutputTokens ?? 0) + (job.observedOutputTokens ?? 0) - (prior.observedOutputTokens ?? 0),
+            outputTokens: config.outputTokens + job.outputTokens - prior.outputTokens,
+            revision: config.revision + 1,
+          }
+          if (
+            next.calls > (next.maxCalls ?? 16) ||
+            next.inputTokens > next.maxInputTokens ||
+            next.outputTokens > next.maxOutputTokens
+          )
+            throw new ProjectStoreError('invalid', 'Project extraction token budget exhausted')
+          this.backend.put('automation', next.id, next)
+        }
+
+        if (m.entries.length > 0) {
+          if (job.state !== 'completed' || project.memoryGeneration !== m.generation) conflict()
+          for (const entry of m.entries) {
+            if (
+              entry.projectId !== job.projectId ||
+              entry.retired ||
+              entry.edited ||
+              entry.sources.some(
+                (source) =>
+                  source.pairId !== job.pairId ||
+                  source.sessionId !== job.sessionId ||
+                  !job.messages.some((message) => message.id === source.messageId && message.digest === source.digest),
+              )
+            )
+              conflict()
+            const before = this.backend.get('memories', entry.id)
+            // Retired entries are durable tombstones, including explicit user deletion.
+            if (before) continue
+            const duplicate = this.backend
+              .list('memories', {projectId: job.projectId})
+              .some(
+                (item) =>
+                  item.automatic?.fingerprint === entry.automatic?.fingerprint ||
+                  item.body.normalize('NFKC').trim() === entry.body.normalize('NFKC').trim(),
+              )
+            if (duplicate) continue
+            const protectedSource = this.backend
+              .list('memories', {projectId: job.projectId})
+              .some(
+                (item) =>
+                  (item.edited || item.retired) &&
+                  item.automatic?.kind === entry.automatic?.kind &&
+                  item.sources.some((source) =>
+                    entry.sources.some(
+                      (candidate) =>
+                        source.pairId === candidate.pairId &&
+                        source.sessionId === candidate.sessionId &&
+                        source.messageId === candidate.messageId,
+                    ),
+                  ),
+              )
+            if (protectedSource) continue
+            if (
+              entry.automatic &&
+              !entry.automatic.supersedes &&
+              this.backend
+                .list('memories', {projectId: job.projectId, retired: false})
+                .some(
+                  (item) =>
+                    item.id !== entry.id &&
+                    (!item.automatic ||
+                      item.automatic.kind === entry.automatic?.kind ||
+                      entry.automatic?.kind === 'correction') &&
+                    item.body !== entry.body &&
+                    (item.title.normalize('NFKC').toLowerCase() === entry.title.normalize('NFKC').toLowerCase() ||
+                      knowledgeOverlap(`${item.title} ${item.body}`, `${entry.title} ${entry.body}`) > 0),
+                )
+            )
+              entry.automatic.pending = true
+            if (entry.automatic?.kind === 'correction' && !entry.automatic.supersedes) entry.automatic.pending = true
+            if (entry.automatic?.supersedes && !entry.automatic.pending) {
+              const old = this.backend.get('memories', entry.automatic.supersedes)
+              if (!old || old.projectId !== job.projectId || old.retired || old.edited) entry.automatic.pending = true
+              else
+                this.backend.put('memories', old.id, {
+                  ...old,
+                  retired: true,
+                  revision: old.revision + 1,
+                  updatedAt: now,
+                })
+            }
+
+            this.apply({entry, expectedRevision: 0, kind: 'memory'}, now)
+          }
+        }
+
+        const next = {...job, revision: m.expectedRevision + 1}
+        this.backend.put('extractions', job.id, next)
+        return next
       }
 
       case 'membership': {
