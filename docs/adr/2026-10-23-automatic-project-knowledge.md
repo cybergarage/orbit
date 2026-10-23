@@ -4,7 +4,7 @@ proposed-date: 2026-10-23
 decision-date: 2026-10-23
 implementation-status: completed
 implementation-completed-date: 2026-10-23
-implementation-commits: []
+implementation-commits: [fbea4ddeb6729db24461b76031d99c8afd114a3f]
 superseded-by: []
 ---
 
@@ -161,3 +161,16 @@ related targets beyond item sixteen, and UI restart/switch/one-limit edits.
 Lexical conflict screening remains conservative and incomplete: shared generic
 terms can hold compatible knowledge and paraphrases with no shared vocabulary
 can escape detection. This is not a claim of complete semantic consistency.
+
+## Implementation Commit Evidence
+
+Implementation commit: `fbea4ddeb6729db24461b76031d99c8afd114a3f`.
+The user subsequently authorized pull requests and their commit/push workflow;
+merge, release and deployment remain unauthorized. Core header/build checks,
+1230 full tests and independent consumer package validation passed locally on M4.
+The dependent desktop integration has81 full tests and15 full UI passes with3
+existing opt-in live skips. A previously observed, subsequently unreproduced
+`Project not found` UI error remains a verification reservation rather than a
+claimed fix. The three independent-review findings have dedicated regressions.
+The local-model normal-path trial and its quality limits remain separate from
+these fixed-response regression results.
