@@ -19,18 +19,26 @@ oclif-docs:
 
 doc: doc-touch oclif-docs $(docs)
 
-.PHONY: link
-link:
+.PHONY: deps
+deps:
+	npm ci --include=dev
+
+.PHONY: build
+build: deps
 	npm ci
 	npm run build
+
+.PHONY: link
+link: build
 	npm link
 
 .PHONY: run
-run:
-	npm run build
+run: build
 	node ./bin/run.js $(ARGS)
 
 .PHONY: gui
-gui:
-	npm run build
+gui: build
 	node ./bin/run.js gui $(ARGS)
+
+.PHONY: run
+cli: run
