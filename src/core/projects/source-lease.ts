@@ -35,7 +35,12 @@ export class ProjectSourceLease {
       throw new Error('Invalid Project source lease group')
     const lease = new ProjectSourceLease(repository)
     try {
-      for (const id of [...sessionIds].sort()) {
+      // Lock ordering must stay identical across hosts, locales and input permutations.
+      const orderedIds = [...sessionIds].sort((left, right) => {
+        if (left === right) return 0
+        return left < right ? -1 : 1
+      })
+      for (const id of orderedIds) {
         lease.claims.push(WriterClaim.acquire(repository.scope(id), () => {}, true))
         lease.sessions.add(id)
       }
