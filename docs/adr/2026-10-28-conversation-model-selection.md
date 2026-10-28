@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-10-28
 decision-date: 2026-10-28
-implementation-status: partial
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-10-28
+implementation-commits:
+  - 49211b9b8f3ef4eb17203f9708111f1fd7c73913
 superseded-by: []
 ---
 
@@ -72,6 +73,15 @@ retain Orbit's established metadata and registered-writer format.
 
 ## Confirmation
 
-Validation is recorded in the task outcome. Implementation completion and source
-commit pins remain unset until repository checks and consumer artifact integration
-are complete. No release, merge or publication is authorized by this record.
+Core implementation is recorded in commit
+`49211b9b8f3ef4eb17203f9708111f1fd7c73913`. The complete Core suite passed
+1,253 tests; headers, build and lint completed with no lint errors. The isolated
+package consumer verified public declarations, credential-aware catalog filtering,
+constrained gateway routing and selected-model persistence. GUI verification covered
+the compact combined selector, dismissal, defaults and next-turn behavior using
+synthetic generation. No paid inference was performed; authenticated read-only
+listing does not establish inference entitlement.
+
+The downstream App records its exact clean Core source revision and artifact hash
+in `worker/packages/core-artifact.json`, with matching host/worker locks and CI
+checkout pin. This record does not authorize release, merge or publication.
