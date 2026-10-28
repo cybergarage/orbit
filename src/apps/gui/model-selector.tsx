@@ -1,7 +1,7 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-/* global HTMLFieldSetElement, HTMLButtonElement, PointerEvent, KeyboardEvent, Node, document */
+/* global HTMLFieldSetElement, HTMLButtonElement, PointerEvent, KeyboardEvent, Node, document, setTimeout */
 import {useEffect, useRef, useState} from 'react'
 export interface Choice {
   label?: string
@@ -85,7 +85,8 @@ export function ModelSelector({
   const available = catalog?.providers.filter((item) => item.status === 'available' && item.models.length > 0)
   const close = () => {
     setOpen(false)
-    trigger.current?.focus()
+    // Saving temporarily disables the trigger; focus it after React clears busy.
+    setTimeout(() => trigger.current?.focus(), 0)
   }
 
   return (
@@ -97,7 +98,9 @@ export function ModelSelector({
       }}
       onKeyDown={(event) => {
         if (!['ArrowDown', 'ArrowUp', 'End', 'Home'].includes(event.key)) return
-        const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('.model-popover button:not(:disabled)')]
+        const buttons = [
+          ...event.currentTarget.querySelectorAll<HTMLButtonElement>('.model-popover button:not(:disabled)'),
+        ]
         if (buttons.length === 0) return
         event.preventDefault()
         const index = buttons.indexOf(document.activeElement as HTMLButtonElement)
