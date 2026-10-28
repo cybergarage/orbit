@@ -33,6 +33,7 @@ import {assertSupportedSyncLevel} from './durability.js'
 import {SessionEntryType} from './entries.js'
 import {SessionHeader} from './header.js'
 import {validateContextProjectionEntries} from './interrupted-context.js'
+import {type ModelSelection, modelSelectionSchema, writeModelSelection} from './model-selection.js'
 
 export interface AppendMessageOptions {
   iteration?: number
@@ -332,6 +333,17 @@ export class Session {
       type: SessionEntryType.TurnEvent,
     }
     this.addEntry(entry)
+  }
+
+  selectModel(selection: ModelSelection): void {
+    const value = modelSelectionSchema.parse(selection)
+    if (this.closing) throw new Error('Session is closing')
+    if (this.recorder) {
+      this.recorder.assertWritable()
+      writeModelSelection(this.recorder.scope, value)
+    }
+
+    Object.assign(this.metadata, value)
   }
 
   /** Retry retained evidence handles without granting a new Run. */

@@ -116,6 +116,11 @@ export class SessionRecorder {
     this.queue.catch(() => {})
   }
 
+  assertWritable(): void {
+    if (this.closed) throw new Error('Session recorder is closed')
+    this.claim.assertLive()
+  }
+
   close(): Promise<void> {
     this.closed = true
     this.closePromise ??= (async () => {

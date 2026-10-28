@@ -10,6 +10,7 @@ import {loadSystemContexts} from '../../core/context.js'
 import {DurableWorkStore} from '../../core/execution/scheduled-work.js'
 import {
   loadWorkspaceSettingsWithSources,
+  mergeWorkspaceSettings,
   Message,
   MessageType,
   OrbitApplicationService,
@@ -18,6 +19,7 @@ import {
   sessionsDir,
   SqliteProjectStore,
 } from '../../core/index.js'
+import {readGuiDefaultModel} from '../../core/session/model-selection.js'
 import {agentFlags, toAgentOptions} from '../cli-flags.js'
 import {LocalScheduler} from '../gui/local-scheduler.js'
 import {scheduledExecutor} from '../gui/scheduled-executor.js'
@@ -33,11 +35,12 @@ export async function runGuiCommand(
 ): Promise<void> {
   await (deps.storagePreflight ?? ensureStartupStorage)()
   const cwd = process.cwd()
-  const resolved = await resolveWorkspaceAgentOptions(options, cwd)
+  const resolved = await resolveGuiStartupOptions(options, cwd)
   const metrics = options.metricsPort === undefined ? undefined : new PrometheusOperationalMetrics()
   const projectStore = await SqliteProjectStore.open({file: path.join(path.dirname(sessionsDir()), 'projects.sqlite')})
-  const service = await OrbitApplicationService.create({
+  const service: OrbitApplicationService = await OrbitApplicationService.create({
     cwd,
+    enforceCatalog: true,
     execution: {
       journalLevel: resolved.journalLevel,
       policy: {generation: 'product-v1', profile: resolved.executionPolicy ?? 'workspace-confirm', roots: [cwd]},
@@ -49,14 +52,22 @@ export async function runGuiCommand(
     provider: resolved.provider,
     async resolveProjectRuntime(directory) {
       const loaded = await loadWorkspaceSettingsWithSources(directory)
+      const fallback = service.getDefaultModel()
       const projectResolved = resolveAgentOptions(
         {
           ...options,
           model:
             options.model ??
             loaded.settings.model ??
-            (loaded.settings.provider && loaded.settings.provider !== resolved.provider ? undefined : resolved.model),
-          provider: options.provider ?? loaded.settings.provider ?? resolved.provider,
+            (options.provider
+              ? resolved.model
+              : loaded.settings.provider && loaded.settings.provider !== fallback.provider
+                ? undefined
+                : fallback.model),
+          provider:
+            options.provider ??
+            loaded.settings.provider ??
+            (loaded.settings.model === undefined ? fallback.provider : resolved.provider),
         },
         loaded.settings,
       )
@@ -87,6 +98,7 @@ export async function runGuiCommand(
       }
     },
     settings: resolved.settings,
+    useSavedDefault: options.model === undefined && options.provider === undefined,
     ...(await productExtensions(cwd, options)),
     version: options.version,
   }).catch(async (error: unknown) => {
@@ -191,4 +203,21 @@ function waitForShutdown(): Promise<void> {
     process.once('SIGINT', shutdown)
     process.once('SIGTERM', shutdown)
   })
+}
+
+/** A saved GUI selection must not depend on discovery of a model it replaces. */
+export async function resolveGuiStartupOptions(options: AgentOptions, cwd: string, root = sessionsDir()) {
+  if (options.model !== undefined || options.provider !== undefined) return resolveWorkspaceAgentOptions(options, cwd)
+  const saved = readGuiDefaultModel(root)
+  if (!saved) return resolveWorkspaceAgentOptions(options, cwd)
+  const loaded = await loadWorkspaceSettingsWithSources(cwd)
+  const settings = mergeWorkspaceSettings(loaded.settings, options.settings)
+  return resolveAgentOptions(
+    {
+      ...options,
+      model: settings.model ?? (settings.provider && settings.provider !== saved.provider ? undefined : saved.model),
+      provider: settings.provider ?? saved.provider,
+    },
+    settings,
+  )
 }

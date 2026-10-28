@@ -1,10 +1,9 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 /* eslint-disable n/no-unsupported-features/node-builtins */
 /* global document, EventSource, fetch, HTMLButtonElement, HTMLDivElement, HTMLElement, HTMLMetaElement, KeyboardEvent, MessageEvent, navigator, RequestInit, window */
-
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {createRoot} from 'react-dom/client'
 
 import type {RunLimits} from '../../core/execution/limits.js'
@@ -31,6 +30,7 @@ import {sessionDisplayName} from '../../core/session/information.js'
 import {ApprovalDialog} from './approval-dialog.js'
 import {BudgetPanel, budgetStatus, canContinueBudget} from './budget-panel.js'
 import {Icon} from './icons.js'
+import {ModelSelector} from './model-selector.js'
 import {ProjectMemoryPanel} from './project-memory-panel.js'
 import {
   acceptGuiRun,
@@ -227,6 +227,7 @@ function App() {
       if (
         event.type === 'project.changed' ||
         event.type === 'session.renamed' ||
+        event.type === 'model.selection.saved' ||
         event.type === 'run.completed' ||
         event.type === 'session.created' ||
         event.type === 'session.resumed'
@@ -795,6 +796,33 @@ function App() {
                     ? 'Orbit is working · Send this draft when it finishes'
                     : 'Enter to send · Shift+Enter for a new line'}
                 </span>
+                <ModelSelector
+                  disabled={!thread}
+                  key={thread?.id}
+                  load={(refresh) =>
+                    api(
+                      `/api/model-catalog?threadId=${encodeURIComponent(thread!.id)}${refresh ? '&refresh=true' : ''}`,
+                    )
+                  }
+                  save={async (choice) => {
+                    const {id} = thread!
+                    const next = await api<ThreadSnapshot>(`/api/threads/${encodeURIComponent(id)}/model`, {
+                      body: JSON.stringify(choice),
+                      headers: {'Content-Type': 'application/json'},
+                      method: 'PUT',
+                    })
+                    setThread((current) => (current?.id === id ? next : current))
+                    await loadSessions()
+                  }}
+                  value={
+                    thread
+                      ? {
+                          model: thread.model ?? runtime?.model ?? '',
+                          provider: thread.provider ?? runtime?.provider ?? '',
+                        }
+                      : undefined
+                  }
+                />
                 {runActive ? (
                   <button
                     aria-label={runPresentation.phase === GuiRunPhase.Stopping ? 'Stopping response' : 'Stop response'}
@@ -823,7 +851,13 @@ function App() {
               </div>
             </div>
             <p className="composer-status muted">
-              {runActive ? runStatus : selectedSession ? 'Ready · Conversation saved locally' : 'Ready'}
+              {thread?.modelPending
+                ? 'Model change saved · Applies to the next turn'
+                : runActive
+                  ? runStatus
+                  : selectedSession
+                    ? 'Ready · Conversation saved locally'
+                    : 'Ready'}
             </p>
           </div>
         </section>

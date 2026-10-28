@@ -449,3 +449,5 @@ in c17fc5a3170f6a5dbe800da6522e38870b513e1a with 832 passing tests.
 [Scoped host initialization](2026-10-17-scoped-initialization.md) records the
 2026-10-17 author-approved settings, saved-data and all scopes shared by CLI and
 embedded GUI, with explicit settings selection and offline permanent deletion.
+
+[Conversation model selection](2026-10-28-conversation-model-selection.md) records the requested persisted next-turn model and independent GUI-default contract.

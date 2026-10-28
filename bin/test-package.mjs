@@ -35,6 +35,9 @@ try {
   for (const required of [
     'dist/index.js',
     'dist/index.d.ts',
+    'dist/core/model-catalog.js',
+    'dist/core/model-gateway.js',
+    'dist/core/session/model-selection.js',
     'dist/core/session/title.js',
     'dist/core/session/title.d.ts',
     'dist/core/session/repository.d.ts',
@@ -86,12 +89,12 @@ try {
   await writeFile(
     path.join(consumer, 'src/execution-api-probe.ts'),
     `
-import {OperationExecutor, executeManagedTool, executePrepared} from '@cybergarage/orbit'
+import {ModelCatalog, ModelGateway, modelSelectionSchema, OperationExecutor, executeManagedTool, executePrepared} from '@cybergarage/orbit'
 import type {AgentExecutionOptions, AgentOptions, ManagedToolOptions, PreparedExecutionOptions, RunContext} from '@cybergarage/orbit'
 export function executionApi(run: RunContext, managed: ManagedToolOptions, execution: AgentExecutionOptions) {
   const options: AgentOptions = {execution}
   const prepared: PreparedExecutionOptions = {deferPluginStartupFailure: false}
-  return {executor: new OperationExecutor(run, managed), executeManagedTool, executePrepared, options, prepared}
+  return {ModelCatalog, ModelGateway, modelSelectionSchema, executor: new OperationExecutor(run, managed), executeManagedTool, executePrepared, options, prepared}
 }
 `,
   )
@@ -232,7 +235,10 @@ console.log('Package initialization consumer verified: public types, all scopes,
   runNpm(['run', 'build'], consumer)
   runNpm(['test'], consumer)
   execFileSync(process.execPath, [path.join(consumer, 'dist/rename-api-probe.js')], {cwd: consumer, stdio: 'inherit'})
-  execFileSync(process.execPath, [path.join(consumer, 'dist/initialization-api-probe.js')], {cwd: consumer, stdio: 'inherit'})
+  execFileSync(process.execPath, [path.join(consumer, 'dist/initialization-api-probe.js')], {
+    cwd: consumer,
+    stdio: 'inherit',
+  })
   const catalogProbe = path.join(consumer, 'catalog-probe.mjs')
   await writeFile(
     catalogProbe,
@@ -240,7 +246,28 @@ console.log('Package initialization consumer verified: public types, all scopes,
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import {randomUUID} from 'node:crypto'
-import {AppleFoundationModelsAgent, getModel, PluginCatalog, PLUGIN_SCHEMA, SqliteProjectStore, OperationExecutor, RunSupervisor, MemoryExecutionJournal} from '@cybergarage/orbit'
+import {ModelCatalog, ModelGateway, modelSelectionSchema, SessionRepository, AppleFoundationModelsAgent, getModel, PluginCatalog, PLUGIN_SCHEMA, SqliteProjectStore, OperationExecutor, RunSupervisor, MemoryExecutionJournal} from '@cybergarage/orbit'
+const selection = modelSelectionSchema.parse({provider: 'openai', model: 'gpt-4o'})
+const modelSettings = {providers: {openai: {apiKey: 'fake-package-key'}, anthropic: {apiKeyEnv: 'ORBIT_PACKAGE_ABSENT_KEY'}}}
+const modelCatalog = new ModelCatalog({
+  fetcher: async () => {throw new Error('Synthetic local service offline')},
+  listRemote: async () => [{id: 'gpt-4o'}, {id: 'whisper-1'}],
+})
+const choices = await modelCatalog.list(modelSettings)
+assert.deepEqual(choices.providers.find(provider => provider.provider === 'openai').models.map(model => model.model), ['gpt-4o'])
+await modelCatalog.requireSelection(modelSettings, selection)
+const gateway = new ModelGateway(modelSettings, selection, {openai: {chat: {completions: {create: async request => ({model: request.model})}}}})
+assert.deepEqual(await gateway.request('openai-chat', {messages: [], model: selection.model}, new AbortController().signal), {model: selection.model})
+await assert.rejects(gateway.request('chat', {}, new AbortController().signal), /admitted provider/)
+const modelRepository = new SessionRepository({rootDir: path.resolve('model-sessions')})
+modelRepository.initializeStorage({allWritersStopped: true, automaticRestartersDisabled: true, exclusiveStorageControl: true})
+const modelSession = modelRepository.create({cwd: process.cwd(), provider: 'ollama', model: 'original'})
+const modelSessionId = modelSession.getId()
+modelSession.selectModel(selection)
+await modelSession.close()
+assert.equal((await new SessionRepository({rootDir: modelRepository.rootDir}).findById(modelSessionId)).provider, 'openai')
+assert.equal((await modelRepository.findById(modelSessionId)).model, 'gpt-4o')
+console.log('Package model consumer verified: catalog, gateway, declarations and persisted selection; no inference.')
 assert.ok(getModel('apple') instanceof AppleFoundationModelsAgent)
 assert.equal(getModel('apple').getModel(), 'system')
 const supervisor = new RunSupervisor()
@@ -275,10 +302,14 @@ try {
     cwd: consumer,
     stdio: 'inherit',
   })
-  const initializeHelp = execFileSync(process.execPath, ['node_modules/@cybergarage/orbit/bin/run.js', 'initialize', '--help'], {
-    cwd: consumer,
-    encoding: 'utf8',
-  })
+  const initializeHelp = execFileSync(
+    process.execPath,
+    ['node_modules/@cybergarage/orbit/bin/run.js', 'initialize', '--help'],
+    {
+      cwd: consumer,
+      encoding: 'utf8',
+    },
+  )
   assert.match(initializeHelp, /--dry-run/u)
   assert.match(initializeHelp, /--settings-file/u)
   assert.match(initializeHelp, /--confirm-initialize/u)

@@ -83,7 +83,7 @@ import {
 import {encodeWorkflowSubmission, parseWorkflowSubmission} from './selection/binding.js'
 import {immutable, selectionDigest} from './selection/validation.js'
 import {budgetToolResults, continueBudgetRun} from './session/budget-continuation.js'
-import {prepareSessionContext} from './session/context-policy.js'
+import {createModelContextPolicy, prepareSessionContext} from './session/context-policy.js'
 import {Session, SessionContextBuilder, TurnPhase} from './session/index.js'
 import {
   parseInterruptionPolicy,
@@ -175,7 +175,7 @@ export interface AgentOptions {
 }
 
 export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
-  public readonly contextPolicy: ContextPolicy
+  public contextPolicy: ContextPolicy
   public readonly interruptionPolicy: InterruptionPolicy
   public readonly logger: Logger
   public readonly messages: Message[]
@@ -186,6 +186,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   readonly supervisor: RunSupervisor
   public readonly tools: AgentTool[]
   private closePromise?: Promise<void>
+  private readonly createSelectedModel: typeof getModel
   private readonly cwd: string
   private readonly diagnostics?: DiagnosticEventBus
   private readonly execution: AgentExecutionOptions
@@ -194,9 +195,11 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   private readonly journals = new Map<string, Promise<ExecutionJournal>>()
   private readonly mcpFactory: NonNullable<NonNullable<AgentOptions['deps']>['createMcpToolManager']>
   private readonly metrics?: OperationalMetrics
-  private readonly model: Model
+  private model: Model
   private observerFailures = 0
   private readonly ownedLogStore?: SessionLogStore
+  private pendingContextPolicy?: ContextPolicy
+  private pendingModel?: Model
   private readonly projectMemory?: ProjectMemoryService
   private readonly selectionProjector?: WorkflowContextProjector
   private readonly sessionContextBuilder: SessionContextBuilderType
@@ -210,6 +213,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       this.observerFailures++
     })
     const createModel = options.deps?.createModel ?? getModel
+    this.createSelectedModel = createModel
     this.plugins = options.plugins
     this.skillCatalog = options.plugins?.skillCatalog ?? options.skillCatalog
     this.projectMemory = options.projectMemory
@@ -284,6 +288,17 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         },
         'agent session started',
       )
+    }
+  }
+
+  activateModelSelection(): void {
+    if (this.pendingModel) {
+      if (this.supervisor.isBusy())
+        throw new InvalidInputError('Cannot activate a model during an active or unsettled run')
+      this.model = this.pendingModel
+      this.contextPolicy = this.pendingContextPolicy ?? this.contextPolicy
+      this.pendingContextPolicy = undefined
+      this.pendingModel = undefined
     }
   }
 
@@ -371,6 +386,15 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   /** Runs one turn from new input and derives prior model context from the agent session. */
   async invoke(messages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message> {
     return this.invokeSession(this.getSession(), messages, options)
+  }
+
+  async prepareModelSelection(selection: {model: string; provider: ProviderName}): Promise<() => void> {
+    const model = this.createSelectedModel(selection.provider, selection.model, this.settings)
+    const policy = this.contextPolicy.mode === 'budgeted' ? await createModelContextPolicy(model) : this.contextPolicy
+    return () => {
+      this.pendingModel = model
+      this.pendingContextPolicy = policy
+    }
   }
 
   /** Pure preview on an already-created Agent. Never discovers tools or reads Skills. */

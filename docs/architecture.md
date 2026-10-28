@@ -390,3 +390,8 @@ policy-2 cross-pair snapshots, and passes them to isolated disposable workers.
 Source-helper recovery uses a separate source-only PID namespace and the normal
 Core ownership rules. Queue and attempt reservations are enforced atomically in
 the catalog. See [Project knowledge](projects.md#automatic-knowledge).
+
+Conversation model selection flows through `OrbitApplicationService.selectThreadModel`
+and `ThreadManager.selectModel`. Session-owned durable selection metadata overrides
+the original header on resume, while the Agent queues a validated adapter for the
+next admission. GUI default selection is separate from conversation state.

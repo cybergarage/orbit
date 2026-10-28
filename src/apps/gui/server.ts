@@ -16,6 +16,7 @@ import {ExecutionRequestError} from '../../core/execution/run.js'
 import {DiagnosticCapture, InvalidInputError} from '../../core/index.js'
 import {parseMemorySelection} from '../../core/projects/memory-context.js'
 import {ProjectStoreError} from '../../core/projects/types.js'
+import {modelSelectionSchema} from '../../core/session/model-selection.js'
 import {sessionRenameSchema} from '../../core/session/title.js'
 import {initializationRoutes} from './initialization-routes.js'
 import {memoryRoutes} from './memory-routes.js'
@@ -111,6 +112,23 @@ export async function startGuiServer(options: GuiServerOptions): Promise<GuiServ
   app.use('/api', schedulingRoutes(options.scheduler))
   app.use('/api', projectRoutes(options.service))
   app.use('/api', memoryRoutes(options.service))
+  app.get('/api/model-catalog', async (request, response) =>
+    response.json(
+      await options.service.getModelCatalog(stringQuery(request.query.threadId), request.query.refresh === 'true'),
+    ),
+  )
+  app.get('/api/models', async (request, response) =>
+    response.json(await options.service.getModelChoices(stringQuery(request.query.threadId))),
+  )
+  app.get('/api/default-model', (_request, response) => response.json(options.service.getDefaultModel()))
+  app.put('/api/default-model', async (request, response) =>
+    response.json(await options.service.updateDefaultModel(modelSelectionSchema.parse(request.body))),
+  )
+  app.put('/api/threads/:threadId/model', async (request, response) =>
+    response.json(
+      await options.service.selectThreadModel(request.params.threadId, modelSelectionSchema.parse(request.body)),
+    ),
+  )
   app.get('/api/runtime', (_request, response) => response.json(options.service.runtime))
   app.get('/api/logs/health', (_request, response) => response.json(options.service.getLogHealth()))
   app.get('/api/preferences', (_request, response) => response.json(options.service.getPreferences()))

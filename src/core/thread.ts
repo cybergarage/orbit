@@ -24,6 +24,7 @@ import {Message as CoreMessage, MessageType as CoreMessageType} from './message/
 import {boundedGraphJSON, graphBinding} from './processor/graph-definition.js'
 import {parseMemorySelection, type ProjectMemorySelection} from './projects/memory-context.js'
 import {Session, type SessionRepository} from './session/index.js'
+import {type ModelSelection, modelSelectionSchema} from './session/model-selection.js'
 import {loadWorkspaceSettingsSync} from './settings.js'
 import {normalizeSkillSelections} from './skills/catalog.js'
 import {State} from './state.js'
@@ -70,6 +71,7 @@ export interface ThreadSnapshot {
   id: string
   messages: ThreadMessage[]
   model?: string
+  modelPending?: boolean
   provider?: ProviderName
   run?: RunSnapshot
   status: ThreadStatus
@@ -157,12 +159,14 @@ export type ThreadEvent =
 export type ThreadEventHandler = (event: ThreadEvent) => void
 
 export interface ThreadAgent {
+  activateModelSelection?(): void
   close(): Promise<void>
   getExecutionLimits?(): import('./execution/limits.js').RunLimits
   getGraphSnapshot?(id: string): GraphSnapshot | undefined
   getRun?(id: string): RunSnapshot | undefined
   /** Records new messages into its configured session and runs one turn. */
   invoke(newMessages: Message[], options?: Partial<AgentInvokeOptions>): Promise<Message>
+  prepareModelSelection?(selection: ModelSelection): Promise<() => void>
   previewGraphSubmission?(
     graph: CompiledProcessorGraph,
     input: GraphJSON,
@@ -228,6 +232,8 @@ interface ManagedThread {
   createdAt: string
   id: string
   lastRunId?: string
+  modelPending?: boolean
+  modelPreparation?: Promise<void>
   session: Session
   updatedAt: string
 }
@@ -252,6 +258,7 @@ export class ThreadManager {
   private readonly eventHandlers = new Set<ThreadEventHandler>()
   private readonly loggerFactory?: SessionLoggerFactory
   private readonly metrics?: OperationalMetrics
+  private readonly modelSelectionVersions = new Map<string, number>()
   private readonly onRunSnapshot?: (snapshot: RunSnapshot) => void
   private readonly runThreads = new Map<string, string>()
   private readonly sessionRepository?: SessionRepository
@@ -388,6 +395,7 @@ export class ThreadManager {
       agent,
       createdAt: metadata.createdAt,
       id,
+      modelPreparation: prepareThreadModel(agent, agentOptions),
       session,
       updatedAt: metadata.createdAt,
     }
@@ -477,10 +485,35 @@ export class ThreadManager {
       agent,
       createdAt: metadata.createdAt,
       id,
+      modelPreparation: prepareThreadModel(agent, agentOptions),
       session,
       updatedAt: session.getConversationMessages().at(-1)?.timestamp ?? metadata.createdAt,
     }
     this.threads.set(id, thread)
+    return this.snapshot(thread)
+  }
+
+  async selectModel(threadId: string, selection: ModelSelection): Promise<ThreadSnapshot> {
+    if (this.closed) throw new InvalidInputError('Thread manager is closed')
+    const thread = this.requireThread(threadId)
+    const value = modelSelectionSchema.parse(selection)
+    if (this.closingIdleThreads.has(threadId) || this.getThread(threadId)?.run?.quarantined)
+      throw new InvalidInputError('Thread must be settled before changing model')
+    if (!thread.agent.prepareModelSelection) throw new InvalidInputError('Agent does not support model selection')
+    const revision = (this.modelSelectionVersions.get(threadId) ?? 0) + 1
+    this.modelSelectionVersions.set(threadId, revision)
+    await thread.modelPreparation?.catch(() => {})
+    thread.modelPreparation = undefined
+    const commit = await thread.agent.prepareModelSelection(value)
+    if (this.modelSelectionVersions.get(threadId) !== revision)
+      throw new InvalidInputError('Model selection superseded')
+    if (this.threads.get(threadId) !== thread || this.closed)
+      throw new InvalidInputError('Thread closed during model selection')
+    if (this.getThread(threadId)?.run?.quarantined)
+      throw new InvalidInputError('Thread became quarantined during model selection')
+    thread.session.selectModel(value)
+    commit()
+    thread.modelPending = true
     return this.snapshot(thread)
   }
 
@@ -543,6 +576,14 @@ export class ThreadManager {
       parentid: thread.session.getLastMessageId(),
     })
     try {
+      if (thread.modelPreparation) {
+        await thread.modelPreparation
+        thread.modelPreparation = undefined
+        if (run.controller.signal.aborted) throw new ModelAbortError('Agent cancelled before model activation')
+      }
+
+      thread.agent.activateModelSelection?.()
+      thread.modelPending = false
       thread.updatedAt = userMessage.timestamp
 
       const invokeOptions: Partial<AgentInvokeOptions> = {
@@ -731,6 +772,7 @@ export class ThreadManager {
     return {
       ...(thread.agent.getExecutionLimits ? {executionLimits: thread.agent.getExecutionLimits()} : {}),
       ...thread.session.getTitle(),
+      ...(thread.modelPending ? {modelPending: true} : {}),
       createdAt: thread.createdAt,
       cwd: metadata.cwd,
       ...(thread.session.getFile() === undefined ? {} : {file: thread.session.getFile()}),
@@ -869,4 +911,23 @@ function sessionSystemPrompt(messages: Message[] | undefined): string | undefine
     .flatMap((message) => message.contents)
     .filter((content) => content.length > 0)
   return contents === undefined || contents.length === 0 ? undefined : contents.join('\n\n')
+}
+
+/** A restored selection may differ from a profile configured for the original model. */
+function prepareThreadModel(agent: ThreadAgent, options: AgentOptions): Promise<void> | undefined {
+  const policy = options.contextPolicy ?? options.settings?.contextPolicy
+  const selection = options.model
+  if (
+    policy?.mode !== 'budgeted' ||
+    !selection?.name ||
+    !selection.provider ||
+    !agent.prepareModelSelection ||
+    (policy.profile.model === selection.name && policy.profile.provider === selection.provider)
+  )
+    return
+  const preparation = agent
+    .prepareModelSelection({model: selection.name, provider: selection.provider})
+    .then((commit) => commit())
+  preparation.catch(() => {})
+  return preparation
 }

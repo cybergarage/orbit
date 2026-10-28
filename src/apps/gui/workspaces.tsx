@@ -3,9 +3,9 @@
 
 import {useCallback, useEffect, useRef, useState} from 'react'
 
+import type {GuiPreferences, RuntimeSnapshot} from '../../core/application.js'
 /* global RequestInit */
 /* eslint-disable n/no-unsupported-features/node-builtins */
-import type {GuiPreferences, RuntimeSnapshot} from '../../core/application.js'
 import type {DiagnosticCapture} from '../../core/diagnostics/index.js'
 import type {WorkState} from '../../core/execution/scheduled-work.js'
 import type {LocalTask} from './local-scheduler.js'
@@ -13,6 +13,7 @@ import type {LocalTask} from './local-scheduler.js'
 import {Icon} from './icons.js'
 import {InitializationPanel} from './initialization-panel.js'
 import {LatestRequest} from './latest-request.js'
+import {type Choice, ModelSelector} from './model-selector.js'
 import orbitLogo from './public/assets/orbit-logo-navy-blue.png'
 import {SidebarDialog} from './sidebar.js'
 
@@ -460,6 +461,12 @@ export function SettingsWorkspace({
   update: (value: Partial<GuiPreferences>) => void
 }) {
   const [tab, setTab] = useState('diagnostics')
+  const [defaultModel, setDefaultModel] = useState<Choice>()
+  useEffect(() => {
+    api<Choice>('/api/default-model')
+      .then(setDefaultModel)
+      .catch(() => {})
+  }, [api])
   return (
     <>
       <aside className="pane sidebar context-list">
@@ -487,6 +494,25 @@ export function SettingsWorkspace({
             <InitializationPanel api={api} />
           ) : tab === 'diagnostics' ? (
             <>
+              <div className="model-settings">
+                <span title="Used for new chats. Project settings take precedence. Existing chats retain their model.">
+                  Default model
+                </span>
+                <ModelSelector
+                  label="Default model"
+                  load={(refresh) => api('/api/model-catalog' + (refresh ? '?refresh=true' : ''))}
+                  save={async (choice) => {
+                    setDefaultModel(
+                      await api<Choice>('/api/default-model', {
+                        body: JSON.stringify(choice),
+                        headers: {'Content-Type': 'application/json'},
+                        method: 'PUT',
+                      }),
+                    )
+                  }}
+                  value={defaultModel}
+                />
+              </div>
               <h2>Diagnostics</h2>
               <div className="settings-toggle">
                 <span>Show Logs panel</span>

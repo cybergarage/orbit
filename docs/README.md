@@ -116,3 +116,5 @@ repository adopts a dedicated specification lifecycle.
 
 - [Initialization](initialization.md) defines shared CLI/GUI scopes, explicit
   setting selection and offline permanent deletion without user-work removal.
+
+- [Provider and model catalog](model-catalog.md): credential-aware coding eligibility, read-only discovery and host-only worker transport.
