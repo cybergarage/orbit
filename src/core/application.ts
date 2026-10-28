@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {randomUUID} from 'node:crypto'
+import fsSync from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
@@ -46,7 +47,10 @@ import {inspectExecutionJournal} from './execution/recovery.js'
 import {recoveredRunSnapshot} from './execution/run.js'
 import {createCompositeLogger} from './logger/index.js'
 import {FileSessionLogStore, LogEventType, LogOutcome, StoreSessionLoggerFactory} from './logs/index.js'
+import {ModelCatalog, type ModelCatalogSnapshot} from './model-catalog.js'
+import {discoverModelChoices} from './model-choices.js'
 import {createOllamaKnowledgeExtractor} from './models/adapters/ollama-knowledge.js'
+import {getModel} from './models/factory.js'
 import {Message, MessageType, Role} from './models/index.js'
 import {inspectGraphRun} from './processor/graph-inspection.js'
 import {parseProjectContext, type ProjectMemorySelection} from './projects/memory-context.js'
@@ -55,7 +59,14 @@ import {ProjectService} from './projects/service.js'
 import {ProjectStoreError} from './projects/types.js'
 import {WorkflowSelectionService} from './selection/service.js'
 import {parseSessionFile} from './session/codec.js'
+import {syncSupportedDirectory} from './session/durability.js'
 import {SessionRepository as Repository, SessionDeletionService} from './session/index.js'
+import {
+  guiDefaultModelPath,
+  type ModelSelection,
+  modelSelectionSchema,
+  readGuiDefaultModel,
+} from './session/model-selection.js'
 import {loadWorkspaceSettingsWithSources} from './settings.js'
 import {SkillCatalog} from './skills/index.js'
 import {State} from './state.js'
@@ -113,6 +124,8 @@ export interface OrbitApplicationServiceOptions {
   createAgent?: ThreadAgentFactory
   cwd?: string
   diagnostics?: DiagnosticEventBus
+  discoverModels?: typeof discoverModelChoices
+  enforceCatalog?: boolean
   execution?: CoreAgentOptions['execution']
   knowledgeExtractor?: KnowledgeExtractor
   logger?: Logger
@@ -129,6 +142,7 @@ export interface OrbitApplicationServiceOptions {
   settings?: WorkspaceSettings
   settingsSources?: WorkspaceSettingsSource[]
   skillCatalog?: SkillCatalog
+  useSavedDefault?: boolean
   version?: string
 }
 
@@ -146,11 +160,17 @@ export class OrbitApplicationService {
   readonly runtime: RuntimeSnapshot
   readonly skillCatalog?: SkillCatalog
   private closePromise?: Promise<void>
+  private readonly customDiscovery: boolean
+  private defaultModel?: ModelSelection
+  private defaultModelRevision = 0
   private readonly deletionService: SessionDeletionService
   private readonly detachDiagnosticLogger: () => void
+  private readonly discoverModels: typeof discoverModelChoices
   private readonly displayMessages = new Map<string, ThreadMessage[]>()
   private readonly logger: Logger
   private readonly loggerFactory: SessionLoggerFactory
+  private readonly modelCatalog = new ModelCatalog()
+  private readonly modelRequests = new Map<string, number>()
   private readonly ownsLogs: boolean
   private preferences: GuiPreferences
   private readonly projectCreations = new Map<string, {projectId: string; promise: Promise<ThreadSnapshot>}>()
@@ -162,11 +182,13 @@ export class OrbitApplicationService {
   private readonly systemPrompt?: string
   private readonly threadManager: ThreadManager
   private readonly threadRuntime = new Map<string, CoreAgentOptions>()
+  private readonly validateRunModels: boolean
 
   constructor(
     options: OrbitApplicationServiceOptions &
       Required<Pick<OrbitApplicationServiceOptions, 'contexts' | 'cwd' | 'settingsSources'>>,
   ) {
+    this.validateRunModels = options.enforceCatalog === true
     this.plugins = options.plugins
     this.skillCatalog = options.plugins?.skillCatalog ?? options.skillCatalog
     const resolved = resolveAgentOptions(
@@ -191,6 +213,10 @@ export class OrbitApplicationService {
       this.logger.child({component: 'diagnostics'}),
     )
     this.repository = options.repository ?? new Repository()
+    this.discoverModels = options.discoverModels ?? discoverModelChoices
+    this.customDiscovery = options.discoverModels !== undefined
+    this.defaultModel = options.useSavedDefault === false ? undefined : readGuiDefaultModel(this.repository.rootDir)
+
     this.systemPrompt = options.contexts
       .map((context) => context.content)
       .filter((content) => content.length > 0)
@@ -253,10 +279,12 @@ export class OrbitApplicationService {
           {
             model:
               loaded.settings.model ??
-              (loaded.settings.provider && loaded.settings.provider !== this.runtime.provider
+              (loaded.settings.provider && loaded.settings.provider !== this.getDefaultModel().provider
                 ? undefined
-                : this.runtime.model),
-            provider: loaded.settings.provider ?? this.runtime.provider,
+                : this.getDefaultModel().model),
+            provider:
+              loaded.settings.provider ??
+              (loaded.settings.model === undefined ? this.getDefaultModel().provider : this.runtime.provider),
           },
           loaded.settings,
         )
@@ -374,7 +402,7 @@ export class OrbitApplicationService {
         cwd: this.runtime.cwd,
         diagnostics: this.diagnostics,
         messages: systemMessages,
-        model: {name: this.runtime.model, provider: this.runtime.provider},
+        model: {name: this.getDefaultModel().model, provider: this.getDefaultModel().provider},
         plugins: this.plugins,
         projectMemory: this.projectMemory,
         settings: this.settings,
@@ -468,6 +496,10 @@ export class OrbitApplicationService {
     return true
   }
 
+  getDefaultModel(): ModelSelection {
+    return {...(this.defaultModel ?? {model: this.runtime.model, provider: this.runtime.provider})}
+  }
+
   getEvents(afterSequence = 0): DiagnosticEvent[] {
     return this.diagnostics.list(afterSequence)
   }
@@ -478,6 +510,38 @@ export class OrbitApplicationService {
 
   getLogHealth(): LogStoreHealth {
     return this.logs.getHealth()
+  }
+
+  async getModelCatalog(threadId?: string, refresh = false): Promise<ModelCatalogSnapshot> {
+    const settings = threadId ? (this.threadRuntime.get(threadId)?.settings ?? this.settings) : this.settings
+    if (this.customDiscovery) {
+      const choices = await this.getModelChoices(threadId)
+      const labels = {anthropic: 'Claude (Anthropic)', ollama: 'Ollama', openai: 'OpenAI'}
+      return {
+        checkedAt: Date.now(),
+        expiresAt: Date.now(),
+        providers: Object.entries(labels).map(([provider, label]) => ({
+          credential: 'present',
+          label,
+          models: choices
+            .filter((choice) => choice.provider === provider)
+            .map((choice) => ({...choice, label: choice.model, tools: true})),
+          provider: provider as 'anthropic' | 'ollama' | 'openai',
+          status: 'available',
+        })),
+      }
+    }
+
+    return this.modelCatalog.list(settings, {refresh})
+  }
+
+  async getModelChoices(threadId?: string): Promise<ModelSelection[]> {
+    const projectRuntime = threadId ? this.threadRuntime.get(threadId) : undefined
+    const settings = projectRuntime?.settings ?? this.settings
+    return this.discoverModels(settings, {
+      model: projectRuntime?.model?.name ?? this.runtime.model,
+      provider: projectRuntime?.model?.provider ?? this.runtime.provider,
+    })
   }
 
   getPreferences(): GuiPreferences {
@@ -750,6 +814,21 @@ export class OrbitApplicationService {
     return this.withDisplayMessages(thread)
   }
 
+  async selectThreadModel(threadId: string, selection: ModelSelection): Promise<ThreadSnapshot> {
+    const value = modelSelectionSchema.parse(selection)
+    const revision = (this.modelRequests.get(threadId) ?? 0) + 1
+    this.modelRequests.set(threadId, revision)
+    const choices = this.customDiscovery
+      ? await this.getModelChoices(threadId)
+      : (await this.getModelCatalog(threadId, true)).providers.flatMap((provider) => provider.models)
+    if (this.modelRequests.get(threadId) !== revision) throw new Error('Model selection superseded')
+    if (!choices.some((choice) => choice.model === value.model && choice.provider === value.provider))
+      throw new Error('Model is unavailable or does not support tools')
+    const result = await this.threadManager.selectModel(threadId, value)
+    this.diagnostics.emit({data: value, sessionId: threadId, threadId, type: 'model.selection.saved'})
+    return result
+  }
+
   async skillHistory(sessionId: string) {
     const summary = await this.repository.findById(sessionId)
     if (!summary) throw new Error('Session not found')
@@ -824,6 +903,23 @@ export class OrbitApplicationService {
     }
 
     await this.projects?.requireActive(threadId)
+    if (this.validateRunModels) {
+      const selected = this.threadManager.getThread(threadId)
+      const catalog = await this.getModelCatalog(threadId, true)
+      if (
+        !selected ||
+        !catalog.providers.some(
+          (provider) =>
+            provider.status === 'available' &&
+            provider.provider === selected.provider &&
+            provider.models.some((model) => model.model === selected.model),
+        )
+      )
+        throw new Error(
+          'Selected provider/model is unavailable or unsupported. Choose an eligible model before sending.',
+        )
+    }
+
     const handle = this.threadManager.startRun(threadId, content, {
       continueFromRunId,
       limits,
@@ -852,6 +948,38 @@ export class OrbitApplicationService {
 
   async unarchiveSession(sessionId: string): Promise<SessionSummary> {
     return this.setSessionArchived(sessionId, false)
+  }
+
+  async updateDefaultModel(selection: ModelSelection): Promise<ModelSelection> {
+    const revision = ++this.defaultModelRevision
+    const value = modelSelectionSchema.parse(selection)
+    const choices = this.customDiscovery
+      ? await this.getModelChoices()
+      : (await this.getModelCatalog(undefined, true)).providers.flatMap((provider) => provider.models)
+    if (!choices.some((choice) => choice.model === value.model && choice.provider === value.provider))
+      throw new Error('Model is unavailable or does not support tools')
+    if (revision !== this.defaultModelRevision) throw new Error('Default model selection superseded')
+    getModel(value.provider, value.model, this.settings)
+    const file = this.defaultModelPath()
+    fsSync.mkdirSync(path.dirname(file), {mode: 0o700, recursive: true})
+    const temporary = file + '.' + randomUUID() + '.tmp'
+    try {
+      const fd = fsSync.openSync(temporary, 'wx', 0o600)
+      try {
+        fsSync.writeFileSync(fd, JSON.stringify(value) + '\n')
+        fsSync.fsyncSync(fd)
+      } finally {
+        fsSync.closeSync(fd)
+      }
+
+      fsSync.renameSync(temporary, file)
+      syncSupportedDirectory(path.dirname(file))
+    } finally {
+      fsSync.rmSync(temporary, {force: true})
+    }
+
+    this.defaultModel = value
+    return this.getDefaultModel()
   }
 
   updatePreferences(update: Partial<GuiPreferences>): GuiPreferences {
@@ -949,6 +1077,10 @@ export class OrbitApplicationService {
       await runtime?.skillCatalog?.settle()
       throw error
     }
+  }
+
+  private defaultModelPath(): string {
+    return guiDefaultModelPath(this.repository.rootDir)
   }
 
   private async dispatchSelectedGraph(

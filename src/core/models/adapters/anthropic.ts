@@ -29,6 +29,7 @@ import {metadataRecord, positiveTokenLimit, readModelMetadata, unknownModelConte
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
 import {freezeModelRequest} from '../prepared.js'
 import {splitSystemPrompt} from '../prompt.js'
+import {redactProviderAuthenticationError} from '../provider-errors.js'
 import {Role} from '../role.js'
 import {getToolCalls, getToolResult, isToolResultError, stringifyToolOutput} from './tools.js'
 
@@ -37,21 +38,25 @@ export interface AnthropicAgentOptions {
 }
 
 export class AnthropicAgent implements Model {
-  private readonly client: Partial<Pick<Anthropic, 'models'>> & Pick<Anthropic, 'messages'>
+  private client: (Partial<Pick<Anthropic, 'models'>> & Pick<Anthropic, 'messages'>) | undefined
 
   constructor(
     private readonly model: string,
     private readonly provider: Provider,
     options: AnthropicAgentOptions = {},
   ) {
-    this.client = options.client ?? new Anthropic({...createAnthropicOptions(provider), maxRetries: 0})
+    this.client = options.client
   }
 
   async getContextInfo(options: {signal?: AbortSignal} = {}): Promise<ModelContextInfo> {
     const metadata = metadataRecord(
       await readModelMetadata(
         async () =>
-          this.client.models?.retrieve(this.model, undefined, {maxRetries: 0, signal: options.signal, timeout: 5000}),
+          this.getClient().models?.retrieve(this.model, undefined, {
+            maxRetries: 0,
+            signal: options.signal,
+            timeout: 5000,
+          }),
         options.signal,
       ),
     )
@@ -121,12 +126,13 @@ export class AnthropicAgent implements Model {
         const startedAt = performance.now()
         let response
         try {
-          response = await this.client.messages.create(request, {signal: options?.signal})
+          response = await this.getClient().messages.create(request, {signal: options?.signal})
         } catch (error) {
+          const failure = redactProviderAuthenticationError(error, this.getProvider())
           emitModelFailure(
             options,
             {durationMs: performance.now() - startedAt, model: this.model, provider: this.getProvider()},
-            error,
+            failure,
           )
           const details = metadataRecord(error)
           const body = metadataRecord(metadataRecord(details.error).error)
@@ -137,7 +143,7 @@ export class AnthropicAgent implements Model {
             body.message.startsWith('prompt is too long')
           )
             throw new ContextOverflowError('Anthropic context window exceeded', {cause: error})
-          throw error
+          throw failure
         }
 
         const toolCalls = response.content
@@ -180,6 +186,11 @@ export class AnthropicAgent implements Model {
       },
       request,
     }
+  }
+
+  private getClient(): Partial<Pick<Anthropic, 'models'>> & Pick<Anthropic, 'messages'> {
+    this.client ??= new Anthropic({...createAnthropicOptions(this.provider), logLevel: 'off', maxRetries: 0})
+    return this.client
   }
 }
 

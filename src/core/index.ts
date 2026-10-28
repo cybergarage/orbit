@@ -147,6 +147,16 @@ export {Message, MessageType, UserMessage} from './message/index.js'
 export type {MessageOptions, MessagePayload} from './message/index.js'
 export {PrometheusOperationalMetrics} from './metrics.js'
 export type {OperationalMetrics} from './metrics.js'
+export {ModelCatalog} from './model-catalog.js'
+export type {
+  CatalogModel,
+  CatalogProvider,
+  CodingProvider,
+  ModelCatalogOptions,
+  ModelCatalogSnapshot,
+} from './model-catalog.js'
+export {ModelGateway, modelGatewayRoutes} from './model-gateway.js'
+export type {ModelGatewayOptions} from './model-gateway.js'
 export {AppleFoundationModelsAgent, AppleHelperClient} from './models/adapters/apple.js'
 export type {AppleAvailability, AppleFoundationModelsOptions, AppleHelperTransport} from './models/adapters/apple.js'
 export {resolveModelContextCapacity} from './models/context-capacity.js'
@@ -204,9 +214,12 @@ export type {
   ProcessorOutput,
   ProcessorType,
 } from './processor/index.js'
+
 export * from './projects/index.js'
+
 export * from './selection/index.js'
 export {createModelContextPolicy} from './session/context-policy.js'
+
 export {
   createSessionInformation,
   encodeSessionEntry,
@@ -224,7 +237,6 @@ export {
   SessionRepository,
   TurnPhase,
 } from './session/index.js'
-
 export type {
   AppendMessageOptions,
   CreateSessionOptions,
@@ -255,7 +267,6 @@ export type {
   SessionTurnContextEntry,
   SessionTurnEventEntry,
 } from './session/index.js'
-
 export {
   coordinationPaths,
   initializeSessionStorage,
@@ -265,6 +276,7 @@ export {
   resumeSessionStorage,
   retrySessionCleanup,
 } from './session/index.js'
+
 export type {
   OfflineStorageConditions,
   RegistrationResumeOptions,
@@ -272,13 +284,13 @@ export type {
   SessionWriterLease,
   StorageRegistrationInspection,
 } from './session/index.js'
-
 export {
   ContextBudgetError,
   estimateJSONRequest,
   migrateSessionTranscript,
   validateContextProfile,
 } from './session/index.js'
+
 export type {
   ContextPolicy,
   ContextPreparationEvent,
@@ -290,6 +302,7 @@ export type {
   SummaryFact,
   SummaryTest,
 } from './session/index.js'
+
 export {
   DEFAULT_PROJECTION_LIMITS,
   inspectTranscriptMigration,
@@ -297,9 +310,12 @@ export {
   parseInterruptionPolicy,
   VerifiedContextError,
 } from './session/index.js'
-
 export type {ContextProjectionEntry, InterruptionPolicy} from './session/index.js'
+
 export type {TranscriptMigrationInspection} from './session/index.js'
+
+export {modelSelectionSchema} from './session/model-selection.js'
+export type {ModelSelection} from './session/model-selection.js'
 
 export {
   loadWorkspaceSettings,
@@ -308,7 +324,6 @@ export {
   loadWorkspaceSettingsWithSourcesSync,
   mergeWorkspaceSettings,
 } from './settings.js'
-
 export type {
   McpServerSettings,
   McpSettings,
@@ -319,8 +334,8 @@ export type {
   WorkspaceSettings,
   WorkspaceSettingsSource,
 } from './settings.js'
-export * from './skills/index.js'
 
+export * from './skills/index.js'
 export {State} from './state.js'
 
 export {serializeMessage, ThreadEventType, ThreadManager, ThreadStatus} from './thread.js'
@@ -349,7 +364,6 @@ export type {
 
 export {GptTokenizer} from './tokenizer/index.js'
 export type {Tokenizer} from './tokenizer/index.js'
-
 export {
   BuiltinToolName,
   createBashTool,
@@ -395,6 +409,5 @@ export type {
   ToolSource,
   WriteToolInput,
 } from './tools/index.js'
-
 export {LocalWorkspaceLocator} from './workspace.js'
 export type {LocalWorkspaceLocatorOptions, WorkspaceLocator} from './workspace.js'

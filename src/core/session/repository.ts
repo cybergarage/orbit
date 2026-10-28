@@ -36,6 +36,7 @@ import {
 } from './coordination.js'
 import {SESSION_FORMAT_VERSION, SessionEntryType} from './entries.js'
 import {createSessionInformationFromSource} from './information.js'
+import {readModelSelection} from './model-selection.js'
 import {sessionFilePath} from './paths.js'
 import {SessionRecorder} from './recorder.js'
 import {Session} from './session.js'
@@ -212,6 +213,7 @@ export class SessionRepository {
             const parsed = parseSessionFile(source, file)
             return {
               ...summaryFromParsed(parsed, file),
+              ...readModelSelection(this.rootDir, parsed.header.id),
               archived: this.isArchived(parsed.header.id),
               ...this.getTitle(parsed.header.id),
             }
@@ -262,7 +264,10 @@ export class SessionRepository {
       formatVersion: parsed.header.version,
       journalRoot: this.journalRoot,
       messages,
-      metadata: metadataFromHeader(parsed.header, resolvedFile),
+      metadata: {
+        ...metadataFromHeader(parsed.header, resolvedFile),
+        ...readModelSelection(this.rootDir, parsed.header.id),
+      },
       recorder,
       titleReader: () => this.getTitle(parsed.header.id),
     })
@@ -273,6 +278,7 @@ export class SessionRepository {
     const parsed = parseSessionFile(fs.readFileSync(resolvedFile, 'utf8'), resolvedFile)
     return {
       ...summaryFromParsed(parsed, resolvedFile),
+      ...readModelSelection(this.rootDir, parsed.header.id),
       archived: this.isArchived(parsed.header.id),
       ...this.getTitle(parsed.header.id),
     }

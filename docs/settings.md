@@ -265,3 +265,16 @@ Ollama `num_ctx` and provides an accounting ceiling for cloud models.
 [Model context capacity](model-context-capacity.md) explains metadata discovery,
 precedence, unknown limits and the OpenAI catalog. This setting does not enable
 compaction; `contextPolicy` still controls budgeted preparation.
+
+## GUI model selection
+
+The composer model button opens an upward picker of combined provider / model pairs. Core discovers
+eligible Ollama, Claude (Anthropic), and OpenAI models; see [Model catalog](model-catalog.md). A selected conversation model
+is saved independently and takes effect on its next turn. A running turn keeps its
+original model. Discovery or validation failures preserve the current selection.
+Apple Foundation Models is text-only and is not offered for coding workflows.
+
+Settings provides a default model for new chats. This preference survives restart
+in the session profile; existing conversations retain their saved selection, and
+explicit project settings take precedence. An unavailable saved model is not
+silently replaced: select an available model before starting work.

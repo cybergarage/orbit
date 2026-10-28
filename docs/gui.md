@@ -284,3 +284,24 @@ Install the Playwright dependency under `e2e/coding-workflows/browser` first, or
 set `ORBIT_PLAYWRIGHT_MODULE` to an existing Playwright ES module. Optional
 `ORBIT_CHROMIUM_PATH` selects an existing browser and `ORBIT_GUI_EVIDENCE` selects
 the screenshot/result directory (default `/tmp/orbit-gui-details-evidence`).
+
+## GUI model selection
+
+The composer model button opens an upward picker of combined provider / model pairs. Core discovers
+eligible Ollama, Claude (Anthropic), and OpenAI models; see [Model catalog](model-catalog.md). A selected conversation model
+is saved independently and takes effect on its next turn. A running turn keeps its
+original model. Discovery or validation failures preserve the current selection.
+Apple Foundation Models is text-only and is not offered for coding workflows.
+
+Settings provides a default model for new chats. This preference survives restart
+in the session profile; existing conversations retain their saved selection, and
+explicit project settings take precedence. An unavailable saved model is not
+silently replaced: select an available model before starting work.
+
+The application service exposes `getModelChoices(threadId?)`,
+`selectThreadModel(threadId, {provider, model})`, `getDefaultModel()` and
+`updateDefaultModel({provider, model})`. The thread API also exposes
+`selectModel(threadId, {provider, model})` for hosts that own availability policy.
+Candidate preparation and durable persistence complete before a successful response.
+GUI transports use `GET /api/models`, `PUT /api/threads/:id/model`, and
+`GET`/`PUT /api/default-model`, with the existing token and origin checks.

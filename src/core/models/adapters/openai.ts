@@ -30,6 +30,7 @@ import {formatOperatorName, OperatorType} from '../../processor/index.js'
 import {metadataRecord} from '../context-capacity.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
 import {freezeModelRequest} from '../prepared.js'
+import {redactProviderAuthenticationError} from '../provider-errors.js'
 import {openAIContextInfo} from './openai-context.js'
 import {getToolCalls, getToolResult, stringifyToolResult} from './tools.js'
 
@@ -38,14 +39,14 @@ export interface OpenAIAgentOptions {
 }
 
 export class OpenAIAgent implements Model {
-  private readonly client: Pick<OpenAI, 'chat'>
+  private client: Pick<OpenAI, 'chat'> | undefined
 
   constructor(
     private readonly model: string,
     private readonly provider: Provider,
     options: OpenAIAgentOptions = {},
   ) {
-    this.client = options.client ?? new OpenAI({...createOpenAIOptions(provider), maxRetries: 0})
+    this.client = options.client
   }
 
   async getContextInfo(): Promise<ModelContextInfo> {
@@ -64,11 +65,11 @@ export class OpenAIAgent implements Model {
     return this.provider.getName()
   }
 
-  // Request mapping and optional provider metadata are kept together at the adapter boundary.
-
   async invoke(messages: Message[], options?: Partial<ModelInvokeOptions>): Promise<Message> {
     return this.prepare(messages, options).invoke()
   }
+
+  // Request mapping and optional provider metadata are kept together at the adapter boundary.
 
   prepare(messages: Message[], options?: Partial<ModelInvokeOptions>): PreparedModelInvocation {
     const request = freezeModelRequest(
@@ -100,17 +101,18 @@ export class OpenAIAgent implements Model {
         const startedAt = performance.now()
         let response
         try {
-          response = await this.client.chat.completions.create(request, {signal: options?.signal})
+          response = await this.getClient().chat.completions.create(request, {signal: options?.signal})
         } catch (error) {
+          const failure = redactProviderAuthenticationError(error, this.getProvider())
           emitModelFailure(
             options,
             {durationMs: performance.now() - startedAt, model: this.model, provider: this.getProvider()},
-            error,
+            failure,
           )
           const details = metadataRecord(error)
           if (details.status === 400 && details.code === 'context_length_exceeded')
             throw new ContextOverflowError('OpenAI context window exceeded', {cause: error})
-          throw error
+          throw failure
         }
 
         const choice = response.choices[0]
@@ -157,6 +159,11 @@ export class OpenAIAgent implements Model {
       },
       request,
     }
+  }
+
+  private getClient(): Pick<OpenAI, 'chat'> {
+    this.client ??= new OpenAI({...createOpenAIOptions(this.provider), logLevel: 'off', maxRetries: 0})
+    return this.client
   }
 }
 

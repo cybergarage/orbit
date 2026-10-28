@@ -514,6 +514,15 @@ export class RunSupervisor {
     return this.runs.get(id)?.context.snapshot() ?? this.recovered.get(id)?.getSnapshot()
   }
 
+  isBusy(): boolean {
+    return (
+      this.closed ||
+      this.admitting ||
+      this.admissionFailed ||
+      [...this.runs.values()].some(({context}) => !context.result || !context.released || context.recordingFailed)
+    )
+  }
+
   async reconcileRun(id: string, confirmation: Parameters<typeof recordReconciliation>[2]): Promise<void> {
     const context = this.runs.get(id)?.context
     if (!context?.result || context.pending.size > 0 || context.cleanupErrors.length > 0 || context.recordingFailed)
