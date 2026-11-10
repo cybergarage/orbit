@@ -131,6 +131,53 @@ checkpoints. Existing readers must reject unsupported formats. Finalize the
 schema, migration and reader behavior in this record before implementing reset
 strategies. The first extraction can ship independently with the old format.
 
+### Reset format and action-mode contract — 2026-11-11
+
+The author requested the EoCC/SAC implementation stage. Finalize the reset
+contract within this accepted decision before implementation:
+
+- Use compaction `projectionVersion: 4` within transcript v2/v3. Existing readers
+  reject this unsupported projection version; v1 still requires its existing
+  offline migration. Do not reinterpret old checkpoints or rewrite transcripts.
+- `firstRetainedId` is null for reset checkpoints. `prefixEndId` is the last
+  consumed canonical message and equals `sourceHeadId` at commit. The digest
+  covers the entire consumed prefix. Later messages form the raw suffix.
+- `retainedUserIds` lists every consumed canonical user message in source order.
+  Replay includes each once, preserving the original task and subsequent updates;
+  system, project and active skill context remain owned by normal assembly.
+- Record strategy/algorithm IDs, revision 1 and resolved budget parameters under
+  `components`, plus `summarySchema: context-summary-v1`. Both supplied algorithms
+  consume this same cumulative schema. Replay validates data without resolving
+  the producing implementation; unknown future summary schemas fail closed.
+- Preserve full tool-group, interruption-projection and observation checks. New
+  reset checkpoints can grow for short SAC actions but must fit the target.
+  Provider overflow recovery always requires strict size reduction.
+- Supply `eocc-v1` and `sac-v1` strategies, independently combinable with
+  `structured-summary-v1` and `handoff-summary-v1`. Handoff uses a bounded,
+  tool-free cumulative summary with an original prompt emphasizing progress,
+  failed approaches and next steps. It is an Orbit adaptation of Appendix G,
+  not a byte-for-byte paper reproduction. It never splits one handoff into
+  independently selected history windows; oversize inputs fail explicitly.
+- `executionActionMode: single` is an independent workspace setting, with an
+  `execution.actionMode` Agent override. Default `multiple` preserves current
+  dispatch. SAC requires `single` before Run admission. Agent rejects a response
+  containing multiple tool calls before storing or dispatching it, charges its
+  model request and requested tools, and terminates the Run without retrying an
+  environment action. All comparison strategies can use this same action mode.
+- SAC resets after a completed action/result and before the next worker request,
+  including after resume; no additional worker call uses that raw action. A
+  stopped Run need not generate a recap until a subsequent Run resumes work.
+  Invalid/denied tool results are also folded into state before further work.
+- Total serialized summary requests and outputs use the existing profile window,
+  safety margin and summary reserve. Threshold configurations leave headroom;
+  unexpectedly large tool output fails when a handoff cannot fit. Neither reset
+  strategy permits full-history fallback after a failed handoff.
+
+The pinned Codex/Pi reconstruction lessons above still apply; their raw-suffix
+semantics are not used for reset projections. Benchmark adapter work and live
+quality/cost qualification remain separate follow-up stages. Keep the default
+unchanged and do not report deterministic fixture tests as benchmark results.
+
 ### Failure behavior
 
 Retain the current strategy's fallback rules during extraction. Experimental
