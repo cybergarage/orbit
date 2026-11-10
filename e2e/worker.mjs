@@ -17,7 +17,10 @@ import {
 } from '../dist/index.js'
 import {compactionMetrics, experimentPolicy} from './compaction-config.mjs'
 
-const config = JSON.parse(fs.readFileSync(process.argv[2] ?? '/input/config.json', 'utf8'))
+const configFile = process.argv[2] ?? '/input/config.json'
+if (!['/input/config.json', '/logs/agent/orbit-config.json'].includes(configFile))
+  throw new Error('Unsupported evaluation configuration path')
+const config = JSON.parse(fs.readFileSync(configFile, 'utf8'))
 const workspace = config.workspace ?? '/workspace'
 const output = config.outputDirectory ?? '/output'
 fs.mkdirSync(output, {recursive: true})
@@ -50,11 +53,12 @@ const model = new OllamaAgent(
   {getContextWindow: () => config.options.num_ctx, getName: () => 'ollama'},
   {client},
 )
-const contextPolicy = config.compactionArm
-  ? experimentPolicy({arm: config.compactionArm, model: config.model, ...config.compactionBudgets})
-  : config.contextPolicy === 'budgeted' || config.strategy.startsWith('book-')
-    ? await createModelContextPolicy(model, {outputReserve: config.options.num_predict})
-    : undefined
+let contextPolicy
+if (config.compactionArm) {
+  contextPolicy = experimentPolicy({arm: config.compactionArm, model: config.model, ...config.compactionBudgets})
+} else if (config.contextPolicy === 'budgeted' || config.strategy.startsWith('book-')) {
+  contextPolicy = await createModelContextPolicy(model, {outputReserve: config.options.num_predict})
+}
 if (contextPolicy?.mode === 'budgeted' && config.contextTriggerRatio !== undefined) {
   const {outputReserve, safetyMargin, window} = contextPolicy.profile
   const inputBudget = window - outputReserve - safetyMargin

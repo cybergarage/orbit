@@ -8,7 +8,7 @@ import path from 'node:path'
 import {command, digest, docker, repo, writeJSON} from '../host.mjs'
 import {sourceFingerprint} from '../source-fingerprint.mjs'
 
-const output = path.resolve(process.argv[2] ?? 'tmp/e2e/terminal-bench/bundle')
+const output = path.join(repo, 'tmp/e2e/terminal-bench/bundle')
 await fs.mkdir(output, {recursive: true})
 const image = 'orbit-e2e:terminal-bench'
 await docker(['build', '--platform', 'linux/amd64', '-f', 'e2e/Dockerfile', '-t', image, '.'], {
@@ -29,7 +29,7 @@ try {
     imageId,
     'tar',
     '-czf',
-    '/tmp/orbit-bundle.tar.gz',
+    '/opt/orbit/orbit-bundle.tar.gz',
     '-C',
     '/opt/orbit',
     'dist',
@@ -41,7 +41,7 @@ try {
     'bin/node',
   ])
   await docker(['start', '-a', name], {timeoutMs: 300_000})
-  await docker(['cp', `${name}:/tmp/orbit-bundle.tar.gz`, path.join(output, 'orbit-bundle.tar.gz')], {
+  await docker(['cp', `${name}:/opt/orbit/orbit-bundle.tar.gz`, path.join(output, 'orbit-bundle.tar.gz')], {
     timeoutMs: 300_000,
   })
 } finally {

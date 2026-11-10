@@ -10,6 +10,9 @@ from harbor.environments.base import BaseEnvironment
 from harbor.models.agent.context import AgentContext
 
 
+RESULT_FILE = "result.json"
+
+
 class OrbitAgent(BaseInstalledAgent):
     skip_model_parsing = True
 
@@ -33,12 +36,12 @@ class OrbitAgent(BaseInstalledAgent):
             raise ValueError("Orbit bundle digest mismatch")
 
     async def install(self, environment: BaseEnvironment) -> None:
-        await environment.upload_file(self.bundle, "/tmp/orbit-bundle.tar.gz")
+        await environment.upload_file(self.bundle, "/installed-agent/orbit-bundle.tar.gz")
         result = await self.exec_as_root(environment, command=(
             "test \"$(uname -m)\" = x86_64 && "
-            f"echo {shlex.quote(self.bundle_sha256 + '  /tmp/orbit-bundle.tar.gz')} | sha256sum -c - && "
+            f"echo {shlex.quote(self.bundle_sha256 + '  /installed-agent/orbit-bundle.tar.gz')} | sha256sum -c - && "
             "mkdir -p /installed-agent/orbit && "
-            "tar -xzf /tmp/orbit-bundle.tar.gz -C /installed-agent/orbit && "
+            "tar -xzf /installed-agent/orbit-bundle.tar.gz -C /installed-agent/orbit && "
             "/installed-agent/orbit/bin/node --version"
         ))
         if result.return_code != 0:
@@ -71,11 +74,11 @@ class OrbitAgent(BaseInstalledAgent):
         if result.return_code != 0:
             raise RuntimeError("Orbit worker exited without a normal result")
         # Harbor only invokes its post-run hook for an entirely empty context.
-        await environment.download_file(str(self.environment_logs_dir / "result.json"), self.logs_dir / "result.json")
+        await environment.download_file(str(self.environment_logs_dir / RESULT_FILE), self.logs_dir / RESULT_FILE)
         self.populate_context_post_run(context)
 
     def populate_context_post_run(self, context: AgentContext) -> None:
-        result_path = self.logs_dir / "result.json"
+        result_path = self.logs_dir / RESULT_FILE
         if not result_path.exists():
             return
         result = json.loads(result_path.read_text())

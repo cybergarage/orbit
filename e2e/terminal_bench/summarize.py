@@ -5,6 +5,12 @@ import json
 from pathlib import Path
 
 
+def elapsed_seconds(timing):
+    if not timing.get("started_at") or not timing.get("finished_at"):
+        return None
+    return (datetime.fromisoformat(timing["finished_at"]) - datetime.fromisoformat(timing["started_at"])).total_seconds()
+
+
 def summarize(config_path):
     config = json.loads(Path(config_path).read_text())
     directory = Path(config["jobs_dir"]) / config["job_name"]
@@ -25,9 +31,7 @@ def summarize(config_path):
         worker = result.get("worker", {})
         runtime = worker.get("runtime") or metadata.get("orbit_runtime") or {}
         timing = result.get("agent_execution") or {}
-        seconds = None
-        if timing.get("started_at") and timing.get("finished_at"):
-            seconds = (datetime.fromisoformat(timing["finished_at"]) - datetime.fromisoformat(timing["started_at"])).total_seconds()
+        seconds = elapsed_seconds(timing)
         rows.append({
             "job": config["job_name"], "task": Path(task["path"]).name,
             "arm": agent.get("kwargs", {}).get("arm", agent.get("name")),
@@ -48,5 +52,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     rows = [row for config in args.configs for row in summarize(config)]
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps({"plannedTrials": len(rows), "trials": rows}, indent=2) + "\n")
+    output = args.output.resolve()
+    output.relative_to((Path(__file__).resolve().parents[2] / "tmp/e2e/terminal-bench").resolve())
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps({"plannedTrials": len(rows), "trials": rows}, indent=2) + "\n")

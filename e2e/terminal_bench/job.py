@@ -51,5 +51,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     config = make_job(args.dataset.resolve(), args.bundle.resolve(), args.name, args.task,
                       args.arm, args.model, args.seed, args.elapsed, args.control)
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(config, indent=2) + "\n")
+    output = args.output.resolve()
+    output.relative_to((ROOT / "tmp/e2e/terminal-bench").resolve())
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(config, indent=2) + "\n")
