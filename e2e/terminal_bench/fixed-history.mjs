@@ -75,7 +75,7 @@ if (estimate.tokens < policy.profile.trigger || estimate.tokens > 28_000)
 if (flags.includes('--run')) {
   await writeJSON(path.join(out, 'model.json'), await ollamaMetadata(modelName))
   const rows = []
-  for (const arm of ['suffix', 'suffix-handoff', 'eocc-structured', 'eocc', 'sac-structured', 'sac']) {
+  async function evaluateArm(arm) {
     const session = new Session({formatVersion: 2})
     session.appendMessages(messages)
     const release = session.acquireManagedLease()
@@ -135,4 +135,9 @@ if (flags.includes('--run')) {
   }
 } else {
   console.log(JSON.stringify({tokens: estimate.tokens}))
+  // Keep local inference serial; concurrent arms would contend for the same model.
+  await ['suffix', 'suffix-handoff', 'eocc-structured', 'eocc', 'sac-structured', 'sac'].reduce(
+    (pending, arm) => pending.then(() => evaluateArm(arm)),
+    Promise.resolve(),
+  )
 }
