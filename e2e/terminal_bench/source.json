@@ -1,0 +1,10 @@
+{
+  "harborVersion": "0.25.0",
+  "harborCommit": "fdba28fc411e47e8765420a1a063b4918fce3def",
+  "dataset": "terminal-bench-2.1",
+  "datasetRepository": "https://github.com/harbor-framework/terminal-bench-2-1.git",
+  "datasetCommit": "12b7565679ce5006230b820666353673a133db93",
+  "smokeTasks": ["fix-git", "regex-log"],
+  "heldOutTasks": ["cancel-async-tasks"],
+  "platform": "linux/amd64"
+}

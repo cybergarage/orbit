@@ -13,3 +13,4 @@
 !e2e/orbit-test.py
 !e2e/coding-workflows
 !e2e/coding-workflows/**
+!e2e/compaction-config.mjs
