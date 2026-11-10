@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-11-11
-decision-date: null
+decision-date: 2026-11-11
 implementation-status: not-started
 implementation-completed-date: null
 implementation-commits: []
@@ -21,7 +21,7 @@ Tracking issue — [#22](https://github.com/cybergarage/orbit/issues/22).
 
 ## Decision
 
-**Proposed.** Introduce independent internal interfaces for compaction strategy
+**Accepted on 2026-11-11.** Introduce independent internal interfaces for compaction strategy
 and compaction algorithm, composed by a context coordinator. Deliver the current
 strategy/algorithm pair first, then opt-in EoCC and SAC experiments.
 
