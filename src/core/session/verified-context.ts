@@ -9,7 +9,13 @@ import type {Session} from './session.js'
 import {canonicalJSON} from '../execution/journal.js'
 import {Message, MessageType} from '../message/index.js'
 import {validateSkillEntries} from '../skills/record.js'
-import {checkpointPrefix, persistedContextMessage, sourceDigest, validateCompactionEntries} from './compaction.js'
+import {
+  checkpointPrefix,
+  checkpointSuffix,
+  persistedContextMessage,
+  sourceDigest,
+  validateCompactionEntries,
+} from './compaction.js'
 import {SessionContextBuilder} from './context-builder.js'
 import {
   INTERRUPTED_TOOL_NOTICE,
@@ -191,7 +197,7 @@ export async function prepareInterruptedContext(
   }
 
   const checkpoint = session.getCompaction()
-  const selected = checkpoint ? all.slice(all.findIndex((m) => m.id === checkpoint.firstRetainedId)) : all
+  const selected = checkpoint ? checkpointSuffix(checkpoint, session.getConversationMessages(), all) : all
   const summary = checkpoint ? checkpointPrefix(checkpoint, all) : []
   const notices = [
     new Message(MessageType.User, {

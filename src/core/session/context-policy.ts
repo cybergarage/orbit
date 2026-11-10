@@ -17,7 +17,13 @@ import {resolveModelContextCapacity} from '../models/context-capacity.js'
 import {isOllamaTransportFailure} from '../models/termination.js'
 import {GptTokenizer} from '../tokenizer/index.js'
 import {resolveCompactionComponents, validateCompactionComponents} from './compaction-components.js'
-import {checkpointPrefix, persistedContextMessage, sourceDigest, validateToolGroups} from './compaction.js'
+import {
+  checkpointCut,
+  checkpointPrefix,
+  persistedContextMessage,
+  sourceDigest,
+  validateToolGroups,
+} from './compaction.js'
 import {SessionContextBuilder} from './context-builder.js'
 import {ContextBudgetError} from './context-error.js'
 import {createSummaryCallService} from './summary-call-service.js'
@@ -105,6 +111,7 @@ export function validateContextProfile(profile: ContextProfile, model: Model): n
 }
 
 interface PreparationOptions {
+  actionMode?: 'multiple' | 'single'
   model: Model
   modelOptions: Partial<ModelInvokeOptions>
   onEvent?: (event: ContextPreparationEvent) => void
@@ -181,6 +188,8 @@ export async function prepareSessionContext(
   components: CompactionComponents = resolveCompactionComponents(options.policy),
 ): Promise<PreparedModelInvocation> {
   validateCompactionComponents(components)
+  if (components.strategy.requiresSingleAction && options.actionMode !== 'single')
+    throw new ContextBudgetError('single-action-mode-required')
   const {model, policy, run, session} = options
   const profile = structuredClone(policy.profile)
   validateContextProfile(profile, model)
@@ -256,13 +265,14 @@ export async function prepareSessionContext(
   }
 
   const activeCheckpoint = session.getCompaction()
-  const activeCut = activeCheckpoint ? all.findIndex((message) => message.id === activeCheckpoint.firstRetainedId) : 0
+  const activeCut = activeCheckpoint ? checkpointCut(activeCheckpoint, all) : 0
   const ordinary = activeCheckpoint
     ? await withObservations([...options.prefix, ...context.messages], activeCut, budget, true)
     : prepareRequest(options, [...options.prefix, ...context.messages])
   const before = checkedEstimate(ordinary, options)
   if (
     !components.strategy.shouldCompact({
+      completedAction: all.slice(activeCut).some((message) => message.type === MessageType.Tool),
       recovery: Boolean(options.recoveryRequest),
       tokens: before.tokens,
       trigger: profile.trigger,
@@ -276,7 +286,7 @@ export async function prepareSessionContext(
   )
     throw new ContextBudgetError('unresolved-execution-prevents-compaction')
   const previousValidationFailure = validationFailures.get(run)
-  if (previousValidationFailure && !options.recoveryRequest && before.tokens <= budget) {
+  if (!components.strategy.reset && previousValidationFailure && !options.recoveryRequest && before.tokens <= budget) {
     diagnostic(options, 'context.compaction.skipped', {
       beforeTokens: before.tokens,
       reason: previousValidationFailure,
@@ -286,7 +296,7 @@ export async function prepareSessionContext(
 
   const protectedEntry = session.getEntries().find((entry) => entry.type === 'message' && entry.turnId === run.id)
   const previous = session.getCompaction()
-  const previousCut = previous ? all.findIndex((message) => message.id === previous.firstRetainedId) : 0
+  const previousCut = previous ? checkpointCut(previous, all) : 0
   const estimateRetained = (cut: number, retained: Message[]) =>
     checkedEstimate(
       prepareRequest(options, [
@@ -316,7 +326,7 @@ export async function prepareSessionContext(
 
   // Verified projections can contain synthetic results; validate boundaries by ID, not offset.
   const projected = options.verifiedContext?.all ?? all
-  const boundary = projected.findIndex((message) => message.id === all[cut]?.id)
+  const boundary = cut === all.length ? projected.length : projected.findIndex((message) => message.id === all[cut]?.id)
   validateToolGroups(projected.slice(0, boundary))
   validateToolGroups(projected.slice(boundary))
 
@@ -365,13 +375,42 @@ export async function prepareSessionContext(
       beforeTokens: before.tokens,
       digestVersion: 'sha256-json-v1',
       estimatorRevision: before.revision,
-      firstRetainedId: all[cut].id,
+      firstRetainedId: components.strategy.reset ? null : all[cut].id,
       id: randomUUID(),
       model: model.getModel(),
       prefixEndId: all[cut - 1].id,
       previousId: previous?.id ?? null,
       profileRevision: profile.revision,
-      projectionVersion: retained.length > 0 ? 3 : options.verifiedContext?.projectionIds.length ? 2 : 1,
+      projectionVersion: components.strategy.reset
+        ? 4
+        : retained.length > 0
+          ? 3
+          : options.verifiedContext?.projectionIds.length
+            ? 2
+            : 1,
+      ...(components.strategy.reset
+        ? {
+            components: {
+              algorithm: {
+                id: components.algorithm.id,
+                parameters: {
+                  outputReserve: profile.outputReserve,
+                  safetyMargin: profile.safetyMargin,
+                  summaryOutput: profile.summaryOutput,
+                  templateOverhead: profile.templateOverhead,
+                  window: profile.window,
+                },
+                revision: 1 as const,
+              },
+              strategy: {
+                id: components.strategy.id,
+                parameters: {target: profile.target, trigger: profile.trigger},
+                revision: 1 as const,
+              },
+              summarySchema: 'context-summary-v1' as const,
+            },
+          }
+        : {}),
       ...(retained.length > 0 ? {retainedUserIds: retained.map((message) => message.id)} : {}),
       ...(options.verifiedContext?.projectionIds.length ? {projectionIds: options.verifiedContext.projectionIds} : {}),
       provider: model.getProvider(),
@@ -397,7 +436,11 @@ export async function prepareSessionContext(
     const recoveryCeiling = options.recoveryRequest
       ? checkedEstimate({request: options.recoveryRequest}, options).tokens
       : before.tokens
-    if (after.tokens >= Math.min(before.tokens, recoveryCeiling) || after.tokens > profile.target)
+    if (
+      ((!components.strategy.reset || options.recoveryRequest) &&
+        after.tokens >= Math.min(before.tokens, recoveryCeiling)) ||
+      after.tokens > profile.target
+    )
       throw new ContextBudgetError('summary-does-not-fit-target')
     candidate.afterTokens = after.tokens
   } catch (error) {
@@ -405,6 +448,7 @@ export async function prepareSessionContext(
     const reason = error instanceof ContextBudgetError ? error.code : 'summary-failed'
     if (reason.startsWith('summary-invalid-')) validationFailures.set(run, reason)
     const fallback = !(
+      components.strategy.reset ||
       options.recoveryRequest ||
       hasPendingEffects(run) ||
       before.tokens > budget ||

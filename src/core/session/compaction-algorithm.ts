@@ -18,6 +18,7 @@ export interface CompactionAlgorithmServices {
   calls: SummaryCallService
   diagnostic(type: string, data: Record<string, unknown>, level?: 'error' | 'info'): void
   estimate(request: PreparedModelInvocation): number
+  handoff?: boolean
   hasVerifiedProjection: boolean
   prepare(messages: Message[], outputLimit?: number): PreparedModelInvocation
   profile: ContextProfile
@@ -40,6 +41,13 @@ export const structuredSummaryAlgorithm: CompactionAlgorithm = {
   summarize: summarizeEligible,
   summarySchema: 'context-summary-v1',
   supportsCumulativeUpdates: true,
+}
+
+export const handoffSummaryAlgorithm: CompactionAlgorithm = {
+  ...structuredSummaryAlgorithm,
+  id: 'handoff-summary-v1',
+  summarize: (services, eligible, originals, previous) =>
+    summarizeEligible({...services, handoff: true}, eligible, originals, previous),
 }
 
 function parseSummaryResponse(content: string): unknown {
@@ -108,6 +116,9 @@ function summaryRequest(
   const prompt = new Message(MessageType.User, {
     content:
       SUMMARY_INSTRUCTIONS +
+      (options.handoff
+        ? '\nHANDOFF: Prepare the state needed to continue after history is reset. Update the objective, observed facts, saved edits and verification results from the latest action. Record unsuccessful approaches and why they failed in uncertainties; preserve unresolved obstacles and the next concrete step in unfinished. Distinguish completed work from intended work. Retain exact paths and relevant observed values, and cite canonical sources. Do not resume task execution.'
+        : '') +
       '\nOUTPUT_CONTRACT: ' +
       JSON.stringify(SUMMARY_OUTPUT_CONTRACT) +
       '. Include all six arrays; do not return all arrays empty. At least one item must summarize actual source evidence.' +
@@ -195,7 +206,17 @@ async function summarizeEligible(
   originals: ReturnType<typeof persistedContextMessage>[],
   previous: ContextSummary | null,
 ): Promise<{summary: ContextSummary; usage?: Record<string, number>}> {
-  const originalIds = new Set(originals.map((message) => message.id))
+  const canonicalIds = new Set(originals.map((message) => message.id))
+  // A handoff carries only live state references, not an ever-growing list of
+  // every historical ID. The previous summary already carries consumed state.
+  if (options.handoff) eligible = eligible.filter((message) => canonicalIds.has(message.id))
+  const originalIds = options.handoff
+    ? new Set(
+        [...eligible.map((message) => message.id), ...(previous ? summarySourceIds(previous) : [])].filter((id) =>
+          canonicalIds.has(id),
+        ),
+      )
+    : canonicalIds
   const inputLimit = options.profile.window - options.profile.summaryOutput - options.profile.safetyMargin
   const compactPrevious = previous ? compactSummary(previous) : null
   const sourceTarget = options.profile.summaryOutput * 2
@@ -321,6 +342,11 @@ async function summarizeEligible(
   }
 
   const oneShot = summaryRequest(options, eligible, compactPrevious, {allowedIds: originalIds})
+  if (options.handoff) {
+    if (options.estimate(oneShot) > inputLimit) throw new ContextBudgetError('compaction-input-exceeds-budget')
+    return invokeSource(oneShot, eligible, compactPrevious, originalIds, 'full')
+  }
+
   if (
     options.estimate(oneShot) <= inputLimit &&
     (options.hasVerifiedProjection || groupCount <= 8 || fitsSourceTarget(oneShot, compactPrevious, originalIds))

@@ -30,16 +30,31 @@ export interface ContextSummary {
 export interface SessionCompactionEntry {
   afterTokens: number
   beforeTokens: number
+  components?: {
+    algorithm: {
+      id: string
+      parameters: {
+        outputReserve: number
+        safetyMargin: number
+        summaryOutput: number
+        templateOverhead: number
+        window: number
+      }
+      revision: 1
+    }
+    strategy: {id: string; parameters: {target: number; trigger: number}; revision: 1}
+    summarySchema: 'context-summary-v1'
+  }
   digestVersion: 'sha256-json-v1'
   estimatorRevision: string
-  firstRetainedId: string
+  firstRetainedId: null | string
   id: string
   model: string
   prefixEndId: string
   previousId: null | string
   profileRevision: string
   projectionIds?: string[]
-  projectionVersion: 1 | 2 | 3
+  projectionVersion: 1 | 2 | 3 | 4
   provider: string
   retainedUserIds?: string[]
   sessionId: string
@@ -97,7 +112,6 @@ export function parseCompaction(value: unknown): SessionCompactionEntry {
     'sessionId',
     'sourceHeadId',
     'prefixEndId',
-    'firstRetainedId',
     'sourceDigest',
     'model',
     'provider',
@@ -108,11 +122,34 @@ export function parseCompaction(value: unknown): SessionCompactionEntry {
     string(entry[key])
   if (
     entry.type !== 'compaction' ||
-    ![1, 2, 3].includes(Number(entry.projectionVersion)) ||
+    ![1, 2, 3, 4].includes(entry.projectionVersion as number) ||
     entry.digestVersion !== 'sha256-json-v1' ||
     (entry.previousId !== null && typeof entry.previousId !== 'string')
   )
     throw new Error('Invalid compaction format')
+  if (entry.projectionVersion === 4) {
+    if (entry.firstRetainedId !== null) throw new Error('Reset checkpoint must have an empty raw suffix')
+    const components = record(entry.components)
+    if (components.summarySchema !== 'context-summary-v1') throw new Error('Unsupported checkpoint summary schema')
+    for (const key of ['strategy', 'algorithm']) {
+      const component = record(components[key])
+      string(component.id)
+      if (component.revision !== 1) throw new Error('Unsupported compaction component revision')
+      const parameters = record(component.parameters)
+      for (const field of key === 'strategy'
+        ? ['target', 'trigger']
+        : ['summaryOutput', 'outputReserve', 'window', 'safetyMargin', 'templateOverhead'])
+        if (
+          !Number.isSafeInteger(parameters[field]) ||
+          (parameters[field] as number) < (['safetyMargin', 'templateOverhead'].includes(field) ? 0 : 1)
+        )
+          throw new Error('Invalid compaction component parameters')
+    }
+  } else {
+    string(entry.firstRetainedId)
+    if (entry.components !== undefined) throw new Error('Unexpected compaction components')
+  }
+
   if (entry.projectionVersion === 1 && entry.projectionIds !== undefined)
     throw new Error('Unexpected checkpoint projection references')
   if (
@@ -123,7 +160,7 @@ export function parseCompaction(value: unknown): SessionCompactionEntry {
       new Set(entry.projectionIds).size !== entry.projectionIds.length)
   )
     throw new Error('Missing checkpoint projection references')
-  if (entry.projectionVersion === 3) {
+  if (entry.projectionVersion === 3 || entry.projectionVersion === 4) {
     if (
       !Array.isArray(entry.retainedUserIds) ||
       entry.retainedUserIds.length === 0 ||
@@ -137,7 +174,7 @@ export function parseCompaction(value: unknown): SessionCompactionEntry {
   for (const key of ['beforeTokens', 'afterTokens'])
     if (!Number.isSafeInteger(entry[key]) || (entry[key] as number) < 0)
       throw new Error('Invalid compaction token count')
-  if ((entry.afterTokens as number) >= (entry.beforeTokens as number))
+  if (entry.projectionVersion !== 4 && (entry.afterTokens as number) >= (entry.beforeTokens as number))
     throw new Error('Compaction did not reduce input')
   if (
     entry.summaryUsage !== undefined &&
@@ -222,8 +259,8 @@ export function validateCompactionEntries(
     if (entry.type === 'message') messages.push(entry.message)
     if (entry.type !== 'compaction') continue
     parseCompaction(entry)
-    const cut = messages.findIndex((message) => message.id === entry.firstRetainedId)
-    const oldCut = previous ? messages.findIndex((message) => message.id === previous?.firstRetainedId) : 0
+    const cut = checkpointCut(entry, messages)
+    const oldCut = previous ? checkpointCut(previous, messages) : 0
     if (
       ![2, 3].includes(version) ||
       entry.sessionId !== sessionId ||
@@ -231,7 +268,8 @@ export function validateCompactionEntries(
       entry.previousId !== (previous?.id ?? null) ||
       entry.sourceHeadId !== messages.at(-1)?.id ||
       cut <= oldCut ||
-      (entry.projectionVersion !== 3 && messages[cut]?.type !== 'user') ||
+      (entry.projectionVersion < 3 && messages[cut]?.type !== 'user') ||
+      (entry.projectionVersion === 4 && cut !== messages.length) ||
       entry.prefixEndId !== messages[cut - 1]?.id
     )
       throw new Error('Invalid checkpoint boundary or predecessor')
@@ -255,13 +293,18 @@ export function validateCompactionEntries(
       projected = projectInterruptedMessages(prefixEntries, projection.calls)
     }
 
-    if (entry.projectionVersion === 3) {
-      const expected = currentTurnUsers(entries.slice(0, entries.indexOf(entry)), messages, cut).map(
-        (message) => message.id,
-      )
+    if (entry.projectionVersion === 3 || entry.projectionVersion === 4) {
+      const expected = (
+        entry.projectionVersion === 4
+          ? messages.slice(0, cut).filter((message) => message.type === 'user')
+          : currentTurnUsers(entries.slice(0, entries.indexOf(entry)), messages, cut)
+      ).map((message) => message.id)
       if (JSON.stringify(entry.retainedUserIds) !== JSON.stringify(expected))
         throw new Error('Checkpoint does not retain original current-turn instructions')
-      const boundary = projected.findIndex((message) => message.id === entry.firstRetainedId)
+      const boundary =
+        entry.projectionVersion === 4
+          ? projected.length
+          : projected.findIndex((message) => message.id === entry.firstRetainedId)
       if (boundary === -1) throw new Error('Missing projected checkpoint boundary')
       validateToolGroups(projected.slice(0, boundary))
       validateToolGroups(projected.slice(boundary))
@@ -273,6 +316,29 @@ export function validateCompactionEntries(
   }
 
   return previous
+}
+
+/** Reset boundaries are consumed-through positions, never a sentinel message ID. */
+export function checkpointCut(checkpoint: SessionCompactionEntry, all: readonly {id: string}[]): number {
+  const index = all.findIndex(
+    (message) =>
+      message.id === (checkpoint.projectionVersion === 4 ? checkpoint.prefixEndId : checkpoint.firstRetainedId),
+  )
+  if (index === -1) throw new Error('Missing checkpoint boundary')
+  return index + (checkpoint.projectionVersion === 4 ? 1 : 0)
+}
+
+/** Locate the suffix in derived history by its first unconsumed canonical ID. */
+export function checkpointSuffix(
+  checkpoint: SessionCompactionEntry,
+  source: readonly Message[],
+  projected: readonly Message[] = source,
+): Message[] {
+  const first = source[checkpointCut(checkpoint, source)]
+  if (!first) return []
+  const index = projected.findIndex((message) => message.id === first.id)
+  if (index === -1) throw new Error('Missing projected checkpoint boundary')
+  return projected.slice(index)
 }
 
 /** Original user inputs from the active Run, including all Graph stage inputs. */

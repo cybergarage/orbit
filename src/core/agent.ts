@@ -93,7 +93,7 @@ import {
   prepareInterruptedContext,
   reverifyInterruptedContext,
 } from './session/verified-context.js'
-import {loadWorkspaceSettingsSync, mergeWorkspaceSettings} from './settings.js'
+import {loadWorkspaceSettingsSync, mergeWorkspaceSettings, parseExecutionActionMode} from './settings.js'
 import {normalizeSkillSelections} from './skills/index.js'
 import {skillPrefix} from './skills/record.js'
 import {State} from './state.js'
@@ -122,6 +122,7 @@ export interface AgentInvokeOptions extends OperatorOptions {
 }
 
 interface ManagedInvokeOptions extends AgentInvokeOptions {
+  actionMode?: 'multiple' | 'single'
   activeSkills?: SkillSnapshot[]
   compactionComponents?: CompactionComponents
   contextPolicy?: ContextPolicy
@@ -135,6 +136,7 @@ interface ManagedInvokeOptions extends AgentInvokeOptions {
 
 /** Configuration shared by all managed Runs created by an Agent. */
 export interface AgentExecutionOptions {
+  actionMode?: 'multiple' | 'single'
   allowLegacyTools?: boolean
   journalFactory?: (session: Session) => Promise<ExecutionJournal>
   journalLevel?: Exclude<JournalLevel, 'memory'>
@@ -267,7 +269,13 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       ...(options.toolDefinitions ?? []),
     ]
     this.tools = [...(options.tools ?? [])]
-    this.execution = {...options.execution, limits: {...this.settings.executionLimits, ...options.execution?.limits}}
+    this.execution = {
+      ...options.execution,
+      actionMode: parseExecutionActionMode(
+        options.execution?.actionMode ?? this.settings.executionActionMode ?? 'multiple',
+      ),
+      limits: {...this.settings.executionLimits, ...options.execution?.limits},
+    }
     this.selectionProjector = options.selectionProjector ? Object.freeze({...options.selectionProjector}) : undefined
     this.mcpFactory =
       options.deps?.createMcpToolManager ??
@@ -738,6 +746,18 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           await run.record('operation-result', {operationId: id, status: 'invalid'})
         },
       )
+      const runtimeMessages = [
+        ...this.messages,
+        ...(options?.actionMode === 'single'
+          ? [
+              new Message(MessageType.User, {
+                content:
+                  'Request at most one tool call per response. Wait for its result before choosing another action. Multiple tool calls in one response terminate this run without dispatch.',
+                role: 'system',
+              }),
+            ]
+          : []),
+      ]
       const modelOptions: Partial<ModelInvokeOptions> = {
         ...toModelInvokeOptions(options),
         ...(diagnostics === undefined
@@ -806,6 +826,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
             const preparation: Parameters<typeof prepareSessionContext>[0] | undefined =
               options?.contextPolicy?.mode === 'budgeted'
                 ? {
+                    actionMode: options.actionMode,
                     verifiedContext,
                     ...(verifiedContext ? {reverify: () => reverifyInterruptedContext(session, run)} : {}),
                     model: this.model,
@@ -814,7 +835,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                       emitAgentEvent(options?.onEvent, {iteration, type: AgentEventType.ContextPrepared, ...event}),
                     policy: options.contextPolicy,
                     prefix: [
-                      ...this.messages,
+                      ...runtimeMessages,
                       ...projectContextPrefix(options?.projectContext),
                       ...skillPrefix(options?.activeSkills ?? []).map(
                         (content) => new Message(MessageType.User, {content}),
@@ -832,7 +853,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
               : verifiedContext
                 ? this.model.prepare!(
                     [
-                      ...this.messages,
+                      ...runtimeMessages,
                       ...projectContextPrefix(options?.projectContext),
                       ...skillPrefix(options?.activeSkills ?? []).map(
                         (content) => new Message(MessageType.User, {content}),
@@ -852,7 +873,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                     ? prepared.invoke()
                     : this.model.invoke(
                         [
-                          ...this.messages,
+                          ...runtimeMessages,
                           ...projectContextPrefix(options?.projectContext),
                           ...skillPrefix(options?.activeSkills ?? []).map(
                             (content) => new Message(MessageType.User, {content}),
@@ -916,6 +937,11 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           }
 
           throwIfAborted(options?.signal)
+          if (options?.actionMode === 'single' && getToolCalls(modelMessage).length > 1) {
+            run.consume('toolRequests', getToolCalls(modelMessage).length)
+            throw new InvalidInputError('Single-action mode rejects multiple tool calls before dispatch')
+          }
+
           const [storedModelMessage] = session.appendMessages([modelMessage], {iteration, turnId})
           emitAgentEvent(options?.onEvent, {
             iteration,
@@ -1363,6 +1389,11 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         : {mode: 'disabled'}
     const compactionComponents =
       contextPolicy.mode === 'budgeted' ? resolveCompactionComponents(contextPolicy) : undefined
+    const actionMode = this.execution.actionMode ?? 'multiple'
+    if (graph && actionMode === 'single')
+      throw new InvalidInputError('Single-action mode does not support processor graphs')
+    if (compactionComponents?.strategy.requiresSingleAction && actionMode !== 'single')
+      throw new InvalidInputError('SAC requires executionActionMode single')
     const contextConfiguration =
       contextPolicy.mode === 'budgeted'
         ? {
@@ -1373,7 +1404,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           }
         : {mode: contextPolicy.mode}
     // Estimators are injected behavior, not JSON settings or journal evidence.
-    const settings = copyJSON({...this.settings, contextPolicy: contextConfiguration})
+    const settings = copyJSON({...this.settings, contextPolicy: contextConfiguration, executionActionMode: actionMode})
     if (options.selection) {
       options = {...options, selection: parseWorkflowSubmission(options.selection)}
       if (!graph) throw new Error('Selection requires Graph execution')
@@ -1397,6 +1428,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       },
       configuration: {
         contextPolicy: contextConfiguration,
+        executionActionMode: actionMode,
         ...(this.interruptionPolicy.mode === 'verified-not-dispatched'
           ? {interruptionPolicy: this.interruptionPolicy}
           : {}),
@@ -1460,6 +1492,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
             this.invokeSessionWithTurn(session, messages, run.id, {
               ...options,
               ...(graph ? {graph} : {}),
+              actionMode,
               compactionComponents,
               contextPolicy,
               executionContext: run,
@@ -1519,6 +1552,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       provider: this.model.getProvider(),
       settings: {
         ...this.settings,
+        executionActionMode: this.execution.actionMode ?? 'multiple',
         ...(this.interruptionPolicy.mode === 'verified-not-dispatched'
           ? {interruptionPolicy: this.interruptionPolicy}
           : {}),
@@ -1604,6 +1638,7 @@ function toModelInvokeOptions(options: Partial<AgentInvokeOptions> | undefined):
   delete result.memory
   delete result.projectContext
   delete result.graph
+  delete result.actionMode
   delete result.contextPolicy
   delete result.executionPolicy
   delete result.executionContext

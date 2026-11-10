@@ -41,6 +41,7 @@ export type ToolSettings = BuiltinToolSelection
 
 export interface WorkspaceSettings {
   contextPolicy?: ContextPolicy
+  executionActionMode?: 'multiple' | 'single'
   executionLimits?: Partial<RunLimits>
   interruptionPolicy?: InterruptionPolicy
   mcp?: McpSettings
@@ -185,7 +186,17 @@ function validateWorkspaceSettings(parsed: unknown, file: string): WorkspaceSett
     throw new Error(`Invalid workspace settings in ${file}: settings must be an object.`)
   }
 
-  const {contextPolicy, executionLimits, interruptionPolicy, mcp, model, provider, providers, tools} = parsed
+  const {
+    contextPolicy,
+    executionActionMode,
+    executionLimits,
+    interruptionPolicy,
+    mcp,
+    model,
+    provider,
+    providers,
+    tools,
+  } = parsed
   const providerOptions = getProvider().join(', ')
 
   if (provider !== undefined && !isProvider(provider)) {
@@ -197,6 +208,7 @@ function validateWorkspaceSettings(parsed: unknown, file: string): WorkspaceSett
   }
 
   return {
+    ...(executionActionMode === undefined ? {} : {executionActionMode: parseExecutionActionMode(executionActionMode)}),
     ...(executionLimits === undefined ? {} : {executionLimits: parseRunLimits(executionLimits)}),
     ...(interruptionPolicy === undefined ? {} : {interruptionPolicy: parseInterruptionPolicy(interruptionPolicy)}),
     ...(contextPolicy === undefined ? {} : {contextPolicy: parseContextPolicy(contextPolicy)}),
@@ -334,6 +346,9 @@ function validateBuiltinToolNames(value: unknown, file: string, field: 'exclude'
 
 function mergeWorkspaceSettingsInto(target: WorkspaceSettings, source: WorkspaceSettings): void {
   Object.assign(target, {
+    ...(source.executionActionMode === undefined
+      ? {}
+      : {executionActionMode: parseExecutionActionMode(source.executionActionMode)}),
     ...(source.executionLimits === undefined
       ? {}
       : {executionLimits: {...target.executionLimits, ...parseRunLimits(source.executionLimits)}}),
@@ -411,4 +426,10 @@ function parseContextPolicy(value: unknown): ContextPolicy {
     profile: structuredClone(p) as unknown as ContextProfile,
     ...resolveCompactionSelection(value),
   }
+}
+
+/** Execution scheduling is independent of context selection. */
+export function parseExecutionActionMode(value: unknown): 'multiple' | 'single' {
+  if (value !== 'multiple' && value !== 'single') throw new Error('Unknown execution action mode')
+  return value
 }

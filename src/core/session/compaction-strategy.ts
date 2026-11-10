@@ -24,7 +24,9 @@ export interface CompactionStrategy {
     target: number
   }): CompactionPlan
   readonly requiresCumulativeUpdates: boolean
-  shouldCompact(input: {recovery: boolean; tokens: number; trigger: number}): boolean
+  readonly requiresSingleAction?: boolean
+  readonly reset?: boolean
+  shouldCompact(input: {completedAction?: boolean; recovery: boolean; tokens: number; trigger: number}): boolean
   readonly summarySchema: string
 }
 
@@ -54,4 +56,22 @@ export const budgetedCompactionStrategy: CompactionStrategy = {
   requiresCumulativeUpdates: true,
   shouldCompact: ({recovery, tokens, trigger}) => recovery || tokens >= trigger,
   summarySchema: 'context-summary-v1',
+}
+
+/** Reset projections preserve canonical user instructions but no raw action history. */
+export const eoccCompactionStrategy: CompactionStrategy = {
+  id: 'eocc-v1',
+  plan: ({all}) => ({cut: all.length, retained: all.filter((message) => message.type === MessageType.User)}),
+  requiresCumulativeUpdates: true,
+  reset: true,
+  shouldCompact: ({recovery, tokens, trigger}) => recovery || tokens >= trigger,
+  summarySchema: 'context-summary-v1',
+}
+
+export const sacCompactionStrategy: CompactionStrategy = {
+  ...eoccCompactionStrategy,
+  id: 'sac-v1',
+  requiresSingleAction: true,
+  shouldCompact: ({completedAction, recovery, tokens, trigger}) =>
+    Boolean(completedAction) || recovery || tokens >= trigger,
 }

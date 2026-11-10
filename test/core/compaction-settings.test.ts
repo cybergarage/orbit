@@ -69,6 +69,31 @@ describe('Compaction settings', () => {
     }
   }
 
+  for (const strategy of ['budgeted-suffix-v1', 'eocc-v1', 'sac-v1']) {
+    for (const algorithm of ['structured-summary-v1', 'handoff-summary-v1']) {
+      it(`loads built-in pair ${strategy}/${algorithm} independently of action mode`, async () => {
+        await fs.writeFile(
+          file,
+          JSON.stringify({
+            contextPolicy: {algorithm, mode: 'budgeted', profile, strategy},
+            executionActionMode: 'single',
+          }),
+        )
+        for (const settings of [await loadWorkspaceSettings(root), loadWorkspaceSettingsSync(root)]) {
+          expect(settings.executionActionMode).to.equal('single')
+          expect(settings.contextPolicy).to.include({algorithm, strategy})
+        }
+      })
+    }
+  }
+
+  for (const executionActionMode of ['unknown', null, 1, {}]) {
+    it(`rejects invalid action mode ${JSON.stringify(executionActionMode)}`, async () => {
+      await fs.writeFile(file, JSON.stringify({executionActionMode}))
+      expect(() => loadWorkspaceSettingsSync(root)).to.throw('Unknown execution action mode')
+    })
+  }
+
   it('rejects schema and cumulative-update incompatibility', () => {
     const components = resolveCompactionComponents(selected)
     expect(components.strategy).to.equal(budgetedCompactionStrategy)
