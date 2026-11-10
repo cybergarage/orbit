@@ -21,27 +21,34 @@ Tracking issue — [#22](https://github.com/cybergarage/orbit/issues/22).
 
 ## Decision
 
-**Proposed.** Introduce an internal strategy boundary in session context
-preparation. Deliver the compatibility extraction first, then opt-in EoCC and
-SAC experiments. The default remains the current budgeted strategy.
+**Proposed.** Introduce independent internal interfaces for compaction strategy
+and compaction algorithm, composed by a context coordinator. Deliver the current
+strategy/algorithm pair first, then opt-in EoCC and SAC experiments.
 
 ### Responsibility boundary
 
-| Component           | Proposed responsibility                                                                                                       |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Trigger policy      | Request compaction at a token threshold, during hard-limit recovery, or after a completed action                              |
-| Compaction strategy | Select eligible history and produce a candidate summary and retained-message projection                                       |
-| Context coordinator | Resolve immutable run configuration, validate candidates, construct provider requests, enforce budgets and commit checkpoints |
-| Session             | Own canonical records, exclusive writer access, synchronization and reconstruction                                            |
-| Agent loop          | Establish completed action boundaries and enforce the experimental one-action execution mode                                  |
+| Component            | Proposed responsibility                                                                                           |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Compaction strategy  | Decide when to compact, select eligible history and specify which raw messages remain in the next context         |
+| Compaction algorithm | Produce a summary from selected history and the previous summary under the requested schema and budget            |
+| Context coordinator  | Resolve the pair, validate compatibility and results, construct requests, enforce budgets and commit checkpoints  |
+| Execution policy     | Determine continuation after task failures, retry allowances, lack-of-progress stopping conditions and run limits |
+| Model-call service   | Apply bounded transport retries, cancellation, timeouts and usage accounting to each summary attempt              |
+| Session and replay   | Own canonical records, exclusive writer access, synchronization and reconstruction from stored checkpoints        |
+| Agent loop           | Establish completed action boundaries and enforce the experimental one-action execution mode                      |
 
-A strategy receives a read-only snapshot containing source message IDs, the
-previous checkpoint, verified projection boundaries, original task references,
-current budgets and the reason for preparation. Its result identifies consumed
-history, retained messages, summary schema/revision and model usage. Strategies
-may request tool-free summarization through a coordinator-owned service. That
-service applies cancellation, model-call limits, provider preparation and usage
-accounting to every attempt, including repair requests.
+A strategy receives a read-only snapshot of source IDs, the previous checkpoint,
+verified boundaries, task references, budgets and the preparation reason. It
+returns either no compaction or a plan identifying the consumed range, retained
+messages, required summary contract and summary budget. Threshold and completed-
+action triggers belong to this strategy. The strategy does not choose the
+summary implementation.
+
+The coordinator passes the selected history and previous summary to the
+independently selected algorithm. The algorithm returns a candidate summary,
+source references, schema/revision and usage. It may invoke the tool-free
+model-call service, whose attempts consume the shared Run budget. The algorithm
+does not change the retained range, dispatch tools or commit Session state.
 
 The coordinator validates source membership, complete tool groups, summary
 schema, mandatory observation evidence and total serialized request size. It
@@ -50,18 +57,58 @@ commit activates a new projection. Summaries remain untrusted context and cannot
 supply authorization or replace execution proofs. Pending approvals, unknown
 effects and interrupted groups remain subject to the existing admission rules.
 
-Keep the strategy interface internal initially. Settings select named built-ins
-and validated parameters. Preserve the existing estimator injection. Resolve and
-snapshot strategy identity, revision and parameters at run start. Model changes
-recompute capacity-dependent budgets while preserving explicit strategy choice.
-Unknown strategy names fail configuration validation. A future public plugin
-contract requires its own compatibility review.
+### Independent composition
+
+Settings select strategy and algorithm independently, each with its own identity,
+revision and validated parameters. Resolve and snapshot both at run start.
+Preserve the existing estimator injection. Model changes recompute capacity-
+dependent budgets while preserving both selections. Keep both interfaces
+internal initially; a public plugin contract requires compatibility review.
+
+| Pair | Strategy                                                 | Algorithm                  |
+| ---- | -------------------------------------------------------- | -------------------------- |
+| A/C  | Threshold-triggered compaction retaining a recent suffix | Current structured summary |
+| A/D  | Threshold-triggered compaction retaining a recent suffix | Handoff-oriented summary   |
+| B/C  | Per-action reset                                         | Current structured summary |
+| B/D  | Per-action reset                                         | Handoff-oriented summary   |
+
+These are proposed combinations. Availability requires compatible contracts.
+Each strategy declares required capabilities, including the accepted summary
+schema and whether cumulative updates from a previous summary are required.
+Each algorithm declares supported input/output schema versions and cumulative-
+update support. Validate compatibility before executing a run. Validate actual
+output again after generation. Unknown identities or incompatible pairs produce
+configuration errors; no implicit algorithm substitution occurs.
+
+Changing algorithms between runs requires the new algorithm to accept the saved
+summary schema or an explicitly supported conversion from canonical evidence.
+Otherwise reject that change before model or tool execution. Replay itself uses
+the stored summary and projection, independent of the algorithm that produced it.
+
+EoCC and SAC primarily specify strategies and execution regimes. Their recap
+prompts are algorithm configuration. Paper reproduction pins the complete pair,
+prompts and action mode. Other compatible combinations are separately labeled
+Orbit experiments.
+
+### Continuation and replay ownership
+
+Persistence of effort, such as continuing after failed tests, belongs to execution
+policy. That policy applies the same continuation and resource rules across
+compaction pairs. The strategy can request preparation after an action, while
+the Agent loop decides whether another action is permitted. Summary and repair
+calls consume the same time, model-call and cost allowances as other run work.
+
+Session replay reconstructs model input from saved summaries, projections and
+subsequent messages without invoking a strategy, summary model or tool. Repeating
+an environment action is a new execution decision requiring the usual admission
+and side-effect checks. Loading a checkpoint never authorizes redispatch.
 
 ### Persistence and replay
 
 The compatibility extraction keeps existing checkpoint encoding and replay.
-Existing settings resolve to existing behavior, and legacy checkpoints retain
-their interpretation.
+Existing settings resolve to the current strategy/algorithm pair, and legacy
+checkpoints retain their interpretation. The first extraction uses run metadata
+for pair provenance without changing legacy checkpoint encoding.
 
 EoCC and SAC need a versioned projection that supports consuming through the
 current source head with an empty raw suffix. Define the boundary by the last
@@ -70,11 +117,12 @@ boundary become the suffix on subsequent calls. Explicit task references
 preserve applicable user instructions without duplicating them in the rebuilt
 input. Canonical system context is assembled through its existing owner.
 
-Record the strategy and summary revisions, consumed boundary, retained source
+Record both strategy and algorithm identities, revisions and resolved parameters,
+summary schema/revision, consumed boundary, retained source
 IDs, task references, usage and existing projection provenance in the new
 checkpoint contract. Validate these against canonical Session records. Replay
-uses stored projection data and performs no model calls. Changing strategy on a
-later run reconstructs the previous checkpoint before preparing a new one.
+uses stored projection data and performs no model calls. Changing either selection on a later run reconstructs the previous checkpoint
+and validates compatibility before preparing a new one.
 
 Introduce an explicit format capability/version before writing reset
 checkpoints. Existing readers must reject unsupported formats. Finalize the
@@ -93,7 +141,7 @@ action whose result was already recorded.
 
 ## Consequences
 
-The boundary permits controlled algorithm comparisons and makes summary-model
+The two interfaces permit independent strategy and algorithm comparisons and makes summary-model
 invocation independently testable. Common validation and persistence keep
 strategy-specific code small.
 
@@ -182,7 +230,8 @@ and dataset revision during adapter implementation before recording results.
    cannot express reset projections or SAC's action boundary.
 2. Add independent full preparation pipelines for each regime. This makes
    experiments quick initially but duplicates evidence and persistence checks.
-3. Use a shared coordinator with internal strategies. **Proposed**, because it
+3. Use a shared coordinator with independently selected internal strategies and
+   algorithms. **Proposed**, because it
    supports experiments with one owner for validation and durable activation.
 4. Expose arbitrary strategy plugins immediately. Defer until built-in regimes
    establish a stable result and replay contract.
@@ -191,12 +240,19 @@ and dataset revision during adapter implementation before recording results.
 
 ### Compatibility extraction
 
-Extract the current strategy behind the coordinator. Compare captured serialized
+Extract the current strategy and algorithm behind the coordinator. Compare captured serialized
 requests, retained message IDs, summary inputs, fallback outcomes and resumed
 contexts with existing behavior. Cover old settings and checkpoint fixtures,
 model changes, unknown strategies, invalid summaries, cancellation, stale heads
 and failed synchronization. Update affected session/agent tests and exports only
 when a public contract is deliberately introduced.
+
+Add a deterministic A/C, A/D, B/C and B/D composition matrix with compatible
+stub algorithms. Assert selected source ranges, retained messages, algorithm
+selection and shared continuation limits. Test rejection of incompatible schemas
+and missing cumulative-update support before calls, and verify replay performs
+zero summary/tool calls even when the producing algorithm is unavailable. Cover
+changing algorithms between runs and explicit legacy-pair defaults.
 
 ### Terminal-Bench integration and baseline
 
@@ -231,6 +287,11 @@ multi-tool-round variant receives a separate name and results. General Orbit
 multi-turn interaction and new user input must retain canonical task updates.
 
 ### Measurements and acceptance
+
+Vary the strategy while holding the algorithm fixed, then vary the algorithm
+while holding the strategy fixed. Record both identities, revisions and parameters
+for every result. Keep execution continuation, retries, model, tools and resource
+limits matched across these comparisons.
 
 Compare fresh full-history sessions, the current budgeted strategy, EoCC and SAC
 on fixed SWE-bench and Terminal-Bench tasks. Use development tasks to tune budgets
