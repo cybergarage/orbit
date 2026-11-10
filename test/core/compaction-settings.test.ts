@@ -166,7 +166,7 @@ describe('Compaction settings', () => {
         (await (await agent.startRun([new Message(MessageType.User, {content: 'Continue'})])).finished).outcome,
       ).to.equal('completed')
       expect(summaries).to.equal(1)
-      expect(session.getCompaction()).to.not.equal(undefined)
+      expect(session.getCompaction()).to.not.be.undefined
       const priorCalls = calls
       let error: unknown
       try {
