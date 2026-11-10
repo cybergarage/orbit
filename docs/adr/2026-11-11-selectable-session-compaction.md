@@ -8,6 +8,8 @@ implementation-commits:
   - cedd11384b722032b0e706593451da62ff6e4a3b
   - 03021601937563f440c4bfd928a577dcb71c3192
   - 03a933c7457f93836119744db3aaa76e51a23a72
+  - 9ee881a93d2091c04fc2e46a9d5f8604afffa032
+  - a28ceeddc9b48fabe44c06894feca65267dfd14d
 superseded-by: []
 ---
 
@@ -442,14 +444,54 @@ live SWE-bench/Terminal-Bench quality/cost result is claimed. Benchmark adapters
 matched-action baselines, held-out evaluation and default-change decisions remain
 follow-up work; this ADR therefore remains partially implemented.
 
+### Benchmark integration and local confirmation — 2026-11-11
+
+Mainline commit `9ee881a93d2091c04fc2e46a9d5f8604afffa032` (PR #26)
+adds the pinned Terminal-Bench/Harbor adapter, independent comparison arms,
+verifier controls and predeclared local evaluation protocol. Commit
+`a28ceeddc9b48fabe44c06894feca65267dfd14d` (PR #27) adds final-event
+worker/recap/cache accounting, an opt-in fixed-history diagnostic, and a worker
+process-group timeout guard that preserves official grading.
+
+The earlier extraction, settings and reset stages reached main through squash
+commits `0ef699e5e62c5a54de5685796a1f7048f9fcdb61` (PR #23),
+`63c6cf2c6dccfd23886acba9d905bb53f756a6c3` (PR #24), and
+`7a12bc5c489df588efb52b901906e5b0db963be2` (PR #25), respectively. The
+original implementation hashes above remain historical evidence.
+
+Header checks, build and the complete 1,315-test suite passed locally. Both
+harness PRs passed their applicable CI, including Linux unit tests on Node.js
+22/24/26, package consumers on 20.19/24 and adapter checks. PR #27's
+adapter/accounting checks passed in Linux CI; nine passed locally and its GNU-timeout check skipped
+on macOS. A separate control in the pinned task image verified that a
+TERM-ignoring descendant could not continue writing after the timeout.
+
+The [local transfer study](../research/2026-11-11-local-compaction-transfer.md)
+records 32 solver trials, six fixed-history diagnostics and the official verifier
+controls. Confirmation used one task per benchmark and three paired seeds:
+Terminal-Bench success was 1/3 for every strategy; SWE-bench success was 1/3
+for suffix and 0/3 for EoCC/SAC. The original ungraded development trial remains
+in the denominator. SAC committed resets but incurred substantial recap work;
+no EoCC task checkpoint committed. SWE threshold-arm recap attempts were
+output-length recovery, not ordinary threshold crossings. These bounded local
+results do not qualify a default change or reproduce the paper's serving claims.
+
+The integration and first local comparison are implemented. Broader quality and
+efficiency qualification remains open, so this ADR remains accepted / partial,
+with no overall completion date. The accepted rationale and default pair are
+unchanged.
+
 ## Follow-up Work
 
-- Select and pin Terminal-Bench tasks and Harbor version, then establish baselines.
-- Qualify the experimental reset strategies on pinned benchmark tasks.
-- Set evaluation repetitions, resource limits and quality tolerance before final runs.
-- Update maintained architecture, settings and evaluation documentation with the
-  corresponding implementation. Link any partial supersession of older ADRs at
-  acceptance while preserving their rationale.
+- Qualify completed threshold resets separately from output-length recovery on
+  broader tasks and models, with a separately labeled ordinary multiple-action
+  reference.
+- Evaluate recap fidelity, source-ID representation, cache reuse and resource
+  budgets as independent factors on new development/confirmation splits.
+- Establish the predeclared quality margin and efficiency criterion with enough
+  independent task coverage before proposing a default change.
+- Keep the broader Issue #22 selective-reading and canonical-history retrieval
+  experiments separate from this local compaction comparison.
 
 ## References
 

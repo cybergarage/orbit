@@ -1,0 +1,4310 @@
+{
+  "schema": "orbit-local-compaction-study-v1",
+  "date": "2026-11-11",
+  "scope": "Local transfer diagnostic, not a paper reproduction or benchmark leaderboard submission.",
+  "rawArtifacts": "Raw task trajectories remain local and ignored. SHA-256 identifies captured artifacts, but is not a public replay archive.",
+  "host": {
+    "cpu": "Apple M6",
+    "architecture": "arm64",
+    "memoryBytes": 34359738368
+  },
+  "model": {
+    "details": {
+      "parent_model": "",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": ["qwen35"],
+      "parameter_size": "9.0B",
+      "quantization_level": "Q4_K_M"
+    },
+    "digest": "e5df7dcdd8a263994df62d610317e07be0d6af23f96fcbd8543273058fce575e",
+    "model": "ornith-1.5:9b",
+    "ollama": {
+      "version": "0.40.14"
+    },
+    "size": 6550813657,
+    "templateSha256": "f55f52930aa8bf44ab5cb85f99370fcc3c56e9a85640b812086d5330bce5d86b"
+  },
+  "dockerVersion": "29.9.2",
+  "taskImages": [
+    {
+      "tag": "alexgshaw/fix-git:20260403",
+      "id": "sha256:389b9c8247610c2c5be080b1ac00429007c2c69bf57f7f26c79f0f75ba2d5c74",
+      "repoDigests": ["alexgshaw/fix-git@sha256:389b9c8247610c2c5be080b1ac00429007c2c69bf57f7f26c79f0f75ba2d5c74"],
+      "architecture": "amd64",
+      "os": "linux"
+    },
+    {
+      "tag": "alexgshaw/regex-log:20251031",
+      "id": "sha256:90101b2e815323a8da20528a1439bebc407eb9761c9c68a3d557730856c878e9",
+      "repoDigests": ["alexgshaw/regex-log@sha256:90101b2e815323a8da20528a1439bebc407eb9761c9c68a3d557730856c878e9"],
+      "architecture": "amd64",
+      "os": "linux"
+    },
+    {
+      "tag": "alexgshaw/cancel-async-tasks:20251031",
+      "id": "sha256:84c7fae6b256dcc56a350790e2a9715eefc7dad662a9d8e8a472363aa71ef18d",
+      "repoDigests": [
+        "alexgshaw/cancel-async-tasks@sha256:84c7fae6b256dcc56a350790e2a9715eefc7dad662a9d8e8a472363aa71ef18d"
+      ],
+      "architecture": "amd64",
+      "os": "linux"
+    }
+  ],
+  "terminalBenchSource": {
+    "harborVersion": "0.25.0",
+    "harborCommit": "fdba28fc411e47e8765420a1a063b4918fce3def",
+    "dataset": "terminal-bench-2.1",
+    "datasetRepository": "https://github.com/harbor-framework/terminal-bench-2-1.git",
+    "datasetCommit": "12b7565679ce5006230b820666353673a133db93",
+    "smokeTasks": ["fix-git", "regex-log"],
+    "heldOutTasks": ["cancel-async-tasks"],
+    "platform": "linux/amd64"
+  },
+  "taskResourceLimits": {
+    "fix-git": {
+      "docker_image": "alexgshaw/fix-git:20260403",
+      "cpus": 1,
+      "memory_mb": 2048,
+      "storage_mb": 10240,
+      "gpus": 0
+    },
+    "regex-log": {
+      "docker_image": "alexgshaw/regex-log:20251031",
+      "cpus": 1,
+      "memory_mb": 2048,
+      "storage_mb": 10240,
+      "gpus": 0
+    },
+    "cancel-async-tasks": {
+      "docker_image": "alexgshaw/cancel-async-tasks:20251031",
+      "cpus": 1,
+      "memory_mb": 2048,
+      "storage_mb": 10240,
+      "gpus": 0
+    }
+  },
+  "sweBenchResourceLimits": {
+    "cpus": 2,
+    "memoryGiB": 4,
+    "pids": 256
+  },
+  "bundleManifest": {
+    "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+    "dirty": true,
+    "imageId": "sha256:43efc6de7a018244725db0b9fad4430a01c0933b8cba6dab9d8afdd7b9ec0855",
+    "orbitCommit": "7a12bc5c489df588efb52b901906e5b0db963be2",
+    "platform": "linux/amd64",
+    "sourceSha256": "8c46be949e9de255ba937b4d51d156e519b3ec925ceeb29eaaa858c382aca1bb"
+  },
+  "bundleSourceVerification": {
+    "commit": "5aaed4d8ba4110f9af9ae0515750ad2829f26d75",
+    "sourceSha256": "8c46be949e9de255ba937b4d51d156e519b3ec925ceeb29eaaa858c382aca1bb",
+    "matches": true
+  },
+  "timeoutGuardControl": {
+    "passed": true,
+    "artifactSha256": "f0bcea8f407e32d5ae66fc159eafaccf3b34d1aea34fb29a3691b160c3dad70c"
+  },
+  "runtimeCommit": "7a12bc5c489df588efb52b901906e5b0db963be2",
+  "bundleSourceCommit": "5aaed4d8ba4110f9af9ae0515750ad2829f26d75",
+  "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+  "planned": {
+    "development": 14,
+    "terminalBenchConfirmation": 9,
+    "sweBenchConfirmation": 9,
+    "fixedHistory": 6
+  },
+  "development": [
+    {
+      "job": "smoke-fha-42",
+      "task": "fix-git",
+      "arm": "fha",
+      "seed": 42,
+      "recorded": true,
+      "reward": 1.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 64191,
+        "workerOutputTokens": 2647,
+        "phaseResponsesAccounted": 18,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 18,
+        "modelCallsCompleted": 18,
+        "usageComplete": true,
+        "inputTokens": 64191,
+        "outputTokens": 2647,
+        "peakInputTokens": 7562,
+        "cacheUsageComplete": true,
+        "cacheTokens": 58727,
+        "uncachedInputTokens": 5464,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 17,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 129.3202,
+      "taskChecksum": "e89f54f2fc73ac576f976c1cd09758e4c9ccf152e53c2dcd91da0c178b89abc7",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "82d15de9235a0ad00f75cb76e6014b881123e2ee5564bfdd456451884d2e4de6",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "71e9290cce9d9c661d13b04bc7ce520c6767363650e400e4debe713b50228414",
+        "agent/result.json": "be43ab337a79c0f71814dc71231b769a764efe2754791673efcb0035447250ba",
+        "agent/events.jsonl": "fa65a3b09f212385f50af60979d55220ae8910a754ebf98feea7b80b7351903a",
+        "verifier/reward.txt": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+        "verifier/test-stdout.txt": "01881f46db3e9b4513792859ae554186211f5a2949c71ebe6e73209fa2862ba0"
+      }
+    },
+    {
+      "job": "smoke-fha-42",
+      "task": "regex-log",
+      "arm": "fha",
+      "seed": 42,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "incomplete",
+        "reason": "budget-exceeded:elapsedMs:300000:300006:0",
+        "quiescence": false
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 146548,
+        "workerOutputTokens": 6714,
+        "phaseResponsesAccounted": 37,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 37,
+        "modelCallsCompleted": 37,
+        "usageComplete": true,
+        "inputTokens": 146548,
+        "outputTokens": 6714,
+        "peakInputTokens": 10366,
+        "cacheUsageComplete": true,
+        "cacheTokens": 141663,
+        "uncachedInputTokens": 4885,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 36,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 319.633249,
+      "taskChecksum": "8e6fca84d707d9c8736d83027308f7b9be7cbb2013df8fb40f4343c1c58bac1f",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "215f306ae7f6b68be8b55f527b28c2917d0f16117231fd7d4a7e16aa5a52511f",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "a39699aea13724a4824ae0499a0dfb43a9ba264adefb43353ab7cfe7f291de2d",
+        "agent/result.json": "60ccfd0288b1bcadcf61f23d38b213da77ee5e763172244e95f5c4a2c19fb83c",
+        "agent/events.jsonl": "a3a6281189786f2060bf7253798e0c86a85d7720be6ed8398eb9e7f3c04c560e",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "bf7a36e06131776209f048d92e3bd858ed19a5dc5a67ecfec37089077259f13c"
+      }
+    },
+    {
+      "job": "smoke-suffix-42",
+      "task": "fix-git",
+      "arm": "suffix",
+      "seed": 42,
+      "recorded": true,
+      "reward": 1.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 64156,
+        "workerOutputTokens": 2776,
+        "phaseResponsesAccounted": 18,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 18,
+        "modelCallsCompleted": 18,
+        "usageComplete": true,
+        "inputTokens": 64156,
+        "outputTokens": 2776,
+        "peakInputTokens": 7616,
+        "cacheUsageComplete": true,
+        "cacheTokens": 59192,
+        "uncachedInputTokens": 4964,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 17,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 126.695742,
+      "taskChecksum": "e89f54f2fc73ac576f976c1cd09758e4c9ccf152e53c2dcd91da0c178b89abc7",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "28ccc6604122807ea5cf5edadbf09c926e9ac1a13445d644ffcb6ba43a085282",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "f82990190b824621354f5b89c17ca6fb29b3716d1603b0f36af54523fb6e472c",
+        "agent/result.json": "1534f52ed15c8263257b7d4efb5a10deeeaa619bcbc5fb944cee817cd2703230",
+        "agent/events.jsonl": "13fa516c1ac429cea822095de0a7673d9700465a7f980c115bce0552d896eff6",
+        "verifier/reward.txt": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+        "verifier/test-stdout.txt": "f0caea25fd291afaea789fad4749652952130ec68bc2f652d7890b7d46fedc15"
+      }
+    },
+    {
+      "job": "smoke-suffix-42",
+      "task": "regex-log",
+      "arm": "suffix",
+      "seed": 42,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "incomplete",
+        "reason": "budget-exceeded:elapsedMs:300000:300028:0",
+        "quiescence": false
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 127637,
+        "workerOutputTokens": 6615,
+        "phaseResponsesAccounted": 31,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 31,
+        "modelCallsCompleted": 31,
+        "usageComplete": true,
+        "inputTokens": 127637,
+        "outputTokens": 6615,
+        "peakInputTokens": 9329,
+        "cacheUsageComplete": true,
+        "cacheTokens": 123825,
+        "uncachedInputTokens": 3812,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 30,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 309.234015,
+      "taskChecksum": "8e6fca84d707d9c8736d83027308f7b9be7cbb2013df8fb40f4343c1c58bac1f",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "90036ac479822f0407b326cfc1aa6e75ad551c1add699ae8c2096e9cd08f05d5",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "b4700769fcc888643e32e2131b53bc867dbe032eda90524acf3329a4cc746cd2",
+        "agent/result.json": "d9d1325a131dfa42b46a5cf2f821eb3f06838dd630e5cdd51721c7e64a0c4c36",
+        "agent/events.jsonl": "6a056fdf3e7a112df3bd41f2d2ddd356fb76cd6be3dd377ff484e1e4bd988ff8",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "b70136d96c21e30493354f25d676fa570b569f4036b6635565613327ae813322"
+      }
+    },
+    {
+      "job": "smoke-eocc-42",
+      "task": "fix-git",
+      "arm": "eocc",
+      "seed": 42,
+      "recorded": true,
+      "reward": 1.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 64336,
+        "workerOutputTokens": 2731,
+        "phaseResponsesAccounted": 18,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 18,
+        "modelCallsCompleted": 18,
+        "usageComplete": true,
+        "inputTokens": 64336,
+        "outputTokens": 2731,
+        "peakInputTokens": 7671,
+        "cacheUsageComplete": true,
+        "cacheTokens": 59113,
+        "uncachedInputTokens": 5223,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 17,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 125.996709,
+      "taskChecksum": "e89f54f2fc73ac576f976c1cd09758e4c9ccf152e53c2dcd91da0c178b89abc7",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "28ccc6604122807ea5cf5edadbf09c926e9ac1a13445d644ffcb6ba43a085282",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "68568518607cb4a62270323e81479bcf33fc468176f9ebebc6f4f9023ec093e3",
+        "agent/result.json": "0808d557dae1dfa155250fdc1ff6ed52176563c5c9a2e063578729e4bc6b2646",
+        "agent/events.jsonl": "f144f5be96972d8fb11aaa808d29a99ffe3f6bcf0758371fc484246568f90b81",
+        "verifier/reward.txt": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+        "verifier/test-stdout.txt": "ab7debb0ec36cf4e20d48283b8d4ab4c6ab5709f3966eef9da0ae78135a187bd"
+      }
+    },
+    {
+      "job": "smoke-eocc-42",
+      "task": "regex-log",
+      "arm": "eocc",
+      "seed": 42,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "incomplete",
+        "reason": "budget-exceeded:elapsedMs:300000:300002:0",
+        "quiescence": false
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 104166,
+        "workerOutputTokens": 6394,
+        "phaseResponsesAccounted": 23,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 23,
+        "modelCallsCompleted": 23,
+        "usageComplete": true,
+        "inputTokens": 104166,
+        "outputTokens": 6394,
+        "peakInputTokens": 10716,
+        "cacheUsageComplete": true,
+        "cacheTokens": 96651,
+        "uncachedInputTokens": 7515,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 22,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 313.563221,
+      "taskChecksum": "8e6fca84d707d9c8736d83027308f7b9be7cbb2013df8fb40f4343c1c58bac1f",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "90036ac479822f0407b326cfc1aa6e75ad551c1add699ae8c2096e9cd08f05d5",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "d92d7a2f3e90d36e7c083a25fa978811fb1bb6563e065dd7aa417647fbcccb05",
+        "agent/result.json": "43bfd97b221de9baf6569474aa23c0bfd2e151080158af4e2e3759f1f4a2ad2c",
+        "agent/events.jsonl": "00845a6f59e41251ed89e4416171db742b8036b9789ef55dec066e3c41a4e669",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "430b80bcc381d6a5febe8842719f7f588033221c8950df71b61652f15383e396"
+      }
+    },
+    {
+      "job": "smoke-sac-42",
+      "task": "fix-git",
+      "arm": "sac",
+      "seed": 42,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "metrics": {
+        "summaryInputTokens": 7882,
+        "summaryOutputTokens": 4460,
+        "workerInputTokens": 5008,
+        "workerOutputTokens": 229,
+        "phaseResponsesAccounted": 6,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 6,
+        "modelCallsCompleted": 6,
+        "usageComplete": true,
+        "inputTokens": 12890,
+        "outputTokens": 4689,
+        "peakInputTokens": 3356,
+        "cacheUsageComplete": true,
+        "cacheTokens": 628,
+        "uncachedInputTokens": 12262,
+        "billedCostUSD": null,
+        "compactions": 2,
+        "compactionFailures": 1,
+        "summaryAttempts": 3,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 1,
+        "toolCalls": 3,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 215.893123,
+      "taskChecksum": "e89f54f2fc73ac576f976c1cd09758e4c9ccf152e53c2dcd91da0c178b89abc7",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "28ccc6604122807ea5cf5edadbf09c926e9ac1a13445d644ffcb6ba43a085282",
+      "failureReasons": {
+        "context.summary.truncated:length": 1,
+        "context.compaction.failed:summary-failed": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 346,
+          "configuredTrigger": 12288,
+          "precedingEvent": "tool.completed",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 1803,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 2795,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        }
+      ],
+      "artifactSha256": {
+        "result.json": "cdc9af8a0034f3ef36b3d6e65f30397de2b61dc9835f1cee8d13f909d985b71f",
+        "agent/result.json": "14f8baaa9ee051aa4a92b890701a04197d781a2c1448f57cdbc92f5ef7d05f86",
+        "agent/events.jsonl": "c699d2acf5246d08e32bb99b6df1da7eebb2d53dc1605e50d1e1c87b87744c4f",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "bbb3b0ed1defac3b67a7a9da2e438cc9d3b46650451fc2cf0141ab1b369cfdee"
+      }
+    },
+    {
+      "job": "smoke-sac-42",
+      "task": "regex-log",
+      "arm": "sac",
+      "seed": 42,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "metrics": {
+        "summaryInputTokens": 4312,
+        "summaryOutputTokens": 2585,
+        "workerInputTokens": 2101,
+        "workerOutputTokens": 214,
+        "phaseResponsesAccounted": 4,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 4,
+        "modelCallsCompleted": 4,
+        "usageComplete": true,
+        "inputTokens": 6413,
+        "outputTokens": 2799,
+        "peakInputTokens": 2224,
+        "cacheUsageComplete": true,
+        "cacheTokens": 0,
+        "uncachedInputTokens": 6413,
+        "billedCostUSD": null,
+        "compactions": 1,
+        "compactionFailures": 1,
+        "summaryAttempts": 2,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 1,
+        "toolCalls": 2,
+        "identicalRepeatedToolCalls": 1
+      },
+      "agentSeconds": 126.343254,
+      "taskChecksum": "8e6fca84d707d9c8736d83027308f7b9be7cbb2013df8fb40f4343c1c58bac1f",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "90036ac479822f0407b326cfc1aa6e75ad551c1add699ae8c2096e9cd08f05d5",
+      "failureReasons": {
+        "context.summary.truncated:length": 1,
+        "context.compaction.failed:summary-failed": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 642,
+          "configuredTrigger": 12288,
+          "precedingEvent": "tool.completed",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 1481,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        }
+      ],
+      "artifactSha256": {
+        "result.json": "280a1b78b5560ed75a88fd0ae6e5ab8fd8de6a7c553b81d295dc9c0c43d5a701",
+        "agent/result.json": "23eb82a4521995f0c6bec4865fdc665e3d6e72b50aa14c955dd3bbedacead366",
+        "agent/events.jsonl": "907a179d81fd6b6b069030fafbcfb059e40813474316797015a3d8acc2a0144b",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "8cbbc6539f8430997218d0880e89cfccd3bbc7532f5a4c97fb65fd99f1a0c937"
+      }
+    },
+    {
+      "job": "smoke-suffix-handoff-42",
+      "task": "fix-git",
+      "arm": "suffix-handoff",
+      "seed": 42,
+      "recorded": true,
+      "reward": 1.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 64284,
+        "workerOutputTokens": 2736,
+        "phaseResponsesAccounted": 18,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 18,
+        "modelCallsCompleted": 18,
+        "usageComplete": true,
+        "inputTokens": 64284,
+        "outputTokens": 2736,
+        "peakInputTokens": 7630,
+        "cacheUsageComplete": true,
+        "cacheTokens": 58967,
+        "uncachedInputTokens": 5317,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 17,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 124.789905,
+      "taskChecksum": "e89f54f2fc73ac576f976c1cd09758e4c9ccf152e53c2dcd91da0c178b89abc7",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "28ccc6604122807ea5cf5edadbf09c926e9ac1a13445d644ffcb6ba43a085282",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "f3039b20698146af3935d30547565a8847b2018bb18fb6a4cf6855cb995c4d4d",
+        "agent/result.json": "f5b31ced79d0a4215a0a917194291c150f1334531a7cf321e324addbb69f24b4",
+        "agent/events.jsonl": "baef036282bd136b49aa38bf4d6030ac0b6e23c0803340fec6c1dbc423be4452",
+        "verifier/reward.txt": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+        "verifier/test-stdout.txt": "6925ff5ad0d8983e0021c720479bc9831c4c0ca7e1efdc2c50c05bdf0fc6c808"
+      }
+    },
+    {
+      "job": "smoke-suffix-handoff-42",
+      "task": "regex-log",
+      "arm": "suffix-handoff",
+      "seed": 42,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 77476,
+        "workerOutputTokens": 3249,
+        "phaseResponsesAccounted": 24,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 24,
+        "modelCallsCompleted": 24,
+        "usageComplete": true,
+        "inputTokens": 77476,
+        "outputTokens": 3249,
+        "peakInputTokens": 7972,
+        "cacheUsageComplete": true,
+        "cacheTokens": 71507,
+        "uncachedInputTokens": 5969,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 1,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 24,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 155.909418,
+      "taskChecksum": "8e6fca84d707d9c8736d83027308f7b9be7cbb2013df8fb40f4343c1c58bac1f",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "90036ac479822f0407b326cfc1aa6e75ad551c1add699ae8c2096e9cd08f05d5",
+      "failureReasons": {
+        "context.compaction.failed:compaction-input-exceeds-budget": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 12341,
+          "configuredTrigger": 12288,
+          "precedingEvent": "tool.completed",
+          "precedingStopReason": null,
+          "inferredCause": "threshold"
+        }
+      ],
+      "artifactSha256": {
+        "result.json": "84285f3a483028b0b1232738407b42e4094d3e9b4f648cb1420d200006a2bb50",
+        "agent/result.json": "20c25b495e810734072c80e690a06f9a7697364a3190e65eb2894c66b4f19bc1",
+        "agent/events.jsonl": "1ef87e70cd60310e812aa064c14457f0b53c728ecedc93e7c56fb95e4ee65d8e",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "368e08fd7f6653ddc63b31ee786585ac5d2e57632df02bc386304a7511788156"
+      }
+    },
+    {
+      "job": "smoke-eocc-structured-42",
+      "task": "fix-git",
+      "arm": "eocc-structured",
+      "seed": 42,
+      "recorded": true,
+      "reward": 1.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 64078,
+        "workerOutputTokens": 2662,
+        "phaseResponsesAccounted": 18,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 18,
+        "modelCallsCompleted": 18,
+        "usageComplete": true,
+        "inputTokens": 64078,
+        "outputTokens": 2662,
+        "peakInputTokens": 7554,
+        "cacheUsageComplete": true,
+        "cacheTokens": 59072,
+        "uncachedInputTokens": 5006,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 17,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 125.160781,
+      "taskChecksum": "e89f54f2fc73ac576f976c1cd09758e4c9ccf152e53c2dcd91da0c178b89abc7",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "28ccc6604122807ea5cf5edadbf09c926e9ac1a13445d644ffcb6ba43a085282",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "21023ca0fc552fcf9f68e98ac5b9c465918bc2c7c04367240711bf3c2e5162f6",
+        "agent/result.json": "b01914de3014fc7b5755d62905ec4f4e8fdf72cba08abf07d139af79c6695be5",
+        "agent/events.jsonl": "9fa8ce5b852a0fa4e60ca2c1dfc0aa9ab410fd8fc3152927b26010eef83d8a0e",
+        "verifier/reward.txt": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+        "verifier/test-stdout.txt": "84b6dadf35b82344ac0fa7381fd806f8e8b13f3ada9f34c7d78636f5e25135b9"
+      }
+    },
+    {
+      "job": "smoke-eocc-structured-42",
+      "task": "regex-log",
+      "arm": "eocc-structured",
+      "seed": 42,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "budget-exceeded",
+        "reason": "budget-exceeded:elapsedMs:300000:300001:0",
+        "quiescence": true
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 91967,
+        "workerOutputTokens": 3776,
+        "phaseResponsesAccounted": 29,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 29,
+        "modelCallsCompleted": 29,
+        "usageComplete": true,
+        "inputTokens": 91967,
+        "outputTokens": 3776,
+        "peakInputTokens": 6762,
+        "cacheUsageComplete": true,
+        "cacheTokens": 88274,
+        "uncachedInputTokens": 3693,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 29,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 301.302095,
+      "taskChecksum": "8e6fca84d707d9c8736d83027308f7b9be7cbb2013df8fb40f4343c1c58bac1f",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "90036ac479822f0407b326cfc1aa6e75ad551c1add699ae8c2096e9cd08f05d5",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "c28abf695b549d1a8fd2f7b94352e629f9fa051f490fb9fbc37060fac6524ca6",
+        "agent/result.json": "c56d0413917f738ed961356f75a58f68e8ff41447d1a0fe33091324d45d92d73",
+        "agent/events.jsonl": "f6b760bde9f2906c8ea0996de5b4c3b860aa824609b673a3c88ea67f7847a270",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "23a5f3c7dbecdc0d47f97e135ada376a9228535496b9f0dff5fe8f266f608596"
+      }
+    },
+    {
+      "job": "smoke-sac-structured-42",
+      "task": "fix-git",
+      "arm": "sac-structured",
+      "seed": 42,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "metrics": {
+        "summaryInputTokens": 1580,
+        "summaryOutputTokens": 560,
+        "workerInputTokens": 385,
+        "workerOutputTokens": 63,
+        "phaseResponsesAccounted": 2,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 2,
+        "modelCallsCompleted": 2,
+        "usageComplete": true,
+        "inputTokens": 1965,
+        "outputTokens": 623,
+        "peakInputTokens": 1580,
+        "cacheUsageComplete": true,
+        "cacheTokens": 0,
+        "uncachedInputTokens": 1965,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 1,
+        "summaryAttempts": 1,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 1,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 30.14569,
+      "taskChecksum": "e89f54f2fc73ac576f976c1cd09758e4c9ccf152e53c2dcd91da0c178b89abc7",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "28ccc6604122807ea5cf5edadbf09c926e9ac1a13445d644ffcb6ba43a085282",
+      "failureReasons": {
+        "context.compaction.failed:summary-invalid-evidence": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 346,
+          "configuredTrigger": 12288,
+          "precedingEvent": "tool.completed",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        }
+      ],
+      "artifactSha256": {
+        "result.json": "4d0e7240cd6615efc73030b2cfb291830d6cce80ebdd50db95b80db474d80eeb",
+        "agent/result.json": "98d92c8ae508317206895f233662f521708667619989aa5deaf983a71ab887a1",
+        "agent/events.jsonl": "010a37d47058db908233b1a3508cae401e41b01966c261347b9aebe2f99e64cc",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "9d4614fa512f4ab41077025c5c39867c8ef398255c4c835bf6d253d1f8edd508"
+      }
+    },
+    {
+      "job": "smoke-sac-structured-42",
+      "task": "regex-log",
+      "arm": "sac-structured",
+      "seed": 42,
+      "recorded": true,
+      "reward": null,
+      "exceptionType": "RuntimeError",
+      "runtime": {
+        "outcome": "incomplete",
+        "reason": "budget-exceeded:elapsedMs:300000:300023:0",
+        "quiescence": false
+      },
+      "metrics": {
+        "summaryInputTokens": 21061,
+        "summaryOutputTokens": 5204,
+        "workerInputTokens": 13803,
+        "workerOutputTokens": 663,
+        "phaseResponsesAccounted": 14,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 15,
+        "modelCallsCompleted": 14,
+        "usageComplete": false,
+        "inputTokens": 34864,
+        "outputTokens": 5867,
+        "peakInputTokens": 3801,
+        "cacheUsageComplete": false,
+        "cacheTokens": null,
+        "uncachedInputTokens": null,
+        "billedCostUSD": null,
+        "compactions": 6,
+        "compactionFailures": 0,
+        "summaryAttempts": 8,
+        "summaryFailures": 1,
+        "summaryValidationFailures": 1,
+        "summaryTruncations": 0,
+        "toolCalls": 7,
+        "identicalRepeatedToolCalls": 3
+      },
+      "agentSeconds": 330.133286,
+      "taskChecksum": "8e6fca84d707d9c8736d83027308f7b9be7cbb2013df8fb40f4343c1c58bac1f",
+      "bundleSha256": null,
+      "firstRequestSha256SortedJSON": "90036ac479822f0407b326cfc1aa6e75ad551c1add699ae8c2096e9cd08f05d5",
+      "failureReasons": {
+        "context.summary.validation-failed:unspecified": 1,
+        "context.summary.failed:request-failed": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 642,
+          "configuredTrigger": 12288,
+          "precedingEvent": "tool.completed",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 1448,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 1718,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 2066,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 2192,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 2230,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 2336,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        }
+      ],
+      "artifactSha256": {
+        "result.json": "0e4e934027b50435e3ac50e58998b1362116d3cd26312f06e383b8593366feca",
+        "agent/result.json": "fdc10404073fdff4c4fec14cd966c767cc1e4ea3ee6d2867b3e5c1cc9d82de6f",
+        "agent/events.jsonl": "34427a0b26ff33df3be99f9109a9805a372438f076be87500511cb8193f37de4"
+      }
+    }
+  ],
+  "terminalBenchConfirmation": [
+    {
+      "job": "heldout-suffix-42",
+      "task": "cancel-async-tasks",
+      "arm": "suffix",
+      "seed": 42,
+      "recorded": true,
+      "reward": 1.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "incomplete",
+        "reason": "budget-exceeded:elapsedMs:300000:300019:0",
+        "quiescence": false
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 56719,
+        "workerOutputTokens": 7062,
+        "phaseResponsesAccounted": 12,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 12,
+        "modelCallsCompleted": 12,
+        "usageComplete": true,
+        "inputTokens": 56719,
+        "outputTokens": 7062,
+        "peakInputTokens": 8102,
+        "cacheUsageComplete": true,
+        "cacheTokens": 54475,
+        "uncachedInputTokens": 2244,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 11,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 327.638226,
+      "taskChecksum": "1566331f6913b8a4f9af6779e90cabbb79edf1b15c126b6bc544912df3f14de5",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "0e40aebf560816006263a21dde69525fb9269a19ec447986d01088232b34b825",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "ef8f82063eaf867cc838bac6a7bb6653e70a75851e0920181053bea2fbb0dc89",
+        "agent/result.json": "f461d63796ff5cdf2ea9a2068e703ebfd33c9795e476c9762960c578bc3a9ef6",
+        "agent/events.jsonl": "cdef3205d7b9fdbae72823de19e02013ba64ecd115dd4d13d051cb6a67a31031",
+        "verifier/reward.txt": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+        "verifier/test-stdout.txt": "8eb73c500321881fecf664f370a3f74f656bad63add58dda92bb953d5876f2a0"
+      }
+    },
+    {
+      "job": "heldout-eocc-structured-42",
+      "task": "cancel-async-tasks",
+      "arm": "eocc-structured",
+      "seed": 42,
+      "recorded": true,
+      "reward": 1.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "incomplete",
+        "reason": "budget-exceeded:elapsedMs:300000:300015:0",
+        "quiescence": false
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 90194,
+        "workerOutputTokens": 7786,
+        "phaseResponsesAccounted": 16,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 16,
+        "modelCallsCompleted": 16,
+        "usageComplete": true,
+        "inputTokens": 90194,
+        "outputTokens": 7786,
+        "peakInputTokens": 11477,
+        "cacheUsageComplete": true,
+        "cacheTokens": 86184,
+        "uncachedInputTokens": 4010,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 15,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 326.357653,
+      "taskChecksum": "1566331f6913b8a4f9af6779e90cabbb79edf1b15c126b6bc544912df3f14de5",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "0e40aebf560816006263a21dde69525fb9269a19ec447986d01088232b34b825",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "9326fa4412781a84445ddd1b24deb6fc6df15ca428c6f710b65e2bb92ebd9e25",
+        "agent/result.json": "68b3ca6ebae2a8a102e6ec24a944adf5c657f4a74aef21362300eb16a0e09d3f",
+        "agent/events.jsonl": "bd685c3f90977d74d5caecc6b37e9d0216772df882ba50155251faeca57bc187",
+        "verifier/reward.txt": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+        "verifier/test-stdout.txt": "7452a81b7d45c37fd72bd54b62fc847513b6bab7b8895ec40843d044e30cf90e"
+      }
+    },
+    {
+      "job": "heldout-sac-structured-42",
+      "task": "cancel-async-tasks",
+      "arm": "sac-structured",
+      "seed": 42,
+      "recorded": true,
+      "reward": 1.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "incomplete",
+        "reason": "budget-exceeded:elapsedMs:300000:300038:0",
+        "quiescence": false
+      },
+      "metrics": {
+        "summaryInputTokens": 16441,
+        "summaryOutputTokens": 6451,
+        "workerInputTokens": 6841,
+        "workerOutputTokens": 643,
+        "phaseResponsesAccounted": 10,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 10,
+        "modelCallsCompleted": 10,
+        "usageComplete": true,
+        "inputTokens": 23282,
+        "outputTokens": 7094,
+        "peakInputTokens": 4542,
+        "cacheUsageComplete": true,
+        "cacheTokens": 628,
+        "uncachedInputTokens": 22654,
+        "billedCostUSD": null,
+        "compactions": 3,
+        "compactionFailures": 0,
+        "summaryAttempts": 6,
+        "summaryFailures": 1,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 1,
+        "toolCalls": 4,
+        "identicalRepeatedToolCalls": 1
+      },
+      "agentSeconds": 315.990526,
+      "taskChecksum": "1566331f6913b8a4f9af6779e90cabbb79edf1b15c126b6bc544912df3f14de5",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "0e40aebf560816006263a21dde69525fb9269a19ec447986d01088232b34b825",
+      "failureReasons": {
+        "context.summary.truncated:length": 1,
+        "context.summary.failed:request-failed": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 476,
+          "configuredTrigger": 12288,
+          "precedingEvent": "tool.completed",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 1606,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 2238,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 2387,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        }
+      ],
+      "artifactSha256": {
+        "result.json": "a9698893cd54eabdbd5d038f0e1f1219e165a07838f3588d003324cc8db1b508",
+        "agent/result.json": "d5cd39098a855373819e5955282c49742744a0861bbe31d5b5e843bf85fcd612",
+        "agent/events.jsonl": "1f445a0a17f49d958c2df0324d482edc6356ec9631e303092a2c62afbd5c8de6",
+        "verifier/reward.txt": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+        "verifier/test-stdout.txt": "3635eca5fd0ad841a72bc6d94e418f63a9e3cede8dcfb0acc080b46a5babb829"
+      }
+    },
+    {
+      "job": "heldout-suffix-43",
+      "task": "cancel-async-tasks",
+      "arm": "suffix",
+      "seed": 43,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "budget-exceeded",
+        "reason": "budget-exceeded:elapsedMs:300000:300011:0",
+        "quiescence": true
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 181848,
+        "workerOutputTokens": 7192,
+        "phaseResponsesAccounted": 26,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 26,
+        "modelCallsCompleted": 26,
+        "usageComplete": true,
+        "inputTokens": 181848,
+        "outputTokens": 7192,
+        "peakInputTokens": 11304,
+        "cacheUsageComplete": true,
+        "cacheTokens": 176528,
+        "uncachedInputTokens": 5320,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 25,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 301.885276,
+      "taskChecksum": "1566331f6913b8a4f9af6779e90cabbb79edf1b15c126b6bc544912df3f14de5",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "0e40aebf560816006263a21dde69525fb9269a19ec447986d01088232b34b825",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "118dda4596bf5e5ac281e89629834ac9efc2385ae02848b4e4e59aa5ad4f2771",
+        "agent/result.json": "f66f176bc5dbda77b72c5b6258102f7cb102e015c881165938485aa64b491350",
+        "agent/events.jsonl": "4556cf5aecd0805af481539903eaf3cdc9f2da9cb52cc1f07be1fd7985bf6661",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "d300e6dd56dc82120fcf1d8876eebf642efe522385fcc415bac2ede1ec7a8dab"
+      }
+    },
+    {
+      "job": "heldout-eocc-structured-43",
+      "task": "cancel-async-tasks",
+      "arm": "eocc-structured",
+      "seed": 43,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": "NonZeroAgentExitCodeError",
+      "runtime": {
+        "outcome": "incomplete",
+        "reason": "budget-exceeded:elapsedMs:300000:300010:0",
+        "quiescence": false
+      },
+      "metrics": {
+        "summaryInputTokens": 8895,
+        "summaryOutputTokens": 950,
+        "workerInputTokens": 101361,
+        "workerOutputTokens": 6365,
+        "phaseResponsesAccounted": 21,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 21,
+        "modelCallsCompleted": 21,
+        "usageComplete": true,
+        "inputTokens": 110256,
+        "outputTokens": 7315,
+        "peakInputTokens": 12047,
+        "cacheUsageComplete": true,
+        "cacheTokens": 95788,
+        "uncachedInputTokens": 14468,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 2,
+        "summaryFailures": 1,
+        "summaryValidationFailures": 1,
+        "summaryTruncations": 0,
+        "toolCalls": 19,
+        "identicalRepeatedToolCalls": 0
+      },
+      "agentSeconds": 330.639894,
+      "taskChecksum": "1566331f6913b8a4f9af6779e90cabbb79edf1b15c126b6bc544912df3f14de5",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "0e40aebf560816006263a21dde69525fb9269a19ec447986d01088232b34b825",
+      "failureReasons": {
+        "context.summary.validation-failed:unspecified": 1,
+        "context.summary.failed:request-failed": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 12530,
+          "configuredTrigger": 12288,
+          "precedingEvent": "tool.completed",
+          "precedingStopReason": null,
+          "inferredCause": "threshold"
+        }
+      ],
+      "artifactSha256": {
+        "result.json": "41eaa006aec109c7a55c26380da0b17ce32805a5e9692f0ab0e5bd47a7690319",
+        "agent/result.json": "a2e77f1631c6785b2dc2bd3e797aeb0771ca7b8f77bccac1deee3cf0ed2d1e29",
+        "agent/events.jsonl": "93f85ac5faca95efd97374f204380c1be77bba547164ebba8a7b0600fe4b0426",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "cecc8779505e347d740172adc6192c9c7527dc276c855b1e1fef72f0605bab44"
+      }
+    },
+    {
+      "job": "heldout-sac-structured-43",
+      "task": "cancel-async-tasks",
+      "arm": "sac-structured",
+      "seed": 43,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": "NonZeroAgentExitCodeError",
+      "runtime": {
+        "outcome": "incomplete",
+        "reason": "budget-exceeded:elapsedMs:300000:300025:0",
+        "quiescence": false
+      },
+      "metrics": {
+        "summaryInputTokens": 19018,
+        "summaryOutputTokens": 5212,
+        "workerInputTokens": 11212,
+        "workerOutputTokens": 492,
+        "phaseResponsesAccounted": 12,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 13,
+        "modelCallsCompleted": 12,
+        "usageComplete": false,
+        "inputTokens": 30230,
+        "outputTokens": 5704,
+        "peakInputTokens": 3961,
+        "cacheUsageComplete": false,
+        "cacheTokens": null,
+        "uncachedInputTokens": null,
+        "billedCostUSD": null,
+        "compactions": 5,
+        "compactionFailures": 0,
+        "summaryAttempts": 7,
+        "summaryFailures": 1,
+        "summaryValidationFailures": 1,
+        "summaryTruncations": 0,
+        "toolCalls": 6,
+        "identicalRepeatedToolCalls": 5
+      },
+      "agentSeconds": 335.247047,
+      "taskChecksum": "1566331f6913b8a4f9af6779e90cabbb79edf1b15c126b6bc544912df3f14de5",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "0e40aebf560816006263a21dde69525fb9269a19ec447986d01088232b34b825",
+      "failureReasons": {
+        "context.summary.validation-failed:unspecified": 1,
+        "context.summary.failed:request-failed": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 487,
+          "configuredTrigger": 12288,
+          "precedingEvent": "tool.completed",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 1703,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 1865,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 2015,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 2312,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 2175,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        }
+      ],
+      "artifactSha256": {
+        "result.json": "a5c37e3e66559cdcb1f776e27c3f7ef070182afd06447c292187339e2bb7890e",
+        "agent/result.json": "cdea9f3ca39ff5164da5f512d8afff730b844e0fc69ae2265aa0e1a037be40a6",
+        "agent/events.jsonl": "b6911d2f3150a98157bc995f9e028e231e3964fb230038bc37a838f19759b54e",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "c25f37037485b37a6ece2db9f6b7225ddfb6ffd47bf96e85b57339966035c26a"
+      }
+    },
+    {
+      "job": "heldout-suffix-44",
+      "task": "cancel-async-tasks",
+      "arm": "suffix",
+      "seed": 44,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "incomplete",
+        "reason": "budget-exceeded:elapsedMs:300000:300005:0",
+        "quiescence": false
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 124394,
+        "workerOutputTokens": 7354,
+        "phaseResponsesAccounted": 23,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 23,
+        "modelCallsCompleted": 23,
+        "usageComplete": true,
+        "inputTokens": 124394,
+        "outputTokens": 7354,
+        "peakInputTokens": 10774,
+        "cacheUsageComplete": true,
+        "cacheTokens": 119793,
+        "uncachedInputTokens": 4601,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 22,
+        "identicalRepeatedToolCalls": 6
+      },
+      "agentSeconds": 317.597404,
+      "taskChecksum": "1566331f6913b8a4f9af6779e90cabbb79edf1b15c126b6bc544912df3f14de5",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "0e40aebf560816006263a21dde69525fb9269a19ec447986d01088232b34b825",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "e30cc93b59ca7df0337cc7d0371a3be7a0808bbb0646831b6cd4c13aa7cc661c",
+        "agent/result.json": "65bb5a1df6ae1485acef42360a3ba854e636042b9ea8726d7139b9fd318e53ae",
+        "agent/events.jsonl": "f2b37c540ec4bf14ab070e576e8a76736e43834321d5ad8392dc05038df4916c",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "344cee00a58dee091b7ac851dbf4c99018235cb028ee3d9134e5dbd96a307651"
+      }
+    },
+    {
+      "job": "heldout-eocc-structured-44",
+      "task": "cancel-async-tasks",
+      "arm": "eocc-structured",
+      "seed": 44,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "incomplete",
+        "reason": "budget-exceeded:elapsedMs:300000:300010:0",
+        "quiescence": false
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 124394,
+        "workerOutputTokens": 7354,
+        "phaseResponsesAccounted": 23,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 23,
+        "modelCallsCompleted": 23,
+        "usageComplete": true,
+        "inputTokens": 124394,
+        "outputTokens": 7354,
+        "peakInputTokens": 10774,
+        "cacheUsageComplete": true,
+        "cacheTokens": 120107,
+        "uncachedInputTokens": 4287,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 22,
+        "identicalRepeatedToolCalls": 6
+      },
+      "agentSeconds": 318.389974,
+      "taskChecksum": "1566331f6913b8a4f9af6779e90cabbb79edf1b15c126b6bc544912df3f14de5",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "0e40aebf560816006263a21dde69525fb9269a19ec447986d01088232b34b825",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "a7715c86508c32eebbe383b1861e55dcce9ba0452817ad2a91df49157ee4fe93",
+        "agent/result.json": "84b7ad2a94384c1c236b5db3d2ddbf5767904bf1080d9dd2a2cde0a4e5acd0f6",
+        "agent/events.jsonl": "12d8bf5c6a090b4024bbd4ab572ed7be77638faf1806bee8d4eb75fc11e4b549",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "eaed0f7d9e7f3c79fe60ccaec18a34d947aa9d4389c2189370ffecd1ba1db897"
+      }
+    },
+    {
+      "job": "heldout-sac-structured-44",
+      "task": "cancel-async-tasks",
+      "arm": "sac-structured",
+      "seed": 44,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "metrics": {
+        "summaryInputTokens": 4644,
+        "summaryOutputTokens": 1140,
+        "workerInputTokens": 1918,
+        "workerOutputTokens": 187,
+        "phaseResponsesAccounted": 4,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 4,
+        "modelCallsCompleted": 4,
+        "usageComplete": true,
+        "inputTokens": 6562,
+        "outputTokens": 1327,
+        "peakInputTokens": 2885,
+        "cacheUsageComplete": true,
+        "cacheTokens": 314,
+        "uncachedInputTokens": 6248,
+        "billedCostUSD": null,
+        "compactions": 1,
+        "compactionFailures": 1,
+        "summaryAttempts": 2,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 2,
+        "identicalRepeatedToolCalls": 1
+      },
+      "agentSeconds": 63.457149,
+      "taskChecksum": "1566331f6913b8a4f9af6779e90cabbb79edf1b15c126b6bc544912df3f14de5",
+      "bundleSha256": "3771d35ee26e52211dae2938626c6886e480b464d777fe6895bca5b78e502e99",
+      "firstRequestSha256SortedJSON": "0e40aebf560816006263a21dde69525fb9269a19ec447986d01088232b34b825",
+      "failureReasons": {
+        "context.compaction.failed:summary-invalid-evidence": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 459,
+          "configuredTrigger": 12288,
+          "precedingEvent": "tool.completed",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 1333,
+          "configuredTrigger": 12288,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        }
+      ],
+      "artifactSha256": {
+        "result.json": "0413fb2c764866f8932c5abf597561d2646a620e2d72d21c5637f7f1b372a9dc",
+        "agent/result.json": "472fa0d791df627ba3670552ace22f95e11e8bdfbdd37e31a28169dfe61ea97d",
+        "agent/events.jsonl": "80a754a11d352e7a8561a53dd9baef82f52805fbb6449bd1307a76bc34f1855c",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "5381bcf43ba48a14385d61612a219234ef1d7201493f413c78d03fc7a7f4f61f"
+      }
+    }
+  ],
+  "fixedHistory": [
+    {
+      "afterTokens": 404,
+      "arm": "suffix",
+      "beforeTokens": 18128,
+      "outcome": "completed",
+      "reason": "completed",
+      "retained": {
+        "branch": true,
+        "marker": true,
+        "noFalsePass": true,
+        "pendingCheck": true
+      },
+      "metrics": {
+        "summaryInputTokens": 21726,
+        "summaryOutputTokens": 294,
+        "workerInputTokens": 0,
+        "workerOutputTokens": 0,
+        "phaseResponsesAccounted": 1,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 1,
+        "modelCallsCompleted": 1,
+        "usageComplete": true,
+        "inputTokens": 21726,
+        "outputTokens": 294,
+        "peakInputTokens": 21726,
+        "cacheUsageComplete": true,
+        "cacheTokens": 0,
+        "uncachedInputTokens": 21726,
+        "billedCostUSD": null,
+        "compactions": 1,
+        "compactionFailures": 0,
+        "summaryAttempts": 1,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 0,
+        "identicalRepeatedToolCalls": 0
+      },
+      "summaryUsage": {
+        "inputTokens": 21726,
+        "outputTokens": 294,
+        "totalTokens": 22020
+      },
+      "artifactSha256": {
+        "suffix-events.jsonl": "f53fb01077420c2f45e98767c082f7f60214166736ba29fa4d064ec85801905c",
+        "results.json": "3396c42866946761fcc6d2d0c3ce941b6f4a1dea2946d79b19ab00f883c1333f",
+        "source.json": "9f9fff8c2ca152801d935b610d27753df1166c28a30ff6d23a4235c513ee8451"
+      }
+    },
+    {
+      "afterTokens": 534,
+      "arm": "suffix-handoff",
+      "beforeTokens": 18128,
+      "outcome": "completed",
+      "reason": "completed",
+      "retained": {
+        "branch": true,
+        "marker": true,
+        "noFalsePass": true,
+        "pendingCheck": true
+      },
+      "metrics": {
+        "summaryInputTokens": 43655,
+        "summaryOutputTokens": 746,
+        "workerInputTokens": 0,
+        "workerOutputTokens": 0,
+        "phaseResponsesAccounted": 2,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 2,
+        "modelCallsCompleted": 2,
+        "usageComplete": true,
+        "inputTokens": 43655,
+        "outputTokens": 746,
+        "peakInputTokens": 21850,
+        "cacheUsageComplete": true,
+        "cacheTokens": 0,
+        "uncachedInputTokens": 43655,
+        "billedCostUSD": null,
+        "compactions": 1,
+        "compactionFailures": 0,
+        "summaryAttempts": 2,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 1,
+        "summaryTruncations": 0,
+        "toolCalls": 0,
+        "identicalRepeatedToolCalls": 0
+      },
+      "summaryUsage": {
+        "inputTokens": 21850,
+        "outputTokens": 414,
+        "totalTokens": 22264
+      },
+      "artifactSha256": {
+        "suffix-handoff-events.jsonl": "eb4b0f5f65f8cd7d8f8a8c7cb2e53c0472776489ff6fe68b0d44c2f083fff0a2",
+        "results.json": "3396c42866946761fcc6d2d0c3ce941b6f4a1dea2946d79b19ab00f883c1333f",
+        "source.json": "9f9fff8c2ca152801d935b610d27753df1166c28a30ff6d23a4235c513ee8451"
+      }
+    },
+    {
+      "afterTokens": 499,
+      "arm": "eocc-structured",
+      "beforeTokens": 18128,
+      "outcome": "completed",
+      "reason": "completed",
+      "retained": {
+        "branch": true,
+        "marker": true,
+        "noFalsePass": true,
+        "pendingCheck": true
+      },
+      "metrics": {
+        "summaryInputTokens": 21784,
+        "summaryOutputTokens": 352,
+        "workerInputTokens": 0,
+        "workerOutputTokens": 0,
+        "phaseResponsesAccounted": 1,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 1,
+        "modelCallsCompleted": 1,
+        "usageComplete": true,
+        "inputTokens": 21784,
+        "outputTokens": 352,
+        "peakInputTokens": 21784,
+        "cacheUsageComplete": true,
+        "cacheTokens": 0,
+        "uncachedInputTokens": 21784,
+        "billedCostUSD": null,
+        "compactions": 1,
+        "compactionFailures": 0,
+        "summaryAttempts": 1,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 0,
+        "identicalRepeatedToolCalls": 0
+      },
+      "summaryUsage": {
+        "inputTokens": 21784,
+        "outputTokens": 352,
+        "totalTokens": 22136
+      },
+      "artifactSha256": {
+        "eocc-structured-events.jsonl": "4d98b416638d17f150ad2302c83c1da475ac944c29b3f9fcc5c983c95289155a",
+        "results.json": "3396c42866946761fcc6d2d0c3ce941b6f4a1dea2946d79b19ab00f883c1333f",
+        "source.json": "9f9fff8c2ca152801d935b610d27753df1166c28a30ff6d23a4235c513ee8451"
+      }
+    },
+    {
+      "afterTokens": 600,
+      "arm": "eocc",
+      "beforeTokens": 18128,
+      "outcome": "completed",
+      "reason": "completed",
+      "retained": {
+        "branch": true,
+        "marker": true,
+        "noFalsePass": true,
+        "pendingCheck": true
+      },
+      "metrics": {
+        "summaryInputTokens": 21867,
+        "summaryOutputTokens": 439,
+        "workerInputTokens": 0,
+        "workerOutputTokens": 0,
+        "phaseResponsesAccounted": 1,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 1,
+        "modelCallsCompleted": 1,
+        "usageComplete": true,
+        "inputTokens": 21867,
+        "outputTokens": 439,
+        "peakInputTokens": 21867,
+        "cacheUsageComplete": true,
+        "cacheTokens": 0,
+        "uncachedInputTokens": 21867,
+        "billedCostUSD": null,
+        "compactions": 1,
+        "compactionFailures": 0,
+        "summaryAttempts": 1,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 0,
+        "identicalRepeatedToolCalls": 0
+      },
+      "summaryUsage": {
+        "inputTokens": 21867,
+        "outputTokens": 439,
+        "totalTokens": 22306
+      },
+      "artifactSha256": {
+        "eocc-events.jsonl": "7823f80f4f90be84aac79e7c45a8ed1a4e78eb351ff59f774b4c1568f216bf8c",
+        "results.json": "3396c42866946761fcc6d2d0c3ce941b6f4a1dea2946d79b19ab00f883c1333f",
+        "source.json": "9f9fff8c2ca152801d935b610d27753df1166c28a30ff6d23a4235c513ee8451"
+      }
+    },
+    {
+      "afterTokens": 446,
+      "arm": "sac-structured",
+      "beforeTokens": 18128,
+      "outcome": "completed",
+      "reason": "completed",
+      "retained": {
+        "branch": true,
+        "marker": true,
+        "noFalsePass": true,
+        "pendingCheck": true
+      },
+      "metrics": {
+        "summaryInputTokens": 21785,
+        "summaryOutputTokens": 313,
+        "workerInputTokens": 0,
+        "workerOutputTokens": 0,
+        "phaseResponsesAccounted": 1,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 1,
+        "modelCallsCompleted": 1,
+        "usageComplete": true,
+        "inputTokens": 21785,
+        "outputTokens": 313,
+        "peakInputTokens": 21785,
+        "cacheUsageComplete": true,
+        "cacheTokens": 0,
+        "uncachedInputTokens": 21785,
+        "billedCostUSD": null,
+        "compactions": 1,
+        "compactionFailures": 0,
+        "summaryAttempts": 1,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 0,
+        "identicalRepeatedToolCalls": 0
+      },
+      "summaryUsage": {
+        "inputTokens": 21785,
+        "outputTokens": 313,
+        "totalTokens": 22098
+      },
+      "artifactSha256": {
+        "sac-structured-events.jsonl": "72673781d88e873bbf1e0550b2a09f3cc944d9affad8be6f997b63bff976301d",
+        "results.json": "3396c42866946761fcc6d2d0c3ce941b6f4a1dea2946d79b19ab00f883c1333f",
+        "source.json": "9f9fff8c2ca152801d935b610d27753df1166c28a30ff6d23a4235c513ee8451"
+      }
+    },
+    {
+      "afterTokens": 487,
+      "arm": "sac",
+      "beforeTokens": 18128,
+      "outcome": "completed",
+      "reason": "completed",
+      "retained": {
+        "branch": true,
+        "marker": true,
+        "noFalsePass": true,
+        "pendingCheck": true
+      },
+      "metrics": {
+        "summaryInputTokens": 21865,
+        "summaryOutputTokens": 355,
+        "workerInputTokens": 0,
+        "workerOutputTokens": 0,
+        "phaseResponsesAccounted": 1,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 1,
+        "modelCallsCompleted": 1,
+        "usageComplete": true,
+        "inputTokens": 21865,
+        "outputTokens": 355,
+        "peakInputTokens": 21865,
+        "cacheUsageComplete": true,
+        "cacheTokens": 0,
+        "uncachedInputTokens": 21865,
+        "billedCostUSD": null,
+        "compactions": 1,
+        "compactionFailures": 0,
+        "summaryAttempts": 1,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 0,
+        "identicalRepeatedToolCalls": 0
+      },
+      "summaryUsage": {
+        "inputTokens": 21865,
+        "outputTokens": 355,
+        "totalTokens": 22220
+      },
+      "artifactSha256": {
+        "sac-events.jsonl": "63d2794fcadddfefb5a934159f4ed8aa25b9b762ba1d477fd53e86985a2741ec",
+        "results.json": "3396c42866946761fcc6d2d0c3ce941b6f4a1dea2946d79b19ab00f883c1333f",
+        "source.json": "9f9fff8c2ca152801d935b610d27753df1166c28a30ff6d23a4235c513ee8451"
+      }
+    }
+  ],
+  "sweBenchConfirmation": [
+    {
+      "arm": "suffix",
+      "seed": 42,
+      "task": "pytest-dev__pytest-10051",
+      "elapsedMs": 900000,
+      "solveExit": 0,
+      "gradeExit": 0,
+      "solver": {
+        "agentSourceSha256": "72a66a0784c38cd00ec4440aec43c43df7feba432b9ad7d58fc1720112eba4ef",
+        "elapsedMs": 935850,
+        "imageId": "sha256:1e7ca67e193d9256f1b6ae738aca667a00f660e8e2f22e113ce4d010ce5c9685",
+        "orbitCommit": "07fe0cdc4b5c0a5e7981e62140f36e5bae22f162",
+        "runStatus": "timeout",
+        "runtimeOutcome": "incomplete",
+        "sourceArchiveSha256": "42587bca80f689036a2125a4ded03bebac754c13cedcbaa796e8cf3bbf51b6a0",
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/lastfailed",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ],
+        "configuration": {
+          "compactionArm": "suffix",
+          "compactionBudgets": {
+            "target": 16384,
+            "trigger": 24576,
+            "window": 32768
+          },
+          "contextPolicy": "disabled",
+          "executionActionMode": "single",
+          "model": "ornith-1.5:9b",
+          "options": {
+            "num_ctx": 32768,
+            "num_predict": 2048,
+            "seed": 42,
+            "temperature": 0.6,
+            "top_p": 0.95
+          },
+          "promptSha256": "e5153b77634f6a24f794f47cafd41ad2a38d963f5a31890034e9a8f04a652048",
+          "rounds": "unlimited",
+          "strategy": "baseline",
+          "think": false,
+          "timeoutMs": 900000
+        }
+      },
+      "effectiveContextPolicy": {
+        "algorithm": "structured-summary-v1",
+        "mode": "budgeted",
+        "strategy": "budgeted-suffix-v1",
+        "profile": {
+          "model": "ornith-1.5:9b",
+          "outputReserve": 2048,
+          "provider": "ollama",
+          "revision": "compaction-experiment-v1",
+          "safetyMargin": 256,
+          "summaryOutput": 2048,
+          "target": 16384,
+          "templateOverhead": 0,
+          "trigger": 24576,
+          "window": 32768
+        }
+      },
+      "quality": {
+        "changes": [
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/.gitignore",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/CACHEDIR.TAG",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/README.md",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/lastfailed",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/nodeids",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/stepwise",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": "src/_pytest/logging.py",
+            "status": "modified",
+            "unwanted": false
+          },
+          {
+            "isTest": true,
+            "kind": "file",
+            "path": "testing/logging/test_fixture.py",
+            "status": "modified",
+            "unwanted": false
+          }
+        ],
+        "issues": [
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/.gitignore",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/CACHEDIR.TAG",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/README.md",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/lastfailed",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/nodeids",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/stepwise",
+            "status": "added",
+            "unwanted": true
+          }
+        ],
+        "officialScore": "independent",
+        "status": "quality-failed",
+        "tests": [
+          {
+            "baselineExitCode": 0,
+            "candidateExitCode": 1,
+            "path": "testing/logging/test_fixture.py",
+            "status": "candidate-test-failure"
+          }
+        ]
+      },
+      "metrics": {
+        "summaryInputTokens": 22356,
+        "summaryOutputTokens": 8663,
+        "workerInputTokens": 564867,
+        "workerOutputTokens": 11404,
+        "phaseResponsesAccounted": 61,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 62,
+        "modelCallsCompleted": 61,
+        "usageComplete": false,
+        "inputTokens": 587223,
+        "outputTokens": 20067,
+        "peakInputTokens": 21548,
+        "cacheUsageComplete": false,
+        "cacheTokens": null,
+        "uncachedInputTokens": null,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 10,
+        "summaryFailures": 1,
+        "summaryValidationFailures": 1,
+        "summaryTruncations": 2,
+        "toolCalls": 51,
+        "identicalRepeatedToolCalls": 1
+      },
+      "firstRequestSha256SortedJSON": "672f91c907b2818c63d8ebe3d79e867d14a527367509afded3c0425b3b76771e",
+      "failureReasons": {
+        "context.summary.truncated:length": 2,
+        "context.summary.validation-failed:unspecified": 1,
+        "context.summary.failed:request-failed": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 20946,
+          "configuredTrigger": 24576,
+          "precedingEvent": "model.response.completed",
+          "precedingStopReason": "length",
+          "inferredCause": "recovery-after-output-length"
+        }
+      ],
+      "artifactSha256": {
+        "metadata.json": "3bc0ef634cc9412be9eba4d57ddc20f28727977b246d45720581a1a6de864afd",
+        "predictions.jsonl": "b11f58294eaa6f85618969ca21b39b9fa676612998b76fa6c7ea17653cc59b78",
+        "patch.diff": "a62b3903da770055649750bd9c308c7cec237a344360d108679dcf0565732efe",
+        "agent/output/events.jsonl": "d0db7bd62970e22c45f5fb22a19fd2daa0fd2f22de51d848ed432d05948adb19",
+        "agent/output/result.json": "b37df8bd8dcac2bc80541a2e481b3cb379dc6dda454d62f7101badc835618c07",
+        "gradeRecord": "1f0b79aa3b0707d3d310ea4ccae14b82e3af641fd665b0dc07644e7c0129757e"
+      },
+      "runtime": {
+        "outcome": "incomplete",
+        "reason": "budget-exceeded:elapsedMs:900000:900019:0",
+        "quiescence": false
+      },
+      "grade": {
+        "status": "unresolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+        "imageDigests": [
+          "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+          "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f"
+        ],
+        "report": {
+          "pytest-dev__pytest-10051": {
+            "patch_is_None": false,
+            "patch_exists": true,
+            "patch_successfully_applied": true,
+            "resolved": false,
+            "tests_status": {
+              "FAIL_TO_PASS": {
+                "success": [],
+                "failure": ["testing/logging/test_fixture.py::test_clear_for_call_stage"]
+              },
+              "PASS_TO_PASS": {
+                "success": [
+                  "testing/logging/test_fixture.py::test_change_level",
+                  "testing/logging/test_fixture.py::test_with_statement",
+                  "testing/logging/test_fixture.py::test_log_access",
+                  "testing/logging/test_fixture.py::test_messages",
+                  "testing/logging/test_fixture.py::test_record_tuples",
+                  "testing/logging/test_fixture.py::test_unicode",
+                  "testing/logging/test_fixture.py::test_clear",
+                  "testing/logging/test_fixture.py::test_fixture_help",
+                  "testing/logging/test_fixture.py::test_change_level_undo",
+                  "testing/logging/test_fixture.py::test_change_level_undos_handler_level",
+                  "testing/logging/test_fixture.py::test_ini_controls_global_log_level",
+                  "testing/logging/test_fixture.py::test_caplog_can_override_global_log_level",
+                  "testing/logging/test_fixture.py::test_caplog_captures_despite_exception",
+                  "testing/logging/test_fixture.py::test_log_report_captures_according_to_config_option_upon_failure"
+                ],
+                "failure": ["testing/logging/test_fixture.py::test_caplog_captures_for_all_stages"]
+              },
+              "FAIL_TO_FAIL": {
+                "success": [],
+                "failure": []
+              },
+              "PASS_TO_FAIL": {
+                "success": [],
+                "failure": []
+              }
+            }
+          }
+        },
+        "processExit": 0,
+        "predictionsSha256": "b11f58294eaa6f85618969ca21b39b9fa676612998b76fa6c7ea17653cc59b78"
+      }
+    },
+    {
+      "arm": "eocc-structured",
+      "seed": 42,
+      "task": "pytest-dev__pytest-10051",
+      "elapsedMs": 900000,
+      "solveExit": 0,
+      "gradeExit": 0,
+      "solver": {
+        "agentSourceSha256": "72a66a0784c38cd00ec4440aec43c43df7feba432b9ad7d58fc1720112eba4ef",
+        "elapsedMs": 404296,
+        "imageId": "sha256:1e7ca67e193d9256f1b6ae738aca667a00f660e8e2f22e113ce4d010ce5c9685",
+        "orbitCommit": "07fe0cdc4b5c0a5e7981e62140f36e5bae22f162",
+        "runStatus": "runtime-error",
+        "runtimeOutcome": "failed",
+        "sourceArchiveSha256": "42587bca80f689036a2125a4ded03bebac754c13cedcbaa796e8cf3bbf51b6a0",
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/lastfailed",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ],
+        "configuration": {
+          "compactionArm": "eocc-structured",
+          "compactionBudgets": {
+            "target": 16384,
+            "trigger": 24576,
+            "window": 32768
+          },
+          "contextPolicy": "disabled",
+          "executionActionMode": "single",
+          "model": "ornith-1.5:9b",
+          "options": {
+            "num_ctx": 32768,
+            "num_predict": 2048,
+            "seed": 42,
+            "temperature": 0.6,
+            "top_p": 0.95
+          },
+          "promptSha256": "e5153b77634f6a24f794f47cafd41ad2a38d963f5a31890034e9a8f04a652048",
+          "rounds": "unlimited",
+          "strategy": "baseline",
+          "think": false,
+          "timeoutMs": 900000
+        }
+      },
+      "effectiveContextPolicy": {
+        "algorithm": "structured-summary-v1",
+        "mode": "budgeted",
+        "strategy": "eocc-v1",
+        "profile": {
+          "model": "ornith-1.5:9b",
+          "outputReserve": 2048,
+          "provider": "ollama",
+          "revision": "compaction-experiment-v1",
+          "safetyMargin": 256,
+          "summaryOutput": 2048,
+          "target": 16384,
+          "templateOverhead": 0,
+          "trigger": 24576,
+          "window": 32768
+        }
+      },
+      "quality": {
+        "changes": [
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/.gitignore",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/CACHEDIR.TAG",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/README.md",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/lastfailed",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/nodeids",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/stepwise",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": "src/_pytest/logging.py",
+            "status": "modified",
+            "unwanted": false
+          },
+          {
+            "isTest": true,
+            "kind": "file",
+            "path": "testing/logging/test_fixture.py",
+            "status": "modified",
+            "unwanted": false
+          }
+        ],
+        "issues": [
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/.gitignore",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/CACHEDIR.TAG",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/README.md",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/lastfailed",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/nodeids",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/stepwise",
+            "status": "added",
+            "unwanted": true
+          }
+        ],
+        "officialScore": "independent",
+        "status": "quality-failed",
+        "tests": [
+          {
+            "baselineExitCode": 0,
+            "candidateExitCode": 1,
+            "path": "testing/logging/test_fixture.py",
+            "status": "candidate-test-failure"
+          }
+        ]
+      },
+      "metrics": {
+        "summaryInputTokens": 21013,
+        "summaryOutputTokens": 4004,
+        "workerInputTokens": 186482,
+        "workerOutputTokens": 4767,
+        "phaseResponsesAccounted": 33,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 33,
+        "modelCallsCompleted": 33,
+        "usageComplete": true,
+        "inputTokens": 207495,
+        "outputTokens": 8771,
+        "peakInputTokens": 10778,
+        "cacheUsageComplete": true,
+        "cacheTokens": 179129,
+        "uncachedInputTokens": 28366,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 1,
+        "summaryAttempts": 4,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 1,
+        "summaryTruncations": 0,
+        "toolCalls": 28,
+        "identicalRepeatedToolCalls": 1
+      },
+      "firstRequestSha256SortedJSON": "672f91c907b2818c63d8ebe3d79e867d14a527367509afded3c0425b3b76771e",
+      "failureReasons": {
+        "context.summary.validation-failed:unspecified": 1,
+        "context.compaction.failed:summary-invalid-evidence": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 10863,
+          "configuredTrigger": 24576,
+          "precedingEvent": "model.response.completed",
+          "precedingStopReason": "length",
+          "inferredCause": "recovery-after-output-length"
+        }
+      ],
+      "artifactSha256": {
+        "metadata.json": "3bb6801cb07c80325e7557df17d9c9d7059a702c5632914d94c37c9a488c5d68",
+        "predictions.jsonl": "5daccf2ff913f4ff2b44936b9224c7a604fac46525857147d5a00f50c7b5d40c",
+        "patch.diff": "132f65f09e406af00dac80d92433bb0239170993dff78cfdb2c83041f7991040",
+        "agent/output/events.jsonl": "3fa0c8342e89c00dcb5647470ab43260955df1c8dcf685e5c28e3051beceb315",
+        "agent/output/result.json": "7ba15f85dc40fc281f0dfac4223f953e541a544a55525e4fbe33ab3f7a514532",
+        "gradeRecord": "5101b54fab5f0e8693edc92ee8f78da0017f3b3090b38bd548f0a798dd46c75b"
+      },
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "grade": {
+        "status": "unresolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+        "imageDigests": [
+          "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+          "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f"
+        ],
+        "report": {
+          "pytest-dev__pytest-10051": {
+            "patch_is_None": false,
+            "patch_exists": true,
+            "patch_successfully_applied": true,
+            "resolved": false,
+            "tests_status": {
+              "FAIL_TO_PASS": {
+                "success": [],
+                "failure": ["testing/logging/test_fixture.py::test_clear_for_call_stage"]
+              },
+              "PASS_TO_PASS": {
+                "success": [
+                  "testing/logging/test_fixture.py::test_change_level",
+                  "testing/logging/test_fixture.py::test_with_statement",
+                  "testing/logging/test_fixture.py::test_log_access",
+                  "testing/logging/test_fixture.py::test_messages",
+                  "testing/logging/test_fixture.py::test_record_tuples",
+                  "testing/logging/test_fixture.py::test_unicode",
+                  "testing/logging/test_fixture.py::test_clear",
+                  "testing/logging/test_fixture.py::test_fixture_help",
+                  "testing/logging/test_fixture.py::test_change_level_undo",
+                  "testing/logging/test_fixture.py::test_change_level_undos_handler_level",
+                  "testing/logging/test_fixture.py::test_ini_controls_global_log_level",
+                  "testing/logging/test_fixture.py::test_caplog_can_override_global_log_level",
+                  "testing/logging/test_fixture.py::test_caplog_captures_despite_exception",
+                  "testing/logging/test_fixture.py::test_log_report_captures_according_to_config_option_upon_failure"
+                ],
+                "failure": ["testing/logging/test_fixture.py::test_caplog_captures_for_all_stages"]
+              },
+              "FAIL_TO_FAIL": {
+                "success": [],
+                "failure": []
+              },
+              "PASS_TO_FAIL": {
+                "success": [],
+                "failure": []
+              }
+            }
+          }
+        },
+        "processExit": 0,
+        "predictionsSha256": "5daccf2ff913f4ff2b44936b9224c7a604fac46525857147d5a00f50c7b5d40c"
+      }
+    },
+    {
+      "arm": "sac-structured",
+      "seed": 42,
+      "task": "pytest-dev__pytest-10051",
+      "elapsedMs": 900000,
+      "solveExit": 0,
+      "gradeExit": 0,
+      "solver": {
+        "agentSourceSha256": "72a66a0784c38cd00ec4440aec43c43df7feba432b9ad7d58fc1720112eba4ef",
+        "elapsedMs": 917752,
+        "imageId": "sha256:1e7ca67e193d9256f1b6ae738aca667a00f660e8e2f22e113ce4d010ce5c9685",
+        "orbitCommit": "07fe0cdc4b5c0a5e7981e62140f36e5bae22f162",
+        "runStatus": "runtime-error",
+        "runtimeOutcome": "incomplete",
+        "sourceArchiveSha256": "42587bca80f689036a2125a4ded03bebac754c13cedcbaa796e8cf3bbf51b6a0",
+        "excludedGeneratedPaths": [],
+        "configuration": {
+          "compactionArm": "sac-structured",
+          "compactionBudgets": {
+            "target": 16384,
+            "trigger": 24576,
+            "window": 32768
+          },
+          "contextPolicy": "disabled",
+          "executionActionMode": "single",
+          "model": "ornith-1.5:9b",
+          "options": {
+            "num_ctx": 32768,
+            "num_predict": 2048,
+            "seed": 42,
+            "temperature": 0.6,
+            "top_p": 0.95
+          },
+          "promptSha256": "e5153b77634f6a24f794f47cafd41ad2a38d963f5a31890034e9a8f04a652048",
+          "rounds": "unlimited",
+          "strategy": "baseline",
+          "think": false,
+          "timeoutMs": 900000
+        }
+      },
+      "effectiveContextPolicy": {
+        "algorithm": "structured-summary-v1",
+        "mode": "budgeted",
+        "strategy": "sac-v1",
+        "profile": {
+          "model": "ornith-1.5:9b",
+          "outputReserve": 2048,
+          "provider": "ollama",
+          "revision": "compaction-experiment-v1",
+          "safetyMargin": 256,
+          "summaryOutput": 2048,
+          "target": 16384,
+          "templateOverhead": 0,
+          "trigger": 24576,
+          "window": 32768
+        }
+      },
+      "quality": {
+        "changes": [],
+        "issues": [],
+        "officialScore": "independent",
+        "status": "not-measured",
+        "tests": []
+      },
+      "metrics": {
+        "summaryInputTokens": 86082,
+        "summaryOutputTokens": 18225,
+        "workerInputTokens": 23151,
+        "workerOutputTokens": 429,
+        "phaseResponsesAccounted": 22,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 22,
+        "modelCallsCompleted": 22,
+        "usageComplete": true,
+        "inputTokens": 109233,
+        "outputTokens": 18654,
+        "peakInputTokens": 13250,
+        "cacheUsageComplete": true,
+        "cacheTokens": 5952,
+        "uncachedInputTokens": 103281,
+        "billedCostUSD": null,
+        "compactions": 6,
+        "compactionFailures": 0,
+        "summaryAttempts": 15,
+        "summaryFailures": 1,
+        "summaryValidationFailures": 2,
+        "summaryTruncations": 2,
+        "toolCalls": 7,
+        "identicalRepeatedToolCalls": 3
+      },
+      "firstRequestSha256SortedJSON": "672f91c907b2818c63d8ebe3d79e867d14a527367509afded3c0425b3b76771e",
+      "failureReasons": {
+        "context.summary.validation-failed:unspecified": 2,
+        "context.summary.truncated:length": 2,
+        "context.summary.failed:request-failed": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 1594,
+          "configuredTrigger": 24576,
+          "precedingEvent": "tool.completed",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 2544,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 10455,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 10449,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 4111,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 11940,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 4535,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        }
+      ],
+      "artifactSha256": {
+        "metadata.json": "11d9a1035a6ba5ff6ad81a3143d4f6dccd38e4e837359f109078605d6ef5a9e8",
+        "predictions.jsonl": "fbf091eca30c3a089ad9d89f1e81196485285cb1421a3b63d4298141bfab7d0b",
+        "patch.diff": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "agent/output/events.jsonl": "cef7fdc5857ccd25d997d3da19a2daeade4463b66de7a6d3953c5fd7d796526b",
+        "agent/output/result.json": "5884eb1b7434749140268f822dd3122c33f4485642c5f689cca9cc4eceee4c1c",
+        "gradeRecord": "dd65f6a660c752125abde035192b0be1d486782b828a45ed174053b87fc6c99a"
+      },
+      "runtime": {
+        "outcome": "incomplete",
+        "reason": "budget-exceeded:elapsedMs:900000:900084:0",
+        "quiescence": false
+      },
+      "grade": {
+        "status": "unresolved",
+        "gradingDisposition": "skipped-empty-patch",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+        "imageDigests": [
+          "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+          "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f"
+        ],
+        "report": null,
+        "processExit": 0,
+        "predictionsSha256": "fbf091eca30c3a089ad9d89f1e81196485285cb1421a3b63d4298141bfab7d0b"
+      }
+    },
+    {
+      "arm": "suffix",
+      "seed": 43,
+      "task": "pytest-dev__pytest-10051",
+      "elapsedMs": 900000,
+      "solveExit": 0,
+      "gradeExit": 0,
+      "solver": {
+        "agentSourceSha256": "72a66a0784c38cd00ec4440aec43c43df7feba432b9ad7d58fc1720112eba4ef",
+        "elapsedMs": 538348,
+        "imageId": "sha256:1e7ca67e193d9256f1b6ae738aca667a00f660e8e2f22e113ce4d010ce5c9685",
+        "orbitCommit": "07fe0cdc4b5c0a5e7981e62140f36e5bae22f162",
+        "runStatus": "runtime-error",
+        "runtimeOutcome": "failed",
+        "sourceArchiveSha256": "42587bca80f689036a2125a4ded03bebac754c13cedcbaa796e8cf3bbf51b6a0",
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/lastfailed",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ],
+        "configuration": {
+          "compactionArm": "suffix",
+          "compactionBudgets": {
+            "target": 16384,
+            "trigger": 24576,
+            "window": 32768
+          },
+          "contextPolicy": "disabled",
+          "executionActionMode": "single",
+          "model": "ornith-1.5:9b",
+          "options": {
+            "num_ctx": 32768,
+            "num_predict": 2048,
+            "seed": 43,
+            "temperature": 0.6,
+            "top_p": 0.95
+          },
+          "promptSha256": "e5153b77634f6a24f794f47cafd41ad2a38d963f5a31890034e9a8f04a652048",
+          "rounds": "unlimited",
+          "strategy": "baseline",
+          "think": false,
+          "timeoutMs": 900000
+        }
+      },
+      "effectiveContextPolicy": {
+        "algorithm": "structured-summary-v1",
+        "mode": "budgeted",
+        "strategy": "budgeted-suffix-v1",
+        "profile": {
+          "model": "ornith-1.5:9b",
+          "outputReserve": 2048,
+          "provider": "ollama",
+          "revision": "compaction-experiment-v1",
+          "safetyMargin": 256,
+          "summaryOutput": 2048,
+          "target": 16384,
+          "templateOverhead": 0,
+          "trigger": 24576,
+          "window": 32768
+        }
+      },
+      "quality": {
+        "changes": [
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/.gitignore",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/CACHEDIR.TAG",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/README.md",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/lastfailed",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/nodeids",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/stepwise",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": "src/_pytest/logging.py",
+            "status": "modified",
+            "unwanted": false
+          }
+        ],
+        "issues": [
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/.gitignore",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/CACHEDIR.TAG",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/README.md",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/lastfailed",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/nodeids",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/stepwise",
+            "status": "added",
+            "unwanted": true
+          }
+        ],
+        "officialScore": "independent",
+        "status": "quality-failed",
+        "tests": []
+      },
+      "metrics": {
+        "summaryInputTokens": 19890,
+        "summaryOutputTokens": 8561,
+        "workerInputTokens": 80071,
+        "workerOutputTokens": 3756,
+        "phaseResponsesAccounted": 24,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 24,
+        "modelCallsCompleted": 24,
+        "usageComplete": true,
+        "inputTokens": 99961,
+        "outputTokens": 12317,
+        "peakInputTokens": 7575,
+        "cacheUsageComplete": true,
+        "cacheTokens": 74186,
+        "uncachedInputTokens": 25775,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 1,
+        "summaryAttempts": 5,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 2,
+        "toolCalls": 18,
+        "identicalRepeatedToolCalls": 0
+      },
+      "firstRequestSha256SortedJSON": "672f91c907b2818c63d8ebe3d79e867d14a527367509afded3c0425b3b76771e",
+      "failureReasons": {
+        "context.summary.truncated:length": 2,
+        "context.compaction.failed:summary-failed": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 7660,
+          "configuredTrigger": 24576,
+          "precedingEvent": "model.response.completed",
+          "precedingStopReason": "length",
+          "inferredCause": "recovery-after-output-length"
+        }
+      ],
+      "artifactSha256": {
+        "metadata.json": "f528718b6d2f4ba1c94679086abf3569955b29b2fd260ea39dd552f36028c7ed",
+        "predictions.jsonl": "d33f24bcfb4ba0b1c4d1944fae1b6789dedfd50f87d17255c95161dbd63d1578",
+        "patch.diff": "60281ad6dd464e8bab5a6924cb91ed497336d7509e5e624adc9a58a7718075f6",
+        "agent/output/events.jsonl": "cbf244f05dc7d91ece5392d3f404672be2d8207fd8508a0ace4019cfdac8de1a",
+        "agent/output/result.json": "333858f8d9a610211f5e4bfcf877125617f3cc9d9509a9b1a2fcaa389fae7a1b",
+        "gradeRecord": "b7365d806a1c5b319339795108a3c655826447e5f5dc40666dc71c3c5d175dba"
+      },
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "grade": {
+        "status": "unresolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+        "imageDigests": [
+          "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+          "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f"
+        ],
+        "report": {
+          "pytest-dev__pytest-10051": {
+            "patch_is_None": false,
+            "patch_exists": true,
+            "patch_successfully_applied": true,
+            "resolved": false,
+            "tests_status": {
+              "FAIL_TO_PASS": {
+                "success": [],
+                "failure": ["testing/logging/test_fixture.py::test_clear_for_call_stage"]
+              },
+              "PASS_TO_PASS": {
+                "success": [
+                  "testing/logging/test_fixture.py::test_change_level",
+                  "testing/logging/test_fixture.py::test_with_statement",
+                  "testing/logging/test_fixture.py::test_log_access",
+                  "testing/logging/test_fixture.py::test_messages",
+                  "testing/logging/test_fixture.py::test_record_tuples",
+                  "testing/logging/test_fixture.py::test_unicode",
+                  "testing/logging/test_fixture.py::test_clear",
+                  "testing/logging/test_fixture.py::test_fixture_help",
+                  "testing/logging/test_fixture.py::test_change_level_undo",
+                  "testing/logging/test_fixture.py::test_change_level_undos_handler_level",
+                  "testing/logging/test_fixture.py::test_ini_controls_global_log_level",
+                  "testing/logging/test_fixture.py::test_caplog_can_override_global_log_level",
+                  "testing/logging/test_fixture.py::test_caplog_captures_despite_exception",
+                  "testing/logging/test_fixture.py::test_log_report_captures_according_to_config_option_upon_failure"
+                ],
+                "failure": ["testing/logging/test_fixture.py::test_caplog_captures_for_all_stages"]
+              },
+              "FAIL_TO_FAIL": {
+                "success": [],
+                "failure": []
+              },
+              "PASS_TO_FAIL": {
+                "success": [],
+                "failure": []
+              }
+            }
+          }
+        },
+        "processExit": 0,
+        "predictionsSha256": "d33f24bcfb4ba0b1c4d1944fae1b6789dedfd50f87d17255c95161dbd63d1578"
+      }
+    },
+    {
+      "arm": "eocc-structured",
+      "seed": 43,
+      "task": "pytest-dev__pytest-10051",
+      "elapsedMs": 900000,
+      "solveExit": 0,
+      "gradeExit": 0,
+      "solver": {
+        "agentSourceSha256": "72a66a0784c38cd00ec4440aec43c43df7feba432b9ad7d58fc1720112eba4ef",
+        "elapsedMs": 838218,
+        "imageId": "sha256:1e7ca67e193d9256f1b6ae738aca667a00f660e8e2f22e113ce4d010ce5c9685",
+        "orbitCommit": "07fe0cdc4b5c0a5e7981e62140f36e5bae22f162",
+        "runStatus": "runtime-error",
+        "runtimeOutcome": "failed",
+        "sourceArchiveSha256": "42587bca80f689036a2125a4ded03bebac754c13cedcbaa796e8cf3bbf51b6a0",
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/lastfailed",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ],
+        "configuration": {
+          "compactionArm": "eocc-structured",
+          "compactionBudgets": {
+            "target": 16384,
+            "trigger": 24576,
+            "window": 32768
+          },
+          "contextPolicy": "disabled",
+          "executionActionMode": "single",
+          "model": "ornith-1.5:9b",
+          "options": {
+            "num_ctx": 32768,
+            "num_predict": 2048,
+            "seed": 43,
+            "temperature": 0.6,
+            "top_p": 0.95
+          },
+          "promptSha256": "e5153b77634f6a24f794f47cafd41ad2a38d963f5a31890034e9a8f04a652048",
+          "rounds": "unlimited",
+          "strategy": "baseline",
+          "think": false,
+          "timeoutMs": 900000
+        }
+      },
+      "effectiveContextPolicy": {
+        "algorithm": "structured-summary-v1",
+        "mode": "budgeted",
+        "strategy": "eocc-v1",
+        "profile": {
+          "model": "ornith-1.5:9b",
+          "outputReserve": 2048,
+          "provider": "ollama",
+          "revision": "compaction-experiment-v1",
+          "safetyMargin": 256,
+          "summaryOutput": 2048,
+          "target": 16384,
+          "templateOverhead": 0,
+          "trigger": 24576,
+          "window": 32768
+        }
+      },
+      "quality": {
+        "changes": [
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/.gitignore",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/CACHEDIR.TAG",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/README.md",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/lastfailed",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/nodeids",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/stepwise",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": "src/_pytest/logging.py",
+            "status": "modified",
+            "unwanted": false
+          }
+        ],
+        "issues": [
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/.gitignore",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/CACHEDIR.TAG",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/README.md",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/lastfailed",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/nodeids",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/stepwise",
+            "status": "added",
+            "unwanted": true
+          }
+        ],
+        "officialScore": "independent",
+        "status": "quality-failed",
+        "tests": []
+      },
+      "metrics": {
+        "summaryInputTokens": 37269,
+        "summaryOutputTokens": 12566,
+        "workerInputTokens": 218069,
+        "workerOutputTokens": 6105,
+        "phaseResponsesAccounted": 39,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 39,
+        "modelCallsCompleted": 39,
+        "usageComplete": true,
+        "inputTokens": 255338,
+        "outputTokens": 18671,
+        "peakInputTokens": 12382,
+        "cacheUsageComplete": true,
+        "cacheTokens": 209714,
+        "uncachedInputTokens": 45624,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 1,
+        "summaryAttempts": 8,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 1,
+        "summaryTruncations": 1,
+        "toolCalls": 30,
+        "identicalRepeatedToolCalls": 3
+      },
+      "firstRequestSha256SortedJSON": "672f91c907b2818c63d8ebe3d79e867d14a527367509afded3c0425b3b76771e",
+      "failureReasons": {
+        "context.summary.validation-failed:unspecified": 1,
+        "context.summary.truncated:length": 1,
+        "context.compaction.failed:summary-invalid-evidence": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 12338,
+          "configuredTrigger": 24576,
+          "precedingEvent": "model.response.completed",
+          "precedingStopReason": "length",
+          "inferredCause": "recovery-after-output-length"
+        }
+      ],
+      "artifactSha256": {
+        "metadata.json": "c88ef36a2a077f621540b6cec2d99f065aaae19850f1c1d16e1e1584e943c22e",
+        "predictions.jsonl": "d33f24bcfb4ba0b1c4d1944fae1b6789dedfd50f87d17255c95161dbd63d1578",
+        "patch.diff": "60281ad6dd464e8bab5a6924cb91ed497336d7509e5e624adc9a58a7718075f6",
+        "agent/output/events.jsonl": "2cedc59c3559c7e8dd5eb520ff7f8ea5cbbb14904a704ad4e56a6a0f7f7c1597",
+        "agent/output/result.json": "6d2ef3730aad78ccbf4d74a25954e89004ba62f05ad6bbf0e7fc5d4a0447b288",
+        "gradeRecord": "dd3b220e5d0e436c59a0cab2a823b59d0298114860fd9e6f5b2086b190f1c94d"
+      },
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "grade": {
+        "status": "unresolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+        "imageDigests": [
+          "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+          "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f"
+        ],
+        "report": {
+          "pytest-dev__pytest-10051": {
+            "patch_is_None": false,
+            "patch_exists": true,
+            "patch_successfully_applied": true,
+            "resolved": false,
+            "tests_status": {
+              "FAIL_TO_PASS": {
+                "success": [],
+                "failure": ["testing/logging/test_fixture.py::test_clear_for_call_stage"]
+              },
+              "PASS_TO_PASS": {
+                "success": [
+                  "testing/logging/test_fixture.py::test_change_level",
+                  "testing/logging/test_fixture.py::test_with_statement",
+                  "testing/logging/test_fixture.py::test_log_access",
+                  "testing/logging/test_fixture.py::test_messages",
+                  "testing/logging/test_fixture.py::test_record_tuples",
+                  "testing/logging/test_fixture.py::test_unicode",
+                  "testing/logging/test_fixture.py::test_clear",
+                  "testing/logging/test_fixture.py::test_fixture_help",
+                  "testing/logging/test_fixture.py::test_change_level_undo",
+                  "testing/logging/test_fixture.py::test_change_level_undos_handler_level",
+                  "testing/logging/test_fixture.py::test_ini_controls_global_log_level",
+                  "testing/logging/test_fixture.py::test_caplog_can_override_global_log_level",
+                  "testing/logging/test_fixture.py::test_caplog_captures_despite_exception",
+                  "testing/logging/test_fixture.py::test_log_report_captures_according_to_config_option_upon_failure"
+                ],
+                "failure": ["testing/logging/test_fixture.py::test_caplog_captures_for_all_stages"]
+              },
+              "FAIL_TO_FAIL": {
+                "success": [],
+                "failure": []
+              },
+              "PASS_TO_FAIL": {
+                "success": [],
+                "failure": []
+              }
+            }
+          }
+        },
+        "processExit": 0,
+        "predictionsSha256": "d33f24bcfb4ba0b1c4d1944fae1b6789dedfd50f87d17255c95161dbd63d1578"
+      }
+    },
+    {
+      "arm": "sac-structured",
+      "seed": 43,
+      "task": "pytest-dev__pytest-10051",
+      "elapsedMs": 900000,
+      "solveExit": 0,
+      "gradeExit": 0,
+      "solver": {
+        "agentSourceSha256": "72a66a0784c38cd00ec4440aec43c43df7feba432b9ad7d58fc1720112eba4ef",
+        "elapsedMs": 245306,
+        "imageId": "sha256:1e7ca67e193d9256f1b6ae738aca667a00f660e8e2f22e113ce4d010ce5c9685",
+        "orbitCommit": "07fe0cdc4b5c0a5e7981e62140f36e5bae22f162",
+        "runStatus": "runtime-error",
+        "runtimeOutcome": "failed",
+        "sourceArchiveSha256": "42587bca80f689036a2125a4ded03bebac754c13cedcbaa796e8cf3bbf51b6a0",
+        "excludedGeneratedPaths": [],
+        "configuration": {
+          "compactionArm": "sac-structured",
+          "compactionBudgets": {
+            "target": 16384,
+            "trigger": 24576,
+            "window": 32768
+          },
+          "contextPolicy": "disabled",
+          "executionActionMode": "single",
+          "model": "ornith-1.5:9b",
+          "options": {
+            "num_ctx": 32768,
+            "num_predict": 2048,
+            "seed": 43,
+            "temperature": 0.6,
+            "top_p": 0.95
+          },
+          "promptSha256": "e5153b77634f6a24f794f47cafd41ad2a38d963f5a31890034e9a8f04a652048",
+          "rounds": "unlimited",
+          "strategy": "baseline",
+          "think": false,
+          "timeoutMs": 900000
+        }
+      },
+      "effectiveContextPolicy": {
+        "algorithm": "structured-summary-v1",
+        "mode": "budgeted",
+        "strategy": "sac-v1",
+        "profile": {
+          "model": "ornith-1.5:9b",
+          "outputReserve": 2048,
+          "provider": "ollama",
+          "revision": "compaction-experiment-v1",
+          "safetyMargin": 256,
+          "summaryOutput": 2048,
+          "target": 16384,
+          "templateOverhead": 0,
+          "trigger": 24576,
+          "window": 32768
+        }
+      },
+      "quality": {
+        "changes": [],
+        "issues": [],
+        "officialScore": "independent",
+        "status": "not-measured",
+        "tests": []
+      },
+      "metrics": {
+        "summaryInputTokens": 37865,
+        "summaryOutputTokens": 4022,
+        "workerInputTokens": 9299,
+        "workerOutputTokens": 227,
+        "phaseResponsesAccounted": 9,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 9,
+        "modelCallsCompleted": 9,
+        "usageComplete": true,
+        "inputTokens": 47164,
+        "outputTokens": 4249,
+        "peakInputTokens": 10919,
+        "cacheUsageComplete": true,
+        "cacheTokens": 1808,
+        "uncachedInputTokens": 45356,
+        "billedCostUSD": null,
+        "compactions": 3,
+        "compactionFailures": 1,
+        "summaryAttempts": 5,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 1,
+        "summaryTruncations": 0,
+        "toolCalls": 4,
+        "identicalRepeatedToolCalls": 1
+      },
+      "firstRequestSha256SortedJSON": "672f91c907b2818c63d8ebe3d79e867d14a527367509afded3c0425b3b76771e",
+      "failureReasons": {
+        "context.summary.validation-failed:unspecified": 1,
+        "context.compaction.failed:summary-invalid-evidence": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 1597,
+          "configuredTrigger": 24576,
+          "precedingEvent": "tool.completed",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 3542,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 10046,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 10221,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        }
+      ],
+      "artifactSha256": {
+        "metadata.json": "0f0fc94e092ff3712b409156e51a5de9d338c08ffaee0c7e3307056e227b8909",
+        "predictions.jsonl": "fbf091eca30c3a089ad9d89f1e81196485285cb1421a3b63d4298141bfab7d0b",
+        "patch.diff": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "agent/output/events.jsonl": "56ab7c2002ad3cd3353e0d158d9671c9ae15b46221946231ef897cf22f7890c2",
+        "agent/output/result.json": "83f34a78c481bbdfdb5437d576d4b8b696f49bcf46389cd8349d16147cc96d31",
+        "gradeRecord": "232482c6e29bf3f32a05d218a24adaf1f1f28579a17ea9d25aa694c84e5ac743"
+      },
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "grade": {
+        "status": "unresolved",
+        "gradingDisposition": "skipped-empty-patch",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+        "imageDigests": [
+          "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+          "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f"
+        ],
+        "report": null,
+        "processExit": 0,
+        "predictionsSha256": "fbf091eca30c3a089ad9d89f1e81196485285cb1421a3b63d4298141bfab7d0b"
+      }
+    },
+    {
+      "arm": "suffix",
+      "seed": 44,
+      "task": "pytest-dev__pytest-10051",
+      "elapsedMs": 900000,
+      "solveExit": 0,
+      "gradeExit": 0,
+      "solver": {
+        "agentSourceSha256": "72a66a0784c38cd00ec4440aec43c43df7feba432b9ad7d58fc1720112eba4ef",
+        "elapsedMs": 393724,
+        "imageId": "sha256:1e7ca67e193d9256f1b6ae738aca667a00f660e8e2f22e113ce4d010ce5c9685",
+        "orbitCommit": "07fe0cdc4b5c0a5e7981e62140f36e5bae22f162",
+        "runStatus": "completed",
+        "runtimeOutcome": "completed",
+        "sourceArchiveSha256": "42587bca80f689036a2125a4ded03bebac754c13cedcbaa796e8cf3bbf51b6a0",
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/lastfailed",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ],
+        "configuration": {
+          "compactionArm": "suffix",
+          "compactionBudgets": {
+            "target": 16384,
+            "trigger": 24576,
+            "window": 32768
+          },
+          "contextPolicy": "disabled",
+          "executionActionMode": "single",
+          "model": "ornith-1.5:9b",
+          "options": {
+            "num_ctx": 32768,
+            "num_predict": 2048,
+            "seed": 44,
+            "temperature": 0.6,
+            "top_p": 0.95
+          },
+          "promptSha256": "e5153b77634f6a24f794f47cafd41ad2a38d963f5a31890034e9a8f04a652048",
+          "rounds": "unlimited",
+          "strategy": "baseline",
+          "think": false,
+          "timeoutMs": 900000
+        }
+      },
+      "effectiveContextPolicy": {
+        "algorithm": "structured-summary-v1",
+        "mode": "budgeted",
+        "strategy": "budgeted-suffix-v1",
+        "profile": {
+          "model": "ornith-1.5:9b",
+          "outputReserve": 2048,
+          "provider": "ollama",
+          "revision": "compaction-experiment-v1",
+          "safetyMargin": 256,
+          "summaryOutput": 2048,
+          "target": 16384,
+          "templateOverhead": 0,
+          "trigger": 24576,
+          "window": 32768
+        }
+      },
+      "quality": {
+        "changes": [
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/.gitignore",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/CACHEDIR.TAG",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/README.md",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/lastfailed",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/nodeids",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/stepwise",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": "changelog/10340.bugfix.rst",
+            "status": "added",
+            "unwanted": false
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": "src/_pytest/logging.py",
+            "status": "modified",
+            "unwanted": false
+          }
+        ],
+        "issues": [
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/.gitignore",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/CACHEDIR.TAG",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/README.md",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/lastfailed",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/nodeids",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/stepwise",
+            "status": "added",
+            "unwanted": true
+          }
+        ],
+        "officialScore": "independent",
+        "status": "quality-failed",
+        "tests": []
+      },
+      "metrics": {
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "workerInputTokens": 961403,
+        "workerOutputTokens": 7623,
+        "phaseResponsesAccounted": 59,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 59,
+        "modelCallsCompleted": 59,
+        "usageComplete": true,
+        "inputTokens": 961403,
+        "outputTokens": 7623,
+        "peakInputTokens": 23697,
+        "cacheUsageComplete": true,
+        "cacheTokens": 945276,
+        "uncachedInputTokens": 16127,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 0,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 0,
+        "toolCalls": 58,
+        "identicalRepeatedToolCalls": 1
+      },
+      "firstRequestSha256SortedJSON": "672f91c907b2818c63d8ebe3d79e867d14a527367509afded3c0425b3b76771e",
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "metadata.json": "c8befd792342c6ae4caf394fa0c20842d538f5b4a480629cc959ec8a7e679f2d",
+        "predictions.jsonl": "22de71680f924818b782881290afcb601637762406abc0fa4a3bb883530ed0da",
+        "patch.diff": "4c939411bb1db53a09c592f1aff3cc14a9f4de27f7ec71502d6d730981e28838",
+        "agent/output/events.jsonl": "77cc512cecbece7a8a5c92d480cfa322f90172b6888641a9144fe955f712e7bf",
+        "agent/output/result.json": "43dc20444c1765663ff236b66f1efa06b262e2542564b12922885f59b3f33085",
+        "gradeRecord": "af6b3236d43d9f3a983ad7e68d553097db6988b4bb75a59016b8c931a5f2b8e8"
+      },
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "grade": {
+        "status": "resolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+        "imageDigests": [
+          "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+          "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f"
+        ],
+        "report": {
+          "pytest-dev__pytest-10051": {
+            "patch_is_None": false,
+            "patch_exists": true,
+            "patch_successfully_applied": true,
+            "resolved": true,
+            "tests_status": {
+              "FAIL_TO_PASS": {
+                "success": ["testing/logging/test_fixture.py::test_clear_for_call_stage"],
+                "failure": []
+              },
+              "PASS_TO_PASS": {
+                "success": [
+                  "testing/logging/test_fixture.py::test_change_level",
+                  "testing/logging/test_fixture.py::test_with_statement",
+                  "testing/logging/test_fixture.py::test_log_access",
+                  "testing/logging/test_fixture.py::test_messages",
+                  "testing/logging/test_fixture.py::test_record_tuples",
+                  "testing/logging/test_fixture.py::test_unicode",
+                  "testing/logging/test_fixture.py::test_clear",
+                  "testing/logging/test_fixture.py::test_caplog_captures_for_all_stages",
+                  "testing/logging/test_fixture.py::test_fixture_help",
+                  "testing/logging/test_fixture.py::test_change_level_undo",
+                  "testing/logging/test_fixture.py::test_change_level_undos_handler_level",
+                  "testing/logging/test_fixture.py::test_ini_controls_global_log_level",
+                  "testing/logging/test_fixture.py::test_caplog_can_override_global_log_level",
+                  "testing/logging/test_fixture.py::test_caplog_captures_despite_exception",
+                  "testing/logging/test_fixture.py::test_log_report_captures_according_to_config_option_upon_failure"
+                ],
+                "failure": []
+              },
+              "FAIL_TO_FAIL": {
+                "success": [],
+                "failure": []
+              },
+              "PASS_TO_FAIL": {
+                "success": [],
+                "failure": []
+              }
+            }
+          }
+        },
+        "processExit": 0,
+        "predictionsSha256": "22de71680f924818b782881290afcb601637762406abc0fa4a3bb883530ed0da"
+      }
+    },
+    {
+      "arm": "eocc-structured",
+      "seed": 44,
+      "task": "pytest-dev__pytest-10051",
+      "elapsedMs": 900000,
+      "solveExit": 0,
+      "gradeExit": 0,
+      "solver": {
+        "agentSourceSha256": "72a66a0784c38cd00ec4440aec43c43df7feba432b9ad7d58fc1720112eba4ef",
+        "elapsedMs": 776713,
+        "imageId": "sha256:1e7ca67e193d9256f1b6ae738aca667a00f660e8e2f22e113ce4d010ce5c9685",
+        "orbitCommit": "07fe0cdc4b5c0a5e7981e62140f36e5bae22f162",
+        "runStatus": "runtime-error",
+        "runtimeOutcome": "failed",
+        "sourceArchiveSha256": "42587bca80f689036a2125a4ded03bebac754c13cedcbaa796e8cf3bbf51b6a0",
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/lastfailed",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ],
+        "configuration": {
+          "compactionArm": "eocc-structured",
+          "compactionBudgets": {
+            "target": 16384,
+            "trigger": 24576,
+            "window": 32768
+          },
+          "contextPolicy": "disabled",
+          "executionActionMode": "single",
+          "model": "ornith-1.5:9b",
+          "options": {
+            "num_ctx": 32768,
+            "num_predict": 2048,
+            "seed": 44,
+            "temperature": 0.6,
+            "top_p": 0.95
+          },
+          "promptSha256": "e5153b77634f6a24f794f47cafd41ad2a38d963f5a31890034e9a8f04a652048",
+          "rounds": "unlimited",
+          "strategy": "baseline",
+          "think": false,
+          "timeoutMs": 900000
+        }
+      },
+      "effectiveContextPolicy": {
+        "algorithm": "structured-summary-v1",
+        "mode": "budgeted",
+        "strategy": "eocc-v1",
+        "profile": {
+          "model": "ornith-1.5:9b",
+          "outputReserve": 2048,
+          "provider": "ollama",
+          "revision": "compaction-experiment-v1",
+          "safetyMargin": 256,
+          "summaryOutput": 2048,
+          "target": 16384,
+          "templateOverhead": 0,
+          "trigger": 24576,
+          "window": 32768
+        }
+      },
+      "quality": {
+        "changes": [
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/.gitignore",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/CACHEDIR.TAG",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/README.md",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/lastfailed",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/nodeids",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/stepwise",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": "repro_test.py",
+            "status": "added",
+            "unwanted": false
+          }
+        ],
+        "issues": [
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/.gitignore",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/CACHEDIR.TAG",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/README.md",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/lastfailed",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/nodeids",
+            "status": "added",
+            "unwanted": true
+          },
+          {
+            "isTest": false,
+            "kind": "file",
+            "path": ".pytest_cache/v/cache/stepwise",
+            "status": "added",
+            "unwanted": true
+          }
+        ],
+        "officialScore": "independent",
+        "status": "quality-failed",
+        "tests": []
+      },
+      "metrics": {
+        "summaryInputTokens": 36667,
+        "summaryOutputTokens": 10402,
+        "workerInputTokens": 449949,
+        "workerOutputTokens": 6123,
+        "phaseResponsesAccounted": 42,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 42,
+        "modelCallsCompleted": 42,
+        "usageComplete": true,
+        "inputTokens": 486616,
+        "outputTokens": 16525,
+        "peakInputTokens": 17979,
+        "cacheUsageComplete": true,
+        "cacheTokens": 436214,
+        "uncachedInputTokens": 50402,
+        "billedCostUSD": null,
+        "compactions": 0,
+        "compactionFailures": 1,
+        "summaryAttempts": 7,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 0,
+        "summaryTruncations": 2,
+        "toolCalls": 34,
+        "identicalRepeatedToolCalls": 0
+      },
+      "firstRequestSha256SortedJSON": "672f91c907b2818c63d8ebe3d79e867d14a527367509afded3c0425b3b76771e",
+      "failureReasons": {
+        "context.summary.truncated:length": 2,
+        "context.compaction.failed:summary-failed": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 18175,
+          "configuredTrigger": 24576,
+          "precedingEvent": "model.response.completed",
+          "precedingStopReason": "length",
+          "inferredCause": "recovery-after-output-length"
+        }
+      ],
+      "artifactSha256": {
+        "metadata.json": "2a00437ca5970a47d3678ecedb7c5cdce3d97379be0001aa4954bfe6d4fd500e",
+        "predictions.jsonl": "688c00db8a03b06930ca2c40f69a1158bb457e870a8d820b4c155c1964f849c3",
+        "patch.diff": "6cd06c3bae9a300efd41fdbac11679d42bd9ac2704e105f70003fa1b1b175431",
+        "agent/output/events.jsonl": "47dc15ebf49aa5f489f656a38e7d0365891fbbda8dbda22ef385f84214648ea4",
+        "agent/output/result.json": "22dc181eeee6faf85131bb095e1a527d955ac1fe4915b29c0959cc4d8e010cb9",
+        "gradeRecord": "d0c92798f97b0f4d2cd8986b1f3ef8112372b6f8221b42c08f045ce40e7d25ab"
+      },
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "grade": {
+        "status": "unresolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+        "imageDigests": [
+          "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+          "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f"
+        ],
+        "report": {
+          "pytest-dev__pytest-10051": {
+            "patch_is_None": false,
+            "patch_exists": true,
+            "patch_successfully_applied": true,
+            "resolved": false,
+            "tests_status": {
+              "FAIL_TO_PASS": {
+                "success": [],
+                "failure": ["testing/logging/test_fixture.py::test_clear_for_call_stage"]
+              },
+              "PASS_TO_PASS": {
+                "success": [
+                  "testing/logging/test_fixture.py::test_change_level",
+                  "testing/logging/test_fixture.py::test_with_statement",
+                  "testing/logging/test_fixture.py::test_log_access",
+                  "testing/logging/test_fixture.py::test_messages",
+                  "testing/logging/test_fixture.py::test_record_tuples",
+                  "testing/logging/test_fixture.py::test_unicode",
+                  "testing/logging/test_fixture.py::test_clear",
+                  "testing/logging/test_fixture.py::test_caplog_captures_for_all_stages",
+                  "testing/logging/test_fixture.py::test_fixture_help",
+                  "testing/logging/test_fixture.py::test_change_level_undo",
+                  "testing/logging/test_fixture.py::test_change_level_undos_handler_level",
+                  "testing/logging/test_fixture.py::test_ini_controls_global_log_level",
+                  "testing/logging/test_fixture.py::test_caplog_can_override_global_log_level",
+                  "testing/logging/test_fixture.py::test_caplog_captures_despite_exception",
+                  "testing/logging/test_fixture.py::test_log_report_captures_according_to_config_option_upon_failure"
+                ],
+                "failure": []
+              },
+              "FAIL_TO_FAIL": {
+                "success": [],
+                "failure": []
+              },
+              "PASS_TO_FAIL": {
+                "success": [],
+                "failure": []
+              }
+            }
+          }
+        },
+        "processExit": 0,
+        "predictionsSha256": "688c00db8a03b06930ca2c40f69a1158bb457e870a8d820b4c155c1964f849c3"
+      }
+    },
+    {
+      "arm": "sac-structured",
+      "seed": 44,
+      "task": "pytest-dev__pytest-10051",
+      "elapsedMs": 900000,
+      "solveExit": 0,
+      "gradeExit": 0,
+      "solver": {
+        "agentSourceSha256": "72a66a0784c38cd00ec4440aec43c43df7feba432b9ad7d58fc1720112eba4ef",
+        "elapsedMs": 612996,
+        "imageId": "sha256:1e7ca67e193d9256f1b6ae738aca667a00f660e8e2f22e113ce4d010ce5c9685",
+        "orbitCommit": "07fe0cdc4b5c0a5e7981e62140f36e5bae22f162",
+        "runStatus": "runtime-error",
+        "runtimeOutcome": "failed",
+        "sourceArchiveSha256": "42587bca80f689036a2125a4ded03bebac754c13cedcbaa796e8cf3bbf51b6a0",
+        "excludedGeneratedPaths": [],
+        "configuration": {
+          "compactionArm": "sac-structured",
+          "compactionBudgets": {
+            "target": 16384,
+            "trigger": 24576,
+            "window": 32768
+          },
+          "contextPolicy": "disabled",
+          "executionActionMode": "single",
+          "model": "ornith-1.5:9b",
+          "options": {
+            "num_ctx": 32768,
+            "num_predict": 2048,
+            "seed": 44,
+            "temperature": 0.6,
+            "top_p": 0.95
+          },
+          "promptSha256": "e5153b77634f6a24f794f47cafd41ad2a38d963f5a31890034e9a8f04a652048",
+          "rounds": "unlimited",
+          "strategy": "baseline",
+          "think": false,
+          "timeoutMs": 900000
+        }
+      },
+      "effectiveContextPolicy": {
+        "algorithm": "structured-summary-v1",
+        "mode": "budgeted",
+        "strategy": "sac-v1",
+        "profile": {
+          "model": "ornith-1.5:9b",
+          "outputReserve": 2048,
+          "provider": "ollama",
+          "revision": "compaction-experiment-v1",
+          "safetyMargin": 256,
+          "summaryOutput": 2048,
+          "target": 16384,
+          "templateOverhead": 0,
+          "trigger": 24576,
+          "window": 32768
+        }
+      },
+      "quality": {
+        "changes": [],
+        "issues": [],
+        "officialScore": "independent",
+        "status": "not-measured",
+        "tests": []
+      },
+      "metrics": {
+        "summaryInputTokens": 45490,
+        "summaryOutputTokens": 12207,
+        "workerInputTokens": 31289,
+        "workerOutputTokens": 488,
+        "phaseResponsesAccounted": 19,
+        "accountingSource": "final-events",
+        "modelCallsStarted": 19,
+        "modelCallsCompleted": 19,
+        "usageComplete": true,
+        "inputTokens": 76779,
+        "outputTokens": 12695,
+        "peakInputTokens": 5643,
+        "cacheUsageComplete": true,
+        "cacheTokens": 9030,
+        "uncachedInputTokens": 67749,
+        "billedCostUSD": null,
+        "compactions": 8,
+        "compactionFailures": 1,
+        "summaryAttempts": 10,
+        "summaryFailures": 0,
+        "summaryValidationFailures": 1,
+        "summaryTruncations": 0,
+        "toolCalls": 9,
+        "identicalRepeatedToolCalls": 5
+      },
+      "firstRequestSha256SortedJSON": "672f91c907b2818c63d8ebe3d79e867d14a527367509afded3c0425b3b76771e",
+      "failureReasons": {
+        "context.summary.validation-failed:unspecified": 1,
+        "context.compaction.failed:summary-invalid-format": 1
+      },
+      "compactionStarts": [
+        {
+          "beforeTokensEstimate": 1511,
+          "configuredTrigger": 24576,
+          "precedingEvent": "tool.completed",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 3393,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 3746,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 3546,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 3649,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 3647,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 4051,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 4502,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        },
+        {
+          "beforeTokensEstimate": 5186,
+          "configuredTrigger": 24576,
+          "precedingEvent": "context.observations.prepared",
+          "precedingStopReason": null,
+          "inferredCause": "after-action"
+        }
+      ],
+      "artifactSha256": {
+        "metadata.json": "997340fa8256bf7137e912fd100d2cb785bf0738d5487c09b00185964499d901",
+        "predictions.jsonl": "fbf091eca30c3a089ad9d89f1e81196485285cb1421a3b63d4298141bfab7d0b",
+        "patch.diff": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "agent/output/events.jsonl": "37d1f575a0c36624c0dc331ad6fd905025425767dbaafdb3a7d8e42a3050c1f3",
+        "agent/output/result.json": "1f162943ad3af998f23b162675943f52332d15b450c168320ffc4890084237d5",
+        "gradeRecord": "04a1a4eae0eea6a31ffa9e58d74184deef34a8a3ef7488b35ffecc38a4fed850"
+      },
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "grade": {
+        "status": "unresolved",
+        "gradingDisposition": "skipped-empty-patch",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+        "imageDigests": [
+          "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+          "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f"
+        ],
+        "report": null,
+        "processExit": 0,
+        "predictionsSha256": "fbf091eca30c3a089ad9d89f1e81196485285cb1421a3b63d4298141bfab7d0b"
+      }
+    }
+  ],
+  "terminalBenchControls": [
+    {
+      "job": "controls-oracle",
+      "task": "fix-git",
+      "arm": "oracle",
+      "seed": null,
+      "recorded": true,
+      "reward": 1.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": null,
+        "reason": null,
+        "quiescence": null
+      },
+      "metrics": null,
+      "agentSeconds": 0.518329,
+      "taskChecksum": "e89f54f2fc73ac576f976c1cd09758e4c9ccf152e53c2dcd91da0c178b89abc7",
+      "bundleSha256": null,
+      "firstRequestSha256SortedJSON": null,
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "5afc4782e85f76dae4dd2c3921e52540db9e1804fcc24f8d771df1c4a2cb605b",
+        "verifier/reward.txt": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+        "verifier/test-stdout.txt": "ecb0ebb701d7f6265e2d8c72a0a9183fe1048d5f3a08f76293bc7a7488507499"
+      }
+    },
+    {
+      "job": "controls-oracle",
+      "task": "regex-log",
+      "arm": "oracle",
+      "seed": null,
+      "recorded": true,
+      "reward": 1.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": null,
+        "reason": null,
+        "quiescence": null
+      },
+      "metrics": null,
+      "agentSeconds": 0.249905,
+      "taskChecksum": "8e6fca84d707d9c8736d83027308f7b9be7cbb2013df8fb40f4343c1c58bac1f",
+      "bundleSha256": null,
+      "firstRequestSha256SortedJSON": null,
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "acbdff284057e1a33a54e72d67d92b01800e4d17f0253168e5601bb94b6ef70b",
+        "verifier/reward.txt": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+        "verifier/test-stdout.txt": "7dc1beebe9c6c9f86e8a09f519177cfd0afd5ad373f5597b7a33b8206d48a721"
+      }
+    },
+    {
+      "job": "controls-nop",
+      "task": "fix-git",
+      "arm": "nop",
+      "seed": null,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": null,
+        "reason": null,
+        "quiescence": null
+      },
+      "metrics": null,
+      "agentSeconds": 0.003024,
+      "taskChecksum": "e89f54f2fc73ac576f976c1cd09758e4c9ccf152e53c2dcd91da0c178b89abc7",
+      "bundleSha256": null,
+      "firstRequestSha256SortedJSON": null,
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "2505e0202e71a25dd78f826942875f69950e447b221153d5f76bf46c64eb3f1e",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "1261df8fdcfa5d00b46370c3e7a62073e9f2dd6e11eae17d74eae5753d7b966b"
+      }
+    },
+    {
+      "job": "controls-nop",
+      "task": "regex-log",
+      "arm": "nop",
+      "seed": null,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": null,
+        "reason": null,
+        "quiescence": null
+      },
+      "metrics": null,
+      "agentSeconds": 0.000197,
+      "taskChecksum": "8e6fca84d707d9c8736d83027308f7b9be7cbb2013df8fb40f4343c1c58bac1f",
+      "bundleSha256": null,
+      "firstRequestSha256SortedJSON": null,
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "f1227d5d68caa9e25c9362c1beba790e78fdf24da10fc818da72e4e29b59ef16",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "eb7afebf0eb4bcffd5d84725f3e3c77143c1192be6c5d7fd2001662f3c4245b0"
+      }
+    },
+    {
+      "job": "heldout-control-oracle",
+      "task": "cancel-async-tasks",
+      "arm": "oracle",
+      "seed": null,
+      "recorded": true,
+      "reward": 1.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": null,
+        "reason": null,
+        "quiescence": null
+      },
+      "metrics": null,
+      "agentSeconds": 0.238527,
+      "taskChecksum": "1566331f6913b8a4f9af6779e90cabbb79edf1b15c126b6bc544912df3f14de5",
+      "bundleSha256": null,
+      "firstRequestSha256SortedJSON": null,
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "1b2e360aedb681caa9a3f6331ae38eb464a1656c5b5c9c3e813b9416778ef7cc",
+        "verifier/reward.txt": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+        "verifier/test-stdout.txt": "63dedfa7967cb873374b85dfb39c13c9176135030f92a54ca3f3b752bcf024d1"
+      }
+    },
+    {
+      "job": "heldout-control-nop",
+      "task": "cancel-async-tasks",
+      "arm": "nop",
+      "seed": null,
+      "recorded": true,
+      "reward": 0.0,
+      "exceptionType": null,
+      "runtime": {
+        "outcome": null,
+        "reason": null,
+        "quiescence": null
+      },
+      "metrics": null,
+      "agentSeconds": 0.003079,
+      "taskChecksum": "1566331f6913b8a4f9af6779e90cabbb79edf1b15c126b6bc544912df3f14de5",
+      "bundleSha256": null,
+      "firstRequestSha256SortedJSON": null,
+      "failureReasons": {},
+      "compactionStarts": [],
+      "artifactSha256": {
+        "result.json": "3ee5b2efc812a6fcca195dbf859d2526bb05d045c6f11de08a611ee0ea5a96c9",
+        "verifier/reward.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "verifier/test-stdout.txt": "a6795483437004d19995d3a6341000f7a47a33f4619bb83e571e92afc8ae7de0"
+      }
+    }
+  ],
+  "arms": {
+    "fha": {
+      "mode": "disabled"
+    },
+    "suffix": {
+      "strategy": "budgeted-suffix-v1",
+      "algorithm": "structured-summary-v1"
+    },
+    "suffix-handoff": {
+      "strategy": "budgeted-suffix-v1",
+      "algorithm": "handoff-summary-v1"
+    },
+    "eocc-structured": {
+      "strategy": "eocc-v1",
+      "algorithm": "structured-summary-v1"
+    },
+    "eocc": {
+      "strategy": "eocc-v1",
+      "algorithm": "handoff-summary-v1"
+    },
+    "sac-structured": {
+      "strategy": "sac-v1",
+      "algorithm": "structured-summary-v1"
+    },
+    "sac": {
+      "strategy": "sac-v1",
+      "algorithm": "handoff-summary-v1"
+    }
+  },
+  "measurementNotes": [
+    "An explicit compactionArm resolves the effective worker policy and overrides the legacy contextPolicy field in the SWE host configuration.",
+    "inputTokens includes cached tokens and all completed worker and recap responses; partial totals require usageComplete=false.",
+    "cacheTokens and uncachedInputTokens are null unless every started request has a valid completed response with cache usage.",
+    "peakInputTokens is the maximum completed provider response input, including recaps, not a measurement of serving memory.",
+    "Run quiescence is captured at Run finish; late model responses can settle later in final logs.",
+    "Billed cost is unmeasured. Failed early runs cannot establish efficiency improvements.",
+    "Fixed-history retention checks cover selected fields, not comprehensive semantic fidelity; manual review found incorrect inspection counts."
+  ],
+  "terminalBenchConfiguration": {
+    "window": 16384,
+    "trigger": 12288,
+    "target": 8192,
+    "summaryOutput": 2048,
+    "workerOutput": 2048,
+    "safetyMargin": 256,
+    "elapsedMs": 300000,
+    "actionMode": "single",
+    "toolset": "bash",
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "think": false
+  },
+  "fixedHistoryConfiguration": {
+    "window": 32768,
+    "trigger": 12288,
+    "target": 8192,
+    "summaryOutput": 2048,
+    "elapsedMs": 120000,
+    "seed": 42,
+    "modelCalls": 4
+  },
+  "sweBenchGoldControl": {
+    "status": "resolved",
+    "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+    "harnessVersion": "4.1.0",
+    "imageId": "sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+    "imageDigests": [
+      "orbit-swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f",
+      "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10051@sha256:e38365e835d4ba57f3e7331778894f51ac20bf6c5893827065da8657525e123f"
+    ],
+    "report": {
+      "pytest-dev__pytest-10051": {
+        "patch_is_None": false,
+        "patch_exists": true,
+        "patch_successfully_applied": true,
+        "resolved": true,
+        "tests_status": {
+          "FAIL_TO_PASS": {
+            "success": ["testing/logging/test_fixture.py::test_clear_for_call_stage"],
+            "failure": []
+          },
+          "PASS_TO_PASS": {
+            "success": [
+              "testing/logging/test_fixture.py::test_change_level",
+              "testing/logging/test_fixture.py::test_with_statement",
+              "testing/logging/test_fixture.py::test_log_access",
+              "testing/logging/test_fixture.py::test_messages",
+              "testing/logging/test_fixture.py::test_record_tuples",
+              "testing/logging/test_fixture.py::test_unicode",
+              "testing/logging/test_fixture.py::test_clear",
+              "testing/logging/test_fixture.py::test_caplog_captures_for_all_stages",
+              "testing/logging/test_fixture.py::test_fixture_help",
+              "testing/logging/test_fixture.py::test_change_level_undo",
+              "testing/logging/test_fixture.py::test_change_level_undos_handler_level",
+              "testing/logging/test_fixture.py::test_ini_controls_global_log_level",
+              "testing/logging/test_fixture.py::test_caplog_can_override_global_log_level",
+              "testing/logging/test_fixture.py::test_caplog_captures_despite_exception",
+              "testing/logging/test_fixture.py::test_log_report_captures_according_to_config_option_upon_failure"
+            ],
+            "failure": []
+          },
+          "FAIL_TO_FAIL": {
+            "success": [],
+            "failure": []
+          },
+          "PASS_TO_FAIL": {
+            "success": [],
+            "failure": []
+          }
+        }
+      }
+    },
+    "processExit": 0,
+    "datasetFileSha256": "96d9a459bb6dd3db627167b43c1e0ca4f74dbaa1326613df6e95b67ab6e57f20",
+    "artifactSha256": "b5765dc1898c8c90a9eae6660c1f7bd8c0b35a84498c685613614b8da4066664"
+  },
+  "complete": true
+}

@@ -645,3 +645,11 @@ The `expanded-missing` diagnostic uses a 4,096-token reserve and injects two res
 ## Terminal-Bench and compaction comparisons
 
 The opt-in [Terminal-Bench harness](../e2e/terminal_bench/README.md) runs Orbit inside pinned Harbor task environments and uses official verifiers. Its [predeclared local-model protocol](../e2e/terminal_bench/protocol.md) separates verifier controls, diagnostic tasks, held-out tasks, and algorithm-controlled comparisons. This is independent of the default unit suite and does not establish leaderboard performance.
+
+The [local compaction transfer study](research/2026-11-11-local-compaction-transfer.md)
+records the first completed comparison and its limitations. Its
+[result ledger](../e2e/results/2026-11-11-local-compaction-transfer.json) retains
+all planned outcomes and distinguishes completed-request usage from Run
+completion. In particular, output-length recovery can invoke compaction below
+the configured trigger; a shorter context alone does not establish lower total
+cost or better task success.
