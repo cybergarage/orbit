@@ -370,6 +370,10 @@ export async function prepareSessionContext(
       originals,
       previous?.summary ?? null,
     )
+    let projectionVersion: SessionCompactionEntry['projectionVersion'] = 1
+    if (components.strategy.reset) projectionVersion = 4
+    else if (retained.length > 0) projectionVersion = 3
+    else if (options.verifiedContext?.projectionIds.length) projectionVersion = 2
     candidate = {
       afterTokens: 0,
       beforeTokens: before.tokens,
@@ -381,13 +385,7 @@ export async function prepareSessionContext(
       prefixEndId: all[cut - 1].id,
       previousId: previous?.id ?? null,
       profileRevision: profile.revision,
-      projectionVersion: components.strategy.reset
-        ? 4
-        : retained.length > 0
-          ? 3
-          : options.verifiedContext?.projectionIds.length
-            ? 2
-            : 1,
+      projectionVersion,
       ...(components.strategy.reset
         ? {
             components: {

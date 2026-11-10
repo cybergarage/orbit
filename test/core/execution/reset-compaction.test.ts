@@ -438,7 +438,7 @@ describe('Reset compaction', () => {
     for (const edit of edits) {
       const entries = structuredClone(original)
       edit(entries[index] as SessionCompactionEntry)
-      expect(() => validateCompactionEntries(entries, session.getId(), 2)).to.throw()
+      expect(() => validateCompactionEntries(entries, session.getId(), 2)).to.throw(/checkpoint|compaction/i)
     }
 
     const unknownProducer = structuredClone(original)
@@ -461,7 +461,9 @@ describe('Reset compaction', () => {
         .map((entry) => JSON.stringify(entry))
         .join('\n') + '\n'
     expect(() => parseSessionFile(raw, 'fixture.jsonl')).not.to.throw()
-    expect(() => parseSessionFile(raw.replace('"version":2', '"version":1'), 'fixture.jsonl')).to.throw()
+    expect(() => parseSessionFile(raw.replace('"version":2', '"version":1'), 'fixture.jsonl')).to.throw(
+      'Invalid checkpoint boundary or predecessor',
+    )
   })
 
   it('does not leak derived results after a consumed canonical head', async () => {
