@@ -75,7 +75,7 @@ describe('Internal compaction components', () => {
       hasVerifiedProjection: false,
       prepare(messages, outputLimit) {
         prompts.push(messages[0].content)
-        expect(outputLimit).to.equal(undefined)
+        expect(outputLimit).to.be.undefined
         return {
           async invoke() {
             return new Message(MessageType.Assistant, {content: JSON.stringify(summary)})
@@ -183,7 +183,7 @@ describe('Internal compaction components', () => {
                       async summarize(_services, eligible, originals, previous) {
                         algorithmCalls++
                         expect(eligible).to.have.length(cut)
-                        expect(previous).to.equal(null)
+                        expect(previous).to.be.null
                         return {
                           summary: {
                             changedPaths: [],
