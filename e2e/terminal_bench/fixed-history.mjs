@@ -133,11 +133,15 @@ if (flags.includes('--run')) {
     await writeJSON(path.join(out, 'results.json'), rows)
     console.log(arm, rows.at(-1).outcome, JSON.stringify(rows.at(-1).retained))
   }
+
+  // Queue each arm after the previous one to avoid local-model contention.
+  let pending = Promise.resolve()
+  for (const arm of ['suffix', 'suffix-handoff', 'eocc-structured', 'eocc', 'sac-structured', 'sac']) {
+    // eslint-disable-next-line unicorn/prefer-top-level-await -- Preserve the serial model queue.
+    pending = pending.then(() => evaluateArm(arm))
+  }
+
+  await pending
 } else {
   console.log(JSON.stringify({tokens: estimate.tokens}))
-  // Keep local inference serial; concurrent arms would contend for the same model.
-  await ['suffix', 'suffix-handoff', 'eocc-structured', 'eocc', 'sac-structured', 'sac'].reduce(
-    (pending, arm) => pending.then(() => evaluateArm(arm)),
-    Promise.resolve(),
-  )
 }
