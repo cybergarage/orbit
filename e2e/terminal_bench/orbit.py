@@ -5,7 +5,7 @@ import json
 import shlex
 from pathlib import Path
 
-from harbor.agents.installed.base import BaseInstalledAgent
+from harbor.agents.installed.base import BaseInstalledAgent, NonZeroAgentExitCodeError
 from harbor.environments.base import BaseEnvironment
 from harbor.models.agent.context import AgentContext
 from e2e.terminal_bench.metrics import final_metrics
@@ -44,7 +44,7 @@ class OrbitAgent(BaseInstalledAgent):
             f"echo {shlex.quote(self.bundle_sha256 + '  /installed-agent/orbit-bundle.tar.gz')} | sha256sum -c - && "
             "mkdir -p /installed-agent/orbit && "
             "tar -xzf /installed-agent/orbit-bundle.tar.gz -C /installed-agent/orbit && "
-            "/installed-agent/orbit/bin/node --version"
+            "command -v timeout >/dev/null && /installed-agent/orbit/bin/node --version"
         ))
         if result.return_code != 0:
             raise RuntimeError("Orbit bundle installation failed: " + (result.stderr or ""))
@@ -68,13 +68,14 @@ class OrbitAgent(BaseInstalledAgent):
         remote = str(self.environment_logs_dir / "orbit-config.json")
         await environment.upload_file(local, remote)
         result = await self.exec_as_agent(environment, command=(
+            f"timeout --signal=TERM --kill-after=5s {self.elapsed_sec + 30}s "
             "/installed-agent/orbit/bin/node /installed-agent/orbit/e2e/worker.mjs "
             f"{shlex.quote(remote)} > {shlex.quote(str(self.environment_logs_dir / 'console.log'))} 2>&1"
-        ), timeout_sec=self.elapsed_sec + 30)
+        ), timeout_sec=self.elapsed_sec + 40)
         # A failed Orbit Run still reaches Harbor's verifier; keep execution and quality separate.
         context.metadata = {"process_exit_code": result.return_code, "arm": self.arm, "bundle_sha256": self.bundle_sha256}
         if result.return_code != 0:
-            raise RuntimeError("Orbit worker exited without a normal result")
+            raise NonZeroAgentExitCodeError("Orbit worker exited without a normal result")
         # Harbor only invokes its post-run hook for an entirely empty context.
         await environment.download_file(str(self.environment_logs_dir / RESULT_FILE), self.logs_dir / RESULT_FILE)
         await environment.download_file(str(self.environment_logs_dir / EVENTS_FILE), self.logs_dir / EVENTS_FILE)
@@ -87,8 +88,11 @@ class OrbitAgent(BaseInstalledAgent):
         result = json.loads(result_path.read_text())
         events = self.logs_dir / EVENTS_FILE
         metrics = final_metrics(events) if events.exists() else result.get("evaluation", {})
-        context.metadata = {**(context.metadata or {}), "orbit_runtime": result.get("runtime"), "evaluation": metrics}
+        context.metadata = {"arm": self.arm, "bundle_sha256": self.bundle_sha256,
+                            **(context.metadata or {}), "orbit_runtime": result.get("runtime"), "evaluation": metrics}
         if metrics.get("usageComplete"):
             context.n_input_tokens = metrics["inputTokens"]
             context.n_output_tokens = metrics["outputTokens"]
-        # Cache accounting and billed cost are unknown for this local provider.
+        if metrics.get("cacheUsageComplete"):
+            context.n_cache_tokens = metrics["cacheTokens"]
+        # Local provider usage does not establish a billed monetary cost.

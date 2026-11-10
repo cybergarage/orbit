@@ -43,7 +43,11 @@ trial, a 16,384-token window, 12,288 trigger, 8,192 target, 2,048 output/summary
 reserve, 256 safety margin, temperature 0.6, top-p 0.95 and the recorded seed.
 The default 300-second Run limit is a diagnostic constraint, shorter than the
 official task allowance; it is not a leaderboard configuration. The Harbor
-outer timeout adds cleanup grace. No infrastructure failures are silently retried.
+outer timeout adds cleanup grace. GNU `timeout` terminates the owned worker
+process group after 30 seconds of grace, with a five-second hard-kill fallback.
+Its nonzero exit uses Harbor's graded agent-failure path; a competing Docker exec
+timeout must not turn an already stopped Run into an ungraded infrastructure
+error. The task image must provide GNU `timeout`. No infrastructure failures are silently retried.
 
 Artifacts under `tmp/e2e/terminal-bench/jobs/` include Harbor configuration and
 lock files, environment/verifier logs and reward, plus `agent/result.json`,
@@ -52,7 +56,11 @@ trials, including timeout, setup error, summary failure and missing reward.
 Final-log worker/summary token totals include all completed provider calls,
 including responses settling after the Run timeout; incomplete
 usage is flagged. Peak completed input is a lower bound when a call lacks usage.
-Cache tokens and billed cost remain null for local Ollama. Orbit Run outcome,
+Billed cost remains null. Cache tokens and uncached input are reported only when
+every request has a completed response with a valid provider cache count; otherwise
+they remain null. Ollama 0.40.14 defines `prompt_eval_count` as total prompt tokens
+and `prompt_eval_cached_count` as the cached subset.
+[Version-pinned API schema](https://github.com/ollama/ollama/blob/9a3e8177767245acc62b735eba7d5d8a553606d0/docs/openapi.yaml). Orbit Run outcome,
 verifier reward and compaction activity are separate: no compaction means the
 threshold policy was not exercised. Reopening or reading results never reruns tools.
 
@@ -80,3 +88,16 @@ Job and summary output paths must remain under `tmp/e2e/terminal-bench/`.
 Identical repeated tool calls are a diagnostic count, not proof of redundant
 work: a repeated verification command can be necessary. Final provider usage
 can be complete even when the Run timed out and reported non-quiescence.
+
+## Fixed-history recap diagnostic
+
+After building, `node e2e/terminal_bench/fixed-history.mjs --prepare-only`
+validates a synthetic source that crosses the compaction trigger without calling
+Ollama. Explicit `--run` performs six serial live recap preparations with the
+pinned local model, a 32,768-token window, the same 12,288 trigger / 8,192 target,
+and 2,048 summary limit. The larger window leaves room for recap instructions.
+This isolates source retention and checkpoint creation; it is not a task-success
+benchmark or a test of SAC's per-action cadence. No tool is executed. The fixture
+asks to retain an exact marker, branch and pending check, and verifies that the
+pending check is not reported as passed. Outputs remain under the ignored
+`tmp/e2e/terminal-bench/fixed-history/` directory.
