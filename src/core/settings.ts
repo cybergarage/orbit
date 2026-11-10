@@ -12,6 +12,7 @@ import type {InterruptionPolicy} from './session/verified-context.js'
 import {DOT_APP_DIR_NAME, SETTINGS_FILE_NAME} from './app.js'
 import {parseRunLimits} from './execution/limits.js'
 import {getProvider, isProvider, type ProviderName} from './models/provider.js'
+import {resolveCompactionSelection} from './session/compaction-components.js'
 import {parseInterruptionPolicy} from './session/verified-context.js'
 import {type BuiltinToolSelection, isBuiltinToolName, isToolProfile} from './tools/index.js'
 import {LocalWorkspaceLocator} from './workspace.js'
@@ -405,5 +406,9 @@ function parseContextPolicy(value: unknown): ContextPolicy {
     'templateOverhead',
   ])
     if (!Number.isSafeInteger(p[name]) || (p[name] as number) < 0) throw new Error('Invalid context profile count')
-  return {mode: 'budgeted', profile: structuredClone(p) as unknown as ContextProfile}
+  return {
+    mode: 'budgeted',
+    profile: structuredClone(p) as unknown as ContextProfile,
+    ...resolveCompactionSelection(value),
+  }
 }

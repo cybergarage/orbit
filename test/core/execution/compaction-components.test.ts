@@ -196,6 +196,8 @@ describe('Internal compaction components', () => {
                           },
                         }
                       },
+                      summarySchema: 'context-summary-v1',
+                      supportsCumulativeUpdates: true,
                     },
                     strategy: {...budgetedCompactionStrategy, id: `cut-${cut}`, plan: () => ({cut, retained: []})},
                   },

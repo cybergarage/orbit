@@ -177,7 +177,10 @@ a tool-free summary call to the same Run, synchronizes a v2 checkpoint and then
 selects the retained suffix. `session/compaction-strategy.ts` owns the threshold
 and retained-range plan. `session/compaction-algorithm.ts` owns the existing
 structured summary, batching and format repair. The coordinator composes these
-internal interfaces independently. `session/summary-call-service.ts` owns Run
+internal interfaces independently. `session/compaction-components.ts` resolves
+workspace selections and validates summary-schema and cumulative-update
+compatibility. Agent snapshots the resolved pair at Run admission and preserves
+its names when recalculating profiles for model changes. `session/summary-call-service.ts` owns Run
 accounting, cancellation and transport retries. `session/compaction.ts` validates source digests,
 predecessors and tool groups. `session/migration.ts` upgrades closed v1 files
 under stable Session exclusion; ordinary recovery refuses pending migration.

@@ -6,6 +6,7 @@ implementation-status: partial
 implementation-completed-date: null
 implementation-commits:
   - cedd11384b722032b0e706593451da62ff6e4a3b
+  - 03021601937563f440c4bfd928a577dcb71c3192
 superseded-by: []
 ---
 
@@ -344,6 +345,29 @@ loopback access passed. Lint completed with warnings and zero errors.
 The ADR remains partially implemented. Named settings and capability negotiation,
 new checkpoint schemas, EoCC/SAC and Terminal-Bench integration are follow-up
 stages. Overall implementation completion is therefore unset.
+
+### Named component selection implementation
+
+The next implementation stage adds independent `contextPolicy.strategy` and
+`contextPolicy.algorithm` string fields. Their defaults are `budgeted-suffix-v1`
+and `structured-summary-v1`. The internal built-in catalog resolves names and
+checks summary schema and cumulative-update requirements. Configuration cannot
+register or load code. The current catalog contains one compatible pair.
+
+Agent captures the resolved pair and canonical names before Run admission and
+uses that pair for ordinary preparation and context-limit recovery. Run and
+workflow-selection identity include the resolved names. Model selection preserves
+the pair while deriving a new capacity profile. Resumed Sessions replay stored
+checkpoints unchanged and use the current configured pair for subsequent work.
+No selection data is added to the existing checkpoint format.
+
+Implementation commit: `03021601937563f440c4bfd928a577dcb71c3192`.
+Validation passed: header checks, build, and the complete 1,280-test suite,
+including settings resolution, Run isolation, model switching and checkpoint
+compatibility coverage.
+
+This stage implements built-in selection and capability checks. Reset projection
+schemas, EoCC/SAC and Terminal-Bench remain subsequent stages.
 
 ## Follow-up Work
 

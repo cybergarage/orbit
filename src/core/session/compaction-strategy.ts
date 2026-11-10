@@ -23,7 +23,9 @@ export interface CompactionStrategy {
     protectedMessageId?: string
     target: number
   }): CompactionPlan
+  readonly requiresCumulativeUpdates: boolean
   shouldCompact(input: {recovery: boolean; tokens: number; trigger: number}): boolean
+  readonly summarySchema: string
 }
 
 export const budgetedCompactionStrategy: CompactionStrategy = {
@@ -49,5 +51,7 @@ export const budgetedCompactionStrategy: CompactionStrategy = {
 
     return {cut, retained}
   },
+  requiresCumulativeUpdates: true,
   shouldCompact: ({recovery, tokens, trigger}) => recovery || tokens >= trigger,
+  summarySchema: 'context-summary-v1',
 }

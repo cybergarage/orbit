@@ -220,6 +220,12 @@ profile. A nearer setting replaces this policy rather than merging individual
 counts. Model identity, window, reserves and estimator assumptions are explicit;
 see [Input budgets and compaction](context-compaction.md). CLI, GUI and Service
 use this same setting. Programmatic Agent/Service options can override it.
+For budgeted mode, `contextPolicy.strategy` and `contextPolicy.algorithm` select
+built-ins independently. Their defaults are `budgeted-suffix-v1` and
+`structured-summary-v1`. Omission selects the default for that field. Unknown or
+non-string names fail settings loading. The selected pair is checked for schema
+and cumulative-update compatibility and fixed for each Run. Model changes retain
+the selected pair while recalculating capacity-dependent profile values.
 
 ### Interrupted tool context
 

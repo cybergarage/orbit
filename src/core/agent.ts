@@ -30,6 +30,7 @@ import type {GraphInvocation, GraphSnapshot, GraphValue} from './processor/graph
 import type {Operator, OperatorOptions} from './processor/index.js'
 import type {ProjectMemoryService} from './projects/memory-service.js'
 import type {WorkflowContextProjector, WorkflowExpectation, WorkflowSubmission} from './selection/binding.js'
+import type {CompactionComponents} from './session/compaction-components.js'
 import type {ContextPolicy} from './session/context-policy.js'
 import type {SessionContextBuilder as SessionContextBuilderType, SessionError} from './session/index.js'
 import type {InterruptionPolicy} from './session/verified-context.js'
@@ -83,6 +84,7 @@ import {
 import {encodeWorkflowSubmission, parseWorkflowSubmission} from './selection/binding.js'
 import {immutable, selectionDigest} from './selection/validation.js'
 import {budgetToolResults, continueBudgetRun} from './session/budget-continuation.js'
+import {resolveCompactionComponents, resolveCompactionSelection} from './session/compaction-components.js'
 import {createModelContextPolicy, prepareSessionContext} from './session/context-policy.js'
 import {Session, SessionContextBuilder, TurnPhase} from './session/index.js'
 import {
@@ -121,6 +123,7 @@ export interface AgentInvokeOptions extends OperatorOptions {
 
 interface ManagedInvokeOptions extends AgentInvokeOptions {
   activeSkills?: SkillSnapshot[]
+  compactionComponents?: CompactionComponents
   contextPolicy?: ContextPolicy
   executionContext?: RunContext
   executionPolicy?: ExecutionPolicy
@@ -390,7 +393,12 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
 
   async prepareModelSelection(selection: {model: string; provider: ProviderName}): Promise<() => void> {
     const model = this.createSelectedModel(selection.provider, selection.model, this.settings)
-    const policy = this.contextPolicy.mode === 'budgeted' ? await createModelContextPolicy(model) : this.contextPolicy
+    const selectionPolicy = this.contextPolicy
+    const components = selectionPolicy.mode === 'budgeted' ? resolveCompactionSelection(selectionPolicy) : undefined
+    const policy =
+      selectionPolicy.mode === 'budgeted'
+        ? {...(await createModelContextPolicy(model)), ...components}
+        : selectionPolicy
     return () => {
       this.pendingModel = model
       this.pendingContextPolicy = policy
@@ -820,7 +828,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
 
             let prepared = preparation
               ? // eslint-disable-next-line no-await-in-loop -- Preparation depends on the preceding tool round.
-                await prepareSessionContext(preparation)
+                await prepareSessionContext(preparation, options?.compactionComponents)
               : verifiedContext
                 ? this.model.prepare!(
                     [
@@ -879,7 +887,10 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                 if (!preparation || !prepared || !isRecoverableContextFailure(error)) throw error
                 // A recovery preparation must commit a strictly smaller checkpoint. No unchanged-input fallback.
                 // eslint-disable-next-line no-await-in-loop
-                prepared = await prepareSessionContext({...preparation, recoveryRequest: prepared.request})
+                prepared = await prepareSessionContext(
+                  {...preparation, recoveryRequest: prepared.request},
+                  options?.compactionComponents,
+                )
                 // Exactly one retry for this generation; a second failure escapes to the Run terminal.
                 // eslint-disable-next-line no-await-in-loop
                 modelMessage = await invoke()
@@ -1344,11 +1355,22 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     const frozenPolicy = Object.freeze({...policy, roots: Object.freeze([...policy.roots])})
     const contextPolicy: ContextPolicy =
       this.contextPolicy.mode === 'budgeted'
-        ? {...this.contextPolicy, profile: copyJSON(this.contextPolicy.profile)}
+        ? {
+            ...this.contextPolicy,
+            ...resolveCompactionSelection(this.contextPolicy),
+            profile: copyJSON(this.contextPolicy.profile),
+          }
         : {mode: 'disabled'}
+    const compactionComponents =
+      contextPolicy.mode === 'budgeted' ? resolveCompactionComponents(contextPolicy) : undefined
     const contextConfiguration =
       contextPolicy.mode === 'budgeted'
-        ? {mode: contextPolicy.mode, profile: contextPolicy.profile}
+        ? {
+            algorithm: contextPolicy.algorithm,
+            mode: contextPolicy.mode,
+            profile: contextPolicy.profile,
+            strategy: contextPolicy.strategy,
+          }
         : {mode: contextPolicy.mode}
     // Estimators are injected behavior, not JSON settings or journal evidence.
     const settings = copyJSON({...this.settings, contextPolicy: contextConfiguration})
@@ -1438,6 +1460,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
             this.invokeSessionWithTurn(session, messages, run.id, {
               ...options,
               ...(graph ? {graph} : {}),
+              compactionComponents,
               contextPolicy,
               executionContext: run,
               executionPolicy: frozenPolicy,
@@ -1501,7 +1524,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           : {}),
         contextPolicy:
           this.contextPolicy.mode === 'budgeted'
-            ? {mode: 'budgeted', profile: this.contextPolicy.profile}
+            ? {mode: 'budgeted', profile: this.contextPolicy.profile, ...resolveCompactionSelection(this.contextPolicy)}
             : {mode: 'disabled'},
       },
       skillCatalog: this.skillCatalog?.configuration ?? null,

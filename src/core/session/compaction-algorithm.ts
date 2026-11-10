@@ -31,11 +31,15 @@ export interface CompactionAlgorithm {
     originals: ReturnType<typeof persistedContextMessage>[],
     previous: ContextSummary | null,
   ): Promise<{summary: ContextSummary; usage?: Record<string, number>}>
+  readonly summarySchema: string
+  readonly supportsCumulativeUpdates: boolean
 }
 
 export const structuredSummaryAlgorithm: CompactionAlgorithm = {
   id: 'structured-summary-v1',
   summarize: summarizeEligible,
+  summarySchema: 'context-summary-v1',
+  supportsCumulativeUpdates: true,
 }
 
 function parseSummaryResponse(content: string): unknown {

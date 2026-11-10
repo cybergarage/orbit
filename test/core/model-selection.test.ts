@@ -290,6 +290,7 @@ describe('Conversation model selection', () => {
         agent = new Agent({
           ...options,
           contextPolicy: {
+            algorithm: 'structured-summary-v1',
             mode: 'budgeted',
             profile: {
               model: 'old',
@@ -303,6 +304,7 @@ describe('Conversation model selection', () => {
               trigger: 16_384,
               window: 32_768,
             },
+            strategy: 'budgeted-suffix-v1',
           },
           deps: {
             createModel: (provider, model) =>
@@ -333,7 +335,11 @@ describe('Conversation model selection', () => {
       agent.activateModelSelection()
       expect(agent.getModel().getModel()).equal('new')
       expect(agent.contextPolicy.mode).equal('budgeted')
-      if (agent.contextPolicy.mode === 'budgeted') expect(agent.contextPolicy.profile.window).equal(8192)
+      if (agent.contextPolicy.mode === 'budgeted') {
+        expect(agent.contextPolicy.profile.window).equal(8192)
+        expect(agent.contextPolicy).include({algorithm: 'structured-summary-v1', strategy: 'budgeted-suffix-v1'})
+      }
+
       let rejected = false
       try {
         await manager.selectModel(thread.id, {model: 'unknown', provider: 'openai'})
@@ -448,7 +454,7 @@ describe('Conversation model selection', () => {
       contexts: [],
       cwd: root,
       discoverModels: async () => [{model: 'local', provider: 'ollama'}],
-      enforceCatalog:true,
+      enforceCatalog: true,
       logStore: new MemorySessionLogStore(),
       model: 'local',
       provider: 'ollama',
