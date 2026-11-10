@@ -43,7 +43,11 @@ trial, a 16,384-token window, 12,288 trigger, 8,192 target, 2,048 output/summary
 reserve, 256 safety margin, temperature 0.6, top-p 0.95 and the recorded seed.
 The default 300-second Run limit is a diagnostic constraint, shorter than the
 official task allowance; it is not a leaderboard configuration. The Harbor
-outer timeout adds cleanup grace. No infrastructure failures are silently retried.
+outer timeout adds cleanup grace. GNU `timeout` terminates the owned worker
+process group after 30 seconds of grace, with a five-second hard-kill fallback.
+Its nonzero exit uses Harbor's graded agent-failure path; a competing Docker exec
+timeout must not turn an already stopped Run into an ungraded infrastructure
+error. The task image must provide GNU `timeout`. No infrastructure failures are silently retried.
 
 Artifacts under `tmp/e2e/terminal-bench/jobs/` include Harbor configuration and
 lock files, environment/verifier logs and reward, plus `agent/result.json`,

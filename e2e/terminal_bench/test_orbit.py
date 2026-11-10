@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from harbor.models.agent.context import AgentContext
+from harbor.agents.installed.base import NonZeroAgentExitCodeError
 from e2e.terminal_bench.orbit import OrbitAgent
 from e2e.terminal_bench.job import make_job, SOURCE
 
@@ -49,14 +50,17 @@ class OrbitAdapterTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(config["compactionArm"], "sac")
         self.assertEqual(context.metadata["process_exit_code"], 0)
         self.assertEqual(environment.download_file.await_count, 2)
+        command = agent.exec_as_agent.call_args.kwargs
+        self.assertIn("timeout --signal=TERM --kill-after=5s 330s", command["command"])
+        self.assertEqual(command["timeout_sec"], 340)
 
-    async def test_worker_crash_is_infrastructure_failure(self):
+    async def test_worker_crash_is_explicit_and_allows_harbor_verification(self):
         agent = self.agent()
         agent.exec_as_agent = AsyncMock(side_effect=[
             SimpleNamespace(return_code=0, stdout="/app\n"),
             SimpleNamespace(return_code=1),
         ])
-        with self.assertRaisesRegex(RuntimeError, "normal result"):
+        with self.assertRaisesRegex(NonZeroAgentExitCodeError, "normal result"):
             await agent.run("Task", SimpleNamespace(upload_file=AsyncMock()), AgentContext())
 
     def test_job_rejects_changed_dataset_and_keeps_serial_no_retry_configuration(self):
