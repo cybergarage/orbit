@@ -59,6 +59,7 @@ if (config.compactionArm) {
 } else if (config.contextPolicy === 'budgeted' || config.strategy.startsWith('book-')) {
   contextPolicy = await createModelContextPolicy(model, {outputReserve: config.options.num_predict})
 }
+
 if (contextPolicy?.mode === 'budgeted' && config.contextTriggerRatio !== undefined) {
   const {outputReserve, safetyMargin, window} = contextPolicy.profile
   const inputBudget = window - outputReserve - safetyMargin

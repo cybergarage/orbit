@@ -28,13 +28,14 @@ const entry = (exitCode) => ({
 })
 describe('E2E host control (no model or Docker)', () => {
   it('rejects invalid seeds before creating files or starting containers', async () => {
-    for (const seed of [-1, NaN, 1.5]) {
+    for (const seed of [-1, Number.NaN, 1.5]) {
       let failure
       try {
         await runAgent({seed})
       } catch (error) {
         failure = error
       }
+
       expect(failure?.message).to.equal('Evaluation seed must be a nonnegative safe integer')
     }
   })

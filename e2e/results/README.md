@@ -1,11 +1,20 @@
 # Coding E2E results
 
-These are dated **local diagnostic results**, not SWE-bench leaderboard scores.
+These are dated **local diagnostic results**, not SWE-bench or Terminal-Bench leaderboard scores.
 The [evaluation guide](../../docs/e2e-evaluation.md) explains how to run and
 regrade the cases. Each linked report records the dataset and harness revision,
 target commits, model digest and settings, environment, and limitations. The
 tables below summarize observed attempts; they are not estimates of general
 model reliability.
+
+## Compaction transfer study
+
+The [2026-11-11 local comparison](../../docs/research/2026-11-11-local-compaction-transfer.md)
+and [result ledger](2026-11-11-local-compaction-transfer.json) cover pinned
+Terminal-Bench and SWE-bench tasks, independent strategy/algorithm combinations,
+recap overhead, cache accounting and fixed-history fidelity. The report separates
+official outcomes, Run completion and incomplete measurements; it does not
+qualify a default change or reproduce frontier-model results.
 
 ## SWE-bench
 

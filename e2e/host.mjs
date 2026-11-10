@@ -137,7 +137,6 @@ export async function ollamaMetadata(model) {
 export async function runAgent({
   agentImage = image,
   compactionArm = process.env.ORBIT_E2E_COMPACTION_ARM,
-  seed = Number(process.env.ORBIT_E2E_SEED ?? 42),
   contextPolicy = 'disabled',
   directory,
   executionActionMode = process.env.ORBIT_E2E_ACTION_MODE ?? 'multiple',
@@ -146,6 +145,7 @@ export async function runAgent({
   numCtx = 16_384,
   prompt,
   rounds = 12,
+  seed = Number(process.env.ORBIT_E2E_SEED ?? 42),
   strategy = 'baseline',
   think = false,
   timeoutMs = 240_000,
