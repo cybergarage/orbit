@@ -1,6 +1,10 @@
 """Adapter boundary tests; require the pinned Harbor environment, never a model."""
 import hashlib
 import json
+import shlex
+import shutil
+import subprocess
+import time
 import tempfile
 import unittest
 from pathlib import Path
@@ -25,6 +29,16 @@ class OrbitAdapterTests(unittest.IsolatedAsyncioTestCase):
     def agent(self, **overrides):
         return OrbitAgent(logs_dir=self.root, model_name="fake-model",
                           bundle=str(self.bundle), bundle_sha256=self.digest, **overrides)
+
+    @unittest.skipUnless(shutil.which("timeout"), "GNU timeout is required")
+    def test_deadline_kills_term_ignoring_descendants_before_grading(self):
+        marker = self.root / "late-write"
+        command = 'trap "" TERM; sleep 3; touch ' + shlex.quote(str(marker))
+        result = subprocess.run(["timeout", "--signal=TERM", "--kill-after=1s", "1s",
+                                 "bash", "-c", command], capture_output=True, timeout=10)
+        self.assertIn(result.returncode, [-9, 137])
+        time.sleep(2)
+        self.assertFalse(marker.exists())
 
     def test_rejects_changed_bundle_and_invalid_elapsed(self):
         self.bundle.write_bytes(b"changed")
