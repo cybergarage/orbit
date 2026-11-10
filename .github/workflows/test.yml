@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - run: python -m pip install --only-binary=:all: harbor==0.25.0
+      - run: "python -m pip install --only-binary=:all: harbor==0.25.0"
       - run: python -B -m unittest e2e.terminal_bench.test_orbit e2e.terminal_bench.test_summary
         env:
           LITELLM_LOCAL_MODEL_COST_MAP: 'True'
