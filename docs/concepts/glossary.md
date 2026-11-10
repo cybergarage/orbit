@@ -26,6 +26,20 @@ outcome. The current `OperationExecutor` shares resource ownership with every
 other executor in the same loaded module instance. It does not own Run admission
 or replace the enclosing supervisor. See [Managed Execution](../execution.md).
 
+### Compaction strategy
+
+The internal component selecting when to compact and which conversation suffix
+to retain. The current budgeted strategy uses token thresholds and protected
+turn/tool boundaries. Execution continuation remains owned by the Run.
+
+### Compaction algorithm
+
+The independently composed internal component generating a summary from selected
+history and a previous checkpoint. The current structured algorithm uses a managed
+model-call service for Run accounting, cancellation and transport retries.
+Session replay reads the saved result. See
+[Internal preparation components](../context-compaction.md#internal-preparation-components).
+
 ### Context checkpoint
 
 A validated, synchronized record selecting an untrusted summary and retained
