@@ -117,6 +117,7 @@ at pinned revisions by default. If either is not relevant, record why.
 
 | Investigated | Status     | Topic                                                                                                                                   |
 | ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-11 | current | [OpenCode and an Orbit-based Development Application](2026-11-11-opencode-and-development-application.md) |
 | 2026-10-02 | current | [Public Execution API Review](2026-10-02-public-execution-api.md) |
 | 2026-10-02 | current | [Apple Foundation Models Interfaces for Orbit](2026-10-02-apple-foundation-models-interface.md) |
 | 2026-09-29 | current | [Structured Tool Observations Across Compaction](2026-09-29-structured-tool-observations.md) |
