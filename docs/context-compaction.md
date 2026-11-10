@@ -362,3 +362,16 @@ original data; embedded encodings are not interpreted recursively. This makes
 the representation unambiguous even for custom outputs resembling a reference.
 The literal-rendering instruction is added only to requests containing an
 escaped output; the fixed comparison history has no reserved encodings.
+
+## Internal preparation components
+
+The current budgeted behavior is composed from the internal `budgeted-suffix-v1`
+strategy and `structured-summary-v1` algorithm. The strategy selects when and
+what to compact. The algorithm generates the summary through a managed model-call
+service. Context preparation retains checkpoint validation and durable activation.
+Session replay uses saved checkpoints without calling either component.
+
+This compatibility extraction preserves existing settings, summary prompts and
+checkpoint formats. Named settings for alternative pairs, capability negotiation,
+EoCC/SAC and Terminal-Bench evaluation remain subsequent implementation stages of
+the [accepted ADR](adr/2026-11-11-selectable-session-compaction.md).

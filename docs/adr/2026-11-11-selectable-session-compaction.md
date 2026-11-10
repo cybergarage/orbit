@@ -2,7 +2,7 @@
 status: accepted
 proposed-date: 2026-11-11
 decision-date: 2026-11-11
-implementation-status: not-started
+implementation-status: in-progress
 implementation-completed-date: null
 implementation-commits: []
 superseded-by: []
@@ -237,6 +237,15 @@ and dataset revision during adapter implementation before recording results.
    establish a stable result and replay contract.
 
 ## Implementation and Confirmation
+
+### Authorized implementation scope
+
+The author accepted this ADR and requested the initial compatibility extraction
+as a pull request. This stage introduces independently composable internal
+interfaces and the existing implementations. Runtime settings for named pairs,
+capability negotiation, reset projections, EoCC/SAC and Terminal-Bench integration
+remain follow-up stages. Existing session formats and public settings are the
+compatibility baseline for this extraction.
 
 ### Compatibility extraction
 
