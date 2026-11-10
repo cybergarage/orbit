@@ -88,6 +88,12 @@ class OrbitAdapterTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(context.n_input_tokens, 10)
         self.assertEqual(context.n_output_tokens, 3)
         self.assertIsNone(context.n_cache_tokens)
+        events = [{"type": "model.request.started"}, {"type": "model.response.completed", "data": {
+            "usage": {"inputTokens": 10, "outputTokens": 3}, "response": {"prompt_eval_cached_count": 7}}}]
+        (self.root / "events.jsonl").write_text("\n".join(json.dumps(event) for event in events))
+        agent.populate_context_post_run(context)
+        self.assertEqual(context.n_cache_tokens, 7)
+        self.assertEqual(context.n_input_tokens, 10)
 
 
 if __name__ == "__main__":

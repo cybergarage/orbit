@@ -91,4 +91,6 @@ class OrbitAgent(BaseInstalledAgent):
         if metrics.get("usageComplete"):
             context.n_input_tokens = metrics["inputTokens"]
             context.n_output_tokens = metrics["outputTokens"]
-        # Cache accounting and billed cost are unknown for this local provider.
+        if metrics.get("cacheUsageComplete"):
+            context.n_cache_tokens = metrics["cacheTokens"]
+        # Local provider usage does not establish a billed monetary cost.
