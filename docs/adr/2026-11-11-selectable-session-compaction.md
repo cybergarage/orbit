@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-11-11
 decision-date: 2026-11-11
-implementation-status: in-progress
+implementation-status: partial
 implementation-completed-date: null
-implementation-commits: []
+implementation-commits:
+  - cedd11384b722032b0e706593451da62ff6e4a3b
 superseded-by: []
 ---
 
@@ -323,6 +324,26 @@ by measured quality and efficiency. Run the repository's required header, build
 and test checks for implementation changes, plus E2E adapter checks and recorded
 live benchmark confirmation. Documentation-only proposal validation checks links,
 metadata, formatting and diff scope.
+
+### Initial extraction evidence — 2026-11-11
+
+Commit `cedd11384b722032b0e706593451da62ff6e4a3b` delivers the authorized
+compatibility extraction. Context preparation composes the existing threshold/
+suffix strategy and structured-summary algorithm through internal interfaces.
+The managed summary-call service owns transport retries and Run accounting.
+Settings and persisted checkpoint encoding retain their existing contracts.
+
+Validation passed with `npm run headers:check`, `npm run build` and `npm test`
+(1,261 tests). Eight component tests include four strategy/algorithm combinations
+and replay from their committed projections. Existing compaction, interrupted
+context, migration and recovery tests exercise normal Agent entry points. The
+summary instruction string matches the original byte-for-byte. The first
+sandboxed suite had 15 loopback `listen EPERM` failures; the complete rerun with
+loopback access passed. Lint completed with warnings and zero errors.
+
+The ADR remains partially implemented. Named settings and capability negotiation,
+new checkpoint schemas, EoCC/SAC and Terminal-Bench integration are follow-up
+stages. Overall implementation completion is therefore unset.
 
 ## Follow-up Work
 
