@@ -7,6 +7,7 @@ implementation-completed-date: null
 implementation-commits:
   - cedd11384b722032b0e706593451da62ff6e4a3b
   - 03021601937563f440c4bfd928a577dcb71c3192
+  - 03a933c7457f93836119744db3aaa76e51a23a72
 superseded-by: []
 ---
 
@@ -164,6 +165,9 @@ contract within this accepted decision before implementation:
   containing multiple tool calls before storing or dispatching it, charges its
   model request and requested tools, and terminates the Run without retrying an
   environment action. All comparison strategies can use this same action mode.
+  Processor Graphs explicitly refuse single mode in this stage because direct
+  Graph tool nodes lack the action/context boundary. A Bash invocation counts as
+  one action regardless of the shell statements it contains.
 - SAC resets after a completed action/result and before the next worker request,
   including after resume; no additional worker call uses that raw action. A
   stopped Run need not generate a recap until a subsequent Run resumes work.
@@ -416,11 +420,32 @@ compatibility coverage.
 This stage implements built-in selection and capability checks. Reset projection
 schemas, EoCC/SAC and Terminal-Bench remain subsequent stages.
 
+### Experimental reset implementation — 2026-11-11
+
+Commit `03a933c7457f93836119744db3aaa76e51a23a72` implements opt-in `eocc-v1`
+and `sac-v1`, independently selected with the structured or handoff algorithm.
+Projection v4 preserves consumed boundaries, canonical user instructions, source
+validation and component provenance. Replay uses saved state without a model;
+canonical-ID suffix selection excludes synthetic results for already consumed
+messages. Agent enforces the independent single-action setting before dispatch.
+
+Header checks, build and the full 1,315-test suite passed. The final live-source
+ID restriction in handoff input was then verified with another build and all
+124 compaction/settings tests. Coverage includes strategy/algorithm combinations,
+per-action resets, bounded state growth, unknown settings, multi-action refusal,
+Graph refusal, file reopen, algorithm changes, cancelled recap, stale source,
+failed commit, shared limits, oversized inputs and strict overflow recovery.
+
+The handoff prompt is an original Orbit adaptation with the existing structured
+schema and source-derived observations. No paper-performance reproduction or
+live SWE-bench/Terminal-Bench quality/cost result is claimed. Benchmark adapters,
+matched-action baselines, held-out evaluation and default-change decisions remain
+follow-up work; this ADR therefore remains partially implemented.
+
 ## Follow-up Work
 
-- Review the proposed boundary and finalize reset-schema migration details.
 - Select and pin Terminal-Bench tasks and Harbor version, then establish baselines.
-- Implement extraction, EoCC and SAC in successive reviewable changes.
+- Qualify the experimental reset strategies on pinned benchmark tasks.
 - Set evaluation repetitions, resource limits and quality tolerance before final runs.
 - Update maintained architecture, settings and evaluation documentation with the
   corresponding implementation. Link any partial supersession of older ADRs at
