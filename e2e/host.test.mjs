@@ -7,7 +7,7 @@ import path from 'node:path'
 
 import {recoveryObserved} from './cases.mjs'
 import {excludeGeneratedPatch, gradeCase, normalizePatch} from './grading.mjs'
-import {command} from './host.mjs'
+import {command, runAgent} from './host.mjs'
 import {checkDeliverable, inspectDeliverable, testCommand} from './quality.mjs'
 import {prepareRepositorySource, repositoryProfile} from './repository-checks.mjs'
 import {sourceFingerprint} from './source-fingerprint.mjs'
@@ -27,12 +27,25 @@ const entry = (exitCode) => ({
   type: 'message',
 })
 describe('E2E host control (no model or Docker)', () => {
+  it('rejects invalid seeds before creating files or starting containers', async () => {
+    for (const seed of [-1, NaN, 1.5]) {
+      let failure
+      try {
+        await runAgent({seed})
+      } catch (error) {
+        failure = error
+      }
+      expect(failure?.message).to.equal('Evaluation seed must be a nonnegative safe integer')
+    }
+  })
+
   it('changes the agent source fingerprint when the source changes', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-fingerprint-'))
     try {
       for (const file of [
         'bin/build-gui.mjs',
         'e2e/source-fingerprint.mjs',
+        'e2e/compaction-config.mjs',
         'e2e/worker.mjs',
         'package-lock.json',
         'package.json',

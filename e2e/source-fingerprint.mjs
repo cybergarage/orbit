@@ -10,6 +10,7 @@ const sources = [
   'bin/build-gui.mjs',
   'e2e/source-fingerprint.mjs',
   'e2e/worker.mjs',
+  'e2e/compaction-config.mjs',
   'package-lock.json',
   'package.json',
   'src',

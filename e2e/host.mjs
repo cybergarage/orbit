@@ -83,7 +83,9 @@ export async function verifyAgentImageSources(agentImage = image) {
     {allowFailure: true},
   )
   if (result.code !== 0 || result.stdout.trim() !== expected)
-    throw new Error(`Agent image ${agentImage} does not match the current Orbit sources; rebuild the image before evaluation.`)
+    throw new Error(
+      `Agent image ${agentImage} does not match the current Orbit sources; rebuild the image before evaluation.`,
+    )
   return expected
 }
 
@@ -134,8 +136,11 @@ export async function ollamaMetadata(model) {
 
 export async function runAgent({
   agentImage = image,
+  compactionArm = process.env.ORBIT_E2E_COMPACTION_ARM,
+  seed = Number(process.env.ORBIT_E2E_SEED ?? 42),
   contextPolicy = 'disabled',
   directory,
+  executionActionMode = process.env.ORBIT_E2E_ACTION_MODE ?? 'multiple',
   files,
   model,
   numCtx = 16_384,
@@ -146,16 +151,22 @@ export async function runAgent({
   timeoutMs = 240_000,
   workspace,
 }) {
+  if (!Number.isSafeInteger(seed) || seed < 0) throw new Error('Evaluation seed must be a nonnegative safe integer')
   const agentSourceSha256 = await verifyAgentImageSources(agentImage)
   await fs.mkdir(directory, {recursive: true})
   const input = path.join(directory, 'input')
   await fs.mkdir(input)
   const config = {
+    compactionArm,
+    ...(compactionArm
+      ? {compactionBudgets: {target: Math.floor(numCtx * 0.5), trigger: Math.floor(numCtx * 0.75), window: numCtx}}
+      : {}),
     contextPolicy,
     contextTriggerRatio: readContextTriggerRatio(process.env.ORBIT_E2E_CONTEXT_TRIGGER_RATIO),
+    executionActionMode,
     model,
     ollamaHost: process.env.ORBIT_E2E_OLLAMA_HOST ?? 'http://host.docker.internal:11434',
-    options: {num_ctx: numCtx, num_predict: 4096, seed: 42, temperature: 0.6, top_p: 0.95},
+    options: {num_ctx: numCtx, num_predict: compactionArm ? 2048 : 4096, seed, temperature: 0.6, top_p: 0.95},
     prompt,
     promptSha256: digest(prompt),
     rounds,

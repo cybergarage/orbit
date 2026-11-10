@@ -119,7 +119,7 @@
     "test:models": "mocha --no-config --no-package --forbid-only --timeout 130000 e2e/models.e2e.mjs",
     "test:models:unit": "mocha --no-config --no-package --forbid-only e2e/models.test.mjs",
     "test:e2e:ollama": "mocha --no-config --no-package --forbid-only e2e/small.e2e.mjs",
-    "test:e2e:unit": "mocha --no-config --no-package --forbid-only e2e/host.test.mjs",
+    "test:e2e:unit": "mocha --no-config --no-package --forbid-only e2e/host.test.mjs e2e/compaction-config.test.mjs",
     "e2e:build": "docker build -f e2e/Dockerfile -t orbit-e2e:local .",
     "eval:swebench": "node e2e/swebench.mjs",
     "test:e2e:summary": "python3 -B -m unittest discover -s e2e -p context_summary_semantics_test.py",

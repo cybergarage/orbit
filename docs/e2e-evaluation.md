@@ -641,3 +641,7 @@ correspondence and final runtime separately. The injected response has no real
 provider token usage; real response usage remains separate.
 
 The `expanded-missing` diagnostic uses a 4,096-token reserve and injects two responses: first output exhaustion, then a missing category at the expanded allowance. The third summary response and consumer use actual Ollama. This checks that correction retains the expanded allowance, not the natural frequency of this sequence. The output records the count of injected responses.
+
+## Terminal-Bench and compaction comparisons
+
+The opt-in [Terminal-Bench harness](../e2e/terminal_bench/README.md) runs Orbit inside pinned Harbor task environments and uses official verifiers. Its [predeclared local-model protocol](../e2e/terminal_bench/protocol.md) separates verifier controls, diagnostic tasks, held-out tasks, and algorithm-controlled comparisons. This is independent of the default unit suite and does not establish leaderboard performance.

@@ -9,6 +9,19 @@ on:
         default: false
 
 jobs:
+  terminal-bench-adapter:
+    if: ${{ !inputs.coordination_only }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: "python -m pip install --only-binary=:all: harbor==0.25.0"
+      - run: python -B -m unittest e2e.terminal_bench.test_orbit e2e.terminal_bench.test_summary
+        env:
+          LITELLM_LOCAL_MODEL_COST_MAP: 'True'
   package-consumer:
     if: ${{ !inputs.coordination_only }}
     runs-on: ubuntu-latest
@@ -41,6 +54,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run test
+      - run: npm run test:e2e:unit
   windows-unit-tests:
     if: github.event_name == 'workflow_dispatch' && !inputs.coordination_only
     strategy:

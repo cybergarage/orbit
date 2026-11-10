@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import fs from 'node:fs'
+import path from 'node:path'
 import {Ollama} from 'ollama'
 
 import {OllamaAgent, ollamaFetch} from '../dist/core/models/adapters/ollama.js'
@@ -14,9 +15,17 @@ import {
   Session,
   State,
 } from '../dist/index.js'
+import {compactionMetrics, experimentPolicy} from './compaction-config.mjs'
 
-const config = JSON.parse(fs.readFileSync('/input/config.json', 'utf8'))
-fs.cpSync('/fixture', '/workspace', {recursive: true, verbatimSymlinks: true})
+const configFile = process.argv[2] ?? '/input/config.json'
+if (!['/input/config.json', '/logs/agent/orbit-config.json'].includes(configFile))
+  throw new Error('Unsupported evaluation configuration path')
+const config = JSON.parse(fs.readFileSync(configFile, 'utf8'))
+const workspace = config.workspace ?? '/workspace'
+const output = config.outputDirectory ?? '/output'
+fs.mkdirSync(output, {recursive: true})
+if (config.copyFixture !== false) fs.cpSync('/fixture', workspace, {recursive: true, verbatimSymlinks: true})
+const events = []
 const session = new Session({formatVersion: 2})
 const diagnostics = new DiagnosticEventBus({
   capture: 'full',
@@ -24,7 +33,10 @@ const diagnostics = new DiagnosticEventBus({
   fullCaptureDurationMs: config.timeoutMs === 'unlimited' ? 86_400_000 : config.timeoutMs + 30_000,
   maxEvents: 20_000,
 })
-diagnostics.subscribe((event) => fs.appendFileSync('/output/events.jsonl', JSON.stringify(event) + '\n'))
+diagnostics.subscribe((event) => {
+  events.push({data: event.type === 'model.response.completed' ? {usage: event.data?.usage} : {}, type: event.type})
+  fs.appendFileSync(path.join(output, 'events.jsonl'), JSON.stringify(event) + '\n')
+})
 const sdk = new Ollama({fetch: ollamaFetch, host: config.ollamaHost})
 // Test-local transport configuration: exercise the real Orbit serializer and
 // response parser. Expose num_ctx so discovery sees the same runtime setting;
@@ -41,24 +53,27 @@ const model = new OllamaAgent(
   {getContextWindow: () => config.options.num_ctx, getName: () => 'ollama'},
   {client},
 )
-const contextPolicy =
-  config.contextPolicy === 'budgeted' || config.strategy.startsWith('book-')
-    ? await createModelContextPolicy(model, {outputReserve: config.options.num_predict})
-    : undefined
-if (contextPolicy && config.contextTriggerRatio !== undefined) {
+let contextPolicy
+if (config.compactionArm) {
+  contextPolicy = experimentPolicy({arm: config.compactionArm, model: config.model, ...config.compactionBudgets})
+} else if (config.contextPolicy === 'budgeted' || config.strategy.startsWith('book-')) {
+  contextPolicy = await createModelContextPolicy(model, {outputReserve: config.options.num_predict})
+}
+if (contextPolicy?.mode === 'budgeted' && config.contextTriggerRatio !== undefined) {
   const {outputReserve, safetyMargin, window} = contextPolicy.profile
   const inputBudget = window - outputReserve - safetyMargin
   contextPolicy.profile.trigger = Math.floor(inputBudget * config.contextTriggerRatio)
   contextPolicy.profile.target = Math.min(contextPolicy.profile.target, contextPolicy.profile.trigger - 1)
 }
 
-if (contextPolicy) fs.writeFileSync('/output/context-policy.json', JSON.stringify(contextPolicy, null, 2))
+if (contextPolicy) fs.writeFileSync(path.join(output, 'context-policy.json'), JSON.stringify(contextPolicy, null, 2))
 const agent = new Agent({
   contextPolicy,
-  cwd: '/workspace',
+  cwd: workspace,
   deps: {createModel: () => model},
   diagnostics,
   execution: {
+    actionMode: config.executionActionMode ?? 'multiple',
     limits: {
       cleanupMs: 5000,
       elapsedMs: config.timeoutMs,
@@ -66,11 +81,12 @@ const agent = new Agent({
       toolRequests: config.rounds === 'unlimited' ? 'unlimited' : config.rounds * 8,
       toolRounds: config.rounds,
     },
-    policy: {generation: 'isolated-e2e-v1', profile: 'unrestricted', roots: ['/workspace']},
+    policy: {generation: 'isolated-e2e-v1', profile: 'unrestricted', roots: [workspace]},
   },
   logStore: new MemorySessionLogStore(),
+  settings: config.toolset === 'bash' ? {tools: {include: ['bash']}} : {},
   state: new State(session),
-  toolProfile: 'coding',
+  toolProfile: config.toolset === 'bash' ? 'none' : 'coding',
 })
 const result = {sessionId: session.getId(), startedAt: new Date().toISOString()}
 let handle
@@ -92,5 +108,6 @@ try {
 
   result.finishedAt = new Date().toISOString()
   result.entries = session.getEntries()
-  fs.writeFileSync('/output/result.json', JSON.stringify(result, null, 2))
+  result.evaluation = compactionMetrics(events)
+  fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify(result, null, 2))
 }
