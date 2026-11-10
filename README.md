@@ -3,7 +3,7 @@
 [![npm package](https://img.shields.io/npm/v/@cybergarage/orbit?logo=npm)](https://www.npmjs.com/package/@cybergarage/orbit)
 [![Build Status](https://github.com/cybergarage/orbit/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/cybergarage/orbit/actions/workflows/test.yml)
 
-<img src="doc/img/orbit-logo-navy-blue-readme.png" alt="Orbit logo: an orbital O with a central dot and a satellite dot, beside the Orbit wordmark" width="360">
+<img src="docs/branding/img/orbit-logo-navy-blue-readme.png" alt="Orbit logo: an orbital O with a central dot and a satellite dot, beside the Orbit wordmark" width="360">
 
 Related projects: [Orbit App](https://github.com/cybergarage/orbit-app) · [Orbit Nest](https://github.com/cybergarage/orbit-nest).
 
@@ -14,7 +14,7 @@ The included `orbit` CLI and local web GUI use the same reusable framework.
 
 Orbit means “orbit.” Just as a satellite fulfills its role along an orbit,
 agents move work forward in line with people's goals. The name expresses the
-idea of creating that path. See the [logo and name](doc/style/README.md) for
+idea of creating that path. See the [logo and name](docs/branding/style/README.md) for
 the selected artwork and the original Japanese wording.
 
 **0.9 is an evolving application-development release.** Orbit supplies the runtime;
