@@ -4,6 +4,12 @@ from datetime import datetime
 import json
 from pathlib import Path
 
+# Also support direct invocation from the repository root.
+try:
+    from .metrics import final_metrics
+except ImportError:
+    from metrics import final_metrics
+
 
 def elapsed_seconds(timing):
     if not timing.get("started_at") or not timing.get("finished_at"):
@@ -11,15 +17,23 @@ def elapsed_seconds(timing):
     return (datetime.fromisoformat(timing["finished_at"]) - datetime.fromisoformat(timing["started_at"])).total_seconds()
 
 
-def summarize(config_path):
-    config = json.loads(Path(config_path).read_text())
-    directory = Path(config["jobs_dir"]) / config["job_name"]
+def read_results(directory):
     results = []
     for path in directory.glob("*/result.json"):
         result = json.loads(path.read_text())
         worker = path.parent / "agent" / "result.json"
         result["worker"] = json.loads(worker.read_text()) if worker.exists() else {}
+        events = path.parent / "agent" / "events.jsonl"
+        if events.exists():
+            result["worker"]["evaluation"] = final_metrics(events)
         results.append(result)
+    return results
+
+
+def summarize(config_path):
+    config = json.loads(Path(config_path).read_text())
+    directory = Path(config["jobs_dir"]) / config["job_name"]
+    results = read_results(directory)
     agent = config["agents"][0]
     rows = []
     for task in config["tasks"]:

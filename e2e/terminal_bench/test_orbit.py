@@ -48,7 +48,7 @@ class OrbitAdapterTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(config["executionActionMode"], "single")
         self.assertEqual(config["compactionArm"], "sac")
         self.assertEqual(context.metadata["process_exit_code"], 0)
-        environment.download_file.assert_awaited_once()
+        self.assertEqual(environment.download_file.await_count, 2)
 
     async def test_worker_crash_is_infrastructure_failure(self):
         agent = self.agent()

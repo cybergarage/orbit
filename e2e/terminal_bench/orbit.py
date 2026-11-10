@@ -8,6 +8,7 @@ from pathlib import Path
 from harbor.agents.installed.base import BaseInstalledAgent
 from harbor.environments.base import BaseEnvironment
 from harbor.models.agent.context import AgentContext
+from e2e.terminal_bench.metrics import final_metrics
 
 
 RESULT_FILE = "result.json"
@@ -75,6 +76,7 @@ class OrbitAgent(BaseInstalledAgent):
             raise RuntimeError("Orbit worker exited without a normal result")
         # Harbor only invokes its post-run hook for an entirely empty context.
         await environment.download_file(str(self.environment_logs_dir / RESULT_FILE), self.logs_dir / RESULT_FILE)
+        await environment.download_file(str(self.environment_logs_dir / "events.jsonl"), self.logs_dir / "events.jsonl")
         self.populate_context_post_run(context)
 
     def populate_context_post_run(self, context: AgentContext) -> None:
@@ -82,7 +84,8 @@ class OrbitAgent(BaseInstalledAgent):
         if not result_path.exists():
             return
         result = json.loads(result_path.read_text())
-        metrics = result.get("evaluation", {})
+        events = self.logs_dir / "events.jsonl"
+        metrics = final_metrics(events) if events.exists() else result.get("evaluation", {})
         context.metadata = {**(context.metadata or {}), "orbit_runtime": result.get("runtime"), "evaluation": metrics}
         if metrics.get("usageComplete"):
             context.n_input_tokens = metrics["inputTokens"]

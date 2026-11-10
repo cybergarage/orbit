@@ -49,7 +49,8 @@ Artifacts under `tmp/e2e/terminal-bench/jobs/` include Harbor configuration and
 lock files, environment/verifier logs and reward, plus `agent/result.json`,
 `events.jsonl`, `context-policy.json`, and `orbit-config.json`. Record all planned
 trials, including timeout, setup error, summary failure and missing reward.
-Worker/summary token totals include all completed provider calls; incomplete
+Final-log worker/summary token totals include all completed provider calls,
+including responses settling after the Run timeout; incomplete
 usage is flagged. Peak completed input is a lower bound when a call lacks usage.
 Cache tokens and billed cost remain null for local Ollama. Orbit Run outcome,
 verifier reward and compaction activity are separate: no compaction means the
@@ -74,3 +75,8 @@ Collect all planned trials, including missing and failed results, without infere
 python3 -B e2e/terminal_bench/summarize.py tmp/e2e/terminal-bench/suffix.json --output tmp/e2e/terminal-bench/summary.json
 python3 -B -m unittest e2e.terminal_bench.test_summary
 ```
+
+Job and summary output paths must remain under `tmp/e2e/terminal-bench/`.
+Identical repeated tool calls are a diagnostic count, not proof of redundant
+work: a repeated verification command can be necessary. Final provider usage
+can be complete even when the Run timed out and reported non-quiescence.
