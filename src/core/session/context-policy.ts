@@ -5,8 +5,7 @@ import {randomUUID} from 'node:crypto'
 
 import type {RunContext} from '../execution/run.js'
 import type {Model, ModelInvokeOptions, PreparedModelInvocation} from '../models/model.js'
-import type {CompactionAlgorithm} from './compaction-algorithm.js'
-import type {CompactionStrategy} from './compaction-strategy.js'
+import type {CompactionComponents} from './compaction-components.js'
 import type {SessionCompactionEntry} from './compaction.js'
 import type {Session} from './session.js'
 import type {VerifiedModelContext} from './verified-context.js'
@@ -17,8 +16,7 @@ import {Message, MessageType} from '../message/index.js'
 import {resolveModelContextCapacity} from '../models/context-capacity.js'
 import {isOllamaTransportFailure} from '../models/termination.js'
 import {GptTokenizer} from '../tokenizer/index.js'
-import {structuredSummaryAlgorithm} from './compaction-algorithm.js'
-import {budgetedCompactionStrategy} from './compaction-strategy.js'
+import {resolveCompactionComponents, validateCompactionComponents} from './compaction-components.js'
 import {checkpointPrefix, persistedContextMessage, sourceDigest, validateToolGroups} from './compaction.js'
 import {SessionContextBuilder} from './context-builder.js'
 import {ContextBudgetError} from './context-error.js'
@@ -47,7 +45,7 @@ export interface RequestEstimate {
 }
 export type RequestEstimator = (request: Readonly<Record<string, unknown>>, profile: ContextProfile) => RequestEstimate
 export type ContextPolicy =
-  | {estimator?: RequestEstimator; mode: 'budgeted'; profile: ContextProfile}
+  | {algorithm?: string; estimator?: RequestEstimator; mode: 'budgeted'; profile: ContextProfile; strategy?: string}
   | {mode: 'disabled'}
 export interface ContextPreparationEvent {
   afterTokens?: number
@@ -178,15 +176,11 @@ function diagnostic(
 // round while the unchanged request still fits. Retry at the hard budget.
 const validationFailures = new WeakMap<RunContext, string>()
 
-const defaultCompactionComponents = {
-  algorithm: structuredSummaryAlgorithm,
-  strategy: budgetedCompactionStrategy,
-}
-
 export async function prepareSessionContext(
   options: PreparationOptions,
-  components: {algorithm: CompactionAlgorithm; strategy: CompactionStrategy} = defaultCompactionComponents,
+  components: CompactionComponents = resolveCompactionComponents(options.policy),
 ): Promise<PreparedModelInvocation> {
+  validateCompactionComponents(components)
   const {model, policy, run, session} = options
   const profile = structuredClone(policy.profile)
   validateContextProfile(profile, model)

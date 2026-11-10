@@ -30,13 +30,15 @@ or replace the enclosing supervisor. See [Managed Execution](../execution.md).
 
 The internal component selecting when to compact and which conversation suffix
 to retain. The current budgeted strategy uses token thresholds and protected
-turn/tool boundaries. Execution continuation remains owned by the Run.
+turn/tool boundaries. `contextPolicy.strategy` selects its built-in name.
+Execution continuation remains owned by the Run.
 
 ### Compaction algorithm
 
 The independently composed internal component generating a summary from selected
 history and a previous checkpoint. The current structured algorithm uses a managed
 model-call service for Run accounting, cancellation and transport retries.
+`contextPolicy.algorithm` selects its built-in name independently of the strategy.
 Session replay reads the saved result. See
 [Internal preparation components](../context-compaction.md#internal-preparation-components).
 

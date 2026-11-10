@@ -5,6 +5,22 @@ smaller input while retaining the original Session messages and their IDs.
 Budgeting is opt-in; an absent policy or `mode: "disabled"` preserves unbudgeted
 compatibility behavior. The same policy is used by Agent, Service, CLI and GUI.
 
+## Select a strategy and algorithm
+
+Budgeted policies accept independent `strategy` and `algorithm` names. The current
+built-ins are `budgeted-suffix-v1` and `structured-summary-v1`. Omitting either
+field selects that component's default. Unknown names, non-string values and
+incompatible summary contracts are rejected before model or tool execution.
+Configuration selects registered built-ins and cannot load executable modules.
+The disabled mode does not resolve compaction selections.
+
+Each Run resolves and snapshots both names with its profile. Changes to the
+Agent's policy apply to later Runs. Changing models preserves the selected names
+and recalculates model-dependent budgets. A resumed Session reconstructs existing
+checkpoints from stored data; subsequent Runs use the active workspace or Agent
+policy. The checkpoint format is unchanged and contains no new selection fields.
+A nearer workspace replaces the complete policy, including both selections.
+
 ## Configure a profile
 
 Set `contextPolicy` in workspace settings, or pass it to `Agent` or
@@ -19,6 +35,8 @@ stays in memory while each Run snapshots the JSON profile for its journal.
 {
   "contextPolicy": {
     "mode": "budgeted",
+    "strategy": "budgeted-suffix-v1",
+    "algorithm": "structured-summary-v1",
     "profile": {
       "revision": "local-trial-1",
       "provider": "ollama",
@@ -371,7 +389,7 @@ what to compact. The algorithm generates the summary through a managed model-cal
 service. Context preparation retains checkpoint validation and durable activation.
 Session replay uses saved checkpoints without calling either component.
 
-This compatibility extraction preserves existing settings, summary prompts and
-checkpoint formats. Named settings for alternative pairs, capability negotiation,
-EoCC/SAC and Terminal-Bench evaluation remain subsequent implementation stages of
+Named settings resolve the two components and validate summary-schema and
+cumulative-update compatibility. Existing settings without selection fields use
+the current pair. EoCC/SAC and Terminal-Bench evaluation remain subsequent stages of
 the [accepted ADR](adr/2026-11-11-selectable-session-compaction.md).

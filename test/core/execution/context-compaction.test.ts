@@ -1365,7 +1365,7 @@ describe('budgeted context preparation', () => {
     expect(parseSessionFile(fs.readFileSync(file, 'utf8'), file).header.version).to.equal(2)
     expect(fs.existsSync(file + '.v1-backup')).to.equal(true)
     session = repository.open(file)
-    const {result} = await execute(session, fixtureModel(id))
+    const {result} = await execute(session, fixtureModel(id), {...policy, algorithm: 'structured-summary-v1', strategy: 'budgeted-suffix-v1'})
     expect(result.outcome, JSON.stringify(result)).to.equal('completed')
     const checkpoint = session.getCompaction()
     const before = new SessionContextBuilder().build(session).messages.map((message) => message.content)
