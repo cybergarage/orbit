@@ -12,6 +12,7 @@ from e2e.terminal_bench.metrics import final_metrics
 
 
 RESULT_FILE = "result.json"
+EVENTS_FILE = "events.jsonl"
 
 
 class OrbitAgent(BaseInstalledAgent):
@@ -76,7 +77,7 @@ class OrbitAgent(BaseInstalledAgent):
             raise RuntimeError("Orbit worker exited without a normal result")
         # Harbor only invokes its post-run hook for an entirely empty context.
         await environment.download_file(str(self.environment_logs_dir / RESULT_FILE), self.logs_dir / RESULT_FILE)
-        await environment.download_file(str(self.environment_logs_dir / "events.jsonl"), self.logs_dir / "events.jsonl")
+        await environment.download_file(str(self.environment_logs_dir / EVENTS_FILE), self.logs_dir / EVENTS_FILE)
         self.populate_context_post_run(context)
 
     def populate_context_post_run(self, context: AgentContext) -> None:
@@ -84,7 +85,7 @@ class OrbitAgent(BaseInstalledAgent):
         if not result_path.exists():
             return
         result = json.loads(result_path.read_text())
-        events = self.logs_dir / "events.jsonl"
+        events = self.logs_dir / EVENTS_FILE
         metrics = final_metrics(events) if events.exists() else result.get("evaluation", {})
         context.metadata = {**(context.metadata or {}), "orbit_runtime": result.get("runtime"), "evaluation": metrics}
         if metrics.get("usageComplete"):
