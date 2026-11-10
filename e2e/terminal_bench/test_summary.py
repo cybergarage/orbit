@@ -5,10 +5,23 @@ import tempfile
 import unittest
 
 from e2e.terminal_bench.summarize import summarize
-from e2e.terminal_bench.metrics import final_metrics, phase_usage
+from e2e.terminal_bench.metrics import final_metrics, phase_usage, provider_cache_usage
 
 
 class SummaryTests(unittest.TestCase):
+    def test_cache_usage_is_known_only_with_complete_valid_provider_counts(self):
+        event = {"type": "model.response.completed", "data": {"usage": {"inputTokens": 100, "outputTokens": 5},
+                 "response": {"prompt_eval_cached_count": 70}}}
+        events = [{"type": "model.request.started"}, event]
+        self.assertEqual(provider_cache_usage(events), {
+            "cacheUsageComplete": True, "cacheTokens": 70, "uncachedInputTokens": 30})
+        for value in [None, -1, 101, True]:
+            event["data"]["response"]["prompt_eval_cached_count"] = value
+            self.assertIsNone(provider_cache_usage(events)["cacheTokens"])
+        event["data"]["response"]["prompt_eval_cached_count"] = 0
+        self.assertEqual(provider_cache_usage(events)["cacheTokens"], 0)
+        self.assertFalse(provider_cache_usage(events + [{"type": "model.request.started"}])["cacheUsageComplete"])
+
     def test_recap_usage_keeps_its_phase_after_timeout(self):
         events = [{"type": "model.request.started"},
                   {"type": "model.response.completed", "data": {"usage": {"inputTokens": 10, "outputTokens": 5}}},

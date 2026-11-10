@@ -38,6 +38,22 @@ def phase_usage(events):
             "phaseResponsesAccounted": classified}
 
 
+def provider_cache_usage(events):
+    """Ollama 0.40.14 reports prompt tokens inclusive of cached prompt tokens."""
+    responses = [event.get("data", {}) for event in events if event["type"] == MODEL_RESPONSE_COMPLETED]
+    cached = []
+    for data in responses:
+        usage = data.get("usage") or {}
+        value = (data.get("response") or {}).get("prompt_eval_cached_count")
+        if valid_usage(usage) and type(value) is int and 0 <= value <= usage["inputTokens"]:
+            cached.append(value)
+    starts = sum(event["type"] == MODEL_REQUEST_STARTED for event in events)
+    complete = starts == len(responses) == len(cached)
+    total = sum(cached) if complete else None
+    return {"cacheUsageComplete": complete, "cacheTokens": total,
+            "uncachedInputTokens": sum(data["usage"]["inputTokens"] for data in responses) - total if complete else None}
+
+
 def final_metrics(path):
     events = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
     counts = Counter(event["type"] for event in events)
@@ -54,7 +70,7 @@ def final_metrics(path):
         "inputTokens": sum(usage["inputTokens"] for usage in known),
         "outputTokens": sum(usage["outputTokens"] for usage in known),
         "peakInputTokens": max((usage["inputTokens"] for usage in known), default=None),
-        "cacheTokens": None, "billedCostUSD": None,
+        **provider_cache_usage(events), "billedCostUSD": None,
         "compactions": counts["context.compaction.completed"],
         "compactionFailures": counts["context.compaction.failed"],
         "summaryAttempts": counts["context.summary.started"],

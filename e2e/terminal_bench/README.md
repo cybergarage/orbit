@@ -52,7 +52,11 @@ trials, including timeout, setup error, summary failure and missing reward.
 Final-log worker/summary token totals include all completed provider calls,
 including responses settling after the Run timeout; incomplete
 usage is flagged. Peak completed input is a lower bound when a call lacks usage.
-Cache tokens and billed cost remain null for local Ollama. Orbit Run outcome,
+Billed cost remains null. Cache tokens and uncached input are reported only when
+every request has a completed response with a valid provider cache count; otherwise
+they remain null. Ollama 0.40.14 defines `prompt_eval_count` as total prompt tokens
+and `prompt_eval_cached_count` as the cached subset.
+[Version-pinned API schema](https://github.com/ollama/ollama/blob/9a3e8177767245acc62b735eba7d5d8a553606d0/docs/openapi.yaml). Orbit Run outcome,
 verifier reward and compaction activity are separate: no compaction means the
 threshold policy was not exercised. Reopening or reading results never reruns tools.
 
