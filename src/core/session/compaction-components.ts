@@ -4,8 +4,8 @@
 import type {CompactionAlgorithm} from './compaction-algorithm.js'
 import type {CompactionStrategy} from './compaction-strategy.js'
 
-import {structuredSummaryAlgorithm} from './compaction-algorithm.js'
-import {budgetedCompactionStrategy} from './compaction-strategy.js'
+import {handoffSummaryAlgorithm, structuredSummaryAlgorithm} from './compaction-algorithm.js'
+import {budgetedCompactionStrategy, eoccCompactionStrategy, sacCompactionStrategy} from './compaction-strategy.js'
 
 export interface CompactionComponents {
   algorithm: CompactionAlgorithm
@@ -13,10 +13,13 @@ export interface CompactionComponents {
 }
 
 const algorithms: Readonly<Record<string, CompactionAlgorithm>> = {
+  [handoffSummaryAlgorithm.id]: handoffSummaryAlgorithm,
   [structuredSummaryAlgorithm.id]: structuredSummaryAlgorithm,
 }
 const strategies: Readonly<Record<string, CompactionStrategy>> = {
   [budgetedCompactionStrategy.id]: budgetedCompactionStrategy,
+  [eoccCompactionStrategy.id]: eoccCompactionStrategy,
+  [sacCompactionStrategy.id]: sacCompactionStrategy,
 }
 
 export function validateCompactionComponents({algorithm, strategy}: CompactionComponents): void {

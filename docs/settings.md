@@ -226,6 +226,13 @@ built-ins independently. Their defaults are `budgeted-suffix-v1` and
 non-string names fail settings loading. The selected pair is checked for schema
 and cumulative-update compatibility and fixed for each Run. Model changes retain
 the selected pair while recalculating capacity-dependent profile values.
+Experimental reset strategies `eocc-v1` and `sac-v1` also accept either
+`structured-summary-v1` or `handoff-summary-v1`. SAC requires the independent
+`executionActionMode: "single"` setting. This execution setting defaults to
+`"multiple"`; single mode rejects multi-tool responses before dispatch and is
+currently unavailable for Processor Graphs. `AgentOptions.execution.actionMode`
+overrides the workspace value. Use the [compaction guide](context-compaction.md#experimental-eocc-and-sac)
+for profile requirements, reader compatibility and experimental limits.
 
 ### Interrupted tool context
 

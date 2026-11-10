@@ -249,7 +249,10 @@ automatically.
 After an agent records new input, `SessionContextBuilder` projects the current
 session into a provider-neutral `SessionModelContext`. Uncompacted Sessions return copied user, assistant and tool messages in their
 persisted oldest-to-newest order. A valid v2 checkpoint instead supplies its
-untrusted summary followed by the retained original suffix.
+untrusted summary followed by retained original messages. Reset projection v4
+instead retains consumed user instructions and appends only messages after its
+consumed boundary. Its raw suffix is empty at commit; old readers reject it.
+See [experimental EoCC/SAC](context-compaction.md#experimental-eocc-and-sac).
 
 Every model iteration is assembled as:
 

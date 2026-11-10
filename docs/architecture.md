@@ -174,9 +174,12 @@ context, turn terminal events, and session metadata. `SessionContextBuilder`
 derives model input from those durable records. With an enabled `ContextPolicy`,
 `session/context-policy.ts` prepares the complete frozen provider request, charges
 a tool-free summary call to the same Run, synchronizes a v2 checkpoint and then
-selects the retained suffix. `session/compaction-strategy.ts` owns the threshold
-and retained-range plan. `session/compaction-algorithm.ts` owns the existing
-structured summary, batching and format repair. The coordinator composes these
+selects the retained suffix or reset projection. `session/compaction-strategy.ts`
+owns threshold, completed-action and retained-range plans. EoCC/SAC reset
+checkpoints use projection version 4, with a consumed-through boundary and
+canonical user references. Agent owns independent single-action enforcement;
+SAC requires it, and Graph execution currently refuses single mode. `session/compaction-algorithm.ts` owns the existing
+structured summary, batching, format repair and bounded handoff algorithm. The coordinator composes these
 internal interfaces independently. `session/compaction-components.ts` resolves
 workspace selections and validates summary-schema and cumulative-update
 compatibility. Agent snapshots the resolved pair at Run admission and preserves

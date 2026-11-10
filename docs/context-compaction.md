@@ -8,7 +8,7 @@ compatibility behavior. The same policy is used by Agent, Service, CLI and GUI.
 ## Select a strategy and algorithm
 
 Budgeted policies accept independent `strategy` and `algorithm` names. The current
-built-ins are `budgeted-suffix-v1` and `structured-summary-v1`. Omitting either
+defaults are `budgeted-suffix-v1` and `structured-summary-v1`. Omitting either
 field selects that component's default. Unknown names, non-string values and
 incompatible summary contracts are rejected before model or tool execution.
 Configuration selects registered built-ins and cannot load executable modules.
@@ -18,8 +18,80 @@ Each Run resolves and snapshots both names with its profile. Changes to the
 Agent's policy apply to later Runs. Changing models preserves the selected names
 and recalculates model-dependent budgets. A resumed Session reconstructs existing
 checkpoints from stored data; subsequent Runs use the active workspace or Agent
-policy. The checkpoint format is unchanged and contains no new selection fields.
+policy. Legacy suffix checkpoints keep their encoding; reset checkpoints record both selections.
 A nearer workspace replaces the complete policy, including both selections.
+
+## Experimental EoCC and SAC
+
+| Strategy | Trigger | Context after compaction |
+| --- | --- | --- |
+| `budgeted-suffix-v1` (default) | Token threshold or overflow recovery | Summary and protected recent raw suffix |
+| `eocc-v1` | Token threshold or overflow recovery | Summary and all original user instructions; empty raw suffix |
+| `sac-v1` | Completed action/result before the next worker call, or threshold/recovery | Updated summary and original user instructions; empty raw suffix |
+
+Select either `structured-summary-v1` or `handoff-summary-v1` independently with
+any strategy. Both use cumulative `context-summary-v1` evidence. The handoff
+algorithm emphasizes observed progress, failed approaches and the next step. It
+uses a bounded tool-free recap request; oversized source fails rather than being
+split into multiple recap windows. The structured algorithm retains its batching
+and format-repair behavior. Summary attempts share the worker Run's limits.
+
+For SAC, add these fields to a settings file containing the model-specific
+`contextPolicy.profile` shown below:
+
+```json
+{
+  "executionActionMode": "single",
+  "contextPolicy": {
+    "mode": "budgeted",
+    "strategy": "sac-v1",
+    "algorithm": "handoff-summary-v1"
+  }
+}
+```
+
+This fragment requires a complete profile in the same policy object. Use
+`eocc-v1` for threshold-triggered reset. `executionActionMode` is independent of
+compaction, defaults to `multiple`, and can be `single` for all comparison arms,
+including disabled compaction. Programmatic callers can override it through
+`AgentOptions.execution.actionMode`. Single mode instructs the model to request
+at most one tool call per response, then rejects multi-call responses before
+storing or dispatching them. It terminates the Run and charges its model call and
+requested tools; it never selects just one call or retries an environment action.
+It counts tool invocations, not shell statements inside a Bash command. Processor
+Graphs are currently rejected in single mode because direct Graph tool nodes do
+not implement this action/context boundary.
+
+SAC requires single mode at Run admission. It folds completed actions (including
+failed/denied results) into state before the next worker call. If a Run stops
+before the recap, resume performs that recap without redispatching the action.
+A short action's recap may be larger than its raw input but must fit the target;
+overflow recovery always requires reduction. EoCC/SAC fail on invalid or
+oversized handoffs without falling back to full-history execution. Pending
+approvals, unknown effects and unresolved tool groups retain their admission
+checks.
+
+Reset checkpoints use **projection version 4** in transcript v2/v3. Their
+`firstRetainedId` is null; `prefixEndId` and `sourceHeadId` identify the consumed
+head at commit. Later messages become the raw suffix. The digest covers the
+consumed canonical messages. `retainedUserIds` preserves all consumed user inputs
+in order, once each. System, project and skill context still comes from normal
+assembly. Component IDs, revisions, budget parameters and the summary schema are
+stored under `components`. Replay validates the checkpoint without loading its
+producing algorithm. Old binaries reject version 4; upgrade all readers before
+enabling reset strategies. Existing checkpoints are not rewritten, and v1 uses
+the existing offline migration. Switching strategies or algorithms preserves
+saved state because the current algorithms share one summary schema.
+
+These are experimental Orbit adaptations of the regimes in
+[arXiv:2611.05306v1](https://arxiv.org/html/2611.05306v1), not a replication of its
+harness or measured results. Orbit retains structured source references and
+mandatory tool observations. For later benchmark qualification, start with
+window/trigger pairs of 48K/36K, 32K/24K or 16K/12K where supported; reserve output
+and safety capacity in each profile and measure the entire serialized recap.
+Unexpectedly large outputs can still exceed the recap budget and fail. Live
+SWE-bench/Terminal-Bench quality and cost comparisons remain follow-up work;
+fixture tests do not establish benchmark performance. Defaults are unchanged.
 
 ## Configure a profile
 
@@ -112,7 +184,7 @@ does not prove that generated prose faithfully describes the source.
 
 ## What remains in context
 
-Trusted instructions remain outside the summary. Original user inputs for the
+For the default suffix strategy, trusted instructions remain outside the summary. Original user inputs for the
 active Run remain verbatim, including multiple initial inputs and Graph stage
 inputs. Older turns are compacted first when that leaves enough room. Otherwise,
 completed tool rounds within the active turn can be summarized while the newest
@@ -391,5 +463,6 @@ Session replay uses saved checkpoints without calling either component.
 
 Named settings resolve the two components and validate summary-schema and
 cumulative-update compatibility. Existing settings without selection fields use
-the current pair. EoCC/SAC and Terminal-Bench evaluation remain subsequent stages of
+the default pair. Experimental reset strategies and handoff summaries are available;
+live SWE-bench/Terminal-Bench evaluation remains a subsequent stage of
 the [accepted ADR](adr/2026-11-11-selectable-session-compaction.md).
