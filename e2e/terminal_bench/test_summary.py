@@ -5,22 +5,35 @@ import tempfile
 import unittest
 
 from e2e.terminal_bench.summarize import summarize
-from e2e.terminal_bench.metrics import final_metrics
+from e2e.terminal_bench.metrics import final_metrics, phase_usage
 
 
 class SummaryTests(unittest.TestCase):
+    def test_recap_usage_keeps_its_phase_after_timeout(self):
+        events = [{"type": "model.request.started"},
+                  {"type": "model.response.completed", "data": {"usage": {"inputTokens": 10, "outputTokens": 5}}},
+                  {"type": "context.summary.started"}, {"type": "model.request.started"},
+                  {"type": "context.summary.failed"},
+                  {"type": "model.response.completed", "data": {"usage": {"inputTokens": 50, "outputTokens": 20}}}]
+        totals = phase_usage(events)
+        self.assertEqual(totals["summaryInputTokens"], 50)
+        self.assertEqual(totals["summaryOutputTokens"], 20)
+        self.assertEqual(totals["workerInputTokens"], 10)
+        self.assertEqual(totals["phaseResponsesAccounted"], 2)
+
     def test_final_logs_include_responses_after_the_runtime_snapshot(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "events.jsonl"
             events = [{"type": "model.request.started"},
                       {"type": "turn.cancelled"},
                       {"type": "model.response.completed", "data": {"usage": {"inputTokens": 10, "outputTokens": 5}}},
-                      {"type": "context.summary.validation-failed"}]
+                      {"type": "context.summary.validation-failed"}, {"type": "context.summary.truncated"}]
             path.write_text("\n".join(json.dumps(e) for e in events))
             metrics = final_metrics(path)
             self.assertTrue(metrics["usageComplete"])
             self.assertEqual(metrics["inputTokens"], 10)
             self.assertEqual(metrics["summaryValidationFailures"], 1)
+            self.assertEqual(metrics["summaryTruncations"], 1)
             path.write_text(json.dumps({"type": "model.request.started"}))
             self.assertFalse(final_metrics(path)["usageComplete"])
             self.assertIsNone(final_metrics(path)["peakInputTokens"])

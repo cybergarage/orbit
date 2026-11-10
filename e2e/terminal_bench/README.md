@@ -80,3 +80,16 @@ Job and summary output paths must remain under `tmp/e2e/terminal-bench/`.
 Identical repeated tool calls are a diagnostic count, not proof of redundant
 work: a repeated verification command can be necessary. Final provider usage
 can be complete even when the Run timed out and reported non-quiescence.
+
+## Fixed-history recap diagnostic
+
+After building, `node e2e/terminal_bench/fixed-history.mjs --prepare-only`
+validates a synthetic source that crosses the compaction trigger without calling
+Ollama. Explicit `--run` performs six serial live recap preparations with the
+pinned local model, a 32,768-token window, the same 12,288 trigger / 8,192 target,
+and 2,048 summary limit. The larger window leaves room for recap instructions.
+This isolates source retention and checkpoint creation; it is not a task-success
+benchmark or a test of SAC's per-action cadence. No tool is executed. The fixture
+asks to retain an exact marker, branch and pending check, and verifies that the
+pending check is not reported as passed. Outputs remain under the ignored
+`tmp/e2e/terminal-bench/fixed-history/` directory.

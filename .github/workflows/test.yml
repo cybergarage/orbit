@@ -55,6 +55,7 @@ jobs:
       - run: npm run build
       - run: npm run test
       - run: npm run test:e2e:unit
+      - run: node e2e/terminal_bench/fixed-history.mjs --prepare-only
   windows-unit-tests:
     if: github.event_name == 'workflow_dispatch' && !inputs.coordination_only
     strategy:
