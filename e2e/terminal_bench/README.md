@@ -11,8 +11,8 @@ or task solution is uploaded to the agent.
 release API, not moving online documentation. The dataset stays unmodified;
 job generation rejects a changed checkout. Task image tags and resolved image
 IDs must be retained with result artifacts; upstream image availability is an
-infrastructure dependency. The adapter has no provider credentials and targets
-local Ollama only. A trusted bundle includes the compiled runtime, dependencies,
+infrastructure dependency. The adapter defaults to local Ollama and also supports explicit OpenAI/Anthropic
+models through the [cloud evaluation guide](../../docs/e2e-evaluation.md#cloud-benchmark-runs). A trusted bundle includes the compiled runtime, dependencies,
 worker and Node binary; do not accept a bundle from untrusted model output.
 
 ```sh

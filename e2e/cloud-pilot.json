@@ -1,0 +1,26 @@
+{
+  "protocolVersion": 1,
+  "purpose": "Cost and infrastructure calibration, not held-out quality qualification",
+  "models": [
+    {"provider": "openai", "model": "gpt-4o-2024-08-06"},
+    {"provider": "anthropic", "model": "claude-opus-4-6"}
+  ],
+  "arms": ["fha", "suffix", "eocc-structured", "sac-structured"],
+  "terminalTask": "cancel-async-tasks",
+  "sweCase": "e2e/swebench/pytest-dev__pytest-10051.json",
+  "repetitions": 1,
+  "window": 32768,
+  "trigger": 12288,
+  "target": 8192,
+  "outputTokens": 4096,
+  "modelCalls": 16,
+  "terminalElapsedSec": 180,
+  "sweElapsedSec": 300,
+  "actionMode": "single",
+  "sampling": "provider defaults; no cross-provider seed equivalence",
+  "ordering": "serial, provider then suite then listed arm; not randomized",
+  "stopBeforeNextTrialAtObservedUSD": 20,
+  "stopOnIncompleteAccounting": true,
+  "billingLimitNote": "Between-trial stop, not a provider billing hard cap. Current in-flight usage may be unknown.",
+  "exclusions": "No dropped failures or automatic retries. Previously used tasks are development data. No benchmark superiority or narrow noninferiority inference."
+}

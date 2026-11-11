@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 import shlex
 from pathlib import Path
 
@@ -24,8 +25,18 @@ class OrbitAgent(BaseInstalledAgent):
 
     def __init__(self, *args, bundle: str, bundle_sha256: str, arm: str = "suffix",
                  endpoint: str = "http://host.docker.internal:11434", seed: int = 42,
-                 elapsed_sec: int = 300, **kwargs):
+                 elapsed_sec: int = 300, provider: str = "ollama", model_calls: int | None = None,
+                 window: int = 16384, trigger: int = 12288, target: int = 8192,
+                 output_tokens: int = 2048, **kwargs):
         super().__init__(*args, **kwargs)
+        if provider not in ("ollama", "openai", "anthropic"):
+            raise ValueError("Unsupported evaluation provider")
+        if provider != "ollama" and (not self.model_name or model_calls is None or not 1 <= model_calls <= 100):
+            raise ValueError("Cloud evaluation requires an explicit model and 1-100 model calls")
+        if not 0 < target < trigger <= window - output_tokens - 256 or output_tokens < 1:
+            raise ValueError("Invalid context budgets")
+        self.provider, self.model_calls = provider, model_calls
+        self.window, self.trigger, self.target, self.output_tokens = window, trigger, target, output_tokens
         self.bundle = Path(bundle).resolve()
         self.bundle_sha256 = bundle_sha256
         self.arm, self.endpoint = arm, endpoint
@@ -54,11 +65,14 @@ class OrbitAgent(BaseInstalledAgent):
         if cwd.return_code != 0 or not cwd.stdout.strip().startswith("/"):
             raise RuntimeError("Cannot discover task working directory")
         config = {
-            "model": self.model_name,
+            "model": self.model_name, "provider": self.provider, "modelCalls": self.model_calls,
+            "credentialFile": "/installed-agent/orbit-credential/key",
+            "compactionBudgets": {"window": self.window, "trigger": self.trigger, "target": self.target,
+                                  "outputReserve": self.output_tokens},
             "prompt": instruction + "\n\nWork only from the supplied task and environment. Do not retrieve solutions or inspect verifier files. Verify your work before finishing.",
             "ollamaHost": self.endpoint, "strategy": "baseline", "compactionArm": self.arm,
             "executionActionMode": "single", "toolset": "bash", "think": False,
-            "options": {"num_ctx": 16384, "num_predict": 2048, "temperature": 0.6, "top_p": 0.95, "seed": self.seed},
+            "options": {"num_ctx": self.window, "num_predict": self.output_tokens, "temperature": 0.6, "top_p": 0.95, "seed": self.seed},
             "rounds": "unlimited", "timeoutMs": self.elapsed_sec * 1000,
             "workspace": cwd.stdout.strip(), "copyFixture": False,
             "outputDirectory": str(self.environment_logs_dir),
@@ -67,11 +81,25 @@ class OrbitAgent(BaseInstalledAgent):
         local.write_text(json.dumps(config))
         remote = str(self.environment_logs_dir / "orbit-config.json")
         await environment.upload_file(local, remote)
-        result = await self.exec_as_agent(environment, command=(
-            f"timeout --signal=TERM --kill-after=5s {self.elapsed_sec + 30}s "
-            "/installed-agent/orbit/bin/node /installed-agent/orbit/e2e/worker.mjs "
-            f"{shlex.quote(remote)} > {shlex.quote(str(self.environment_logs_dir / 'console.log'))} 2>&1"
-        ), timeout_sec=self.elapsed_sec + 40)
+        secret_path = "/installed-agent/orbit-credential/key"
+        try:
+            if self.provider != "ollama":
+                key = os.environ.get(f"ORBIT_TEST_{self.provider.upper()}_API_KEY", "")
+                if not key.strip():
+                    raise ValueError("Missing dedicated cloud evaluation credential")
+                await self.exec_as_root(environment, command="mkdir -p /installed-agent/orbit-credential && chmod 700 /installed-agent/orbit-credential")
+                if environment.default_user:
+                    await self.exec_as_root(environment, command=f"chown {shlex.quote(environment.default_user)} /installed-agent/orbit-credential")
+                await self._upload_config_text(environment, content=key, remote_path=secret_path, filename="key")
+                await self.exec_as_root(environment, command=f"chmod 600 {secret_path}")
+            result = await self.exec_as_agent(environment, command=(
+                f"timeout --signal=TERM --kill-after=5s {self.elapsed_sec + 30}s "
+                "/installed-agent/orbit/bin/node /installed-agent/orbit/e2e/worker.mjs "
+                f"{shlex.quote(remote)} > {shlex.quote(str(self.environment_logs_dir / 'console.log'))} 2>&1"
+            ), timeout_sec=self.elapsed_sec + 40)
+        finally:
+            if self.provider != "ollama":
+                await self.exec_as_root(environment, command=f"rm -f {secret_path}")
         # A failed Orbit Run still reaches Harbor's verifier; keep execution and quality separate.
         context.metadata = {"process_exit_code": result.return_code, "arm": self.arm, "bundle_sha256": self.bundle_sha256}
         if result.return_code != 0:

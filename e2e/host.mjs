@@ -6,6 +6,9 @@ import {createHash, randomUUID} from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
+import {cloudMetrics} from './cloud-metrics.mjs'
+import {experimentPolicy} from './compaction-config.mjs'
+import {credentialName, stageCredential} from './evaluation-credentials.mjs'
 import {sourceFingerprint} from './source-fingerprint.mjs'
 import {readContextTriggerRatio, summarizeEvents} from './strategy.mjs'
 
@@ -142,31 +145,54 @@ export async function runAgent({
   executionActionMode = process.env.ORBIT_E2E_ACTION_MODE ?? 'multiple',
   files,
   model,
+  modelCalls = process.env.ORBIT_E2E_MODEL_CALLS ? Number(process.env.ORBIT_E2E_MODEL_CALLS) : undefined,
   numCtx = 16_384,
+  outputTokens = process.env.ORBIT_E2E_OUTPUT_TOKENS ? Number(process.env.ORBIT_E2E_OUTPUT_TOKENS) : undefined,
   prompt,
+  provider = process.env.ORBIT_E2E_PROVIDER ?? 'ollama',
   rounds = 12,
   seed = Number(process.env.ORBIT_E2E_SEED ?? 42),
   strategy = 'baseline',
+  target = process.env.ORBIT_E2E_TARGET ? Number(process.env.ORBIT_E2E_TARGET) : undefined,
   think = false,
   timeoutMs = 240_000,
+  trigger = process.env.ORBIT_E2E_TRIGGER ? Number(process.env.ORBIT_E2E_TRIGGER) : undefined,
   workspace,
 }) {
   if (!Number.isSafeInteger(seed) || seed < 0) throw new Error('Evaluation seed must be a nonnegative safe integer')
+  if (!['anthropic', 'ollama', 'openai'].includes(provider)) throw new Error('Unsupported evaluation provider')
+  if (
+    provider !== 'ollama' &&
+    (!model?.trim() || !Number.isSafeInteger(modelCalls) || modelCalls < 1 || modelCalls > 100)
+  )
+    throw new Error('Cloud evaluation requires an explicit model and 1-100 model calls')
+  if (provider !== 'ollama' && !process.env[credentialName(provider)])
+    throw new Error('Missing dedicated cloud evaluation credential')
+  if (provider !== 'ollama' && (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 900_000))
+    throw new Error('Cloud evaluation requires a finite deadline up to 900 seconds')
+  const outputReserve = outputTokens ?? (compactionArm ? 2048 : 4096)
+  const budgets = {
+    outputReserve,
+    target: target ?? Math.floor(numCtx * (trigger ? 0.25 : 0.5)),
+    trigger: trigger ?? Math.floor(numCtx * 0.75),
+    window: numCtx,
+  }
+  experimentPolicy({arm: compactionArm ?? 'fha', model, provider, ...budgets})
   const agentSourceSha256 = await verifyAgentImageSources(agentImage)
   await fs.mkdir(directory, {recursive: true})
   const input = path.join(directory, 'input')
   await fs.mkdir(input)
   const config = {
     compactionArm,
-    ...(compactionArm
-      ? {compactionBudgets: {target: Math.floor(numCtx * 0.5), trigger: Math.floor(numCtx * 0.75), window: numCtx}}
-      : {}),
+    modelCalls,
+    provider,
+    ...(compactionArm ? {compactionBudgets: budgets} : {}),
     contextPolicy,
     contextTriggerRatio: readContextTriggerRatio(process.env.ORBIT_E2E_CONTEXT_TRIGGER_RATIO),
     executionActionMode,
     model,
     ollamaHost: process.env.ORBIT_E2E_OLLAMA_HOST ?? 'http://host.docker.internal:11434',
-    options: {num_ctx: numCtx, num_predict: compactionArm ? 2048 : 4096, seed, temperature: 0.6, top_p: 0.95},
+    options: {num_ctx: numCtx, num_predict: outputReserve, seed, temperature: 0.6, top_p: 0.95},
     prompt,
     promptSha256: digest(prompt),
     rounds,
@@ -216,6 +242,23 @@ export async function runAgent({
       `type=bind,src=${initial},dst=/fixture,readonly`,
       agentImage,
     ])
+    if (provider !== 'ollama') {
+      const secret = await stageCredential(provider)
+      try {
+        const archive = secret.file + '.tar'
+        await command('python3', [
+          '-c',
+          'import tarfile,sys; t=tarfile.open(sys.argv[2], "w"); i=t.gettarinfo(sys.argv[1], "key"); i.uid=i.gid=1000; i.uname=i.gname="node"; t.addfile(i,open(sys.argv[1],"rb")); t.close()',
+          secret.file,
+          archive,
+        ])
+        await fs.chmod(archive, 0o600)
+        await docker(['cp', '-a', '-', `${name}:/credential`], {input: await fs.readFile(archive)})
+      } finally {
+        await secret.cleanup()
+      }
+    }
+
     stage = 'runtime'
     execution = await docker(['start', '-a', name], {
       allowFailure: true,
@@ -264,12 +307,13 @@ export async function runAgent({
     elapsedMs: Date.now() - start,
     error,
     execution,
-    metrics: summarizeEvents(events),
+    metrics: {...summarizeEvents(events), ...(provider === 'ollama' ? {} : cloudMetrics(events, {model, provider}))},
     model,
     result,
     status,
     usage,
-    usageComplete: status === 'completed',
+    usageComplete:
+      provider === 'ollama' ? status === 'completed' : cloudMetrics(events, {model, provider}).usageComplete,
   }
   await writeJSON(path.join(directory, 'run.json'), record)
   return {...record, events}

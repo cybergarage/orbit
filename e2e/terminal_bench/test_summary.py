@@ -9,6 +9,14 @@ from e2e.terminal_bench.metrics import final_metrics, phase_usage, provider_cach
 
 
 class SummaryTests(unittest.TestCase):
+    def test_anthropic_cache_counts_are_added_to_total_input(self):
+        events = [{"type": "model.request.started"}, {"type": "model.response.completed", "data": {
+            "provider": "anthropic", "usage": {"inputTokens": 10, "outputTokens": 3},
+            "response": {"usage": {"cache_read_input_tokens": 20, "cache_creation_input_tokens": 5}}}}]
+        self.assertEqual(provider_cache_usage(events)["cacheTokens"], 20)
+        self.assertEqual(provider_cache_usage(events)["uncachedInputTokens"], 10)
+        self.assertEqual(phase_usage(events)["workerInputTokens"], 35)
+
     def test_cache_usage_is_known_only_with_complete_valid_provider_counts(self):
         event = {"type": "model.response.completed", "data": {"usage": {"inputTokens": 100, "outputTokens": 5},
                  "response": {"prompt_eval_cached_count": 70}}}

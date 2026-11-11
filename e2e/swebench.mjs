@@ -82,7 +82,7 @@ async function grade(predictions) {
         cwd: root,
         env: {...process.env, DOCKER_HOST: endpoint},
         log: path.join(root, `${runId}.log`),
-        timeoutMs: 900_000,
+        timeoutMs: Number(process.env.ORBIT_E2E_TIMEOUT_MS ?? 900_000),
       },
     )
   } finally {
@@ -174,6 +174,8 @@ switch (action) {
       throw new Error('Verify the current dataset with the reference patch first')
     const [instance] = JSON.parse(await fs.readFile(path.join(root, 'instance.json'), 'utf8'))
     verifyPreparedSWECase(instance, selected, instanceId)
+    const provider = process.env.ORBIT_E2E_PROVIDER ?? 'ollama'
+    if (provider !== 'ollama' && !argument) throw new Error('Select an explicit cloud model')
     const model = argument ?? 'ornith-1.5:9b'
     const directory = path.join(root, `solve-${model.replaceAll(':', '-')}-${randomUUID()}`)
     await fs.mkdir(directory)
@@ -206,7 +208,7 @@ switch (action) {
       }
     }
 
-    const metadata = await ollamaMetadata(model)
+    const metadata = provider === 'ollama' ? await ollamaMetadata(model) : {model, provider, selection: 'explicit'}
     const runDirectory = path.join(directory, 'agent')
     const run = await runAgent({
       contextPolicy: process.env.ORBIT_E2E_CONTEXT_POLICY ?? 'disabled',
@@ -217,10 +219,11 @@ switch (action) {
         `Resolve the following issue in the repository at /workspace. Inspect the code, implement a minimal fix and run relevant tests. Do not retrieve solutions from the network. Do not alter existing tests to hide failures.\n\n${instance.problem_statement}`,
         {strategy, swe: true},
       ),
+      provider,
       rounds,
       strategy,
       think: process.env.ORBIT_SWE_THINK === 'true',
-      timeoutMs: 900_000,
+      timeoutMs: Number(process.env.ORBIT_E2E_TIMEOUT_MS ?? 900_000),
       workspace: pristine,
     })
     const diff = await command(

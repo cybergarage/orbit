@@ -48,6 +48,9 @@ describe('E2E host control (no model or Docker)', () => {
         'e2e/source-fingerprint.mjs',
         'e2e/compaction-config.mjs',
         'e2e/evaluation-model.mjs',
+        'e2e/cloud-metrics.mjs',
+        'e2e/cloud-pricing.json',
+        'e2e/evaluation-credentials.mjs',
         'e2e/worker.mjs',
         'package-lock.json',
         'package.json',
@@ -171,7 +174,11 @@ describe('E2E host control (no model or Docker)', () => {
     expect(filtered.patch).to.include('diff --git a/src/mark.py b/src/mark.py')
     expect(filtered.patch).to.include('diff --git a/testing/test_mark.py b/testing/test_mark.py')
     expect(filtered.patch).not.to.include('.pytest_cache')
-    expect(excludeGeneratedPatch('diff --git "a/path with space/.pytest_cache/README.md" "b/path with space/.pytest_cache/README.md"\n+cache\n').patch).to.equal('')
+    expect(
+      excludeGeneratedPatch(
+        'diff --git "a/path with space/.pytest_cache/README.md" "b/path with space/.pytest_cache/README.md"\n+cache\n',
+      ).patch,
+    ).to.equal('')
   })
 
   it('requires an observed failed test before a successful rerun', () => {

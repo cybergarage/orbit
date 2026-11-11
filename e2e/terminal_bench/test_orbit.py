@@ -53,7 +53,7 @@ class OrbitAdapterTests(unittest.IsolatedAsyncioTestCase):
             SimpleNamespace(return_code=0, stdout="/task dir\n"),
             SimpleNamespace(return_code=0),
         ])
-        environment = SimpleNamespace(upload_file=AsyncMock(), download_file=AsyncMock())
+        environment = SimpleNamespace(default_user="agent", upload_file=AsyncMock(), download_file=AsyncMock())
         context = AgentContext()
         await agent.run("Fix the task.", environment, context)
         config = json.loads((self.root / "orbit-config.json").read_text())
@@ -67,6 +67,25 @@ class OrbitAdapterTests(unittest.IsolatedAsyncioTestCase):
         command = agent.exec_as_agent.call_args.kwargs
         self.assertIn("timeout --signal=TERM --kill-after=5s 330s", command["command"])
         self.assertEqual(command["timeout_sec"], 340)
+
+    async def test_cloud_credentials_are_not_in_configuration_or_commands(self):
+        agent = self.agent(provider="openai", model_calls=16, window=32768, output_tokens=4096)
+        agent.exec_as_agent = AsyncMock(side_effect=[SimpleNamespace(return_code=0, stdout="/app\n"), SimpleNamespace(return_code=0)])
+        agent.exec_as_root = AsyncMock()
+        agent._upload_config_text = AsyncMock()
+        environment = SimpleNamespace(default_user="agent", upload_file=AsyncMock(), download_file=AsyncMock())
+        with patch.dict("os.environ", {"ORBIT_TEST_OPENAI_API_KEY": "fake-private-key"}):
+            await agent.run("Task", environment, AgentContext())
+        config = (self.root / "orbit-config.json").read_text()
+        self.assertNotIn("fake-private-key", config)
+        self.assertEqual(json.loads(config)["modelCalls"], 16)
+        self.assertEqual(agent._upload_config_text.call_args.kwargs["content"], "fake-private-key")
+        self.assertNotIn("fake-private-key", str(agent.exec_as_agent.call_args_list))
+        self.assertIn("rm -f", agent.exec_as_root.call_args.kwargs["command"])
+
+    def test_cloud_requires_explicit_call_limit(self):
+        with self.assertRaisesRegex(ValueError, "model calls"):
+            self.agent(provider="openai")
 
     async def test_worker_crash_is_explicit_and_allows_harbor_verification(self):
         agent = self.agent()
