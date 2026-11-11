@@ -2,11 +2,26 @@
 
 ## Summary
 
+This evaluation asks whether two compaction strategies studied by Belcak et al., End-of-Conversation Compaction (EoCC) and Single-Action Compaction (SAC), transfer to Orbit. The study compares Orbit's adaptations of both methods with its existing suffix strategy and a full-history baseline on SWE-bench and Terminal-Bench. It measures task success, compaction behavior, and token use, including list-price cost for cloud runs. [Paper: _You don't need long context_ (arXiv:2611.05306v1)](https://arxiv.org/abs/2611.05306v1)
+
 Orbit's EoCC compacted a live task and continued to a native verifier pass. The available comparisons leave the question of an advantage over Orbit suffix open.
 
 ![Local and cloud interim results. On local Terminal-Bench, suffix, EoCC and SAC each passed one of three seeds. On local SWE-bench, suffix passed one of three and EoCC and SAC passed none. On the two complete Opus tasks, FHA, suffix and EoCC each passed both tasks, and SAC passed neither. Their estimated list costs were $2.45, $2.02, $2.30 and $5.25, respectively. GPT-4o passed neither task with any method.](images/2026-11-11-compaction-interim.png)
 
 _The local panel shows three seeds on one task per suite. The cloud panel shows two distinct tasks with all eight conditions completed. See the [combined findings](#combined-local-and-cloud-interim-findings) for the comparison limits._
+
+### How the four conditions handle history
+
+| Condition                                 | When it compacts                                                    | What the next model call receives                                                                                              |
+| ----------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Suffix**                                | When history reaches Orbit's compaction threshold.                  | A summary of the older history and the original messages from the recent portion of the conversation.                          |
+| **FHA (Full-History Accumulation)**       | Compaction is disabled. This is the paper's baseline.               | The accumulated conversation, including prior actions and their results.                                                       |
+| **EoCC (End-of-Conversation Compaction)** | When the active conversation reaches the compaction threshold.      | The original task instructions and a compact summary of the work so far. The active conversation starts fresh from that state. |
+| **SAC (Single-Action Compaction)**        | After each completed action and its result, before the next action. | The original task instructions and an updated summary that carries the result of the last action forward.                      |
+
+The EoCC and SAC conditions in this evaluation use Orbit's structured summaries. The paper describes the original methods and the FHA baseline in [Section 2.4.1](https://arxiv.org/html/2611.05306v1#S2.SS4.SSS1).
+
+### Interim findings
 
 - **EoCC and suffix** each passed both complete Opus tasks. On one of those tasks, EoCC committed a compaction checkpoint before continuing to a pass.
 - **SAC** passed one local Terminal-Bench seed. In three of its four cloud runs on the two complete tasks, it spent 32 of the 64 allowed calls on summaries and reached the call limit.
@@ -16,7 +31,7 @@ Related work: [Issue #22](https://github.com/cybergarage/orbit/issues/22), [prot
 
 ## Paper and related evidence
 
-The motivating paper is Belcak et al., _You don't need long context_, arXiv:2611.05306v1 (2026): [abstract and metadata](https://arxiv.org/abs/2611.05306v1), [paper PDF](https://arxiv.org/pdf/2611.05306v1).
+The version evaluated for this report is available as the [paper PDF](https://arxiv.org/pdf/2611.05306v1).
 
 The [local study's publication analysis](../../docs/research/2026-11-11-local-compaction-transfer.md#publication-evidence) separates the authors' reported EoCC/SAC results from Orbit's measurements and records the inspected paper version and PDF hash. EoCC and SAC are evaluated methods in that paper; the results below concern Orbit's adaptations with its own summary validation, prompts, models and execution budgets. This interim report is not a paper-faithful replication and does not establish that the paper's claims are true or false.
 
