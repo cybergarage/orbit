@@ -10,6 +10,8 @@ Orbit’s EoCC compacted the conversation during a benchmark task, continued wor
 
 _The cloud panel on the left shows two distinct tasks with all eight conditions completed. The local panel on the right shows three runs of the same task per benchmark and method, using a different seed each time. A score of 1/3 means one official pass in three runs. A score of 0/3 means zero passes in three runs. See the [combined findings](#combined-local-and-cloud-interim-findings) for the comparison limits._
 
+The effect of compaction may depend on the model, task, and context budget. The paper reports that some models retain task accuracy with EoCC or SAC, while others lose accuracy under the tested settings. In Orbit, EoCC supported a successful continuation on Claude Opus 4.6, and SAC passed a local Terminal-Bench run. The GPT-4o runs on the two matched tasks failed under every strategy, including full-history accumulation, so they do not isolate the effect of compaction. These results leave open how much model age or weight availability matters. [Paper Section 5: SAC results](https://arxiv.org/html/2611.05306v1#S5) · [Appendix D: EoCC with open-weight models](https://arxiv.org/html/2611.05306v1#A4)
+
 ### How the four conditions handle history
 
 | Condition                                 | When it compacts                                                                                                      | What the next model call receives                                                                                                     |
