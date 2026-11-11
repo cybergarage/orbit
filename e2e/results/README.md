@@ -140,3 +140,7 @@ datasets, hidden grading material and logs under ignored `tmp/e2e/`; this
 repository does not distribute them. A saved prediction can be regraded after
 preparing the matching dataset and official image as described in the
 [evaluation guide](../../docs/e2e-evaluation.md).
+
+## Cloud compaction benchmark calibration
+
+The [2026-11-11 cloud pilot](2026-11-11-cloud-compaction-pilot.md) and [ledger](2026-11-11-cloud-compaction-pilot.json) record 16 bounded OpenAI/Anthropic trials across two previously used tasks and four arms. All trials have official grades and complete usage; the observed standard-list-price estimate is $3.4882425. The report separates task quality, Run termination and compaction commits, and proposes a larger calibration before held-out evaluation. It does not establish algorithm superiority or reproduce the paper's model results.
