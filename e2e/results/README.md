@@ -20,6 +20,11 @@ The [cloud EoCC lifecycle diagnostic](2026-11-11-cloud-eocc.md) checks real
 OpenAI/Anthropic compaction, durable save, resume and continuation separately
 from benchmark quality.
 
+The [64-call cloud interim evaluation](2026-11-11-cloud-compaction-interim.md)
+reports two complete task blocks, incomplete calibration coverage, and provider
+cost findings. Evaluation stopped at the user’s request; the report does not
+establish general superiority or authorize further paid runs.
+
 ## SWE-bench
 
 An official result describes the **submitted patch** under the pinned SWE-bench

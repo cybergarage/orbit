@@ -1,0 +1,91 @@
+# Cloud compaction interim evaluation — 2026-11-11
+
+The two tasks with all eight conditions completed show that Orbit EoCC can commit compaction, continue working and pass a native task verifier. They do **not** establish an advantage over Orbit suffix or validate the paper's general claims. SAC consumed substantial summary allowance without passing either task on either model. The user stopped the calibration because of Anthropic cost; no further paid evaluation is running or authorized by this report.
+
+Related work: [Issue #22](https://github.com/cybergarage/orbit/issues/22), [protocol PR #32](https://github.com/cybergarage/orbit/pull/32), [16-call pilot](2026-11-11-cloud-compaction-pilot.md), and [synthetic cloud lifecycle diagnostic](2026-11-11-cloud-eocc.md). The [sanitized ledger](2026-11-11-cloud-compaction-interim.json) retains all 160 planned conditions, four historical credit-interrupted attempts, two user-interrupted attempts within the planned conditions, usage, native results and artifact hashes. This is a benchmark execution report, not a new architecture decision or external-agent comparison.
+
+## Scope and protocol
+
+Orbit revision: `601fedac22d78fc8b72bd8bfdbf5b90941d278d7`. The reused runtime bundle was built at `c98bde8b4c8eda7ed2e91a0618ae75ac10e965ce`; its runtime source fingerprint matches the calibration revision. The ledger records bundle and source hashes.
+
+The [predeclared calibration](../cloud-calibration-20.json) selected 10 SWE-bench Verified and 10 Terminal-Bench tasks, two models and four arms: 160 conditions, one completed attempt per condition. Models are `gpt-4o-2024-08-06` and `claude-opus-4-6`. Arms are FHA (full history without compaction), Orbit suffix, EoCC/structured and SAC/structured. All use baseline execution strategy and single-action mode.
+
+Limits are 64 total model calls **including summaries**, 900 seconds, and 4,096 output tokens per response. Compaction settings are window 32,768, trigger 12,288 and target 8,192. FHA disables compaction and is not restricted to a common 32,768-token request ceiling; its native model limit applies. Thus this comparison is not a fixed-context-cap experiment across all four arms. Sampling uses provider defaults, without cross-provider seed equivalence. Task blocks run at concurrency two; arm/provider order is deterministically hashed within each task. The host uses Linux/amd64 Docker emulation on ARM64.
+
+All 20 native controls passed (SWE reference patches; Terminal-Bench oracle reward 1 and no-op reward 0), and all 10 SWE solver preflights passed. Sources are pinned in the ledger: SWE-bench dataset `c104f840cc67f8b6eec6f759ebc8b2693d585d4a`, harness `726c5461e2ef52d83cf1ea2107870a8bb3328d57`; Terminal-Bench `12b7565679ce5006230b820666353673a133db93`, Harbor `fdba28fc411e47e8765420a1a063b4918fce3def`. SWE images are pinned by digest. Terminal-Bench image identities were captured after the first executions; do not interpret that record as immutable digest pinning for every launch.
+
+Task selection was a metadata-based convenience sample, with supported SWE repository/version profiles (eight Django, one pytest, one Sphinx), not a representative benchmark sample. These are development calibration tasks, not held-out evidence. The two complete task blocks are the earliest completed blocks under the protocol, not selected for passing outcomes.
+
+## Primary comparison: two complete task blocks
+
+The complete tasks are SWE-bench `pytest-dev__pytest-10081` and Terminal-Bench `custom-memory-heap-crash`. Each has two models times four arms. Official verifier results concern the submitted artifact, independently of normal runtime completion.
+
+| Model    | Arm             | Official passes | Committed compactions | Total list cost USD |
+| -------- | --------------- | --------------: | --------------------: | ------------------: |
+| GPT-4o   | FHA             |             0/2 |                     0 |            0.087925 |
+| GPT-4o   | suffix          |             0/2 |                     2 |            0.492730 |
+| GPT-4o   | EoCC/structured |             0/2 |                     0 |            0.049050 |
+| GPT-4o   | SAC/structured  |             0/2 |                    41 |            0.662950 |
+| Opus 4.6 | FHA             |             2/2 |                     0 |            2.449525 |
+| Opus 4.6 | suffix          |             2/2 |                     1 |            2.015115 |
+| Opus 4.6 | EoCC/structured |             2/2 |                     1 |            2.296375 |
+| Opus 4.6 | SAC/structured  |             0/2 |                    64 |            5.245960 |
+
+The complete blocks cost **$13.299630**. Compaction counts are lifecycle observations, not a quality score. With only two task clusters, these pass fractions are descriptive and do not support general superiority, equivalence or noninferiority claims.
+
+### EoCC and suffix
+
+Opus EoCC on pytest committed one compaction and then completed six worker model responses and five tool results before normal completion and a native pass. This is real-task evidence of committed compaction and useful continuation; the separate synthetic diagnostic establishes save/resume behavior explicitly. Opus EoCC on the memory task passed without triggering compaction. The two OpenAI EoCC trials also never triggered and failed native grading; their low costs are not evidence of efficient successful compaction.
+
+Opus suffix and EoCC both passed both tasks. Suffix cost $2.015115 and EoCC $2.296375: EoCC was approximately 14% more expensive in these two blocks. This small difference does not isolate a causal algorithm effect because trajectories and sampling differ. No observed quality advantage justifies replacing suffix.
+
+### SAC and the shared call budget
+
+Three of four SAC trials exhausted the 64-call allowance, with 32 summary attempts each. OpenAI on the memory task failed with `summary-invalid-format` after 21 completed model calls and 11 summary attempts; nine compactions had committed. None passed native grading. On Opus, SAC cost about 2.6 times suffix across the two tasks.
+
+This raises a concrete concern about summary overhead under the shared call budget. It does not show SAC universally fails. Increasing worker allowance while separately budgeting summaries would be a different experimental protocol and must not be silently substituted into this comparison.
+
+## Incomplete coverage and interruptions
+
+There are **24 fully accounted, officially graded conditions** out of 160: 12 OpenAI and 12 Anthropic. Six native passes are all Anthropic conditions; OpenAI has zero passes in its 12 observed conditions. Beyond the primary two blocks, eight complete conditions belong to partially completed Sphinx and DB recovery blocks. They are retained as supplementary evidence, not pooled into a representative success rate. Only 11 task/arm cells have complete results for both providers, so the two 12-condition totals are not matched samples.
+
+Two Anthropic credit-exhaustion incidents interrupted four attempts. Each time, subsequent dispatch stopped. After explicit user confirmation of replenishment, only the externally interrupted conditions were restarted with separate attempt names; completed trials were retained. No algorithm failure was retried for a better outcome. The second recovery was then stopped at the user's request during two SAC executions. Their partial events were copied before the containers and dispatch processes were terminated. There are 134 unstarted conditions and two user-interrupted conditions. The five-complete-task review checkpoint was never reached.
+
+Billing interruptions and the user stop are external interruptions, not algorithm failures. Historical attempts and their costs remain in the ledger. Interrupted grading, where present, is not used as a clean algorithm quality outcome. Original traces, patches and grader outputs are preserved locally under ignored `tmp/e2e/`; public evidence contains hashes and sanitized summaries rather than transcripts or credentials.
+
+## Cost findings
+
+| Provider  | Fully accounted conditions | Cost of those conditions USD | Observed interrupted-attempt cost USD | Total observed USD |
+| --------- | -------------------------: | ---------------------------: | ------------------------------------: | -----------------: |
+| OpenAI    |                         12 |                     3.758565 |                                     0 |           3.758565 |
+| Anthropic |                         12 |                    30.139025 |                              7.831655 |          37.970680 |
+| Total     |                         24 |                    33.897590 |                              7.831655 |      **41.729245** |
+
+These are returned usage multiplied by the study's pinned list rates, **not invoices**. Some interrupted requests have no final usage; $41.729245 is the observed subtotal, not a complete final bill or guaranteed ceiling. The prior 16-call pilot is a separate experiment and is excluded. Compute, storage, taxes, discounts and operator time are excluded.
+
+The study's [pricing snapshot](../cloud-pricing.json) uses $2.50/$10 per million ordinary input/output tokens for GPT-4o and $5/$25 for Opus, with cache read/write rates accounted separately. Sources recorded with the snapshot are [OpenAI model pricing](https://developers.openai.com/api/docs/models/gpt-4o) and [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing). These are the rates used for this experiment, not a promise of future pricing.
+
+The observed Anthropic cost has several causes:
+
+- Across the **11 matched completed cells**, OpenAI cost $3.256565 and Anthropic $17.524890 (about 5.4 times). Anthropic used 2,745,878 input and 151,820 output tokens, versus 1,355,550 and 42,481 for OpenAI. These are different trajectories and outcomes, not interchangeable quality at different prices.
+- Anthropic's 12 completed conditions recorded zero cache-read tokens. OpenAI recorded 445,696. No claim is made that Anthropic cannot cache; this configuration obtained no observed cache-read benefit.
+- Anthropic FHA on DB recovery alone cost **$12.614135**: 57 responses, 2,409,492 cumulative input tokens, 22,667 output tokens and a peak input of 120,742. Input cost was $12.047460; output cost was $0.566675. Full-history replay dominated this example; it made no summary calls and failed native grading despite normal completion. This unmatched cell accounts for about one third of the total observed Anthropic spend and must not be used as a paired OpenAI comparison.
+- Summaries also matter: among fully accounted conditions, OpenAI worker/summary costs were $1.3109375/$2.4476275; Anthropic worker/summary costs were $24.878975/$5.260050. Frequent SAC summaries can consume both money and the shared call allowance.
+- External interruptions added $7.831655 of known Anthropic response costs beyond the completed-condition total. Missing final usage remains unknown rather than assumed zero.
+
+The **$300 figure was a dispatch-stop threshold for the entire calibration**, not a forecast of Anthropic charges, a provider-side hard cap or authorization to spend it after the user stop. In-flight requests could exceed a between-trial threshold. The distinction should have been made clearer before resumption; small credit replenishments caused additional interrupted work and expense.
+
+## Cost-aware next steps — proposals only
+
+Do not restart the 20-task calibration or the larger study automatically. Preserve the current result as an interim report. The earlier 80-task, three-repeat proposal and its cost reserve are not validated by this incomplete calibration; a reliable full-study budget and necessary task count cannot be derived from two complete task clusters.
+
+For a separately approved follow-up:
+
+1. Choose the question first: implementation diagnosis, quality comparison against suffix, or paper-faithful replication. They require different budgets and evidence.
+2. For low-cost diagnostics, OpenAI-only work is an option, but zero passes in these 12 conditions limits its value for detecting successful-task quality differences. Changing to another model requires fresh calibration and its own explicit model ID.
+3. If the primary question is EoCC versus current Orbit, consider initially comparing just EoCC and suffix. Removing FHA/SAC reduces planned conditions but also removes those baselines; declare a new protocol rather than presenting it as completion of the original four-arm study.
+4. Add explicit per-provider and per-trial monetary/token limits and a small pilot spending checkpoint before another large run. A 64-call limit does not bound cost tightly because each request can resend a much larger history. Common input limits would improve cost control but change the FHA comparison and require explicit truncation/budget-stop reporting.
+5. Investigate provider-supported prompt caching in a separate, tested configuration. Report cache writes, reads and observed savings; do not assume savings before measurement.
+6. Estimate later costs by suite, provider and arm, including failed and capped runs, summary overhead and interruption contingency. Estimate paired task discordance before proposing a powered quality study; repetitions do not replace independent tasks. No precise sample-size or general superiority claim is supported here.
+
+The current evidence supports retaining EoCC/SAC as opt-in experimental alternatives. It does not establish a new default, reproduce the paper's model snapshots or throughput estimates, or prove the paper correct or incorrect.
