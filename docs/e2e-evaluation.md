@@ -653,3 +653,62 @@ all planned outcomes and distinguishes completed-request usage from Run
 completion. In particular, output-length recovery can invoke compaction below
 the configured trigger; a shorter context alone does not establish lower total
 cost or better task success.
+
+## Cloud benchmark runs
+
+The SWE-bench and Harbor runners support explicit OpenAI and Anthropic models.
+Load `.env.test.local` as described in [development](development.md#live-model-integration-tests).
+Only dedicated `ORBIT_TEST_OPENAI_API_KEY` / `ORBIT_TEST_ANTHROPIC_API_KEY` variables
+are read. Keys are staged outside artifact directories in private host temporary
+directories, copied into a disposable container, read into the provider's private
+configuration, and unlinked before any Agent tool executes. They are not passed
+through Docker environment arguments or worker JSON. This is secret hygiene,
+not a security boundary against a compromised runtime or container administrator.
+
+Build a fresh source-verified image before SWE runs:
+
+```sh
+docker build --platform linux/amd64 -f e2e/Dockerfile -t orbit-e2e:cloud .
+ORBIT_E2E_IMAGE=orbit-e2e:cloud ORBIT_E2E_PROVIDER=openai \
+ORBIT_E2E_MODEL_CALLS=16 ORBIT_E2E_OUTPUT_TOKENS=4096 \
+ORBIT_E2E_TRIGGER=12288 ORBIT_E2E_TARGET=8192 ORBIT_E2E_TIMEOUT_MS=300000 \
+ORBIT_E2E_ACTION_MODE=single ORBIT_E2E_COMPACTION_ARM=eocc-structured \
+ORBIT_SWE_CASE=e2e/swebench/pytest-dev__pytest-10051.json \
+node e2e/swebench.mjs solve gpt-4o-2024-08-06
+```
+
+Existing prepare/gold prerequisites and official grading remain required. Cloud
+runs require an explicit model, 1–100 model calls including recaps, and a finite
+solver deadline up to 900 seconds. Output caps apply to FHA too. Cloud sampling
+uses adapter defaults: Ollama seed/temperature fields in the shared configuration
+do not set OpenAI/Anthropic sampling. Do not claim matched random seeds across
+providers. No retries or replacement models are silently selected.
+
+For Terminal-Bench, rebuild `node e2e/terminal_bench/bundle.mjs`, then add these
+options to `job.py`: `--provider anthropic --model claude-opus-4-6 --model-calls 16
+--window 32768 --trigger 12288 --target 8192 --output-tokens 4096 --elapsed 180`.
+The key must be present in the Harbor host environment when the job runs, not in
+job kwargs. All existing task pins, native verifiers, no-retry behavior and
+single-action execution remain in force.
+
+After each process has settled, calculate final cloud metrics with:
+
+```sh
+node e2e/cloud-metrics.mjs path/to/events.jsonl openai gpt-4o-2024-08-06
+```
+
+This is also used in the worker and SWE host result. It separates worker/summary
+usage, normalizes Anthropic cache tokens into total input, and distinguishes
+compaction starts, commits, failures, validation failures and truncations.
+Peak input is the largest completed provider response's input usage, not device
+memory. Cache counts and full cost are unknown when a request or required usage
+field is missing or the returned model differs from the priced model.
+
+`cloud-pricing.json` pins standard text API list prices and source URLs as of
+2026-11-11. `estimatedListCostUSD` uses actual response token counts at those
+rates; it is not an invoice. `observedListCostUSD` sums only accounted responses
+and is a partial lower bound when accounting is incomplete. `billedCostUSD`
+remains null. Discounts, taxes, hardware, hosted tools, batch/priority tiers and
+regional uplifts are outside this estimate. Unknown models are never assigned
+a fallback price. Cache write TTL must be known before Anthropic costs are
+considered complete. The core adapters and product defaults are unchanged.

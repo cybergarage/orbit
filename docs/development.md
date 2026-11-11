@@ -543,11 +543,11 @@ This is a synthetic persistence diagnostic, not a coding benchmark, a reliabilit
 estimate, or evidence of a cost advantage. Failed attempts are retained.
 
 The shared evaluation worker now accepts `provider: "openai"` or
-`provider: "anthropic"` with an explicit `model` and the corresponding test key
-in its process environment; omitted `provider` preserves Ollama behavior.
-The existing SWE-bench and Harbor host launchers still configure Ollama. Cloud
-credential delivery to benchmark containers and benchmark-wide cloud comparisons
-are separate follow-up work; never put keys in worker configuration JSON.
+`provider: "anthropic"` with an explicit `model` and a one-use credential file
+supplied by the host launcher; omitted `provider` preserves Ollama behavior.
+The SWE-bench and Harbor host launchers support cloud runs with bounded calls
+and temporary credential delivery; see the [cloud evaluation guide](e2e-evaluation.md#cloud-benchmark-runs).
+Never put keys in worker configuration JSON.
 
 Anthropic's generic `responseFormat: 'json'` uses a JSON-only system instruction,
 not schema-constrained decoding. The caller must validate the result. Orbit's

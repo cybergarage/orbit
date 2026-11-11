@@ -6,7 +6,7 @@ import {Ollama} from 'ollama'
 import {getModel} from '../dist/core/index.js'
 import {OllamaAgent, ollamaFetch} from '../dist/core/models/adapters/ollama.js'
 
-/** Credentials remain in the process environment, never in experiment configuration. */
+/** Credentials are captured privately by the provider, never in experiment configuration. */
 export function createEvaluationModel(config, env = process.env) {
   const provider = config.provider ?? 'ollama'
   if (!['anthropic', 'ollama', 'openai'].includes(provider)) throw new Error('Unsupported evaluation provider')
@@ -15,10 +15,17 @@ export function createEvaluationModel(config, env = process.env) {
   if (provider !== 'ollama') {
     const apiKeyEnv = `ORBIT_TEST_${provider.toUpperCase()}_API_KEY`
     if (!env[apiKeyEnv]?.trim()) throw new Error(`Missing evaluation credential: ${apiKeyEnv}`)
-    return {
-      close() {},
-      model: getModel(provider, config.model, {providers: {[provider]: {apiKeyEnv}}}),
+    const model = getModel(provider, config.model, {providers: {[provider]: {apiKey: env[apiKeyEnv]}}})
+    if (config.options?.num_predict) {
+      const prepare = model.prepare.bind(model)
+      model.prepare = (messages, options = {}) =>
+        prepare(messages, {
+          ...options,
+          maxOutputTokens: Math.min(options.maxOutputTokens ?? config.options.num_predict, config.options.num_predict),
+        })
     }
+
+    return {close() {}, model}
   }
 
   const sdk = new Ollama({fetch: ollamaFetch, host: config.ollamaHost})

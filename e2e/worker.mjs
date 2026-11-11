@@ -13,13 +13,24 @@ import {
   Session,
   State,
 } from '../dist/index.js'
+import {cloudMetrics} from './cloud-metrics.mjs'
 import {compactionMetrics, experimentPolicy} from './compaction-config.mjs'
+import {consumeCredential} from './evaluation-credentials.mjs'
 import {createEvaluationModel} from './evaluation-model.mjs'
 
 const configFile = process.argv[2] ?? '/input/config.json'
 if (!['/input/config.json', '/logs/agent/orbit-config.json'].includes(configFile))
   throw new Error('Unsupported evaluation configuration path')
 const config = JSON.parse(fs.readFileSync(configFile, 'utf8'))
+const credentials =
+  config.provider && config.provider !== 'ollama'
+    ? await consumeCredential(config.credentialFile ?? '/credential/key', config.provider)
+    : undefined
+const redact = (text) => {
+  for (const key of Object.values(credentials ?? {})) text = text.split(key).join('[REDACTED]')
+  return text
+}
+
 const workspace = config.workspace ?? '/workspace'
 const output = config.outputDirectory ?? '/output'
 fs.mkdirSync(output, {recursive: true})
@@ -33,10 +44,22 @@ const diagnostics = new DiagnosticEventBus({
   maxEvents: 20_000,
 })
 diagnostics.subscribe((event) => {
-  events.push({data: event.type === 'model.response.completed' ? {usage: event.data?.usage} : {}, type: event.type})
-  fs.appendFileSync(path.join(output, 'events.jsonl'), JSON.stringify(event) + '\n')
+  events.push({
+    ...event,
+    data: {
+      ...event.data,
+      content: undefined,
+      request: undefined,
+      response: {
+        prompt_eval_cached_count: event.data?.response?.prompt_eval_cached_count,
+        usage: event.data?.response?.usage,
+      },
+      toolCalls: undefined,
+    },
+  })
+  fs.appendFileSync(path.join(output, 'events.jsonl'), redact(JSON.stringify(event)) + '\n')
 })
-const {close: closeModel, model} = createEvaluationModel(config)
+const {close: closeModel, model} = createEvaluationModel(config, credentials)
 let contextPolicy
 if (config.compactionArm) {
   contextPolicy = experimentPolicy({
@@ -67,7 +90,7 @@ const agent = new Agent({
     limits: {
       cleanupMs: 5000,
       elapsedMs: config.timeoutMs,
-      modelCalls: config.rounds === 'unlimited' ? 'unlimited' : config.rounds + 1,
+      modelCalls: config.modelCalls ?? (config.rounds === 'unlimited' ? 'unlimited' : config.rounds + 1),
       toolRequests: config.rounds === 'unlimited' ? 'unlimited' : config.rounds * 8,
       toolRounds: config.rounds,
     },
@@ -100,6 +123,7 @@ try {
 
   result.finishedAt = new Date().toISOString()
   result.entries = session.getEntries()
-  result.evaluation = compactionMetrics(events)
-  fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify(result, null, 2))
+  result.evaluation =
+    config.provider && config.provider !== 'ollama' ? cloudMetrics(events, config) : compactionMetrics(events)
+  fs.writeFileSync(path.join(output, 'result.json'), redact(JSON.stringify(result, null, 2)))
 }

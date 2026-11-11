@@ -6,9 +6,9 @@ RUN npm ci
 COPY src ./src
 COPY bin/build-gui.mjs ./bin/build-gui.mjs
 RUN npm run build
-COPY e2e/worker.mjs e2e/compaction-config.mjs e2e/evaluation-model.mjs ./e2e/
+COPY e2e/worker.mjs e2e/compaction-config.mjs e2e/evaluation-model.mjs e2e/cloud-metrics.mjs e2e/cloud-pricing.json e2e/evaluation-credentials.mjs ./e2e/
 COPY e2e/source-fingerprint.mjs ./e2e/source-fingerprint.mjs
-RUN mkdir /workspace /output && chown node:node /workspace /output
+RUN mkdir /workspace /output /credential && chown node:node /workspace /output /credential
 USER node
 WORKDIR /workspace
 CMD ["node", "/opt/orbit/e2e/worker.mjs"]
