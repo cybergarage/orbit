@@ -1,0 +1,67 @@
+{
+  "protocolVersion": 2,
+  "purpose": "Twenty-task development calibration with expanded call allowance",
+  "models": [
+    {
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-4-6"
+    }
+  ],
+  "arms": ["fha", "suffix", "eocc-structured", "sac-structured"],
+  "repetitions": 1,
+  "window": 32768,
+  "trigger": 12288,
+  "target": 8192,
+  "outputTokens": 4096,
+  "modelCalls": 64,
+  "terminalElapsedSec": 900,
+  "sweElapsedSec": 900,
+  "actionMode": "single",
+  "sampling": "provider defaults; no cross-provider seed equivalence",
+  "ordering": "task blocks; seeded deterministic arm/provider order; at most two independent tasks concurrently",
+  "stopBeforeNextTrialAtObservedUSD": 300,
+  "stopOnIncompleteAccounting": true,
+  "billingLimitNote": "Between-trial stop, not a provider billing hard cap. Current in-flight usage may be unknown.",
+  "exclusions": "Calibration only; no dropped model failures or automatic retries. Exclude these tasks from later held-out claims. No broad superiority or narrow noninferiority inference.",
+  "concurrency": 2,
+  "checkpointAfterTasks": 5,
+  "selection": "Metadata-only convenience sample; existing solver repository/version profiles; excludes previously selected task IDs. Not representative.",
+  "sweTasks": [
+    "django__django-16255",
+    "django__django-16136",
+    "django__django-16100",
+    "django__django-15987",
+    "django__django-16116",
+    "django__django-16315",
+    "django__django-15741",
+    "django__django-15930",
+    "pytest-dev__pytest-10081",
+    "sphinx-doc__sphinx-10435"
+  ],
+  "terminalTasks": [
+    "custom-memory-heap-crash",
+    "db-wal-recovery",
+    "git-leak-recovery",
+    "git-multibranch",
+    "log-summary-date-ranges",
+    "nginx-request-logging",
+    "openssl-selfsigned-cert",
+    "query-optimize",
+    "sqlite-db-truncate",
+    "write-compressor"
+  ],
+  "controlPolicy": "Before paid calls, require native gold/oracle pass and Terminal-Bench no-op fail. Preserve control failures; do not silently replace selected tasks.",
+  "budgetNote": "Observed-cost dispatch stop, not a provider hard cap; at most two in-flight trials can incur additional cost. Stop dispatch on incomplete accounting; retain all outcomes.",
+  "orderKey": "Sort each task block by SHA256(orbit-cal20-v1:<task>:<provider>:<arm>)",
+  "checkpointTasks": [
+    "pytest-dev__pytest-10081",
+    "custom-memory-heap-crash",
+    "sphinx-doc__sphinx-10435",
+    "db-wal-recovery",
+    "django__django-16255"
+  ]
+}

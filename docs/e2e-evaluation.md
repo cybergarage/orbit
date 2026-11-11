@@ -714,3 +714,19 @@ remains null. Discounts, taxes, hardware, hosted tools, batch/priority tiers and
 regional uplifts are outside this estimate. Unknown models are never assigned
 a fallback price. Cache write TTL must be known before Anthropic costs are
 considered complete. The core adapters and product defaults are unchanged.
+
+### Twenty-task cloud calibration
+
+The [expanded calibration protocol](../e2e/cloud-calibration-20.json) fixes ten
+SWE-bench and ten Terminal-Bench tasks, both cloud model IDs and all four arms.
+It uses 64 total model calls (including summaries), a 900-second elapsed limit,
+and at most two independent task blocks concurrently. Review after the first
+five task blocks; stop new dispatch at the observed $300 list-price threshold
+or incomplete accounting. In-flight requests can add cost, so this is not a
+provider-side billing cap. Keep all trials and grading failures in the ledger.
+
+The SWE selection rationale is [recorded with its pinned cases](../e2e/swebench/calibration-20/README.md).
+Terminal-Bench's explicit `calibrationTasks` list is distinct from earlier smoke
+and held-out task selections. Every selected task must pass native controls
+before paid calls. This calibration informs cost and sample-size planning;
+it is not a full benchmark score or a paper-faithful replication.
