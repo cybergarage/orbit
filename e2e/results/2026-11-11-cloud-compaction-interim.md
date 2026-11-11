@@ -4,7 +4,7 @@
 
 This evaluation asks whether two compaction strategies studied by Belcak et al., End-of-Conversation Compaction (EoCC) and Single-Action Compaction (SAC), transfer to Orbit. The study compares Orbit's adaptations of both methods with Orbit (Suffix), its current default compaction strategy, and a full-history baseline on SWE-bench and Terminal-Bench. It measures task success, compaction behavior, and token use, including list-price cost for cloud runs. [Paper: _You don't need long context_ (arXiv:2611.05306v1)](https://arxiv.org/abs/2611.05306v1)
 
-Orbit's EoCC compacted a live task and continued to a native verifier pass. The available comparisons leave the question of an advantage over Orbit's default strategy open.
+Orbit’s EoCC compacted the conversation during a benchmark task, continued working, and passed the task’s official verifier. On the two completed Opus tasks, EoCC matched Orbit’s default strategy on verifier outcomes at a higher observed cost. In the local SWE-bench runs, the default strategy passed once in three attempts, while EoCC and SAC recorded no passes. SAC also incurred substantial summary overhead in the cloud runs. Under the conditions tested so far, the results favor keeping Orbit’s default strategy.
 
 ![Local and cloud interim results. Each local benchmark uses three runs of the same task. On Terminal-Bench, Orbit, EoCC and SAC each passed one of three runs. On SWE-bench, Orbit passed one of three runs and EoCC and SAC passed none. On the two complete Opus tasks, FHA, Orbit and EoCC each passed both tasks, and SAC passed neither. Their estimated list costs were $2.45, $2.02, $2.30 and $5.25, respectively. GPT-4o passed neither task with any method.](images/2026-11-11-compaction-interim.png)
 
