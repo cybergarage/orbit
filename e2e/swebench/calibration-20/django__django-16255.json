@@ -1,0 +1,11 @@
+{
+  "instance_id": "django__django-16255",
+  "repo": "django/django",
+  "version": "4.2",
+  "base_commit": "444b6da7cc229a58a2c476a52e45233001dc7073",
+  "dataset": "princeton-nlp/SWE-bench_Verified",
+  "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+  "split": "test",
+  "imageTag": "swebench/sweb.eval.x86_64.django_1776_django-16255:latest",
+  "image": "swebench/sweb.eval.x86_64.django_1776_django-16255@sha256:32b922f258d8a318319caee863c0c6cbe6122dd8efe5642ad9ab7359975ed45b"
+}

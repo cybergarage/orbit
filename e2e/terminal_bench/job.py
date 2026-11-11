@@ -23,7 +23,7 @@ def make_job(dataset, bundle, name, tasks, arm, model, seed, elapsed, control=No
         raise ValueError("Terminal-Bench dataset revision mismatch")
     if subprocess.check_output(["git", "-C", str(dataset), "status", "--porcelain"], text=True).strip():
         raise ValueError("Terminal-Bench dataset has local modifications")
-    if any(task not in SOURCE["smokeTasks"] + SOURCE["heldOutTasks"] for task in tasks):
+    if any(task not in SOURCE["smokeTasks"] + SOURCE["heldOutTasks"] + SOURCE.get("calibrationTasks", []) for task in tasks):
         raise ValueError("Task is not in the predeclared evaluation set")
     manifest = json.loads((bundle / "manifest.json").read_text())
     agent = {"name": control} if control else {

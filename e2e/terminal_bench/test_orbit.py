@@ -111,6 +111,19 @@ class OrbitAdapterTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(config["n_concurrent_trials"], 1)
         self.assertEqual(config["retry"]["max_retries"], 0)
 
+    def test_calibration_selection_remains_explicit_and_budgeted(self):
+        (self.root / "manifest.json").write_text(json.dumps({"bundleSha256": self.digest}))
+        for task in [SOURCE["calibrationTasks"][0], "undeclared-task"]:
+            with patch("e2e.terminal_bench.job.subprocess.check_output", side_effect=[SOURCE["datasetCommit"], ""]):
+                args = (self.root, self.root, "calibration", [task], "eocc-structured", "fixed-model", 42, 900)
+                if task == "undeclared-task":
+                    with self.assertRaisesRegex(ValueError, "predeclared"):
+                        make_job(*args, provider="openai", model_calls=64)
+                else:
+                    config = make_job(*args, provider="openai", model_calls=64)
+                    self.assertEqual(config["agents"][0]["kwargs"]["model_calls"], 64)
+                    self.assertEqual(config["agents"][0]["kwargs"]["elapsed_sec"], 900)
+
     def test_partial_usage_does_not_become_complete_accounting(self):
         agent = self.agent()
         context = AgentContext()
