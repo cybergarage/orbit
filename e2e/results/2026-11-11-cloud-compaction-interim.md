@@ -1,4 +1,6 @@
-# Cloud compaction interim evaluation — 2026-11-11
+# EoCC and SAC in Orbit: Interim Results from Local and Cloud LLMs
+
+2026-11-11
 
 ## Summary
 
