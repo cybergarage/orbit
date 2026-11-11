@@ -1,0 +1,4392 @@
+{
+  "date": "2026-11-11",
+  "orbitCommit": "601fedac22d78fc8b72bd8bfdbf5b90941d278d7",
+  "orchestratorSha256": "6cf5c3570288078f9a0ac0d9c3ca63531cacc08792396bf32a159e09287fa3ab",
+  "protocol": {
+    "protocolVersion": 2,
+    "purpose": "Twenty-task development calibration with expanded call allowance",
+    "models": [
+      {
+        "provider": "openai",
+        "model": "gpt-4o-2024-08-06"
+      },
+      {
+        "provider": "anthropic",
+        "model": "claude-opus-4-6"
+      }
+    ],
+    "arms": ["fha", "suffix", "eocc-structured", "sac-structured"],
+    "repetitions": 1,
+    "window": 32768,
+    "trigger": 12288,
+    "target": 8192,
+    "outputTokens": 4096,
+    "modelCalls": 64,
+    "terminalElapsedSec": 900,
+    "sweElapsedSec": 900,
+    "actionMode": "single",
+    "sampling": "provider defaults; no cross-provider seed equivalence",
+    "ordering": "task blocks; seeded deterministic arm/provider order; at most two independent tasks concurrently",
+    "stopBeforeNextTrialAtObservedUSD": 300,
+    "stopOnIncompleteAccounting": true,
+    "billingLimitNote": "Between-trial stop, not a provider billing hard cap. Current in-flight usage may be unknown.",
+    "exclusions": "Calibration only; no dropped model failures or automatic retries. Exclude these tasks from later held-out claims. No broad superiority or narrow noninferiority inference.",
+    "concurrency": 2,
+    "checkpointAfterTasks": 5,
+    "selection": "Metadata-only convenience sample; existing solver repository/version profiles; excludes previously selected task IDs. Not representative.",
+    "sweTasks": [
+      "django__django-16255",
+      "django__django-16136",
+      "django__django-16100",
+      "django__django-15987",
+      "django__django-16116",
+      "django__django-16315",
+      "django__django-15741",
+      "django__django-15930",
+      "pytest-dev__pytest-10081",
+      "sphinx-doc__sphinx-10435"
+    ],
+    "terminalTasks": [
+      "custom-memory-heap-crash",
+      "db-wal-recovery",
+      "git-leak-recovery",
+      "git-multibranch",
+      "log-summary-date-ranges",
+      "nginx-request-logging",
+      "openssl-selfsigned-cert",
+      "query-optimize",
+      "sqlite-db-truncate",
+      "write-compressor"
+    ],
+    "controlPolicy": "Before paid calls, require native gold/oracle pass and Terminal-Bench no-op fail. Preserve control failures; do not silently replace selected tasks.",
+    "budgetNote": "Observed-cost dispatch stop, not a provider hard cap; at most two in-flight trials can incur additional cost. Stop dispatch on incomplete accounting; retain all outcomes.",
+    "orderKey": "Sort each task block by SHA256(orbit-cal20-v1:<task>:<provider>:<arm>)",
+    "checkpointTasks": [
+      "pytest-dev__pytest-10081",
+      "custom-memory-heap-crash",
+      "sphinx-doc__sphinx-10435",
+      "db-wal-recovery",
+      "django__django-16255"
+    ]
+  },
+  "runtimeBundle": {
+    "bundleSha256": "35ccadee66c8f697481ad52c5fee5e267bc9a654f48cf579b46cd468eb7add70",
+    "dirty": false,
+    "imageId": "sha256:75204688adb90fd834899bdf4a420925fa8558db40380233e1a5015e6c198750",
+    "orbitCommit": "c98bde8b4c8eda7ed2e91a0618ae75ac10e965ce",
+    "platform": "linux/amd64",
+    "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93"
+  },
+  "terminalSource": {
+    "harborVersion": "0.25.0",
+    "harborCommit": "fdba28fc411e47e8765420a1a063b4918fce3def",
+    "dataset": "terminal-bench-2.1",
+    "datasetRepository": "https://github.com/harbor-framework/terminal-bench-2-1.git",
+    "datasetCommit": "12b7565679ce5006230b820666353673a133db93",
+    "smokeTasks": ["fix-git", "regex-log"],
+    "heldOutTasks": ["cancel-async-tasks"],
+    "platform": "linux/amd64",
+    "calibrationTasks": [
+      "custom-memory-heap-crash",
+      "db-wal-recovery",
+      "git-leak-recovery",
+      "git-multibranch",
+      "log-summary-date-ranges",
+      "nginx-request-logging",
+      "openssl-selfsigned-cert",
+      "query-optimize",
+      "sqlite-db-truncate",
+      "write-compressor"
+    ]
+  },
+  "terminalImages": {
+    "capturedAtUnix": 1794373766.507251,
+    "images": [
+      {
+        "task": "custom-memory-heap-crash",
+        "imageReference": "alexgshaw/custom-memory-heap-crash:20251031",
+        "imageId": "sha256:1895d7d6240d5fb2ec774d6bfdd1057d170f8d199c15c582e4585d3c63802557",
+        "repoDigests": [
+          "alexgshaw/custom-memory-heap-crash@sha256:1895d7d6240d5fb2ec774d6bfdd1057d170f8d199c15c582e4585d3c63802557"
+        ]
+      },
+      {
+        "task": "db-wal-recovery",
+        "imageReference": "alexgshaw/db-wal-recovery:20251031",
+        "imageId": "sha256:0e33ea5ec823975d1bd6c3778395c9f94251dd88f571146057bff6adb7e4594e",
+        "repoDigests": [
+          "alexgshaw/db-wal-recovery@sha256:0e33ea5ec823975d1bd6c3778395c9f94251dd88f571146057bff6adb7e4594e"
+        ]
+      },
+      {
+        "task": "git-leak-recovery",
+        "imageReference": "alexgshaw/git-leak-recovery:20251031",
+        "imageId": "sha256:62160e522a4238b8bcd522411ea97b5b200f811e5899d34947e66809bef7e586",
+        "repoDigests": [
+          "alexgshaw/git-leak-recovery@sha256:62160e522a4238b8bcd522411ea97b5b200f811e5899d34947e66809bef7e586"
+        ]
+      },
+      {
+        "task": "git-multibranch",
+        "imageReference": "alexgshaw/git-multibranch:20251031",
+        "imageId": "sha256:5bc449921c138295f6ddd8dca2977319fee2ce523811dbe56cec4ca663385fb5",
+        "repoDigests": [
+          "alexgshaw/git-multibranch@sha256:5bc449921c138295f6ddd8dca2977319fee2ce523811dbe56cec4ca663385fb5"
+        ]
+      },
+      {
+        "task": "log-summary-date-ranges",
+        "imageReference": "alexgshaw/log-summary-date-ranges:20251031",
+        "imageId": "sha256:cbeb6ba905c2fec294f16cd5e16e3ea7f2e04d38ac2484d51a11de262aa7dc51",
+        "repoDigests": [
+          "alexgshaw/log-summary-date-ranges@sha256:cbeb6ba905c2fec294f16cd5e16e3ea7f2e04d38ac2484d51a11de262aa7dc51"
+        ]
+      },
+      {
+        "task": "nginx-request-logging",
+        "imageReference": "alexgshaw/nginx-request-logging:20251031",
+        "imageId": "sha256:693e64431a0dbf45952e8b91a298d54fd60247e501c6623fb8fa3ebc07fc3d3d",
+        "repoDigests": [
+          "alexgshaw/nginx-request-logging@sha256:693e64431a0dbf45952e8b91a298d54fd60247e501c6623fb8fa3ebc07fc3d3d"
+        ]
+      },
+      {
+        "task": "openssl-selfsigned-cert",
+        "imageReference": "alexgshaw/openssl-selfsigned-cert:20251031",
+        "imageId": "sha256:4c948a4e630af2435ae0a19108fc0814a946ac2fa29a512469e0fc77b38c8c12",
+        "repoDigests": [
+          "alexgshaw/openssl-selfsigned-cert@sha256:4c948a4e630af2435ae0a19108fc0814a946ac2fa29a512469e0fc77b38c8c12"
+        ]
+      },
+      {
+        "task": "query-optimize",
+        "imageReference": "alexgshaw/query-optimize:20251031",
+        "imageId": "sha256:28de7da87004eab5b29bd5eaf1823579bc5b73ccea4b80349a5623185770da14",
+        "repoDigests": [
+          "alexgshaw/query-optimize@sha256:28de7da87004eab5b29bd5eaf1823579bc5b73ccea4b80349a5623185770da14"
+        ]
+      },
+      {
+        "task": "sqlite-db-truncate",
+        "imageReference": "alexgshaw/sqlite-db-truncate:20251031",
+        "imageId": "sha256:aabac93c93bd1f310e6a6fb893911d7735026ed18491c72133c9196a09092ca4",
+        "repoDigests": [
+          "alexgshaw/sqlite-db-truncate@sha256:aabac93c93bd1f310e6a6fb893911d7735026ed18491c72133c9196a09092ca4"
+        ]
+      },
+      {
+        "task": "write-compressor",
+        "imageReference": "alexgshaw/write-compressor:20251031",
+        "imageId": "sha256:3618e1f8a997b437c09cd3dbaac736705809c05f6f12f584b65722175970ebe1",
+        "repoDigests": [
+          "alexgshaw/write-compressor@sha256:3618e1f8a997b437c09cd3dbaac736705809c05f6f12f584b65722175970ebe1"
+        ]
+      }
+    ]
+  },
+  "sweCases": [
+    {
+      "instance_id": "django__django-16255",
+      "repo": "django/django",
+      "version": "4.2",
+      "base_commit": "444b6da7cc229a58a2c476a52e45233001dc7073",
+      "dataset": "princeton-nlp/SWE-bench_Verified",
+      "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "split": "test",
+      "imageTag": "swebench/sweb.eval.x86_64.django_1776_django-16255:latest",
+      "image": "swebench/sweb.eval.x86_64.django_1776_django-16255@sha256:32b922f258d8a318319caee863c0c6cbe6122dd8efe5642ad9ab7359975ed45b"
+    },
+    {
+      "instance_id": "django__django-16136",
+      "repo": "django/django",
+      "version": "4.2",
+      "base_commit": "19e6efa50b603af325e7f62058364f278596758f",
+      "dataset": "princeton-nlp/SWE-bench_Verified",
+      "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "split": "test",
+      "imageTag": "swebench/sweb.eval.x86_64.django_1776_django-16136:latest",
+      "image": "swebench/sweb.eval.x86_64.django_1776_django-16136@sha256:e7b5be8c540efc2fcd17b6c1ce59492007f5992ae762db9fc1956857bd4d9288"
+    },
+    {
+      "instance_id": "django__django-16100",
+      "repo": "django/django",
+      "version": "4.2",
+      "base_commit": "c6350d594c359151ee17b0c4f354bb44f28ff69e",
+      "dataset": "princeton-nlp/SWE-bench_Verified",
+      "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "split": "test",
+      "imageTag": "swebench/sweb.eval.x86_64.django_1776_django-16100:latest",
+      "image": "swebench/sweb.eval.x86_64.django_1776_django-16100@sha256:768b2dd7ecee6c437c64441966687c4a1597230169c7c929e14374660a2ecdab"
+    },
+    {
+      "instance_id": "django__django-15987",
+      "repo": "django/django",
+      "version": "4.2",
+      "base_commit": "7e6b537f5b92be152779fc492bb908d27fe7c52a",
+      "dataset": "princeton-nlp/SWE-bench_Verified",
+      "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "split": "test",
+      "imageTag": "swebench/sweb.eval.x86_64.django_1776_django-15987:latest",
+      "image": "swebench/sweb.eval.x86_64.django_1776_django-15987@sha256:fda248d0e8cc266b52a56094cec5e0d71083766805533deaf908bfe6b288c0d9"
+    },
+    {
+      "instance_id": "django__django-16116",
+      "repo": "django/django",
+      "version": "4.2",
+      "base_commit": "5d36a8266c7d5d1994d7a7eeb4016f80d9cb0401",
+      "dataset": "princeton-nlp/SWE-bench_Verified",
+      "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "split": "test",
+      "imageTag": "swebench/sweb.eval.x86_64.django_1776_django-16116:latest",
+      "image": "swebench/sweb.eval.x86_64.django_1776_django-16116@sha256:402e3f794142610246be59481c9978f57a0a737182fd78ea86c80e8e253d30a0"
+    },
+    {
+      "instance_id": "django__django-16315",
+      "repo": "django/django",
+      "version": "4.2",
+      "base_commit": "7d5329852f19c6ae78c6f6f3d3e41835377bf295",
+      "dataset": "princeton-nlp/SWE-bench_Verified",
+      "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "split": "test",
+      "imageTag": "swebench/sweb.eval.x86_64.django_1776_django-16315:latest",
+      "image": "swebench/sweb.eval.x86_64.django_1776_django-16315@sha256:be87c2c69b5436da575e6cb587ac9f1cd1198b55aefed4a136def12ba8364349"
+    },
+    {
+      "instance_id": "django__django-15741",
+      "repo": "django/django",
+      "version": "4.2",
+      "base_commit": "8c0886b068ba4e224dd78104b93c9638b860b398",
+      "dataset": "princeton-nlp/SWE-bench_Verified",
+      "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "split": "test",
+      "imageTag": "swebench/sweb.eval.x86_64.django_1776_django-15741:latest",
+      "image": "swebench/sweb.eval.x86_64.django_1776_django-15741@sha256:384224d214a356d06be660e58db19118fcc51fb5d5b8fea45d756ad1c1a8711e"
+    },
+    {
+      "instance_id": "django__django-15930",
+      "repo": "django/django",
+      "version": "4.2",
+      "base_commit": "63884829acd207404f2a5c3cc1d6b4cd0a822b70",
+      "dataset": "princeton-nlp/SWE-bench_Verified",
+      "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "split": "test",
+      "imageTag": "swebench/sweb.eval.x86_64.django_1776_django-15930:latest",
+      "image": "swebench/sweb.eval.x86_64.django_1776_django-15930@sha256:13515b9e9004217ff7bbd3b95ac8e6475ca965463435b4dda24a8da969710ffa"
+    },
+    {
+      "instance_id": "pytest-dev__pytest-10081",
+      "repo": "pytest-dev/pytest",
+      "version": "7.2",
+      "base_commit": "da9a2b584eb7a6c7e924b2621ed0ddaeca0a7bea",
+      "dataset": "princeton-nlp/SWE-bench_Verified",
+      "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "split": "test",
+      "imageTag": "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10081:latest",
+      "image": "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10081@sha256:58951c0d236ade36cd508d48e87819c488ed28c60abda963f8d4df99d89c030c"
+    },
+    {
+      "instance_id": "sphinx-doc__sphinx-10435",
+      "repo": "sphinx-doc/sphinx",
+      "version": "5.0",
+      "base_commit": "f1061c012e214f16fd8790dec3c283d787e3daa8",
+      "dataset": "princeton-nlp/SWE-bench_Verified",
+      "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "split": "test",
+      "imageTag": "swebench/sweb.eval.x86_64.sphinx-doc_1776_sphinx-10435:latest",
+      "image": "swebench/sweb.eval.x86_64.sphinx-doc_1776_sphinx-10435@sha256:30d33734839d5f49cb85de2ef78d99a2c8869693b72c9abeb4d999bf1ffc830f"
+    }
+  ],
+  "controls": [
+    {
+      "suite": "terminal-bench",
+      "task": "db-wal-recovery",
+      "steps": [
+        {
+          "control": "oracle",
+          "exit": 0,
+          "reward": 1,
+          "exception": null
+        },
+        {
+          "control": "nop",
+          "exit": 0,
+          "reward": 0,
+          "exception": null
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "custom-memory-heap-crash",
+      "steps": [
+        {
+          "control": "oracle",
+          "exit": 0,
+          "reward": 1,
+          "exception": null
+        },
+        {
+          "control": "nop",
+          "exit": 0,
+          "reward": 0,
+          "exception": null
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-leak-recovery",
+      "steps": [
+        {
+          "control": "oracle",
+          "exit": 0,
+          "reward": 1,
+          "exception": null
+        },
+        {
+          "control": "nop",
+          "exit": 0,
+          "reward": 0,
+          "exception": null
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-multibranch",
+      "steps": [
+        {
+          "control": "oracle",
+          "exit": 0,
+          "reward": 1,
+          "exception": null
+        },
+        {
+          "control": "nop",
+          "exit": 0,
+          "reward": 0,
+          "exception": null
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "log-summary-date-ranges",
+      "steps": [
+        {
+          "control": "oracle",
+          "exit": 0,
+          "reward": 1,
+          "exception": null
+        },
+        {
+          "control": "nop",
+          "exit": 0,
+          "reward": 0,
+          "exception": null
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "nginx-request-logging",
+      "steps": [
+        {
+          "control": "oracle",
+          "exit": 0,
+          "reward": 1,
+          "exception": null
+        },
+        {
+          "control": "nop",
+          "exit": 0,
+          "reward": 0,
+          "exception": null
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "openssl-selfsigned-cert",
+      "steps": [
+        {
+          "control": "oracle",
+          "exit": 0,
+          "reward": 1,
+          "exception": null
+        },
+        {
+          "control": "nop",
+          "exit": 0,
+          "reward": 0,
+          "exception": null
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "sqlite-db-truncate",
+      "steps": [
+        {
+          "control": "oracle",
+          "exit": 0,
+          "reward": 1,
+          "exception": null
+        },
+        {
+          "control": "nop",
+          "exit": 0,
+          "reward": 0,
+          "exception": null
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "write-compressor",
+      "steps": [
+        {
+          "control": "oracle",
+          "exit": 0,
+          "reward": 1,
+          "exception": null
+        },
+        {
+          "control": "nop",
+          "exit": 0,
+          "reward": 0,
+          "exception": null
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16255",
+      "steps": [
+        {
+          "step": "prepare",
+          "exit": 0
+        },
+        {
+          "step": "gold",
+          "exit": 0
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16136",
+      "steps": [
+        {
+          "step": "prepare",
+          "exit": 0
+        },
+        {
+          "step": "gold",
+          "exit": 0
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16100",
+      "steps": [
+        {
+          "step": "prepare",
+          "exit": 0
+        },
+        {
+          "step": "gold",
+          "exit": 0
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15987",
+      "steps": [
+        {
+          "step": "prepare",
+          "exit": 0
+        },
+        {
+          "step": "gold",
+          "exit": 0
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16116",
+      "steps": [
+        {
+          "step": "prepare",
+          "exit": 0
+        },
+        {
+          "step": "gold",
+          "exit": 0
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16315",
+      "steps": [
+        {
+          "step": "prepare",
+          "exit": 0
+        },
+        {
+          "step": "gold",
+          "exit": 0
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15741",
+      "steps": [
+        {
+          "step": "prepare",
+          "exit": 0
+        },
+        {
+          "step": "gold",
+          "exit": 0
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15930",
+      "steps": [
+        {
+          "step": "prepare",
+          "exit": 0
+        },
+        {
+          "step": "gold",
+          "exit": 0
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "swe-bench",
+      "task": "pytest-dev__pytest-10081",
+      "steps": [
+        {
+          "step": "prepare",
+          "exit": 0
+        },
+        {
+          "step": "gold",
+          "exit": 0
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "swe-bench",
+      "task": "sphinx-doc__sphinx-10435",
+      "steps": [
+        {
+          "step": "prepare",
+          "exit": 0
+        },
+        {
+          "step": "gold",
+          "exit": 0
+        }
+      ],
+      "passed": true
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "query-optimize",
+      "steps": [
+        {
+          "control": "oracle",
+          "exit": 0,
+          "reward": 1,
+          "exception": null
+        },
+        {
+          "control": "nop",
+          "exit": 0,
+          "reward": 0,
+          "exception": null
+        }
+      ],
+      "passed": true
+    }
+  ],
+  "preflight": [
+    {
+      "task": "django__django-16255",
+      "passed": true
+    },
+    {
+      "task": "django__django-16136",
+      "passed": true
+    },
+    {
+      "task": "django__django-16100",
+      "passed": true
+    },
+    {
+      "task": "django__django-15987",
+      "passed": true
+    },
+    {
+      "task": "django__django-16116",
+      "passed": true
+    },
+    {
+      "task": "django__django-16315",
+      "passed": true
+    },
+    {
+      "task": "django__django-15741",
+      "passed": true
+    },
+    {
+      "task": "django__django-15930",
+      "passed": true
+    },
+    {
+      "task": "pytest-dev__pytest-10081",
+      "passed": true
+    },
+    {
+      "task": "sphinx-doc__sphinx-10435",
+      "passed": true
+    }
+  ],
+  "pricing": {
+    "asOf": "2026-11-11",
+    "currency": "USD",
+    "unit": "per-million-tokens",
+    "rates": {
+      "openai/gpt-4o-2024-08-06": {
+        "input": 2.5,
+        "cacheRead": 1.25,
+        "output": 10,
+        "source": "https://developers.openai.com/api/docs/models/gpt-4o"
+      },
+      "anthropic/claude-opus-4-6": {
+        "input": 5,
+        "cacheRead": 0.5,
+        "cacheWrite5m": 6.25,
+        "cacheWrite1h": 10,
+        "output": 25,
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+      }
+    }
+  },
+  "observedListCostUSD": 41.729245,
+  "billedCostUSD": null,
+  "stopReason": "user-cost-stop",
+  "checkpoint": null,
+  "recovery": {
+    "authorizedBy": "User confirmed credits replenished and resumption permitted",
+    "startedAt": 1794378359.6410182,
+    "priorLedgerSha256": "8d6ac432c1cd58cbfa5d387f8d24c1124eafff5d3d4b677ed6d2d1d5cc84b4d1",
+    "orchestratorSha256": "3f33970785f5311a4dccfcbe9f71542cff1d2284016f8ee695d39b5855e63631",
+    "policy": "Preserve 24 complete trials and the first two billing interruptions; retain two additional credit interruptions and recover only those conditions with separate attempt names; execute 134 unstarted conditions. Frozen protocol; original observed costs included."
+  },
+  "recoveryHistory": [
+    {
+      "authorizedBy": "User confirmed credits replenished and resumption permitted",
+      "startedAt": 1794375950.995577,
+      "priorLedgerSha256": "b69815be00244aa83166e6c4e7f9bd514faa189fbd0be0f9f1d02ce461355ca3",
+      "orchestratorSha256": "87c9b224b04a478093610124fa4c2546dc7e3a4cb445c583b43c2a97e9cd4ba1",
+      "policy": "Preserve 21 complete trials, retain two external billing interruptions, recover only those two conditions with separate attempt names; execute 137 unstarted conditions. Frozen protocol; original observed costs included."
+    }
+  ],
+  "interruptedAttempts": [
+    {
+      "attempt": 1,
+      "failureCategory": "provider-credit-exhaustion",
+      "suite": "swe-bench",
+      "task": "sphinx-doc__sphinx-10435",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "recorded",
+      "reward": 0,
+      "gradeStatus": "unresolved",
+      "gradingDisposition": "evaluated-or-error",
+      "patchBytes": 1515,
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": null,
+        "compactions": 0,
+        "inputTokens": 227240,
+        "modelCallsCompleted": 32,
+        "modelCallsStarted": 34,
+        "outputTokens": 8347,
+        "peakInputTokens": 13111,
+        "summaryAttempts": 5,
+        "summaryFailures": 1,
+        "usageComplete": false,
+        "accountedResponses": 32,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": false,
+        "cacheWrite1hTokens": null,
+        "cacheWrite5mTokens": null,
+        "compactionFailures": 1,
+        "compactionStarts": 1,
+        "estimatedListCostUSD": null,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 1.344875,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 21232,
+        "summaryOutputTokens": 3634,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": null,
+        "workerInputTokens": 206008,
+        "workerOutputTokens": 4713
+      },
+      "wallSeconds": 259.11021995544434,
+      "controlSha256": "8a69f73c248068c1f2f07b108fe025cded2a5f72be93458b7a298911fa96dac8",
+      "eventsSha256": "ba621b54f12b6c8b891bc17bab46826fb5ee77df7cf4f0e53dcca7678dea2081",
+      "workerSeconds": 193.475,
+      "failureReasonCode": "see-raw-event",
+      "costByPhaseUSD": {
+        "worker": 1.1478650000000001,
+        "summary": 0.19701
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "455c9875f5ca991681c1f96b237bfeb7e104f91ccf395a12532e7d871678c6f1",
+        "qualityStatus": "quality-failed",
+        "qualityIssueCount": 6,
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/lastfailed",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ]
+      },
+      "predictionsSha256": "b6ceb635f397301e373a10635c87547a8cce48f8f343ca425e335090c558ee0c",
+      "grader": {
+        "status": "unresolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:30d33734839d5f49cb85de2ef78d99a2c8869693b72c9abeb4d999bf1ffc830f",
+        "predictionsSha256": "b6ceb635f397301e373a10635c87547a8cce48f8f343ca425e335090c558ee0c",
+        "datasetFileSha256": "11ae7a433d027c75457e440759915fe682ca951a63b89ec5b0b5846b122bb72f"
+      }
+    },
+    {
+      "attempt": 1,
+      "failureCategory": "provider-credit-exhaustion",
+      "suite": "terminal-bench",
+      "task": "db-wal-recovery",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "recorded",
+      "reward": 0,
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": null,
+        "compactions": 0,
+        "inputTokens": 707186,
+        "modelCallsCompleted": 58,
+        "modelCallsStarted": 59,
+        "outputTokens": 15514,
+        "peakInputTokens": 25478,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "usageComplete": false,
+        "accountedResponses": 58,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": false,
+        "cacheWrite1hTokens": null,
+        "cacheWrite5mTokens": null,
+        "compactionFailures": 0,
+        "compactionStarts": 0,
+        "estimatedListCostUSD": null,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 3.92378,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": null,
+        "workerInputTokens": 707186,
+        "workerOutputTokens": 15514
+      },
+      "wallSeconds": 449.7576627731323,
+      "taskChecksum": "571ef768d874f0016bfb31a071aea4cd1b0b71b88af2a76337f452487055e9ae",
+      "controlSha256": "fe8673da6a2f479725851f47d8361c9078a1af2292856b93fc558034da5caed0",
+      "eventsSha256": "d0bd4fa259594287308e700008e7bb98c6052a73d5e7999053022275a9b84e90",
+      "workerSeconds": 375.579,
+      "failureReasonCode": "see-raw-event",
+      "costByPhaseUSD": {
+        "worker": 3.92378,
+        "summary": 0
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "officialResultSha256": "f2f49869108831a70e60b690dfd1ad0c92d58b02971064b955dec89dbd63b47b"
+    },
+    {
+      "attempt": 1,
+      "failureCategory": "provider-credit-exhaustion",
+      "suite": "swe-bench",
+      "task": "sphinx-doc__sphinx-10435",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "recorded",
+      "reward": 0,
+      "gradeStatus": "unresolved",
+      "gradingDisposition": "skipped-empty-patch",
+      "patchBytes": 0,
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": null,
+        "compactions": 8,
+        "inputTokens": 53897,
+        "modelCallsCompleted": 16,
+        "modelCallsStarted": 17,
+        "outputTokens": 7936,
+        "peakInputTokens": 6293,
+        "summaryAttempts": 8,
+        "summaryFailures": 0,
+        "usageComplete": false,
+        "accountedResponses": 16,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": false,
+        "cacheWrite1hTokens": null,
+        "cacheWrite5mTokens": null,
+        "compactionFailures": 0,
+        "compactionStarts": 8,
+        "estimatedListCostUSD": null,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 0.46788500000000005,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 28314,
+        "summaryOutputTokens": 7056,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": null,
+        "workerInputTokens": 25583,
+        "workerOutputTokens": 880
+      },
+      "wallSeconds": 150.1497838497162,
+      "controlSha256": "8a69f73c248068c1f2f07b108fe025cded2a5f72be93458b7a298911fa96dac8",
+      "eventsSha256": "468670517fb4ba5609ed33664771666e6d44944ddf9ada28e56937ad064eef07",
+      "workerSeconds": 124.127,
+      "failureReasonCode": "see-raw-event",
+      "costByPhaseUSD": {
+        "worker": 0.149915,
+        "summary": 0.31797000000000003
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 7,
+      "workerResponsesAfterLastCompaction": 0,
+      "toolResultsAfterLastCompaction": 0,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "455c9875f5ca991681c1f96b237bfeb7e104f91ccf395a12532e7d871678c6f1",
+        "qualityStatus": "not-measured",
+        "qualityIssueCount": 0,
+        "excludedGeneratedPaths": []
+      },
+      "predictionsSha256": "c5acfdf48cefeb4d643f9261e4793e06ff5f6a8be2b012ab7cf42c0f23d09d07",
+      "grader": {
+        "status": "unresolved",
+        "gradingDisposition": "skipped-empty-patch",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:30d33734839d5f49cb85de2ef78d99a2c8869693b72c9abeb4d999bf1ffc830f",
+        "predictionsSha256": "c5acfdf48cefeb4d643f9261e4793e06ff5f6a8be2b012ab7cf42c0f23d09d07",
+        "datasetFileSha256": "11ae7a433d027c75457e440759915fe682ca951a63b89ec5b0b5846b122bb72f"
+      }
+    },
+    {
+      "attempt": 1,
+      "failureCategory": "provider-credit-exhaustion",
+      "suite": "terminal-bench",
+      "task": "db-wal-recovery",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "recorded",
+      "reward": 0,
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": null,
+        "compactions": 20,
+        "inputTokens": 179493,
+        "modelCallsCompleted": 41,
+        "modelCallsStarted": 42,
+        "outputTokens": 26521,
+        "peakInputTokens": 21062,
+        "summaryAttempts": 21,
+        "summaryFailures": 1,
+        "usageComplete": false,
+        "accountedResponses": 41,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": false,
+        "cacheWrite1hTokens": null,
+        "cacheWrite5mTokens": null,
+        "compactionFailures": 1,
+        "compactionStarts": 21,
+        "estimatedListCostUSD": null,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 1.56049,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 110111,
+        "summaryOutputTokens": 24356,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": null,
+        "workerInputTokens": 69382,
+        "workerOutputTokens": 2165
+      },
+      "wallSeconds": 420.50811076164246,
+      "taskChecksum": "571ef768d874f0016bfb31a071aea4cd1b0b71b88af2a76337f452487055e9ae",
+      "controlSha256": "fe8673da6a2f479725851f47d8361c9078a1af2292856b93fc558034da5caed0",
+      "eventsSha256": "f220df0af5b9d055ed671a52ec5843e45fc9ef85901cad21df8a77e0a3167ab8",
+      "workerSeconds": 382.677,
+      "failureReasonCode": "see-raw-event",
+      "costByPhaseUSD": {
+        "worker": 0.40103500000000003,
+        "summary": 1.159455
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 20,
+      "workerResponsesAfterLastCompaction": 1,
+      "toolResultsAfterLastCompaction": 1,
+      "officialResultSha256": "a6131c0c3f70a207a23c944060ab5242211934e5d086d84205a4561f4f32819e"
+    }
+  ],
+  "trials": [
+    {
+      "suite": "swe-bench",
+      "task": "pytest-dev__pytest-10081",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "recorded",
+      "reward": 0,
+      "gradeStatus": "unresolved",
+      "gradingDisposition": "evaluated-or-error",
+      "patchBytes": 847,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 57216,
+        "compactions": 2,
+        "inputTokens": 185860,
+        "modelCallsCompleted": 37,
+        "modelCallsStarted": 37,
+        "outputTokens": 4812,
+        "peakInputTokens": 22110,
+        "summaryAttempts": 14,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 37,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 2,
+        "compactionStarts": 4,
+        "estimatedListCostUSD": 0.44125000000000003,
+        "model": "gpt-4o-2024-08-06",
+        "observedListCostUSD": 0.44125000000000003,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://developers.openai.com/api/docs/models/gpt-4o",
+        "provider": "openai",
+        "returnedModels": ["gpt-4o-2024-08-06"],
+        "summaryInputTokens": 97119,
+        "summaryOutputTokens": 3799,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 1,
+        "uncachedInputTokens": 128644,
+        "workerInputTokens": 88741,
+        "workerOutputTokens": 1013
+      },
+      "wallSeconds": 123.44123411178589,
+      "controlSha256": "47e3696685a03374cecd5a51d8c2e8692ba02b6af0eff4643d4cd68f68874524",
+      "eventsSha256": "9ebbff8f16b3f13e4487aaed29c2c13e19bea126c822095f88e2e2dc657ffe44",
+      "workerSeconds": 80.731,
+      "costByPhaseUSD": {
+        "worker": 0.16526250000000003,
+        "summary": 0.2759875
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 2,
+      "workerResponsesAfterLastCompaction": 5,
+      "toolResultsAfterLastCompaction": 4,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "e65773d2b2377dc6c53a265de1795cb630af778b06121354f0036204add83bb3",
+        "qualityStatus": "quality-failed",
+        "qualityIssueCount": 5,
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ]
+      },
+      "predictionsSha256": "01ae7d78d70c8ac2ea6231c71b78e3f347715f9a5507b3945e133d3fe49ba685",
+      "grader": {
+        "status": "unresolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:58951c0d236ade36cd508d48e87819c488ed28c60abda963f8d4df99d89c030c",
+        "predictionsSha256": "01ae7d78d70c8ac2ea6231c71b78e3f347715f9a5507b3945e133d3fe49ba685",
+        "datasetFileSha256": "d8723928ccff77034b84aead50ad5179818940219012e3290823f024ab013367"
+      }
+    },
+    {
+      "suite": "swe-bench",
+      "task": "pytest-dev__pytest-10081",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "recorded",
+      "reward": 1,
+      "gradeStatus": "resolved",
+      "gradingDisposition": "evaluated-or-error",
+      "patchBytes": 2260,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 1,
+        "inputTokens": 225785,
+        "modelCallsCompleted": 31,
+        "modelCallsStarted": 31,
+        "outputTokens": 10132,
+        "peakInputTokens": 12291,
+        "summaryAttempts": 7,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 31,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 1,
+        "estimatedListCostUSD": 1.3822249999999998,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 1.3822249999999998,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 29171,
+        "summaryOutputTokens": 6508,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 225785,
+        "workerInputTokens": 196614,
+        "workerOutputTokens": 3624
+      },
+      "wallSeconds": 243.45972299575806,
+      "controlSha256": "47e3696685a03374cecd5a51d8c2e8692ba02b6af0eff4643d4cd68f68874524",
+      "eventsSha256": "06f73fc3603a70dc463aaf302a45a79e1d249da84db90993383c2bee10b2cadd",
+      "workerSeconds": 196.558,
+      "costByPhaseUSD": {
+        "worker": 1.07367,
+        "summary": 0.308555
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 1,
+      "workerResponsesAfterLastCompaction": 10,
+      "toolResultsAfterLastCompaction": 9,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "e65773d2b2377dc6c53a265de1795cb630af778b06121354f0036204add83bb3",
+        "qualityStatus": "quality-failed",
+        "qualityIssueCount": 5,
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ]
+      },
+      "predictionsSha256": "dd76920421144611a8f673f47830471c06534a44e219df846456a038c98addc4",
+      "grader": {
+        "status": "resolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:58951c0d236ade36cd508d48e87819c488ed28c60abda963f8d4df99d89c030c",
+        "predictionsSha256": "dd76920421144611a8f673f47830471c06534a44e219df846456a038c98addc4",
+        "datasetFileSha256": "d8723928ccff77034b84aead50ad5179818940219012e3290823f024ab013367"
+      }
+    },
+    {
+      "suite": "swe-bench",
+      "task": "pytest-dev__pytest-10081",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "recorded",
+      "reward": 1,
+      "gradeStatus": "resolved",
+      "gradingDisposition": "evaluated-or-error",
+      "patchBytes": 2238,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 0,
+        "inputTokens": 178233,
+        "modelCallsCompleted": 20,
+        "modelCallsStarted": 20,
+        "outputTokens": 3052,
+        "peakInputTokens": 13222,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 20,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 0,
+        "estimatedListCostUSD": 0.9674650000000001,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 0.9674650000000001,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 178233,
+        "workerInputTokens": 178233,
+        "workerOutputTokens": 3052
+      },
+      "wallSeconds": 130.09272718429565,
+      "controlSha256": "47e3696685a03374cecd5a51d8c2e8692ba02b6af0eff4643d4cd68f68874524",
+      "eventsSha256": "86efc2cd8acb644456ff81eda13a489a41735155cebfc3875176bc38424076df",
+      "workerSeconds": 81.534,
+      "costByPhaseUSD": {
+        "worker": 0.9674650000000001,
+        "summary": 0
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "e65773d2b2377dc6c53a265de1795cb630af778b06121354f0036204add83bb3",
+        "qualityStatus": "quality-failed",
+        "qualityIssueCount": 5,
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ]
+      },
+      "predictionsSha256": "b49db2fc21d0a6e99482267df2bf1fa6a62b01483d815ff7da70ccb575e0033e",
+      "grader": {
+        "status": "resolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:58951c0d236ade36cd508d48e87819c488ed28c60abda963f8d4df99d89c030c",
+        "predictionsSha256": "b49db2fc21d0a6e99482267df2bf1fa6a62b01483d815ff7da70ccb575e0033e",
+        "datasetFileSha256": "d8723928ccff77034b84aead50ad5179818940219012e3290823f024ab013367"
+      }
+    },
+    {
+      "suite": "swe-bench",
+      "task": "pytest-dev__pytest-10081",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "recorded",
+      "reward": 0,
+      "gradeStatus": "unresolved",
+      "gradingDisposition": "evaluated-or-error",
+      "patchBytes": 1178,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 37376,
+        "compactions": 0,
+        "inputTokens": 43865,
+        "modelCallsCompleted": 15,
+        "modelCallsStarted": 15,
+        "outputTokens": 984,
+        "peakInputTokens": 5708,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 15,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 0,
+        "estimatedListCostUSD": 0.0727825,
+        "model": "gpt-4o-2024-08-06",
+        "observedListCostUSD": 0.0727825,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://developers.openai.com/api/docs/models/gpt-4o",
+        "provider": "openai",
+        "returnedModels": ["gpt-4o-2024-08-06"],
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 6489,
+        "workerInputTokens": 43865,
+        "workerOutputTokens": 984
+      },
+      "wallSeconds": 64.75315713882446,
+      "controlSha256": "47e3696685a03374cecd5a51d8c2e8692ba02b6af0eff4643d4cd68f68874524",
+      "eventsSha256": "a28ac7c10119b9c13f1a5a3073abae1817e2c838a9e0339e5693a4a5b3fb079b",
+      "workerSeconds": 20.114,
+      "costByPhaseUSD": {
+        "worker": 0.0727825,
+        "summary": 0
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "e65773d2b2377dc6c53a265de1795cb630af778b06121354f0036204add83bb3",
+        "qualityStatus": "quality-failed",
+        "qualityIssueCount": 6,
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/lastfailed",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ]
+      },
+      "predictionsSha256": "a7988ae6f44d7865a8c5b0ca1d1afc3afc9c276791a08045b785f34a3612ffe8",
+      "grader": {
+        "status": "unresolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:58951c0d236ade36cd508d48e87819c488ed28c60abda963f8d4df99d89c030c",
+        "predictionsSha256": "a7988ae6f44d7865a8c5b0ca1d1afc3afc9c276791a08045b785f34a3612ffe8",
+        "datasetFileSha256": "d8723928ccff77034b84aead50ad5179818940219012e3290823f024ab013367"
+      }
+    },
+    {
+      "suite": "swe-bench",
+      "task": "pytest-dev__pytest-10081",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "recorded",
+      "reward": 0,
+      "gradeStatus": "unresolved",
+      "gradingDisposition": "evaluated-or-error",
+      "patchBytes": 744,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 9984,
+        "compactions": 0,
+        "inputTokens": 18654,
+        "modelCallsCompleted": 5,
+        "modelCallsStarted": 5,
+        "outputTokens": 225,
+        "peakInputTokens": 5401,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 5,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 0,
+        "estimatedListCostUSD": 0.036405,
+        "model": "gpt-4o-2024-08-06",
+        "observedListCostUSD": 0.036405,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://developers.openai.com/api/docs/models/gpt-4o",
+        "provider": "openai",
+        "returnedModels": ["gpt-4o-2024-08-06"],
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 8670,
+        "workerInputTokens": 18654,
+        "workerOutputTokens": 225
+      },
+      "wallSeconds": 44.39334297180176,
+      "controlSha256": "47e3696685a03374cecd5a51d8c2e8692ba02b6af0eff4643d4cd68f68874524",
+      "eventsSha256": "0cb4099a57c51b4ff92515d59ce00e4d8f3ac2f6b5a91719e5a26147238e64df",
+      "workerSeconds": 6.47,
+      "costByPhaseUSD": {
+        "worker": 0.036405,
+        "summary": 0
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "e65773d2b2377dc6c53a265de1795cb630af778b06121354f0036204add83bb3",
+        "qualityStatus": "quality-failed",
+        "qualityIssueCount": 5,
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ]
+      },
+      "predictionsSha256": "300667fc9b3649972815f93d5b978229ae1ccb81428b81193951bb098a21d908",
+      "grader": {
+        "status": "unresolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:58951c0d236ade36cd508d48e87819c488ed28c60abda963f8d4df99d89c030c",
+        "predictionsSha256": "300667fc9b3649972815f93d5b978229ae1ccb81428b81193951bb098a21d908",
+        "datasetFileSha256": "d8723928ccff77034b84aead50ad5179818940219012e3290823f024ab013367"
+      }
+    },
+    {
+      "suite": "swe-bench",
+      "task": "pytest-dev__pytest-10081",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "recorded",
+      "reward": 0,
+      "gradeStatus": "unresolved",
+      "gradingDisposition": "skipped-empty-patch",
+      "patchBytes": 0,
+      "runtime": {
+        "outcome": "budget-exceeded",
+        "reason": "budget-exceeded:modelCalls:64:64:1",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 36224,
+        "compactions": 32,
+        "inputTokens": 178498,
+        "modelCallsCompleted": 64,
+        "modelCallsStarted": 64,
+        "outputTokens": 12722,
+        "peakInputTokens": 9374,
+        "summaryAttempts": 32,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 64,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 32,
+        "estimatedListCostUSD": 0.5281849999999999,
+        "model": "gpt-4o-2024-08-06",
+        "observedListCostUSD": 0.5281849999999999,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://developers.openai.com/api/docs/models/gpt-4o",
+        "provider": "openai",
+        "returnedModels": ["gpt-4o-2024-08-06"],
+        "summaryInputTokens": 124992,
+        "summaryOutputTokens": 12033,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 142274,
+        "workerInputTokens": 53506,
+        "workerOutputTokens": 689
+      },
+      "wallSeconds": 126.46751379966736,
+      "controlSha256": "47e3696685a03374cecd5a51d8c2e8692ba02b6af0eff4643d4cd68f68874524",
+      "eventsSha256": "99421f38921daad499ec2c5f99e9ef053a4f6f55e3940e4c219ccb015be85fc2",
+      "workerSeconds": 110.254,
+      "costByPhaseUSD": {
+        "worker": 0.09777500000000001,
+        "summary": 0.43041
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 31,
+      "workerResponsesAfterLastCompaction": 0,
+      "toolResultsAfterLastCompaction": 0,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "e65773d2b2377dc6c53a265de1795cb630af778b06121354f0036204add83bb3",
+        "qualityStatus": "not-measured",
+        "qualityIssueCount": 0,
+        "excludedGeneratedPaths": []
+      },
+      "predictionsSha256": "38408e39c375868b8846693e5b3acf48b66496fc7e759412eb5f40c1970df490",
+      "grader": {
+        "status": "unresolved",
+        "gradingDisposition": "skipped-empty-patch",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:58951c0d236ade36cd508d48e87819c488ed28c60abda963f8d4df99d89c030c",
+        "predictionsSha256": "38408e39c375868b8846693e5b3acf48b66496fc7e759412eb5f40c1970df490",
+        "datasetFileSha256": "d8723928ccff77034b84aead50ad5179818940219012e3290823f024ab013367"
+      }
+    },
+    {
+      "suite": "swe-bench",
+      "task": "pytest-dev__pytest-10081",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "recorded",
+      "reward": 1,
+      "gradeStatus": "resolved",
+      "gradingDisposition": "evaluated-or-error",
+      "patchBytes": 2215,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 1,
+        "inputTokens": 232365,
+        "modelCallsCompleted": 31,
+        "modelCallsStarted": 31,
+        "outputTokens": 10582,
+        "peakInputTokens": 13590,
+        "summaryAttempts": 7,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 31,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 1,
+        "estimatedListCostUSD": 1.4263749999999997,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 1.4263749999999997,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 35919,
+        "summaryOutputTokens": 7214,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 232365,
+        "workerInputTokens": 196446,
+        "workerOutputTokens": 3368
+      },
+      "wallSeconds": 248.79121017456055,
+      "controlSha256": "47e3696685a03374cecd5a51d8c2e8692ba02b6af0eff4643d4cd68f68874524",
+      "eventsSha256": "fc8aeb6fe726bb8b54ce2baf9036a89f986225fec844767428a1a677b2920e37",
+      "workerSeconds": 198.98,
+      "costByPhaseUSD": {
+        "worker": 1.06643,
+        "summary": 0.359945
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 1,
+      "workerResponsesAfterLastCompaction": 6,
+      "toolResultsAfterLastCompaction": 5,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "e65773d2b2377dc6c53a265de1795cb630af778b06121354f0036204add83bb3",
+        "qualityStatus": "quality-failed",
+        "qualityIssueCount": 5,
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ]
+      },
+      "predictionsSha256": "7fff929806762aa8d16bef55e845a9fdaee4a443bcc1b9dcdf14dfd963d5933f",
+      "grader": {
+        "status": "resolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:58951c0d236ade36cd508d48e87819c488ed28c60abda963f8d4df99d89c030c",
+        "predictionsSha256": "7fff929806762aa8d16bef55e845a9fdaee4a443bcc1b9dcdf14dfd963d5933f",
+        "datasetFileSha256": "d8723928ccff77034b84aead50ad5179818940219012e3290823f024ab013367"
+      }
+    },
+    {
+      "suite": "swe-bench",
+      "task": "pytest-dev__pytest-10081",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "recorded",
+      "reward": 0,
+      "gradeStatus": "unresolved",
+      "gradingDisposition": "skipped-empty-patch",
+      "patchBytes": 0,
+      "runtime": {
+        "outcome": "budget-exceeded",
+        "reason": "budget-exceeded:modelCalls:64:64:1",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 32,
+        "inputTokens": 341851,
+        "modelCallsCompleted": 64,
+        "modelCallsStarted": 64,
+        "outputTokens": 38017,
+        "peakInputTokens": 8829,
+        "summaryAttempts": 32,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 64,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 32,
+        "estimatedListCostUSD": 2.65968,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 2.65968,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 210885,
+        "summaryOutputTokens": 35047,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 341851,
+        "workerInputTokens": 130966,
+        "workerOutputTokens": 2970
+      },
+      "wallSeconds": 501.34780192375183,
+      "controlSha256": "47e3696685a03374cecd5a51d8c2e8692ba02b6af0eff4643d4cd68f68874524",
+      "eventsSha256": "f606d8467729253eb69f55dcb6e8d7a0c931343b5ccf82618af1e44086e10673",
+      "workerSeconds": 480.825,
+      "costByPhaseUSD": {
+        "worker": 0.72908,
+        "summary": 1.9305999999999999
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 31,
+      "workerResponsesAfterLastCompaction": 0,
+      "toolResultsAfterLastCompaction": 0,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "e65773d2b2377dc6c53a265de1795cb630af778b06121354f0036204add83bb3",
+        "qualityStatus": "not-measured",
+        "qualityIssueCount": 0,
+        "excludedGeneratedPaths": []
+      },
+      "predictionsSha256": "baa6ad0fdca36acfa2431cbe0c07ac1927768a3c15448f3732e6964601a2712a",
+      "grader": {
+        "status": "unresolved",
+        "gradingDisposition": "skipped-empty-patch",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:58951c0d236ade36cd508d48e87819c488ed28c60abda963f8d4df99d89c030c",
+        "predictionsSha256": "baa6ad0fdca36acfa2431cbe0c07ac1927768a3c15448f3732e6964601a2712a",
+        "datasetFileSha256": "d8723928ccff77034b84aead50ad5179818940219012e3290823f024ab013367"
+      }
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "custom-memory-heap-crash",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "recorded",
+      "reward": 0,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 0,
+        "inputTokens": 3625,
+        "modelCallsCompleted": 4,
+        "modelCallsStarted": 4,
+        "outputTokens": 608,
+        "peakInputTokens": 1456,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 4,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 0,
+        "estimatedListCostUSD": 0.0151425,
+        "model": "gpt-4o-2024-08-06",
+        "observedListCostUSD": 0.0151425,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://developers.openai.com/api/docs/models/gpt-4o",
+        "provider": "openai",
+        "returnedModels": ["gpt-4o-2024-08-06"],
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 3625,
+        "workerInputTokens": 3625,
+        "workerOutputTokens": 608
+      },
+      "wallSeconds": 57.78183388710022,
+      "taskChecksum": "949f44d01f9411e5858fdfd0861e2c35e9622cbfe91542b761039a7a16286381",
+      "controlSha256": "6ef1982dab5f62336461a615ab60aa20805ee2e1b86527fd89eb72d6a4381553",
+      "eventsSha256": "9b1960636061e779c145155d36487797c95fa37155165d34ba8322e6d9a384d3",
+      "workerSeconds": 15.239,
+      "costByPhaseUSD": {
+        "worker": 0.0151425,
+        "summary": 0
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "officialResultSha256": "0361d12e62a1d97ea47e387b3f474056041a009d90fac2073bc46c744b4ae004"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "custom-memory-heap-crash",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "recorded",
+      "reward": 0,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 1024,
+        "compactions": 0,
+        "inputTokens": 3534,
+        "modelCallsCompleted": 4,
+        "modelCallsStarted": 4,
+        "outputTokens": 509,
+        "peakInputTokens": 1285,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 4,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 0,
+        "estimatedListCostUSD": 0.012645,
+        "model": "gpt-4o-2024-08-06",
+        "observedListCostUSD": 0.012645,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://developers.openai.com/api/docs/models/gpt-4o",
+        "provider": "openai",
+        "returnedModels": ["gpt-4o-2024-08-06"],
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 2510,
+        "workerInputTokens": 3534,
+        "workerOutputTokens": 509
+      },
+      "wallSeconds": 49.36280703544617,
+      "taskChecksum": "949f44d01f9411e5858fdfd0861e2c35e9622cbfe91542b761039a7a16286381",
+      "controlSha256": "6ef1982dab5f62336461a615ab60aa20805ee2e1b86527fd89eb72d6a4381553",
+      "eventsSha256": "41ca155bec747133148c12a58d6b20b3b47f9d41106c33eb3d5e3b74095104c2",
+      "workerSeconds": 10.903,
+      "costByPhaseUSD": {
+        "worker": 0.012645,
+        "summary": 0
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "officialResultSha256": "a23989bbdd40b98e79994999156c69ed9bca31401f9ea40522768d47e485f36b"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "custom-memory-heap-crash",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "recorded",
+      "reward": 0,
+      "runtime": {
+        "outcome": "budget-exceeded",
+        "reason": "budget-exceeded:modelCalls:64:64:1",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 32,
+        "inputTokens": 310116,
+        "modelCallsCompleted": 64,
+        "modelCallsStarted": 64,
+        "outputTokens": 41428,
+        "peakInputTokens": 7053,
+        "summaryAttempts": 32,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 64,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 32,
+        "estimatedListCostUSD": 2.586279999999999,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 2.586279999999999,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 191223,
+        "summaryOutputTokens": 39056,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 310116,
+        "workerInputTokens": 118893,
+        "workerOutputTokens": 2372
+      },
+      "wallSeconds": 571.8892960548401,
+      "taskChecksum": "949f44d01f9411e5858fdfd0861e2c35e9622cbfe91542b761039a7a16286381",
+      "controlSha256": "6ef1982dab5f62336461a615ab60aa20805ee2e1b86527fd89eb72d6a4381553",
+      "eventsSha256": "96f379940f7dc9235f86ca035d552e51712e0165f5939c947c2dcfa711b34d78",
+      "workerSeconds": 535.562,
+      "costByPhaseUSD": {
+        "worker": 0.6537649999999999,
+        "summary": 1.932515
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 31,
+      "workerResponsesAfterLastCompaction": 0,
+      "toolResultsAfterLastCompaction": 0,
+      "officialResultSha256": "780bc20cde912115bb53fbab3529721f89f6c434e50fc15a2892e05ded445d40"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "custom-memory-heap-crash",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "recorded",
+      "reward": 0,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 21120,
+        "compactions": 0,
+        "inputTokens": 25776,
+        "modelCallsCompleted": 10,
+        "modelCallsStarted": 10,
+        "outputTokens": 1344,
+        "peakInputTokens": 3917,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 10,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 0,
+        "estimatedListCostUSD": 0.05147999999999999,
+        "model": "gpt-4o-2024-08-06",
+        "observedListCostUSD": 0.05147999999999999,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://developers.openai.com/api/docs/models/gpt-4o",
+        "provider": "openai",
+        "returnedModels": ["gpt-4o-2024-08-06"],
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 4656,
+        "workerInputTokens": 25776,
+        "workerOutputTokens": 1344
+      },
+      "wallSeconds": 67.01967906951904,
+      "taskChecksum": "949f44d01f9411e5858fdfd0861e2c35e9622cbfe91542b761039a7a16286381",
+      "controlSha256": "6ef1982dab5f62336461a615ab60aa20805ee2e1b86527fd89eb72d6a4381553",
+      "eventsSha256": "bd379d56bfee15b5fd607c70a94e14eb096fcdc970cecc3167d40a0b486c05df",
+      "workerSeconds": 22.896,
+      "costByPhaseUSD": {
+        "worker": 0.05147999999999999,
+        "summary": 0
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "officialResultSha256": "74421c5450245216226ef250b5f32c6e7f5b8e3770b25b6552bc9d6526eb3e85"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "custom-memory-heap-crash",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "recorded",
+      "reward": 0,
+      "runtime": {
+        "outcome": "failed",
+        "reason": "runtime-failed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 9,
+        "inputTokens": 39582,
+        "modelCallsCompleted": 21,
+        "modelCallsStarted": 21,
+        "outputTokens": 3581,
+        "peakInputTokens": 3466,
+        "summaryAttempts": 11,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 21,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 1,
+        "compactionStarts": 10,
+        "estimatedListCostUSD": 0.13476500000000002,
+        "model": "gpt-4o-2024-08-06",
+        "observedListCostUSD": 0.13476500000000002,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://developers.openai.com/api/docs/models/gpt-4o",
+        "provider": "openai",
+        "returnedModels": ["gpt-4o-2024-08-06"],
+        "summaryInputTokens": 25952,
+        "summaryOutputTokens": 2432,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 1,
+        "uncachedInputTokens": 39582,
+        "workerInputTokens": 13630,
+        "workerOutputTokens": 1149
+      },
+      "wallSeconds": 79.18814206123352,
+      "taskChecksum": "949f44d01f9411e5858fdfd0861e2c35e9622cbfe91542b761039a7a16286381",
+      "controlSha256": "6ef1982dab5f62336461a615ab60aa20805ee2e1b86527fd89eb72d6a4381553",
+      "eventsSha256": "94146bd90498c13fbaa41deb1879cb88b39418a018f6f3e523e346a237c6c56d",
+      "workerSeconds": 43.531,
+      "failureReasonCode": "summary-invalid-format",
+      "costByPhaseUSD": {
+        "worker": 0.045565,
+        "summary": 0.0892
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 9,
+      "workerResponsesAfterLastCompaction": 1,
+      "toolResultsAfterLastCompaction": 1,
+      "officialResultSha256": "5df2339af2c52b5000be46e28b660897d05840fd7e52b276f00ef20895289eac"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "custom-memory-heap-crash",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "recorded",
+      "reward": 1,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 0,
+        "inputTokens": 268067,
+        "modelCallsCompleted": 32,
+        "modelCallsStarted": 32,
+        "outputTokens": 5669,
+        "peakInputTokens": 15627,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 32,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 0,
+        "estimatedListCostUSD": 1.4820600000000002,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 1.4820600000000002,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 268067,
+        "workerInputTokens": 268067,
+        "workerOutputTokens": 5669
+      },
+      "wallSeconds": 222.3751003742218,
+      "taskChecksum": "949f44d01f9411e5858fdfd0861e2c35e9622cbfe91542b761039a7a16286381",
+      "controlSha256": "6ef1982dab5f62336461a615ab60aa20805ee2e1b86527fd89eb72d6a4381553",
+      "eventsSha256": "72eb9f486e79f31ac1298f03d1efd688cf7c3a7e7c828f17eed8595ccea57f40",
+      "workerSeconds": 185.914,
+      "costByPhaseUSD": {
+        "worker": 1.4820600000000002,
+        "summary": 0
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "officialResultSha256": "3a97dabd6c136a2f43c8e9c2be2ba38e544dd84a153e6bfca4191b1b73ee2352"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "custom-memory-heap-crash",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "recorded",
+      "reward": 1,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 0,
+        "inputTokens": 155680,
+        "modelCallsCompleted": 25,
+        "modelCallsStarted": 25,
+        "outputTokens": 3664,
+        "peakInputTokens": 11584,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 25,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 0,
+        "estimatedListCostUSD": 0.8700000000000001,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 0.8700000000000001,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 155680,
+        "workerInputTokens": 155680,
+        "workerOutputTokens": 3664
+      },
+      "wallSeconds": 163.89505887031555,
+      "taskChecksum": "949f44d01f9411e5858fdfd0861e2c35e9622cbfe91542b761039a7a16286381",
+      "controlSha256": "6ef1982dab5f62336461a615ab60aa20805ee2e1b86527fd89eb72d6a4381553",
+      "eventsSha256": "6f8023d3721c1925d18a8ed12126a430e6632a681bde1e6b54c61f5949cad27f",
+      "workerSeconds": 125.551,
+      "costByPhaseUSD": {
+        "worker": 0.8700000000000001,
+        "summary": 0
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "officialResultSha256": "988f2ca6e8c2d5931d9964a2c81d0e6ba018e0cb0d1ad81ce181f8f65c6c72f8"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "custom-memory-heap-crash",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "recorded",
+      "reward": 1,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 0,
+        "inputTokens": 110653,
+        "modelCallsCompleted": 19,
+        "modelCallsStarted": 19,
+        "outputTokens": 3185,
+        "peakInputTokens": 10855,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 19,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 0,
+        "estimatedListCostUSD": 0.6328900000000001,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 0.6328900000000001,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 110653,
+        "workerInputTokens": 110653,
+        "workerOutputTokens": 3185
+      },
+      "wallSeconds": 149.25644493103027,
+      "taskChecksum": "949f44d01f9411e5858fdfd0861e2c35e9622cbfe91542b761039a7a16286381",
+      "controlSha256": "6ef1982dab5f62336461a615ab60aa20805ee2e1b86527fd89eb72d6a4381553",
+      "eventsSha256": "51bd47d63d2bca45b521b59a7a7647c734a29908cb1e60f377e92a3a45cc0fd4",
+      "workerSeconds": 110.396,
+      "costByPhaseUSD": {
+        "worker": 0.6328900000000001,
+        "summary": 0
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "officialResultSha256": "7886338dbbe1f5b3516901becfad38750d4284804a274b733336e22e748a1cb2"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "sphinx-doc__sphinx-10435",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "recorded",
+      "reward": 0,
+      "gradeStatus": "unresolved",
+      "gradingDisposition": "skipped-empty-patch",
+      "patchBytes": 0,
+      "runtime": {
+        "outcome": "budget-exceeded",
+        "reason": "budget-exceeded:modelCalls:64:64:1",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 65280,
+        "compactions": 14,
+        "inputTokens": 460821,
+        "modelCallsCompleted": 64,
+        "modelCallsStarted": 64,
+        "outputTokens": 6584,
+        "peakInputTokens": 26797,
+        "summaryAttempts": 19,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 64,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 14,
+        "estimatedListCostUSD": 1.1362925,
+        "model": "gpt-4o-2024-08-06",
+        "observedListCostUSD": 1.1362925,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://developers.openai.com/api/docs/models/gpt-4o",
+        "provider": "openai",
+        "returnedModels": ["gpt-4o-2024-08-06"],
+        "summaryInputTokens": 360627,
+        "summaryOutputTokens": 5371,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 395541,
+        "workerInputTokens": 100194,
+        "workerOutputTokens": 1213
+      },
+      "wallSeconds": 121.98055672645569,
+      "controlSha256": "8a69f73c248068c1f2f07b108fe025cded2a5f72be93458b7a298911fa96dac8",
+      "eventsSha256": "51165977f2c33bedf35aea4c459a32ee90bb17eb41f3cb81bf8ceb9411465bf0",
+      "workerSeconds": 91.277,
+      "costByPhaseUSD": {
+        "worker": 0.18341500000000005,
+        "summary": 0.9528774999999999
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 14,
+      "workerResponsesAfterLastCompaction": 9,
+      "toolResultsAfterLastCompaction": 9,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "455c9875f5ca991681c1f96b237bfeb7e104f91ccf395a12532e7d871678c6f1",
+        "qualityStatus": "not-measured",
+        "qualityIssueCount": 0,
+        "excludedGeneratedPaths": []
+      },
+      "predictionsSha256": "351c836c32e31fe76f41f4dee557222abe9aff96383c9f869b5e773be6062c0f",
+      "grader": {
+        "status": "unresolved",
+        "gradingDisposition": "skipped-empty-patch",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:30d33734839d5f49cb85de2ef78d99a2c8869693b72c9abeb4d999bf1ffc830f",
+        "predictionsSha256": "351c836c32e31fe76f41f4dee557222abe9aff96383c9f869b5e773be6062c0f",
+        "datasetFileSha256": "11ae7a433d027c75457e440759915fe682ca951a63b89ec5b0b5846b122bb72f"
+      }
+    },
+    {
+      "suite": "swe-bench",
+      "task": "sphinx-doc__sphinx-10435",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "recorded",
+      "reward": 0,
+      "gradeStatus": "unresolved",
+      "gradingDisposition": "skipped-empty-patch",
+      "patchBytes": 0,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 101376,
+        "compactions": 0,
+        "inputTokens": 131634,
+        "modelCallsCompleted": 18,
+        "modelCallsStarted": 18,
+        "outputTokens": 1297,
+        "peakInputTokens": 22992,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 18,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 0,
+        "estimatedListCostUSD": 0.215335,
+        "model": "gpt-4o-2024-08-06",
+        "observedListCostUSD": 0.215335,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://developers.openai.com/api/docs/models/gpt-4o",
+        "provider": "openai",
+        "returnedModels": ["gpt-4o-2024-08-06"],
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 30258,
+        "workerInputTokens": 131634,
+        "workerOutputTokens": 1297
+      },
+      "wallSeconds": 47.59202194213867,
+      "controlSha256": "8a69f73c248068c1f2f07b108fe025cded2a5f72be93458b7a298911fa96dac8",
+      "eventsSha256": "475f1fe27ab623953b1006cf9a5e9f9489544bcfb930454b2ad04a752affaec5",
+      "workerSeconds": 21.715,
+      "costByPhaseUSD": {
+        "worker": 0.215335,
+        "summary": 0
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "455c9875f5ca991681c1f96b237bfeb7e104f91ccf395a12532e7d871678c6f1",
+        "qualityStatus": "not-measured",
+        "qualityIssueCount": 0,
+        "excludedGeneratedPaths": []
+      },
+      "predictionsSha256": "351c836c32e31fe76f41f4dee557222abe9aff96383c9f869b5e773be6062c0f",
+      "grader": {
+        "status": "unresolved",
+        "gradingDisposition": "skipped-empty-patch",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:30d33734839d5f49cb85de2ef78d99a2c8869693b72c9abeb4d999bf1ffc830f",
+        "predictionsSha256": "351c836c32e31fe76f41f4dee557222abe9aff96383c9f869b5e773be6062c0f",
+        "datasetFileSha256": "11ae7a433d027c75457e440759915fe682ca951a63b89ec5b0b5846b122bb72f"
+      }
+    },
+    {
+      "suite": "swe-bench",
+      "task": "sphinx-doc__sphinx-10435",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "recorded",
+      "reward": 0,
+      "gradeStatus": "unresolved",
+      "gradingDisposition": "evaluated-or-error",
+      "patchBytes": 1515,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 0,
+        "inputTokens": 183054,
+        "modelCallsCompleted": 24,
+        "modelCallsStarted": 24,
+        "outputTokens": 4280,
+        "peakInputTokens": 12533,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 24,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 0,
+        "estimatedListCostUSD": 1.02227,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 1.02227,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 183054,
+        "workerInputTokens": 183054,
+        "workerOutputTokens": 4280
+      },
+      "wallSeconds": 166.7030189037323,
+      "controlSha256": "8a69f73c248068c1f2f07b108fe025cded2a5f72be93458b7a298911fa96dac8",
+      "eventsSha256": "def403c29728dbd046040b128010645b3e49938b84c81df9a5e3a4bce32fe27f",
+      "workerSeconds": 104.848,
+      "costByPhaseUSD": {
+        "worker": 1.02227,
+        "summary": 0
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "455c9875f5ca991681c1f96b237bfeb7e104f91ccf395a12532e7d871678c6f1",
+        "qualityStatus": "quality-failed",
+        "qualityIssueCount": 6,
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/lastfailed",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ]
+      },
+      "predictionsSha256": "b6ceb635f397301e373a10635c87547a8cce48f8f343ca425e335090c558ee0c",
+      "grader": {
+        "status": "unresolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:30d33734839d5f49cb85de2ef78d99a2c8869693b72c9abeb4d999bf1ffc830f",
+        "predictionsSha256": "b6ceb635f397301e373a10635c87547a8cce48f8f343ca425e335090c558ee0c",
+        "datasetFileSha256": "11ae7a433d027c75457e440759915fe682ca951a63b89ec5b0b5846b122bb72f"
+      }
+    },
+    {
+      "suite": "swe-bench",
+      "task": "sphinx-doc__sphinx-10435",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "recorded",
+      "reward": 0,
+      "gradeStatus": "unresolved",
+      "gradingDisposition": "evaluated-or-error",
+      "patchBytes": 84096,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 116096,
+        "compactions": 2,
+        "inputTokens": 263701,
+        "modelCallsCompleted": 54,
+        "modelCallsStarted": 54,
+        "outputTokens": 9815,
+        "peakInputTokens": 24262,
+        "summaryAttempts": 16,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 54,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 2,
+        "compactionStarts": 4,
+        "estimatedListCostUSD": 0.6122825000000001,
+        "model": "gpt-4o-2024-08-06",
+        "observedListCostUSD": 0.6122825000000001,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://developers.openai.com/api/docs/models/gpt-4o",
+        "provider": "openai",
+        "returnedModels": ["gpt-4o-2024-08-06"],
+        "summaryInputTokens": 98567,
+        "summaryOutputTokens": 7103,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 147605,
+        "workerInputTokens": 165134,
+        "workerOutputTokens": 2712
+      },
+      "wallSeconds": 142.85586881637573,
+      "controlSha256": "8a69f73c248068c1f2f07b108fe025cded2a5f72be93458b7a298911fa96dac8",
+      "eventsSha256": "325fa29cb68b7b071a77b34d80fdbe3cfc5b9a31eee4685b645e98a1bbed6955",
+      "workerSeconds": 96.464,
+      "costByPhaseUSD": {
+        "worker": 0.294835,
+        "summary": 0.31744750000000005
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 2,
+      "workerResponsesAfterLastCompaction": 13,
+      "toolResultsAfterLastCompaction": 12,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "455c9875f5ca991681c1f96b237bfeb7e104f91ccf395a12532e7d871678c6f1",
+        "qualityStatus": "quality-failed",
+        "qualityIssueCount": 6,
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/lastfailed",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ]
+      },
+      "predictionsSha256": "fbf79427b649112c85de82607d9efcc17f81f7c8480d2fcc3c4138afc1057f0e",
+      "grader": {
+        "status": "unresolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:30d33734839d5f49cb85de2ef78d99a2c8869693b72c9abeb4d999bf1ffc830f",
+        "predictionsSha256": "fbf79427b649112c85de82607d9efcc17f81f7c8480d2fcc3c4138afc1057f0e",
+        "datasetFileSha256": "11ae7a433d027c75457e440759915fe682ca951a63b89ec5b0b5846b122bb72f"
+      }
+    },
+    {
+      "attempt": 2,
+      "suite": "swe-bench",
+      "task": "sphinx-doc__sphinx-10435",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "recorded",
+      "reward": 0,
+      "gradeStatus": "unresolved",
+      "gradingDisposition": "evaluated-or-error",
+      "patchBytes": 1562,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 2,
+        "inputTokens": 429512,
+        "modelCallsCompleted": 54,
+        "modelCallsStarted": 54,
+        "outputTokens": 25660,
+        "peakInputTokens": 13037,
+        "summaryAttempts": 12,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 54,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 2,
+        "estimatedListCostUSD": 2.7890599999999997,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 2.7890599999999997,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 62687,
+        "summaryOutputTokens": 16600,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 429512,
+        "workerInputTokens": 366825,
+        "workerOutputTokens": 9060
+      },
+      "wallSeconds": 597.8884069919586,
+      "controlSha256": "8a69f73c248068c1f2f07b108fe025cded2a5f72be93458b7a298911fa96dac8",
+      "eventsSha256": "292e586a23748609909cd6e8dc559e9769ee6b4097c8eba7a341dee75771002f",
+      "workerSeconds": 526.911,
+      "costByPhaseUSD": {
+        "worker": 2.0606250000000004,
+        "summary": 0.7284349999999998
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 2,
+      "workerResponsesAfterLastCompaction": 12,
+      "toolResultsAfterLastCompaction": 11,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "455c9875f5ca991681c1f96b237bfeb7e104f91ccf395a12532e7d871678c6f1",
+        "qualityStatus": "quality-failed",
+        "qualityIssueCount": 6,
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/lastfailed",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ]
+      },
+      "predictionsSha256": "93dd1393ceab7e33c2db6a7dcb1119f434bcefc18ebd6672ddc6829075dfbb18",
+      "grader": {
+        "status": "unresolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:30d33734839d5f49cb85de2ef78d99a2c8869693b72c9abeb4d999bf1ffc830f",
+        "predictionsSha256": "93dd1393ceab7e33c2db6a7dcb1119f434bcefc18ebd6672ddc6829075dfbb18",
+        "datasetFileSha256": "11ae7a433d027c75457e440759915fe682ca951a63b89ec5b0b5846b122bb72f"
+      }
+    },
+    {
+      "suite": "swe-bench",
+      "task": "sphinx-doc__sphinx-10435",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "recorded",
+      "reward": 0,
+      "gradeStatus": "unresolved",
+      "gradingDisposition": "evaluated-or-error",
+      "patchBytes": 1554,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 0,
+        "inputTokens": 310562,
+        "modelCallsCompleted": 33,
+        "modelCallsStarted": 33,
+        "outputTokens": 6151,
+        "peakInputTokens": 16872,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 33,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 0,
+        "estimatedListCostUSD": 1.7065849999999998,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 1.7065849999999998,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 310562,
+        "workerInputTokens": 310562,
+        "workerOutputTokens": 6151
+      },
+      "wallSeconds": 223.83437275886536,
+      "controlSha256": "8a69f73c248068c1f2f07b108fe025cded2a5f72be93458b7a298911fa96dac8",
+      "eventsSha256": "e39b5e32736eb63440ee7597ad66ffe96f0706d24ec75828ce561c2f118a0289",
+      "workerSeconds": 162.272,
+      "costByPhaseUSD": {
+        "worker": 1.7065849999999998,
+        "summary": 0
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "solver": {
+        "sourceSha256": "7aefc9b8832ab316e5fbf0aacd7da4873e0c40076fd2483a1735862861580f93",
+        "imageId": "sha256:df4cbb0293b64b68359ddac09f5ffabc5002ea12b086d9e3b4df6bdf01f3cb9e",
+        "sourceArchiveSha256": "455c9875f5ca991681c1f96b237bfeb7e104f91ccf395a12532e7d871678c6f1",
+        "qualityStatus": "quality-failed",
+        "qualityIssueCount": 6,
+        "excludedGeneratedPaths": [
+          ".pytest_cache/.gitignore",
+          ".pytest_cache/CACHEDIR.TAG",
+          ".pytest_cache/README.md",
+          ".pytest_cache/v/cache/lastfailed",
+          ".pytest_cache/v/cache/nodeids",
+          ".pytest_cache/v/cache/stepwise"
+        ]
+      },
+      "predictionsSha256": "f221097a0665795c11e464494e906cae553e67e2f57fcbe8a3007c28105dd5ea",
+      "grader": {
+        "status": "unresolved",
+        "gradingDisposition": "evaluated-or-error",
+        "harnessCommit": "726c5461e2ef52d83cf1ea2107870a8bb3328d57",
+        "harnessVersion": "4.1.0",
+        "imageId": "sha256:30d33734839d5f49cb85de2ef78d99a2c8869693b72c9abeb4d999bf1ffc830f",
+        "predictionsSha256": "f221097a0665795c11e464494e906cae553e67e2f57fcbe8a3007c28105dd5ea",
+        "datasetFileSha256": "11ae7a433d027c75457e440759915fe682ca951a63b89ec5b0b5846b122bb72f"
+      }
+    },
+    {
+      "attempt": 2,
+      "failureCategory": "user-cost-stop",
+      "suite": "swe-bench",
+      "task": "sphinx-doc__sphinx-10435",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "interrupted",
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": null,
+        "compactions": 5,
+        "inputTokens": 40174,
+        "modelCallsCompleted": 11,
+        "modelCallsStarted": 12,
+        "outputTokens": 3846,
+        "peakInputTokens": 5001,
+        "summaryAttempts": 6,
+        "summaryFailures": 0,
+        "usageComplete": false,
+        "accountedResponses": 11,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": false,
+        "cacheWrite1hTokens": null,
+        "cacheWrite5mTokens": null,
+        "compactionFailures": 0,
+        "compactionStarts": 6,
+        "estimatedListCostUSD": null,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 0.29702,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 15445,
+        "summaryOutputTokens": 3237,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": null,
+        "workerInputTokens": 24729,
+        "workerOutputTokens": 609
+      },
+      "controlSha256": "8a69f73c248068c1f2f07b108fe025cded2a5f72be93458b7a298911fa96dac8",
+      "eventsSha256": "ff10238aa747541eab99c57ae308f43a3e2d927d0b1eb0fe8ae772b2f2776857",
+      "costByPhaseUSD": {
+        "worker": 0.13887,
+        "summary": 0.15814999999999999
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 5,
+      "workerResponsesAfterLastCompaction": 1,
+      "toolResultsAfterLastCompaction": 1
+    },
+    {
+      "suite": "swe-bench",
+      "task": "sphinx-doc__sphinx-10435",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "db-wal-recovery",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "recorded",
+      "reward": 0,
+      "runtime": {
+        "outcome": "budget-exceeded",
+        "reason": "budget-exceeded:modelCalls:64:64:1",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 31,
+        "inputTokens": 133892,
+        "modelCallsCompleted": 64,
+        "modelCallsStarted": 64,
+        "outputTokens": 16727,
+        "peakInputTokens": 4205,
+        "summaryAttempts": 32,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 64,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 32,
+        "estimatedListCostUSD": 0.5019999999999999,
+        "model": "gpt-4o-2024-08-06",
+        "observedListCostUSD": 0.5019999999999999,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://developers.openai.com/api/docs/models/gpt-4o",
+        "provider": "openai",
+        "returnedModels": ["gpt-4o-2024-08-06"],
+        "summaryInputTokens": 91298,
+        "summaryOutputTokens": 15346,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 1,
+        "uncachedInputTokens": 133892,
+        "workerInputTokens": 42594,
+        "workerOutputTokens": 1381
+      },
+      "wallSeconds": 175.12544417381287,
+      "taskChecksum": "571ef768d874f0016bfb31a071aea4cd1b0b71b88af2a76337f452487055e9ae",
+      "controlSha256": "fe8673da6a2f479725851f47d8361c9078a1af2292856b93fc558034da5caed0",
+      "eventsSha256": "cbc3d0b891d0bc37e85df101931854927e92abcfa2f2921e57edde041cc1d563",
+      "workerSeconds": 129.514,
+      "costByPhaseUSD": {
+        "worker": 0.120295,
+        "summary": 0.381705
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 31,
+      "workerResponsesAfterLastCompaction": 1,
+      "toolResultsAfterLastCompaction": 1,
+      "officialResultSha256": "a846a9d3a1f21258aebed64d6a75e4fe11704fcd7b2d0fe3fd1586c76b476f06"
+    },
+    {
+      "attempt": 2,
+      "suite": "terminal-bench",
+      "task": "db-wal-recovery",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "recorded",
+      "reward": 0,
+      "runtime": {
+        "outcome": "completed",
+        "reason": "completed",
+        "quiescence": true
+      },
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": 0,
+        "compactions": 0,
+        "inputTokens": 2409492,
+        "modelCallsCompleted": 57,
+        "modelCallsStarted": 57,
+        "outputTokens": 22667,
+        "peakInputTokens": 120742,
+        "summaryAttempts": 0,
+        "summaryFailures": 0,
+        "usageComplete": true,
+        "accountedResponses": 57,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": true,
+        "cacheWrite1hTokens": 0,
+        "cacheWrite5mTokens": 0,
+        "compactionFailures": 0,
+        "compactionStarts": 0,
+        "estimatedListCostUSD": 12.614134999999997,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 12.614134999999997,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 0,
+        "summaryOutputTokens": 0,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": 2409492,
+        "workerInputTokens": 2409492,
+        "workerOutputTokens": 22667
+      },
+      "wallSeconds": 569.3280379772186,
+      "taskChecksum": "571ef768d874f0016bfb31a071aea4cd1b0b71b88af2a76337f452487055e9ae",
+      "controlSha256": "fe8673da6a2f479725851f47d8361c9078a1af2292856b93fc558034da5caed0",
+      "eventsSha256": "c5e8f54accc8280cf966a04bf98bd24b5c1310c0fb1657d479a440b29dc6de7c",
+      "workerSeconds": 520.9,
+      "costByPhaseUSD": {
+        "worker": 12.614134999999997,
+        "summary": 0
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 0,
+      "workerResponsesAfterLastCompaction": null,
+      "toolResultsAfterLastCompaction": null,
+      "officialResultSha256": "8470780d26fb546a4c0b06d6df3400384215f65c4c0eff068099914225fe1911"
+    },
+    {
+      "attempt": 2,
+      "failureCategory": "user-cost-stop",
+      "suite": "terminal-bench",
+      "task": "db-wal-recovery",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "interrupted",
+      "metrics": {
+        "billedCostUSD": null,
+        "cacheTokens": null,
+        "compactions": 5,
+        "inputTokens": 25881,
+        "modelCallsCompleted": 11,
+        "modelCallsStarted": 12,
+        "outputTokens": 4328,
+        "peakInputTokens": 3143,
+        "summaryAttempts": 6,
+        "summaryFailures": 0,
+        "usageComplete": false,
+        "accountedResponses": 11,
+        "accountingSource": "final-provider-events",
+        "cacheUsageComplete": false,
+        "cacheWrite1hTokens": null,
+        "cacheWrite5mTokens": null,
+        "compactionFailures": 0,
+        "compactionStarts": 6,
+        "estimatedListCostUSD": null,
+        "model": "claude-opus-4-6",
+        "observedListCostUSD": 0.23760499999999998,
+        "pricingAsOf": "2026-11-11",
+        "pricingSource": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "provider": "anthropic",
+        "returnedModels": ["claude-opus-4-6"],
+        "summaryInputTokens": 13454,
+        "summaryOutputTokens": 3747,
+        "summaryTruncations": 0,
+        "summaryValidationFailures": 0,
+        "uncachedInputTokens": null,
+        "workerInputTokens": 12427,
+        "workerOutputTokens": 581
+      },
+      "controlSha256": "fe8673da6a2f479725851f47d8361c9078a1af2292856b93fc558034da5caed0",
+      "eventsSha256": "a85fe5485346e39f9cca3774890c947d36fa4031ff5dd2b8860c6df1a3f7d7c1",
+      "costByPhaseUSD": {
+        "worker": 0.07666,
+        "summary": 0.160945
+      },
+      "compactionsFollowedByCompletedWorkerResponse": 5,
+      "workerResponsesAfterLastCompaction": 1,
+      "toolResultsAfterLastCompaction": 1
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "db-wal-recovery",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "db-wal-recovery",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "db-wal-recovery",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "db-wal-recovery",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "db-wal-recovery",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16255",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16255",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16255",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16255",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16255",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16255",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16255",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16255",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16136",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16136",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16136",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16136",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16136",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16136",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16136",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16136",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16100",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16100",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16100",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16100",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16100",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16100",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16100",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16100",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15987",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15987",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15987",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15987",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15987",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15987",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15987",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15987",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16116",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16116",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16116",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16116",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16116",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16116",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16116",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16116",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16315",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16315",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16315",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16315",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16315",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16315",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16315",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-16315",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15741",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15741",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15741",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15741",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15741",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15741",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15741",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15741",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15930",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15930",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15930",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15930",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15930",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15930",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15930",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "swe-bench",
+      "task": "django__django-15930",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-leak-recovery",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-leak-recovery",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-leak-recovery",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-leak-recovery",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-leak-recovery",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-leak-recovery",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-leak-recovery",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-leak-recovery",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-multibranch",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-multibranch",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-multibranch",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-multibranch",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-multibranch",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-multibranch",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-multibranch",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "git-multibranch",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "log-summary-date-ranges",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "log-summary-date-ranges",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "log-summary-date-ranges",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "log-summary-date-ranges",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "log-summary-date-ranges",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "log-summary-date-ranges",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "log-summary-date-ranges",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "log-summary-date-ranges",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "nginx-request-logging",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "nginx-request-logging",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "nginx-request-logging",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "nginx-request-logging",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "nginx-request-logging",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "nginx-request-logging",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "nginx-request-logging",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "nginx-request-logging",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "openssl-selfsigned-cert",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "openssl-selfsigned-cert",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "openssl-selfsigned-cert",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "openssl-selfsigned-cert",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "openssl-selfsigned-cert",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "openssl-selfsigned-cert",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "openssl-selfsigned-cert",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "openssl-selfsigned-cert",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "query-optimize",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "query-optimize",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "query-optimize",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "query-optimize",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "query-optimize",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "query-optimize",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "query-optimize",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "query-optimize",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "sqlite-db-truncate",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "sqlite-db-truncate",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "sqlite-db-truncate",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "sqlite-db-truncate",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "sqlite-db-truncate",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "sqlite-db-truncate",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "sqlite-db-truncate",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "sqlite-db-truncate",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "write-compressor",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "write-compressor",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "write-compressor",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "write-compressor",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "sac-structured",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "write-compressor",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "write-compressor",
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "arm": "fha",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "write-compressor",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "suffix",
+      "status": "not-started"
+    },
+    {
+      "suite": "terminal-bench",
+      "task": "write-compressor",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "arm": "eocc-structured",
+      "status": "not-started"
+    }
+  ],
+  "reportStatus": "Incomplete calibration; stopped by user for cost",
+  "analysis": {
+    "pairedComparisons": [
+      {
+        "suite": "swe-bench",
+        "provider": "openai",
+        "arm": "eocc-structured",
+        "n": 2,
+        "wins": 0,
+        "losses": 0,
+        "ties": 2,
+        "deltaPercentagePoints": 0.0
+      },
+      {
+        "suite": "swe-bench",
+        "provider": "openai",
+        "arm": "sac-structured",
+        "n": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 1,
+        "deltaPercentagePoints": 0.0
+      },
+      {
+        "suite": "swe-bench",
+        "provider": "anthropic",
+        "arm": "eocc-structured",
+        "n": 2,
+        "wins": 0,
+        "losses": 0,
+        "ties": 2,
+        "deltaPercentagePoints": 0.0
+      },
+      {
+        "suite": "swe-bench",
+        "provider": "anthropic",
+        "arm": "sac-structured",
+        "n": 1,
+        "wins": 0,
+        "losses": 1,
+        "ties": 0,
+        "deltaPercentagePoints": -100.0
+      },
+      {
+        "suite": "terminal-bench",
+        "provider": "openai",
+        "arm": "eocc-structured",
+        "n": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 1,
+        "deltaPercentagePoints": 0.0
+      },
+      {
+        "suite": "terminal-bench",
+        "provider": "openai",
+        "arm": "sac-structured",
+        "n": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 1,
+        "deltaPercentagePoints": 0.0
+      },
+      {
+        "suite": "terminal-bench",
+        "provider": "anthropic",
+        "arm": "eocc-structured",
+        "n": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 1,
+        "deltaPercentagePoints": 0.0
+      },
+      {
+        "suite": "terminal-bench",
+        "provider": "anthropic",
+        "arm": "sac-structured",
+        "n": 1,
+        "wins": 0,
+        "losses": 1,
+        "ties": 0,
+        "deltaPercentagePoints": -100.0
+      }
+    ],
+    "groups": [
+      {
+        "suite": "swe-bench",
+        "provider": "openai",
+        "arm": "fha",
+        "n": 2,
+        "passes": 0,
+        "costUSD": 0.2881175,
+        "workerCostUSD": 0.2881175,
+        "summaryCostUSD": 0,
+        "budgetStops": 0,
+        "failedRuns": 0,
+        "commits": 0,
+        "committedRuns": 0,
+        "committedThenWorkerRuns": 0,
+        "committedThenWorkerAndPassed": 0,
+        "modelCalls": 33,
+        "summaryCalls": 0
+      },
+      {
+        "suite": "swe-bench",
+        "provider": "openai",
+        "arm": "suffix",
+        "n": 2,
+        "passes": 0,
+        "costUSD": 1.0535325000000002,
+        "workerCostUSD": 0.46009750000000005,
+        "summaryCostUSD": 0.593435,
+        "budgetStops": 0,
+        "failedRuns": 0,
+        "commits": 4,
+        "committedRuns": 2,
+        "committedThenWorkerRuns": 2,
+        "committedThenWorkerAndPassed": 0,
+        "modelCalls": 91,
+        "summaryCalls": 30
+      },
+      {
+        "suite": "swe-bench",
+        "provider": "openai",
+        "arm": "eocc-structured",
+        "n": 2,
+        "passes": 0,
+        "costUSD": 1.1726975,
+        "workerCostUSD": 0.21982000000000004,
+        "summaryCostUSD": 0.9528774999999999,
+        "budgetStops": 1,
+        "failedRuns": 0,
+        "commits": 14,
+        "committedRuns": 1,
+        "committedThenWorkerRuns": 1,
+        "committedThenWorkerAndPassed": 0,
+        "modelCalls": 69,
+        "summaryCalls": 19
+      },
+      {
+        "suite": "swe-bench",
+        "provider": "openai",
+        "arm": "sac-structured",
+        "n": 1,
+        "passes": 0,
+        "costUSD": 0.5281849999999999,
+        "workerCostUSD": 0.09777500000000001,
+        "summaryCostUSD": 0.43041,
+        "budgetStops": 1,
+        "failedRuns": 0,
+        "commits": 32,
+        "committedRuns": 1,
+        "committedThenWorkerRuns": 1,
+        "committedThenWorkerAndPassed": 0,
+        "modelCalls": 64,
+        "summaryCalls": 32
+      },
+      {
+        "suite": "swe-bench",
+        "provider": "anthropic",
+        "arm": "fha",
+        "n": 2,
+        "passes": 1,
+        "costUSD": 2.67405,
+        "workerCostUSD": 2.67405,
+        "summaryCostUSD": 0,
+        "budgetStops": 0,
+        "failedRuns": 0,
+        "commits": 0,
+        "committedRuns": 0,
+        "committedThenWorkerRuns": 0,
+        "committedThenWorkerAndPassed": 0,
+        "modelCalls": 53,
+        "summaryCalls": 0
+      },
+      {
+        "suite": "swe-bench",
+        "provider": "anthropic",
+        "arm": "suffix",
+        "n": 2,
+        "passes": 1,
+        "costUSD": 4.171284999999999,
+        "workerCostUSD": 3.1342950000000003,
+        "summaryCostUSD": 1.0369899999999999,
+        "budgetStops": 0,
+        "failedRuns": 0,
+        "commits": 3,
+        "committedRuns": 2,
+        "committedThenWorkerRuns": 2,
+        "committedThenWorkerAndPassed": 1,
+        "modelCalls": 85,
+        "summaryCalls": 19
+      },
+      {
+        "suite": "swe-bench",
+        "provider": "anthropic",
+        "arm": "eocc-structured",
+        "n": 2,
+        "passes": 1,
+        "costUSD": 2.448645,
+        "workerCostUSD": 2.0887000000000002,
+        "summaryCostUSD": 0.359945,
+        "budgetStops": 0,
+        "failedRuns": 0,
+        "commits": 1,
+        "committedRuns": 1,
+        "committedThenWorkerRuns": 1,
+        "committedThenWorkerAndPassed": 1,
+        "modelCalls": 55,
+        "summaryCalls": 7
+      },
+      {
+        "suite": "swe-bench",
+        "provider": "anthropic",
+        "arm": "sac-structured",
+        "n": 1,
+        "passes": 0,
+        "costUSD": 2.65968,
+        "workerCostUSD": 0.72908,
+        "summaryCostUSD": 1.9305999999999999,
+        "budgetStops": 1,
+        "failedRuns": 0,
+        "commits": 32,
+        "committedRuns": 1,
+        "committedThenWorkerRuns": 1,
+        "committedThenWorkerAndPassed": 0,
+        "modelCalls": 64,
+        "summaryCalls": 32
+      },
+      {
+        "suite": "terminal-bench",
+        "provider": "openai",
+        "arm": "fha",
+        "n": 1,
+        "passes": 0,
+        "costUSD": 0.0151425,
+        "workerCostUSD": 0.0151425,
+        "summaryCostUSD": 0,
+        "budgetStops": 0,
+        "failedRuns": 0,
+        "commits": 0,
+        "committedRuns": 0,
+        "committedThenWorkerRuns": 0,
+        "committedThenWorkerAndPassed": 0,
+        "modelCalls": 4,
+        "summaryCalls": 0
+      },
+      {
+        "suite": "terminal-bench",
+        "provider": "openai",
+        "arm": "suffix",
+        "n": 1,
+        "passes": 0,
+        "costUSD": 0.05147999999999999,
+        "workerCostUSD": 0.05147999999999999,
+        "summaryCostUSD": 0,
+        "budgetStops": 0,
+        "failedRuns": 0,
+        "commits": 0,
+        "committedRuns": 0,
+        "committedThenWorkerRuns": 0,
+        "committedThenWorkerAndPassed": 0,
+        "modelCalls": 10,
+        "summaryCalls": 0
+      },
+      {
+        "suite": "terminal-bench",
+        "provider": "openai",
+        "arm": "eocc-structured",
+        "n": 1,
+        "passes": 0,
+        "costUSD": 0.012645,
+        "workerCostUSD": 0.012645,
+        "summaryCostUSD": 0,
+        "budgetStops": 0,
+        "failedRuns": 0,
+        "commits": 0,
+        "committedRuns": 0,
+        "committedThenWorkerRuns": 0,
+        "committedThenWorkerAndPassed": 0,
+        "modelCalls": 4,
+        "summaryCalls": 0
+      },
+      {
+        "suite": "terminal-bench",
+        "provider": "openai",
+        "arm": "sac-structured",
+        "n": 2,
+        "passes": 0,
+        "costUSD": 0.6367649999999999,
+        "workerCostUSD": 0.16586,
+        "summaryCostUSD": 0.470905,
+        "budgetStops": 1,
+        "failedRuns": 1,
+        "commits": 40,
+        "committedRuns": 2,
+        "committedThenWorkerRuns": 2,
+        "committedThenWorkerAndPassed": 0,
+        "modelCalls": 85,
+        "summaryCalls": 43
+      },
+      {
+        "suite": "terminal-bench",
+        "provider": "anthropic",
+        "arm": "fha",
+        "n": 2,
+        "passes": 1,
+        "costUSD": 14.096194999999998,
+        "workerCostUSD": 14.096194999999998,
+        "summaryCostUSD": 0,
+        "budgetStops": 0,
+        "failedRuns": 0,
+        "commits": 0,
+        "committedRuns": 0,
+        "committedThenWorkerRuns": 0,
+        "committedThenWorkerAndPassed": 0,
+        "modelCalls": 89,
+        "summaryCalls": 0
+      },
+      {
+        "suite": "terminal-bench",
+        "provider": "anthropic",
+        "arm": "suffix",
+        "n": 1,
+        "passes": 1,
+        "costUSD": 0.6328900000000001,
+        "workerCostUSD": 0.6328900000000001,
+        "summaryCostUSD": 0,
+        "budgetStops": 0,
+        "failedRuns": 0,
+        "commits": 0,
+        "committedRuns": 0,
+        "committedThenWorkerRuns": 0,
+        "committedThenWorkerAndPassed": 0,
+        "modelCalls": 19,
+        "summaryCalls": 0
+      },
+      {
+        "suite": "terminal-bench",
+        "provider": "anthropic",
+        "arm": "eocc-structured",
+        "n": 1,
+        "passes": 1,
+        "costUSD": 0.8700000000000001,
+        "workerCostUSD": 0.8700000000000001,
+        "summaryCostUSD": 0,
+        "budgetStops": 0,
+        "failedRuns": 0,
+        "commits": 0,
+        "committedRuns": 0,
+        "committedThenWorkerRuns": 0,
+        "committedThenWorkerAndPassed": 0,
+        "modelCalls": 25,
+        "summaryCalls": 0
+      },
+      {
+        "suite": "terminal-bench",
+        "provider": "anthropic",
+        "arm": "sac-structured",
+        "n": 1,
+        "passes": 0,
+        "costUSD": 2.586279999999999,
+        "workerCostUSD": 0.6537649999999999,
+        "summaryCostUSD": 1.932515,
+        "budgetStops": 1,
+        "failedRuns": 0,
+        "commits": 32,
+        "committedRuns": 1,
+        "committedThenWorkerRuns": 1,
+        "committedThenWorkerAndPassed": 0,
+        "modelCalls": 64,
+        "summaryCalls": 32
+      }
+    ],
+    "completeTasks": [
+      {
+        "suite": "swe-bench",
+        "task": "pytest-dev__pytest-10081",
+        "costUSD": 7.5143675
+      },
+      {
+        "suite": "terminal-bench",
+        "task": "custom-memory-heap-crash",
+        "costUSD": 5.785262499999999
+      }
+    ]
+  }
+}
