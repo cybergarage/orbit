@@ -1,6 +1,16 @@
 # Cloud compaction interim evaluation — 2026-11-11
 
-The two tasks with all eight conditions completed show that Orbit EoCC can commit compaction, continue working and pass a native task verifier. They do **not** establish an advantage over Orbit suffix or validate the paper's general claims. SAC consumed substantial summary allowance without passing either task on either model. The user stopped the calibration because of Anthropic cost; no further paid evaluation is running or authorized by this report.
+## Summary
+
+Orbit's EoCC compacted a live task and continued to a native verifier pass. The available comparisons leave the question of an advantage over Orbit suffix open.
+
+![Local and cloud interim results. On local Terminal-Bench, suffix, EoCC and SAC each passed one of three seeds. On local SWE-bench, suffix passed one of three and EoCC and SAC passed none. On the two complete Opus tasks, FHA, suffix and EoCC each passed both tasks, and SAC passed neither. Their estimated list costs were $2.45, $2.02, $2.30 and $5.25, respectively. GPT-4o passed neither task with any method.](images/2026-11-11-compaction-interim.png)
+
+_The local panel shows three seeds on one task per suite. The cloud panel shows two distinct tasks with all eight conditions completed. See the [combined findings](#combined-local-and-cloud-interim-findings) for the comparison limits._
+
+- **EoCC and suffix** each passed both complete Opus tasks. On one of those tasks, EoCC committed a compaction checkpoint before continuing to a pass.
+- **SAC** passed one local Terminal-Bench seed. In three of its four cloud runs on the two complete tasks, it spent 32 of the 64 allowed calls on summaries and reached the call limit.
+- **Cloud calibration** stopped after 24 of 160 conditions had complete usage accounting and official results. Observed list-price cost, including returned usage from interrupted attempts, was $41.73. See the [cost breakdown](#cost-findings) and [restart conditions](#outstanding-verification-and-restart-conditions).
 
 Related work: [Issue #22](https://github.com/cybergarage/orbit/issues/22), [protocol PR #32](https://github.com/cybergarage/orbit/pull/32), [16-call pilot](2026-11-11-cloud-compaction-pilot.md), and [synthetic cloud lifecycle diagnostic](2026-11-11-cloud-eocc.md). The [sanitized ledger](2026-11-11-cloud-compaction-interim.json) retains all 160 planned conditions, four historical credit-interrupted attempts, two user-interrupted attempts within the planned conditions, usage, native results and artifact hashes. This is a benchmark execution report, not a new architecture decision or external-agent comparison.
 
