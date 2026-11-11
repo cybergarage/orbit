@@ -6,9 +6,9 @@ This evaluation asks whether two compaction strategies studied by Belcak et al.,
 
 Orbit's EoCC compacted a live task and continued to a native verifier pass. The available comparisons leave the question of an advantage over Orbit's default strategy open.
 
-![Local and cloud interim results. On local Terminal-Bench, suffix, EoCC and SAC each passed one of three seeds. On local SWE-bench, suffix passed one of three and EoCC and SAC passed none. On the two complete Opus tasks, FHA, suffix and EoCC each passed both tasks, and SAC passed neither. Their estimated list costs were $2.45, $2.02, $2.30 and $5.25, respectively. GPT-4o passed neither task with any method.](images/2026-11-11-compaction-interim.png)
+![Local and cloud interim results. Each local benchmark uses three runs of the same task. On Terminal-Bench, Orbit, EoCC and SAC each passed one of three runs. On SWE-bench, Orbit passed one of three runs and EoCC and SAC passed none. On the two complete Opus tasks, FHA, Orbit and EoCC each passed both tasks, and SAC passed neither. Their estimated list costs were $2.45, $2.02, $2.30 and $5.25, respectively. GPT-4o passed neither task with any method.](images/2026-11-11-compaction-interim.png)
 
-_The local panel shows three seeds on one task per suite. The cloud panel shows two distinct tasks with all eight conditions completed. See the [combined findings](#combined-local-and-cloud-interim-findings) for the comparison limits._
+_In the local panel, each method runs the same task three times per benchmark, with a different seed each time. A score of 1/3 means one official pass in three runs. A score of 0/3 means zero passes in three runs. The cloud panel shows two distinct tasks with all eight conditions completed. See the [combined findings](#combined-local-and-cloud-interim-findings) for the comparison limits._
 
 ### How the four conditions handle history
 
@@ -19,7 +19,7 @@ _The local panel shows three seeds on one task per suite. The cloud panel shows 
 | **EoCC (End-of-Conversation Compaction)** | At the token threshold or during overflow recovery. The active conversation starts fresh after compaction.            | <ul><li>Original task instructions</li><li>A structured summary of the work so far</li></ul>                                          |
 | **SAC (Single-Action Compaction)**        | After each completed action and its result, before the next action.                                                   | <ul><li>Original task instructions</li><li>An updated structured summary that carries forward the result of the last action</li></ul> |
 
-The figure labels Orbit's default strategy as **Suffix**. It summarizes older history and retains recent messages verbatim. The book's context compaction chapter explains this approach and how Orbit chooses the history to retain. [AI Agent Design and Implementation: Understanding Agent Behavior Through Research, Standards, and Open Source](https://www.amazon.com/dp/B0HPZ8HP32)
+In the figure, **Orbit** refers to the default strategy, **Orbit (Suffix)**. It summarizes older history and retains recent messages verbatim. The book's context compaction chapter explains this approach and how Orbit chooses the history to retain. [AI Agent Design and Implementation: Understanding Agent Behavior Through Research, Standards, and Open Source](https://www.amazon.com/dp/B0HPZ8HP32)
 
 The EoCC and SAC conditions in this evaluation use Orbit's structured summaries. The paper describes the original methods and the FHA baseline in [Section 2.4.1](https://arxiv.org/html/2611.05306v1#S2.SS4.SSS1).
 
