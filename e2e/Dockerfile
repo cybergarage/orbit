@@ -6,7 +6,7 @@ RUN npm ci
 COPY src ./src
 COPY bin/build-gui.mjs ./bin/build-gui.mjs
 RUN npm run build
-COPY e2e/worker.mjs e2e/compaction-config.mjs ./e2e/
+COPY e2e/worker.mjs e2e/compaction-config.mjs e2e/evaluation-model.mjs ./e2e/
 COPY e2e/source-fingerprint.mjs ./e2e/source-fingerprint.mjs
 RUN mkdir /workspace /output && chown node:node /workspace /output
 USER node

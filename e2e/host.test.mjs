@@ -47,6 +47,7 @@ describe('E2E host control (no model or Docker)', () => {
         'bin/build-gui.mjs',
         'e2e/source-fingerprint.mjs',
         'e2e/compaction-config.mjs',
+        'e2e/evaluation-model.mjs',
         'e2e/worker.mjs',
         'package-lock.json',
         'package.json',

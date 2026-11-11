@@ -3,9 +3,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
-import {Ollama} from 'ollama'
 
-import {OllamaAgent, ollamaFetch} from '../dist/core/models/adapters/ollama.js'
 import {
   Agent,
   createModelContextPolicy,
@@ -16,6 +14,7 @@ import {
   State,
 } from '../dist/index.js'
 import {compactionMetrics, experimentPolicy} from './compaction-config.mjs'
+import {createEvaluationModel} from './evaluation-model.mjs'
 
 const configFile = process.argv[2] ?? '/input/config.json'
 if (!['/input/config.json', '/logs/agent/orbit-config.json'].includes(configFile))
@@ -37,25 +36,15 @@ diagnostics.subscribe((event) => {
   events.push({data: event.type === 'model.response.completed' ? {usage: event.data?.usage} : {}, type: event.type})
   fs.appendFileSync(path.join(output, 'events.jsonl'), JSON.stringify(event) + '\n')
 })
-const sdk = new Ollama({fetch: ollamaFetch, host: config.ollamaHost})
-// Test-local transport configuration: exercise the real Orbit serializer and
-// response parser. Expose num_ctx so discovery sees the same runtime setting;
-// prepared output/context limits take precedence over test defaults.
-const client = {
-  abort: () => sdk.abort(),
-  chat: (request) =>
-    sdk.chat({...request, keep_alive: '60s', options: {...config.options, ...request.options}, think: config.think}),
-  ps: () => sdk.ps(),
-  show: (request) => sdk.show(request),
-}
-const model = new OllamaAgent(
-  config.model,
-  {getContextWindow: () => config.options.num_ctx, getName: () => 'ollama'},
-  {client},
-)
+const {close: closeModel, model} = createEvaluationModel(config)
 let contextPolicy
 if (config.compactionArm) {
-  contextPolicy = experimentPolicy({arm: config.compactionArm, model: config.model, ...config.compactionBudgets})
+  contextPolicy = experimentPolicy({
+    arm: config.compactionArm,
+    model: config.model,
+    provider: model.getProvider(),
+    ...config.compactionBudgets,
+  })
 } else if (config.contextPolicy === 'budgeted' || config.strategy.startsWith('book-')) {
   contextPolicy = await createModelContextPolicy(model, {outputReserve: config.options.num_predict})
 }
@@ -105,6 +94,8 @@ try {
     await agent.close()
   } catch (error) {
     result.closeError = String(error)
+  } finally {
+    closeModel()
   }
 
   result.finishedAt = new Date().toISOString()

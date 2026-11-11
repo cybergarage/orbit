@@ -94,7 +94,8 @@ describe('prepared provider requests', () => {
 
       if (provider === 'anthropic') {
         expect(prepared.request.max_tokens).to.equal(123)
-        expect(prepared.request.output_config).to.deep.equal({format: {schema: {type: 'object'}, type: 'json_schema'}})
+        expect(prepared.request).not.to.have.property('output_config')
+        expect(prepared.request.system).to.include('Return only a valid JSON object')
       }
 
       if (provider === 'ollama') {
@@ -104,6 +105,23 @@ describe('prepared provider requests', () => {
 
       expect(() => model.prepare!([], {maxOutputTokens: 0})).to.throw('output cap')
     })
+
+  it('preserves Anthropic system instructions and only adds the generic JSON hint when requested', () => {
+    const model = new AnthropicAgent('fixture', createProvider('anthropic'))
+    const messages = [
+      new Message(MessageType.Session, {content: 'Preserve this instruction.'}),
+      new Message(MessageType.User, {content: 'Return the requested fields.'}),
+    ]
+    const plain = model.prepare(messages).request
+    expect(plain.system).to.equal('Preserve this instruction.')
+    expect(plain).not.to.have.property('output_config')
+    const json = model.prepare(messages, {responseFormat: 'json'}).request
+    expect(json.system).to.equal(
+      'Preserve this instruction.\n\nReturn only a valid JSON object, without Markdown fences or surrounding prose.',
+    )
+    expect(json.messages).to.deep.equal(plain.messages)
+    expect(json).not.to.have.property('output_config')
+  })
 
   it('uses the real Ollama SDK without mutating the counted request across invocations', async () => {
     const bodies: string[] = []

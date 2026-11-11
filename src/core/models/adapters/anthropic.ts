@@ -97,14 +97,21 @@ export class AnthropicAgent implements Model {
         max_tokens: options?.maxOutputTokens ?? 8096,
         messages: chatMessages.map((message) => toAnthropicMessage(message)),
         model: this.model,
-        // Provider wire field.
-        ...(options?.responseFormat === 'json'
+        // Anthropic requires a closed schema for structured outputs. The generic
+        // JSON hint has no schema, so request JSON in the prompt and let callers
+        // validate its shape instead of sending an invalid open-object schema.
+        ...(systemPrompt || options?.responseFormat === 'json'
           ? {
-              // eslint-disable-next-line camelcase
-              output_config: {format: {schema: {type: 'object'}, type: 'json_schema' as const}},
+              system: [
+                systemPrompt,
+                ...(options?.responseFormat === 'json'
+                  ? ['Return only a valid JSON object, without Markdown fences or surrounding prose.']
+                  : []),
+              ]
+                .filter(Boolean)
+                .join('\n\n'),
             }
           : {}),
-        ...(systemPrompt ? {system: systemPrompt} : {}),
         ...(options?.tools && options.tools.length > 0
           ? {tools: options.tools.map((tool) => toAnthropicTool(tool))}
           : {}),

@@ -16,6 +16,10 @@ recap overhead, cache accounting and fixed-history fidelity. The report separate
 official outcomes, Run completion and incomplete measurements; it does not
 qualify a default change or reproduce frontier-model results.
 
+The [cloud EoCC lifecycle diagnostic](2026-11-11-cloud-eocc.md) checks real
+OpenAI/Anthropic compaction, durable save, resume and continuation separately
+from benchmark quality.
+
 ## SWE-bench
 
 An official result describes the **submitted patch** under the pinned SWE-bench
