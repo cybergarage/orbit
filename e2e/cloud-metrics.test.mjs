@@ -107,7 +107,11 @@ describe('Cloud evaluation accounting and credential delivery', () => {
   it('consumes and deletes a private staged key before a model or tool runs', async () => {
     const secret = await stageCredential('openai', {ORBIT_TEST_OPENAI_API_KEY: 'fake-evaluation-key'})
     try {
-      if (process.platform !== 'win32') expect((await fs.stat(path.dirname(secret.file))).mode % 512).equal(0o700)
+      if (process.platform !== 'win32') {
+        expect((await fs.stat(path.dirname(secret.file))).mode % 512).equal(0o700)
+        expect((await fs.stat(secret.file)).mode % 512).equal(0o600)
+      }
+
       expect(await consumeCredential(secret.file, 'openai')).deep.equal({
         ORBIT_TEST_OPENAI_API_KEY: 'fake-evaluation-key',
       })

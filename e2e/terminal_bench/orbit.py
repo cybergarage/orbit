@@ -66,7 +66,7 @@ class OrbitAgent(BaseInstalledAgent):
             raise RuntimeError("Cannot discover task working directory")
         config = {
             "model": self.model_name, "provider": self.provider, "modelCalls": self.model_calls,
-            "credentialFile": "/tmp/orbit-evaluation-key",
+            "credentialFile": "/installed-agent/orbit-credential/key",
             "compactionBudgets": {"window": self.window, "trigger": self.trigger, "target": self.target,
                                   "outputReserve": self.output_tokens},
             "prompt": instruction + "\n\nWork only from the supplied task and environment. Do not retrieve solutions or inspect verifier files. Verify your work before finishing.",
@@ -81,12 +81,15 @@ class OrbitAgent(BaseInstalledAgent):
         local.write_text(json.dumps(config))
         remote = str(self.environment_logs_dir / "orbit-config.json")
         await environment.upload_file(local, remote)
-        secret_path = "/tmp/orbit-evaluation-key"
+        secret_path = "/installed-agent/orbit-credential/key"
         try:
             if self.provider != "ollama":
                 key = os.environ.get(f"ORBIT_TEST_{self.provider.upper()}_API_KEY", "")
                 if not key.strip():
                     raise ValueError("Missing dedicated cloud evaluation credential")
+                await self.exec_as_root(environment, command="mkdir -p /installed-agent/orbit-credential && chmod 700 /installed-agent/orbit-credential")
+                if environment.default_user:
+                    await self.exec_as_root(environment, command=f"chown {shlex.quote(environment.default_user)} /installed-agent/orbit-credential")
                 await self._upload_config_text(environment, content=key, remote_path=secret_path, filename="key")
                 await self.exec_as_root(environment, command=f"chmod 600 {secret_path}")
             result = await self.exec_as_agent(environment, command=(

@@ -245,7 +245,15 @@ export async function runAgent({
     if (provider !== 'ollama') {
       const secret = await stageCredential(provider)
       try {
-        await docker(['cp', secret.file, `${name}:/credential/key`])
+        const archive = secret.file + '.tar'
+        await command('python3', [
+          '-c',
+          'import tarfile,sys; t=tarfile.open(sys.argv[2], "w"); i=t.gettarinfo(sys.argv[1], "key"); i.uid=i.gid=1000; i.uname=i.gname="node"; t.addfile(i,open(sys.argv[1],"rb")); t.close()',
+          secret.file,
+          archive,
+        ])
+        await fs.chmod(archive, 0o600)
+        await docker(['cp', '-a', '-', `${name}:/credential`], {input: await fs.readFile(archive)})
       } finally {
         await secret.cleanup()
       }

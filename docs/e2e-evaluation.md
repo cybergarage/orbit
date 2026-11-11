@@ -662,7 +662,9 @@ Only dedicated `ORBIT_TEST_OPENAI_API_KEY` / `ORBIT_TEST_ANTHROPIC_API_KEY` vari
 are read. Keys are staged outside artifact directories in private host temporary
 directories, copied into a disposable container, read into the provider's private
 configuration, and unlinked before any Agent tool executes. They are not passed
-through Docker environment arguments or worker JSON. This is secret hygiene,
+through Docker environment arguments or worker JSON. Key files use owner-only
+permissions; the SWE runner uses host Python 3 to preserve the container user
+ownership when transferring the private file. This is secret hygiene,
 not a security boundary against a compromised runtime or container administrator.
 
 Build a fresh source-verified image before SWE runs:

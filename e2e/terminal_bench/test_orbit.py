@@ -53,7 +53,7 @@ class OrbitAdapterTests(unittest.IsolatedAsyncioTestCase):
             SimpleNamespace(return_code=0, stdout="/task dir\n"),
             SimpleNamespace(return_code=0),
         ])
-        environment = SimpleNamespace(upload_file=AsyncMock(), download_file=AsyncMock())
+        environment = SimpleNamespace(default_user="agent", upload_file=AsyncMock(), download_file=AsyncMock())
         context = AgentContext()
         await agent.run("Fix the task.", environment, context)
         config = json.loads((self.root / "orbit-config.json").read_text())
@@ -73,7 +73,7 @@ class OrbitAdapterTests(unittest.IsolatedAsyncioTestCase):
         agent.exec_as_agent = AsyncMock(side_effect=[SimpleNamespace(return_code=0, stdout="/app\n"), SimpleNamespace(return_code=0)])
         agent.exec_as_root = AsyncMock()
         agent._upload_config_text = AsyncMock()
-        environment = SimpleNamespace(upload_file=AsyncMock(), download_file=AsyncMock())
+        environment = SimpleNamespace(default_user="agent", upload_file=AsyncMock(), download_file=AsyncMock())
         with patch.dict("os.environ", {"ORBIT_TEST_OPENAI_API_KEY": "fake-private-key"}):
             await agent.run("Task", environment, AgentContext())
         config = (self.root / "orbit-config.json").read_text()

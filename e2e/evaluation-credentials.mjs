@@ -17,10 +17,8 @@ export async function stageCredential(provider, env = process.env) {
   await fs.chmod(directory, 0o700)
   const file = path.join(directory, 'key')
   try {
-    // Private parent protects the host copy; the container's node user must read
-    // the root-owned copy and unlink it from its own /credential directory.
-    await fs.writeFile(file, key, {mode: 0o644})
-    await fs.chmod(file, 0o644)
+    await fs.writeFile(file, key, {mode: 0o600})
+    await fs.chmod(file, 0o600)
     return {cleanup: () => fs.rm(directory, {force: true, recursive: true}), file}
   } catch (error) {
     await fs.rm(directory, {force: true, recursive: true})
