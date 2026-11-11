@@ -4,6 +4,12 @@ The two tasks with all eight conditions completed show that Orbit EoCC can commi
 
 Related work: [Issue #22](https://github.com/cybergarage/orbit/issues/22), [protocol PR #32](https://github.com/cybergarage/orbit/pull/32), [16-call pilot](2026-11-11-cloud-compaction-pilot.md), and [synthetic cloud lifecycle diagnostic](2026-11-11-cloud-eocc.md). The [sanitized ledger](2026-11-11-cloud-compaction-interim.json) retains all 160 planned conditions, four historical credit-interrupted attempts, two user-interrupted attempts within the planned conditions, usage, native results and artifact hashes. This is a benchmark execution report, not a new architecture decision or external-agent comparison.
 
+## Paper and related evidence
+
+The motivating paper is Belcak et al., _You don't need long context_, arXiv:2611.05306v1 (2026): [abstract and metadata](https://arxiv.org/abs/2611.05306v1), [paper PDF](https://arxiv.org/pdf/2611.05306v1).
+
+The [local study's publication analysis](../../docs/research/2026-11-11-local-compaction-transfer.md#publication-evidence) separates the authors' reported EoCC/SAC results from Orbit's measurements and records the inspected paper version and PDF hash. EoCC and SAC are evaluated methods in that paper; the results below concern Orbit's adaptations with its own summary validation, prompts, models and execution budgets. This interim report is not a paper-faithful replication and does not establish that the paper's claims are true or false.
+
 ## Scope and protocol
 
 Orbit revision: `601fedac22d78fc8b72bd8bfdbf5b90941d278d7`. The reused runtime bundle was built at `c98bde8b4c8eda7ed2e91a0618ae75ac10e965ce`; its runtime source fingerprint matches the calibration revision. The ledger records bundle and source hashes.
