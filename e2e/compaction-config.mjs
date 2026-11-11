@@ -12,7 +12,15 @@ export const compactionArms = Object.freeze({
   'suffix-handoff': {algorithm: 'handoff-summary-v1', mode: 'budgeted', strategy: 'budgeted-suffix-v1'},
 })
 
-export function experimentPolicy({arm, model, outputReserve = 2048, target = 8192, trigger = 12_288, window = 16_384}) {
+export function experimentPolicy({
+  arm,
+  model,
+  outputReserve = 2048,
+  provider = 'ollama',
+  target = 8192,
+  trigger = 12_288,
+  window = 16_384,
+}) {
   if (!Object.hasOwn(compactionArms, arm)) throw new Error('Unknown compaction experiment arm')
   const counts = [window, trigger, target, outputReserve]
   if (
@@ -28,7 +36,7 @@ export function experimentPolicy({arm, model, outputReserve = 2048, target = 819
         profile: {
           model,
           outputReserve,
-          provider: 'ollama',
+          provider,
           revision: 'compaction-experiment-v1',
           safetyMargin: 256,
           summaryOutput: outputReserve,

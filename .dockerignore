@@ -14,3 +14,4 @@
 !e2e/coding-workflows
 !e2e/coding-workflows/**
 !e2e/compaction-config.mjs
+!e2e/evaluation-model.mjs

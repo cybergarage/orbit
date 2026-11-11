@@ -1,0 +1,1596 @@
+{
+  "baselineCommit": "81bf5cca6a38be6ecb3d322f6dd8359c5f1ccfee",
+  "scope": "Synthetic EoCC checkpoint persistence and continuation; not task success or paper replication",
+  "trials": [
+    {
+      "startedAt": "2026-11-11T02-29-38.728Z",
+      "runnerSha256": null,
+      "sourceFingerprint": "95a2deab5ff119b91c7164414001720b9f4d5436219daa439472c60d0e783b1d",
+      "sourceSha256": "c56b877242a9391864ec22dac25a695be63e7c2f5f5a22aea3d6e5969b7ecc14",
+      "rows": [
+        {
+          "provider": "openai",
+          "model": "gpt-4o-2024-08-06",
+          "arm": "eocc-structured",
+          "policy": {
+            "algorithm": "structured-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "gpt-4o-2024-08-06",
+              "outputReserve": 4096,
+              "provider": "openai",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16133,
+          "error": {
+            "name": "Error",
+            "code": null,
+            "status": null,
+            "message": "Evaluation failed; inspect local diagnostics"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 0,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 0,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "eventsSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "provider": "openai",
+          "model": "gpt-4o-2024-08-06",
+          "arm": "eocc",
+          "policy": {
+            "algorithm": "handoff-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "gpt-4o-2024-08-06",
+              "outputReserve": 4096,
+              "provider": "openai",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16133,
+          "error": {
+            "name": "Error",
+            "code": null,
+            "status": null,
+            "message": "Evaluation failed; inspect local diagnostics"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 0,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 0,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "eventsSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-opus-4-6",
+          "arm": "eocc-structured",
+          "policy": {
+            "algorithm": "structured-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "claude-opus-4-6",
+              "outputReserve": 4096,
+              "provider": "anthropic",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16135,
+          "error": {
+            "name": "Error",
+            "code": null,
+            "status": null,
+            "message": "Evaluation failed; inspect local diagnostics"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 0,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 0,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "eventsSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-opus-4-6",
+          "arm": "eocc",
+          "policy": {
+            "algorithm": "handoff-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "claude-opus-4-6",
+              "outputReserve": 4096,
+              "provider": "anthropic",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16135,
+          "error": {
+            "name": "Error",
+            "code": null,
+            "status": null,
+            "message": "Evaluation failed; inspect local diagnostics"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 0,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 0,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "eventsSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    },
+    {
+      "startedAt": "2026-11-11T02-29-48.364Z",
+      "runnerSha256": null,
+      "sourceFingerprint": "95a2deab5ff119b91c7164414001720b9f4d5436219daa439472c60d0e783b1d",
+      "sourceSha256": "2a1d92f5da0d0ef2055df0c2446c4f0b00b3a2da64501454e0cb2e0a112ccdcb",
+      "rows": [
+        {
+          "provider": "openai",
+          "model": "gpt-4o-2024-08-06",
+          "arm": "eocc-structured",
+          "policy": {
+            "algorithm": "structured-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "gpt-4o-2024-08-06",
+              "outputReserve": 4096,
+              "provider": "openai",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16133,
+          "error": {
+            "name": "Error",
+            "code": null,
+            "status": null,
+            "message": "Session storage is unregistered, incomplete or conflicting; run offline storage initialization or resume"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 0,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 0,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "eventsSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "provider": "openai",
+          "model": "gpt-4o-2024-08-06",
+          "arm": "eocc",
+          "policy": {
+            "algorithm": "handoff-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "gpt-4o-2024-08-06",
+              "outputReserve": 4096,
+              "provider": "openai",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16133,
+          "error": {
+            "name": "Error",
+            "code": null,
+            "status": null,
+            "message": "Session storage is unregistered, incomplete or conflicting; run offline storage initialization or resume"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 0,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 0,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "eventsSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-opus-4-6",
+          "arm": "eocc-structured",
+          "policy": {
+            "algorithm": "structured-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "claude-opus-4-6",
+              "outputReserve": 4096,
+              "provider": "anthropic",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16135,
+          "error": {
+            "name": "Error",
+            "code": null,
+            "status": null,
+            "message": "Session storage is unregistered, incomplete or conflicting; run offline storage initialization or resume"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 0,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 0,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "eventsSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-opus-4-6",
+          "arm": "eocc",
+          "policy": {
+            "algorithm": "handoff-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "claude-opus-4-6",
+              "outputReserve": 4096,
+              "provider": "anthropic",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16135,
+          "error": {
+            "name": "Error",
+            "code": null,
+            "status": null,
+            "message": "Session storage is unregistered, incomplete or conflicting; run offline storage initialization or resume"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 0,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 0,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "eventsSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    },
+    {
+      "startedAt": "2026-11-11T02-30-22.586Z",
+      "runnerSha256": null,
+      "sourceFingerprint": "95a2deab5ff119b91c7164414001720b9f4d5436219daa439472c60d0e783b1d",
+      "sourceSha256": "098a593ea02a9b26584d2ae0798ce1d6c71ecdf01666c56f80f95ec58e0a6709",
+      "rows": [
+        {
+          "provider": "openai",
+          "model": "gpt-4o-2024-08-06",
+          "arm": "eocc-structured",
+          "policy": {
+            "algorithm": "structured-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "gpt-4o-2024-08-06",
+              "outputReserve": 4096,
+              "provider": "openai",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16133,
+          "error": {
+            "name": "AssertionError",
+            "code": "ERR_ASSERTION",
+            "status": null,
+            "message": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'failed'\n- 'completed'\n"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 17022,
+            "modelCallsCompleted": 1,
+            "modelCallsStarted": 1,
+            "outputTokens": 191,
+            "peakInputTokens": 17022,
+            "summaryAttempts": 1,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "compactionRuntime": {
+            "outcome": "failed",
+            "reason": "recording-failed",
+            "quiescence": true,
+            "recording": {
+              "level": "memory",
+              "mode": "memory",
+              "status": "failed"
+            }
+          },
+          "eventsSha256": "e79260275055e1ac53bb4f4d0a1609d5c0cd8e834862108abfad76a80a035f16"
+        },
+        {
+          "provider": "openai",
+          "model": "gpt-4o-2024-08-06",
+          "arm": "eocc",
+          "policy": {
+            "algorithm": "handoff-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "gpt-4o-2024-08-06",
+              "outputReserve": 4096,
+              "provider": "openai",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16133,
+          "error": {
+            "name": "AssertionError",
+            "code": "ERR_ASSERTION",
+            "status": null,
+            "message": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'failed'\n- 'completed'\n"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 17102,
+            "modelCallsCompleted": 1,
+            "modelCallsStarted": 1,
+            "outputTokens": 161,
+            "peakInputTokens": 17102,
+            "summaryAttempts": 1,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "compactionRuntime": {
+            "outcome": "failed",
+            "reason": "recording-failed",
+            "quiescence": true,
+            "recording": {
+              "level": "memory",
+              "mode": "memory",
+              "status": "failed"
+            }
+          },
+          "eventsSha256": "1528cdf60e63fb9b18709b12f077241e74644144b15cc48410340f95980539b2"
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-opus-4-6",
+          "arm": "eocc-structured",
+          "policy": {
+            "algorithm": "structured-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "claude-opus-4-6",
+              "outputReserve": 4096,
+              "provider": "anthropic",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16135,
+          "error": {
+            "name": "AssertionError",
+            "code": "ERR_ASSERTION",
+            "status": null,
+            "message": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'failed'\n- 'completed'\n"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 1,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 1,
+            "summaryFailures": 1,
+            "usageComplete": false
+          },
+          "compactionRuntime": {
+            "outcome": "failed",
+            "reason": "runtime-failed",
+            "quiescence": true,
+            "recording": {
+              "level": "memory",
+              "mode": "memory",
+              "status": "acknowledged"
+            }
+          },
+          "eventsSha256": "16d2f04b82f60ca1486d27998ef9e6a08bf5ebe632a7d103ef07077a819be73c"
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-opus-4-6",
+          "arm": "eocc",
+          "policy": {
+            "algorithm": "handoff-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "claude-opus-4-6",
+              "outputReserve": 4096,
+              "provider": "anthropic",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16135,
+          "error": {
+            "name": "AssertionError",
+            "code": "ERR_ASSERTION",
+            "status": null,
+            "message": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'failed'\n- 'completed'\n"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 1,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 1,
+            "summaryFailures": 1,
+            "usageComplete": false
+          },
+          "compactionRuntime": {
+            "outcome": "failed",
+            "reason": "runtime-failed",
+            "quiescence": true,
+            "recording": {
+              "level": "memory",
+              "mode": "memory",
+              "status": "acknowledged"
+            }
+          },
+          "eventsSha256": "419a6619560eaac09a7a6872c357436ea9bd52fecc2fb425fe298e2881aeb375"
+        }
+      ]
+    },
+    {
+      "startedAt": "2026-11-11T02-31-50.315Z",
+      "runnerSha256": null,
+      "sourceFingerprint": "4a7582503cc33ab74a059fc4cbde010dd73f61200d97908791e7a7c66e08fd13",
+      "sourceSha256": "ffb4ada4d77012db46c0707ba12f5bac5c4c84f1ee2860b0d34c89d8552b0a6f",
+      "rows": [
+        {
+          "provider": "openai",
+          "model": "gpt-4o-2024-08-06",
+          "arm": "eocc-structured",
+          "policy": {
+            "algorithm": "structured-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "gpt-4o-2024-08-06",
+              "outputReserve": 4096,
+              "provider": "openai",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16133,
+          "error": {
+            "name": "Error",
+            "code": null,
+            "status": null,
+            "message": "Session writer is busy or closed"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 0,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 0,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "eventsSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "provider": "openai",
+          "model": "gpt-4o-2024-08-06",
+          "arm": "eocc",
+          "policy": {
+            "algorithm": "handoff-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "gpt-4o-2024-08-06",
+              "outputReserve": 4096,
+              "provider": "openai",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16133,
+          "error": {
+            "name": "Error",
+            "code": null,
+            "status": null,
+            "message": "Session writer is busy or closed"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 0,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 0,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "eventsSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-opus-4-6",
+          "arm": "eocc-structured",
+          "policy": {
+            "algorithm": "structured-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "claude-opus-4-6",
+              "outputReserve": 4096,
+              "provider": "anthropic",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16135,
+          "error": {
+            "name": "Error",
+            "code": null,
+            "status": null,
+            "message": "Session writer is busy or closed"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 0,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 0,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "eventsSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-opus-4-6",
+          "arm": "eocc",
+          "policy": {
+            "algorithm": "handoff-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "claude-opus-4-6",
+              "outputReserve": 4096,
+              "provider": "anthropic",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16135,
+          "error": {
+            "name": "Error",
+            "code": null,
+            "status": null,
+            "message": "Session writer is busy or closed"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 0,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 0,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "eventsSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    },
+    {
+      "startedAt": "2026-11-11T02-32-00.209Z",
+      "runnerSha256": null,
+      "sourceFingerprint": "4a7582503cc33ab74a059fc4cbde010dd73f61200d97908791e7a7c66e08fd13",
+      "sourceSha256": "477baeaa60594924a920dde5a13b531a0c1a16351c2f77315ffa0806dfa4eaea",
+      "rows": [
+        {
+          "provider": "openai",
+          "model": "gpt-4o-2024-08-06",
+          "arm": "eocc-structured",
+          "policy": {
+            "algorithm": "structured-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "gpt-4o-2024-08-06",
+              "outputReserve": 4096,
+              "provider": "openai",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {
+            "compacted": true,
+            "reduced": true,
+            "rawHistoryOmitted": true,
+            "savedAndReopened": true,
+            "requestReconstructed": true,
+            "continuedWithRetainedFacts": true,
+            "continuationSaved": true,
+            "noRecompactionOnResume": true
+          },
+          "status": "passed",
+          "beforeEstimate": 16133,
+          "continuation": {
+            "content": "Active branch: repair-parser. Compatibility marker: PARSER-COMPAT-7821. Pending check: tests/test_parser_compat.py. It has not been executed.",
+            "metadata": {
+              "durationMs": 1333.0510420000005,
+              "model": "gpt-4o-2024-08-06",
+              "provider": "openai",
+              "responseId": "chatcmpl-EisPzp5IpZi0afkemAOMLMZTbTayK",
+              "stopReason": "stop",
+              "usage": {
+                "cachedInputTokens": 0,
+                "inputTokens": 207,
+                "outputTokens": 34,
+                "reasoningTokens": 0,
+                "totalTokens": 241
+              }
+            }
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 1,
+            "inputTokens": 17234,
+            "modelCallsCompleted": 2,
+            "modelCallsStarted": 2,
+            "outputTokens": 156,
+            "peakInputTokens": 17027,
+            "summaryAttempts": 1,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "compactionRuntime": {
+            "outcome": "completed",
+            "reason": "completed",
+            "quiescence": true,
+            "recording": {
+              "level": "file-and-directory-sync",
+              "mode": "file",
+              "status": "acknowledged"
+            }
+          },
+          "continuationRuntime": {
+            "outcome": "completed",
+            "reason": "completed",
+            "quiescence": true,
+            "recording": {
+              "level": "file-and-directory-sync",
+              "mode": "file",
+              "status": "acknowledged"
+            }
+          },
+          "checkpoint": {
+            "projectionVersion": 4,
+            "beforeTokens": 16140,
+            "afterTokens": 253,
+            "components": {
+              "algorithm": {
+                "id": "structured-summary-v1",
+                "parameters": {
+                  "outputReserve": 4096,
+                  "safetyMargin": 256,
+                  "summaryOutput": 4096,
+                  "templateOverhead": 0,
+                  "window": 32768
+                },
+                "revision": 1
+              },
+              "strategy": {
+                "id": "eocc-v1",
+                "parameters": {
+                  "target": 8192,
+                  "trigger": 12288
+                },
+                "revision": 1
+              },
+              "summarySchema": "context-summary-v1"
+            }
+          },
+          "eventsSha256": "84cb5d7cc68d9b4cce170e89a7aa3446c8c5800947f7e43906cc6d19ead7e685"
+        },
+        {
+          "provider": "openai",
+          "model": "gpt-4o-2024-08-06",
+          "arm": "eocc",
+          "policy": {
+            "algorithm": "handoff-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "gpt-4o-2024-08-06",
+              "outputReserve": 4096,
+              "provider": "openai",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {
+            "compacted": true,
+            "reduced": true,
+            "rawHistoryOmitted": true,
+            "savedAndReopened": true,
+            "requestReconstructed": true,
+            "continuedWithRetainedFacts": true,
+            "continuationSaved": true,
+            "noRecompactionOnResume": true
+          },
+          "status": "passed",
+          "beforeEstimate": 16133,
+          "continuation": {
+            "content": "Active branch: repair-parser.  \nCompatibility marker: PARSER-COMPAT-7821.  \nPending check: tests/test_parser_compat.py has not been executed.",
+            "metadata": {
+              "durationMs": 837.2780000000002,
+              "model": "gpt-4o-2024-08-06",
+              "provider": "openai",
+              "responseId": "chatcmpl-EisQ5WuDnBo7vHb2pDc6LqiWyHVxt",
+              "stopReason": "stop",
+              "usage": {
+                "cachedInputTokens": 0,
+                "inputTokens": 236,
+                "outputTokens": 34,
+                "reasoningTokens": 0,
+                "totalTokens": 270
+              }
+            }
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 1,
+            "inputTokens": 34494,
+            "modelCallsCompleted": 3,
+            "modelCallsStarted": 3,
+            "outputTokens": 483,
+            "peakInputTokens": 17151,
+            "summaryAttempts": 2,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "compactionRuntime": {
+            "outcome": "completed",
+            "reason": "completed",
+            "quiescence": true,
+            "recording": {
+              "level": "file-and-directory-sync",
+              "mode": "file",
+              "status": "acknowledged"
+            }
+          },
+          "continuationRuntime": {
+            "outcome": "completed",
+            "reason": "completed",
+            "quiescence": true,
+            "recording": {
+              "level": "file-and-directory-sync",
+              "mode": "file",
+              "status": "acknowledged"
+            }
+          },
+          "checkpoint": {
+            "projectionVersion": 4,
+            "beforeTokens": 16140,
+            "afterTokens": 286,
+            "components": {
+              "algorithm": {
+                "id": "handoff-summary-v1",
+                "parameters": {
+                  "outputReserve": 4096,
+                  "safetyMargin": 256,
+                  "summaryOutput": 4096,
+                  "templateOverhead": 0,
+                  "window": 32768
+                },
+                "revision": 1
+              },
+              "strategy": {
+                "id": "eocc-v1",
+                "parameters": {
+                  "target": 8192,
+                  "trigger": 12288
+                },
+                "revision": 1
+              },
+              "summarySchema": "context-summary-v1"
+            }
+          },
+          "eventsSha256": "08cb2aed547587c913fdd5d1802a7847536d613388399d9bea0e260d546b8a73"
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-opus-4-6",
+          "arm": "eocc-structured",
+          "policy": {
+            "algorithm": "structured-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "claude-opus-4-6",
+              "outputReserve": 4096,
+              "provider": "anthropic",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16135,
+          "error": {
+            "name": "AssertionError",
+            "code": "ERR_ASSERTION",
+            "status": null,
+            "message": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'failed'\n- 'completed'\n"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 1,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 1,
+            "summaryFailures": 1,
+            "usageComplete": false
+          },
+          "compactionRuntime": {
+            "outcome": "failed",
+            "reason": "runtime-failed",
+            "quiescence": true,
+            "recording": {
+              "level": "file-and-directory-sync",
+              "mode": "file",
+              "status": "acknowledged"
+            }
+          },
+          "eventsSha256": "88bc0ab47286b972e879894ad0953a24cbf2373cd70f385e6d14af2e5646d8f9"
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-opus-4-6",
+          "arm": "eocc",
+          "policy": {
+            "algorithm": "handoff-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "claude-opus-4-6",
+              "outputReserve": 4096,
+              "provider": "anthropic",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {},
+          "status": "failed",
+          "beforeEstimate": 16135,
+          "error": {
+            "name": "AssertionError",
+            "code": "ERR_ASSERTION",
+            "status": null,
+            "message": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'failed'\n- 'completed'\n"
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 0,
+            "inputTokens": 0,
+            "modelCallsCompleted": 0,
+            "modelCallsStarted": 1,
+            "outputTokens": 0,
+            "peakInputTokens": null,
+            "summaryAttempts": 1,
+            "summaryFailures": 1,
+            "usageComplete": false
+          },
+          "compactionRuntime": {
+            "outcome": "failed",
+            "reason": "runtime-failed",
+            "quiescence": true,
+            "recording": {
+              "level": "file-and-directory-sync",
+              "mode": "file",
+              "status": "acknowledged"
+            }
+          },
+          "eventsSha256": "2a38eb00dfdd56dbc0bebe6ea1e6a900059dcf9537e74a0882f7cb457be288ee"
+        }
+      ]
+    },
+    {
+      "startedAt": "2026-11-11T02-32-43.856Z",
+      "runnerSha256": "8b9ccc85a6ba5bbdd3af403e6a503a9ce0f99f434ed33ac218bf3b1923fcb32e",
+      "sourceFingerprint": "527fba59fe3271566b7f6ec18f8351c6e1f0fb128b175d3818c48821870b227a",
+      "sourceSha256": "9a404712f88561cb2429e45e411f79003c384d1582c75c632e3b51bd7e825c6b",
+      "rows": [
+        {
+          "provider": "openai",
+          "model": "gpt-4o-2024-08-06",
+          "arm": "eocc-structured",
+          "policy": {
+            "algorithm": "structured-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "gpt-4o-2024-08-06",
+              "outputReserve": 4096,
+              "provider": "openai",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {
+            "compacted": true,
+            "reduced": true,
+            "rawHistoryOmitted": true,
+            "savedAndReopened": true,
+            "requestReconstructed": true,
+            "continuedWithRetainedFacts": true,
+            "continuationSaved": true,
+            "noRecompactionOnResume": true
+          },
+          "status": "passed",
+          "beforeEstimate": 16133,
+          "continuation": {
+            "content": "Here is the current state of the parser repair:\n\n- **Active Branch**: repair-parser\n- **Compatibility Marker**: PARSER-COMPAT-7821\n- **Pending Check**: tests/test_parser_compat.py\n- **Execution Status of Pending Check**: The pending check has not been executed.",
+            "metadata": {
+              "durationMs": 1114.3407090000005,
+              "model": "gpt-4o-2024-08-06",
+              "provider": "openai",
+              "responseId": "chatcmpl-EisQh57ZpDZLG596U076hnsEPVMmt",
+              "stopReason": "stop",
+              "usage": {
+                "cachedInputTokens": 0,
+                "inputTokens": 282,
+                "outputTokens": 64,
+                "reasoningTokens": 0,
+                "totalTokens": 346
+              }
+            }
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 1,
+            "inputTokens": 17319,
+            "modelCallsCompleted": 2,
+            "modelCallsStarted": 2,
+            "outputTokens": 315,
+            "peakInputTokens": 17037,
+            "summaryAttempts": 1,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "compactionRuntime": {
+            "outcome": "completed",
+            "reason": "completed",
+            "quiescence": true,
+            "recording": {
+              "level": "file-and-directory-sync",
+              "mode": "file",
+              "status": "acknowledged"
+            }
+          },
+          "continuationRuntime": {
+            "outcome": "completed",
+            "reason": "completed",
+            "quiescence": true,
+            "recording": {
+              "level": "file-and-directory-sync",
+              "mode": "file",
+              "status": "acknowledged"
+            }
+          },
+          "checkpoint": {
+            "projectionVersion": 4,
+            "beforeTokens": 16140,
+            "afterTokens": 337,
+            "components": {
+              "algorithm": {
+                "id": "structured-summary-v1",
+                "parameters": {
+                  "outputReserve": 4096,
+                  "safetyMargin": 256,
+                  "summaryOutput": 4096,
+                  "templateOverhead": 0,
+                  "window": 32768
+                },
+                "revision": 1
+              },
+              "strategy": {
+                "id": "eocc-v1",
+                "parameters": {
+                  "target": 8192,
+                  "trigger": 12288
+                },
+                "revision": 1
+              },
+              "summarySchema": "context-summary-v1"
+            }
+          },
+          "eventsSha256": "46c5e8bde6a33d9dfefa2c7f6df394818364af8dc0d1088d56bf718709c1cb80"
+        },
+        {
+          "provider": "openai",
+          "model": "gpt-4o-2024-08-06",
+          "arm": "eocc",
+          "policy": {
+            "algorithm": "handoff-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "gpt-4o-2024-08-06",
+              "outputReserve": 4096,
+              "provider": "openai",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {
+            "compacted": true,
+            "reduced": true,
+            "rawHistoryOmitted": true,
+            "savedAndReopened": true,
+            "requestReconstructed": true,
+            "continuedWithRetainedFacts": true,
+            "continuationSaved": true,
+            "noRecompactionOnResume": true
+          },
+          "status": "passed",
+          "beforeEstimate": 16133,
+          "continuation": {
+            "content": "The active branch is 'repair-parser', the compatibility marker is 'PARSER-COMPAT-7821', and the pending check 'tests/test_parser_compat.py' has not been executed.",
+            "metadata": {
+              "durationMs": 884.9115830000001,
+              "model": "gpt-4o-2024-08-06",
+              "provider": "openai",
+              "responseId": "chatcmpl-EisQkgJAYaczvS8U1O5XCTz5kRA1V",
+              "stopReason": "stop",
+              "usage": {
+                "cachedInputTokens": 0,
+                "inputTokens": 238,
+                "outputTokens": 39,
+                "reasoningTokens": 0,
+                "totalTokens": 277
+              }
+            }
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 1,
+            "inputTokens": 17357,
+            "modelCallsCompleted": 2,
+            "modelCallsStarted": 2,
+            "outputTokens": 238,
+            "peakInputTokens": 17119,
+            "summaryAttempts": 1,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "compactionRuntime": {
+            "outcome": "completed",
+            "reason": "completed",
+            "quiescence": true,
+            "recording": {
+              "level": "file-and-directory-sync",
+              "mode": "file",
+              "status": "acknowledged"
+            }
+          },
+          "continuationRuntime": {
+            "outcome": "completed",
+            "reason": "completed",
+            "quiescence": true,
+            "recording": {
+              "level": "file-and-directory-sync",
+              "mode": "file",
+              "status": "acknowledged"
+            }
+          },
+          "checkpoint": {
+            "projectionVersion": 4,
+            "beforeTokens": 16140,
+            "afterTokens": 281,
+            "components": {
+              "algorithm": {
+                "id": "handoff-summary-v1",
+                "parameters": {
+                  "outputReserve": 4096,
+                  "safetyMargin": 256,
+                  "summaryOutput": 4096,
+                  "templateOverhead": 0,
+                  "window": 32768
+                },
+                "revision": 1
+              },
+              "strategy": {
+                "id": "eocc-v1",
+                "parameters": {
+                  "target": 8192,
+                  "trigger": 12288
+                },
+                "revision": 1
+              },
+              "summarySchema": "context-summary-v1"
+            }
+          },
+          "eventsSha256": "078ffb32ef9fa5f1056186d8ddc9132b06670c43c7005b6ed05aad8841de8489"
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-opus-4-6",
+          "arm": "eocc-structured",
+          "policy": {
+            "algorithm": "structured-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "claude-opus-4-6",
+              "outputReserve": 4096,
+              "provider": "anthropic",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {
+            "compacted": true,
+            "reduced": true,
+            "rawHistoryOmitted": true,
+            "savedAndReopened": true,
+            "requestReconstructed": true,
+            "continuedWithRetainedFacts": true,
+            "continuationSaved": true,
+            "noRecompactionOnResume": true
+          },
+          "status": "passed",
+          "beforeEstimate": 16135,
+          "continuation": {
+            "content": "Here's the current recorded state:\n\n1. **Active branch:** `repair-parser`\n2. **Compatibility marker:** `PARSER-COMPAT-7821`\n3. **Pending check:** `tests/test_parser_compat.py` \u2014 **has not been executed**\n\nNo tools have been executed, and no file edits have been confirmed on disk. The lookup tables (0\u2013999) were previously inspected and found unchanged, so no edits were needed there.\n\nReady to continue the parser repair work whenever you'd like to proceed.",
+            "metadata": {
+              "durationMs": 3451.081750000001,
+              "model": "claude-opus-4-6",
+              "provider": "anthropic",
+              "responseId": "msg_011CgvMiTMXcSN2KHG8sYkEE",
+              "stopReason": "end_turn",
+              "usage": {
+                "cacheCreationInputTokens": 0,
+                "cachedInputTokens": 0,
+                "inputTokens": 510,
+                "outputTokens": 125,
+                "totalTokens": 635
+              }
+            }
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 1,
+            "inputTokens": 20691,
+            "modelCallsCompleted": 2,
+            "modelCallsStarted": 2,
+            "outputTokens": 555,
+            "peakInputTokens": 20181,
+            "summaryAttempts": 1,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "compactionRuntime": {
+            "outcome": "completed",
+            "reason": "completed",
+            "quiescence": true,
+            "recording": {
+              "level": "file-and-directory-sync",
+              "mode": "file",
+              "status": "acknowledged"
+            }
+          },
+          "continuationRuntime": {
+            "outcome": "completed",
+            "reason": "completed",
+            "quiescence": true,
+            "recording": {
+              "level": "file-and-directory-sync",
+              "mode": "file",
+              "status": "acknowledged"
+            }
+          },
+          "checkpoint": {
+            "projectionVersion": 4,
+            "beforeTokens": 16135,
+            "afterTokens": 518,
+            "components": {
+              "algorithm": {
+                "id": "structured-summary-v1",
+                "parameters": {
+                  "outputReserve": 4096,
+                  "safetyMargin": 256,
+                  "summaryOutput": 4096,
+                  "templateOverhead": 0,
+                  "window": 32768
+                },
+                "revision": 1
+              },
+              "strategy": {
+                "id": "eocc-v1",
+                "parameters": {
+                  "target": 8192,
+                  "trigger": 12288
+                },
+                "revision": 1
+              },
+              "summarySchema": "context-summary-v1"
+            }
+          },
+          "eventsSha256": "994014170646be4c5adb7397e8dbd86cf0999936269239d1d1cdbcdf0f3b26e3"
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-opus-4-6",
+          "arm": "eocc",
+          "policy": {
+            "algorithm": "handoff-summary-v1",
+            "mode": "budgeted",
+            "strategy": "eocc-v1",
+            "profile": {
+              "model": "claude-opus-4-6",
+              "outputReserve": 4096,
+              "provider": "anthropic",
+              "revision": "compaction-experiment-v1",
+              "safetyMargin": 256,
+              "summaryOutput": 4096,
+              "target": 8192,
+              "templateOverhead": 0,
+              "trigger": 12288,
+              "window": 32768
+            }
+          },
+          "checks": {
+            "compacted": true,
+            "reduced": true,
+            "rawHistoryOmitted": true,
+            "savedAndReopened": true,
+            "requestReconstructed": true,
+            "continuedWithRetainedFacts": true,
+            "continuationSaved": true,
+            "noRecompactionOnResume": true
+          },
+          "status": "passed",
+          "beforeEstimate": 16135,
+          "continuation": {
+            "content": "Based on the recorded state, here is the current status:\n\n1. **Active branch:** `repair-parser`\n2. **Compatibility marker:** `PARSER-COMPAT-7821`\n3. **Pending check:** `tests/test_parser_compat.py` \u2014 **has not been executed**\n\nNo tools have been executed. The lookup tables (0\u2013999) were previously inspected and found unchanged, so no edits were made. The key uncertainty remains: no concrete file edits have been confirmed saved, and it's unclear what specific parser repair work still needs to be done beyond verifying compatibility via the pending test.\n\nTo move forward, the next step would be to execute `tests/test_parser_compat.py` to verify parser compatibility against marker `PARSER-COMPAT-7821` on the `repair-parser` branch. Awaiting your direction to proceed.",
+            "metadata": {
+              "durationMs": 5497.473166000003,
+              "model": "claude-opus-4-6",
+              "provider": "anthropic",
+              "responseId": "msg_011CgvMjSJZnMss7RF87Xq76",
+              "stopReason": "end_turn",
+              "usage": {
+                "cacheCreationInputTokens": 0,
+                "cachedInputTokens": 0,
+                "inputTokens": 543,
+                "outputTokens": 199,
+                "totalTokens": 742
+              }
+            }
+          },
+          "metrics": {
+            "billedCostUSD": null,
+            "cacheTokens": null,
+            "compactions": 1,
+            "inputTokens": 20812,
+            "modelCallsCompleted": 2,
+            "modelCallsStarted": 2,
+            "outputTokens": 662,
+            "peakInputTokens": 20269,
+            "summaryAttempts": 1,
+            "summaryFailures": 0,
+            "usageComplete": true
+          },
+          "compactionRuntime": {
+            "outcome": "completed",
+            "reason": "completed",
+            "quiescence": true,
+            "recording": {
+              "level": "file-and-directory-sync",
+              "mode": "file",
+              "status": "acknowledged"
+            }
+          },
+          "continuationRuntime": {
+            "outcome": "completed",
+            "reason": "completed",
+            "quiescence": true,
+            "recording": {
+              "level": "file-and-directory-sync",
+              "mode": "file",
+              "status": "acknowledged"
+            }
+          },
+          "checkpoint": {
+            "projectionVersion": 4,
+            "beforeTokens": 16135,
+            "afterTokens": 549,
+            "components": {
+              "algorithm": {
+                "id": "handoff-summary-v1",
+                "parameters": {
+                  "outputReserve": 4096,
+                  "safetyMargin": 256,
+                  "summaryOutput": 4096,
+                  "templateOverhead": 0,
+                  "window": 32768
+                },
+                "revision": 1
+              },
+              "strategy": {
+                "id": "eocc-v1",
+                "parameters": {
+                  "target": 8192,
+                  "trigger": 12288
+                },
+                "revision": 1
+              },
+              "summarySchema": "context-summary-v1"
+            }
+          },
+          "eventsSha256": "ee8bd7f1f908768dc4b5f72565e13e44688f2176f0fa7cad80e4130fb6d1bcdb"
+        }
+      ]
+    }
+  ]
+}

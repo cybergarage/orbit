@@ -516,3 +516,39 @@ the existing token; public dependency installation and tests run before that
 configuration. No release or publication workflow is dispatched by this update.
 See the official [checkout README](https://github.com/actions/checkout) and
 [setup-node README](https://github.com/actions/setup-node) for migration details.
+
+### Cloud EoCC persistence diagnostic
+
+After building, run `node e2e/cloud-compaction.mjs --prepare-only` without keys
+for an offline request-budget check. To make live requests, load the dedicated
+test credentials above, then run `node e2e/cloud-compaction.mjs --run`.
+The selection is explicit in the runner: `gpt-4o-2024-08-06` for OpenAI and
+`claude-opus-4-6` for Anthropic. Environment model overrides do not change this
+experiment. These identifiers fix the requested model; they do not prove that
+a hosted provider's underlying deployment is immutable.
+
+The diagnostic runs EoCC with both `structured-summary-v1` and
+`handoff-summary-v1`. It uses a synthetic history above a 12,288-token estimated
+trigger, a 32,768-token window, an 8,192-token target, and a 4,096-token output
+allowance. Each compaction or continuation phase has a 180-second deadline and
+six-model-call ceiling. Credentials are read only from dedicated environment
+variables. Isolated session files, journals, diagnostic events, model metadata,
+and outcomes are saved under `tmp/e2e/cloud-compaction/`.
+
+Checks require an actual checkpoint, omission of consumed raw history, identical
+projection after closing and reopening storage, an identical resumed provider
+request, and a real continuation retaining the marker, branch and pending check
+without claiming the check ran. The continuation is saved and reopened again.
+This is a synthetic persistence diagnostic, not a coding benchmark, a reliability
+estimate, or evidence of a cost advantage. Failed attempts are retained.
+
+The shared evaluation worker now accepts `provider: "openai"` or
+`provider: "anthropic"` with an explicit `model` and the corresponding test key
+in its process environment; omitted `provider` preserves Ollama behavior.
+The existing SWE-bench and Harbor host launchers still configure Ollama. Cloud
+credential delivery to benchmark containers and benchmark-wide cloud comparisons
+are separate follow-up work; never put keys in worker configuration JSON.
+
+Anthropic's generic `responseFormat: 'json'` uses a JSON-only system instruction,
+not schema-constrained decoding. The caller must validate the result. Orbit's
+compaction validation and bounded repair remain active.
