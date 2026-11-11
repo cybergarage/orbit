@@ -45,6 +45,27 @@ Three of four SAC trials exhausted the 64-call allowance, with 32 summary attemp
 
 This raises a concrete concern about summary overhead under the shared call budget. It does not show SAC universally fails. Increasing worker allowance while separately budgeting summaries would be a different experimental protocol and must not be silently substituted into this comparison.
 
+## Combined local and cloud interim findings
+
+The [local transfer study](../../docs/research/2026-11-11-local-compaction-transfer.md), [cloud lifecycle diagnostic](2026-11-11-cloud-eocc.md), [16-call cloud pilot](2026-11-11-cloud-compaction-pilot.md) and this 64-call calibration answer different questions. Together they establish working compaction mechanisms and expose overhead; they do not establish general superiority over Orbit suffix.
+
+| Evidence set                                     | Unit and boundary                    | suffix native passes | EoCC native passes | SAC native passes |
+| ------------------------------------------------ | ------------------------------------ | -------------------: | -----------------: | ----------------: |
+| Local ornith-1.5:9b, Terminal-Bench confirmation | One task, three seeds                |                  1/3 |                1/3 |               1/3 |
+| Local ornith-1.5:9b, SWE-bench confirmation      | One task, three seeds                |                  1/3 |                0/3 |               0/3 |
+| GPT-4o, complete 64-call blocks                  | Two distinct tasks, one attempt each |                  0/2 |                0/2 |               0/2 |
+| Opus 4.6, complete 64-call blocks                | Two distinct tasks, one attempt each |                  2/2 |                2/2 |               0/2 |
+
+Do not sum these denominators into a pooled success rate. Local seed repetitions are not independent tasks; local and cloud tasks, runtime revisions, thresholds, output caps, deadlines and sampling differ. Local confirmation contains one task per suite, and this cloud comparison contains one different task per suite. The earlier 16-call pilot is another separate measurement, not evidence that raising the limit caused an improvement.
+
+**Lifecycle evidence:** local fixed-history diagnostics committed checkpoints in all six strategy/algorithm combinations, but no local EoCC real-task checkpoint committed. The final cloud synthetic diagnostic passed all four provider/summary-algorithm cases: compaction, durable save, reopen and continuation with checked facts retained. The 64-call Opus pytest result adds a committed EoCC checkpoint followed by tool work and native success. Synthetic save/resume success is distinct from real-task quality or complete semantic fidelity.
+
+**Quality evidence:** neither local nor cloud results establish EoCC superiority over suffix. Local EoCC had no committed reset on confirmation tasks, so those failures do not isolate quality after a successful reset. Cloud EoCC succeeded with and without compaction, while suffix matched its two Opus passes. SAC produced a passing local terminal artifact, but local SWE confirmation produced three empty patches, and all four complete cloud SAC conditions failed native grading. This identifies failure modes, not their prevalence across representative tasks.
+
+**Efficiency evidence:** a passing local Terminal-Bench pair reduced peak completed input from 8,102 tokens with suffix to 4,542 with SAC (44% lower), yet uncached input increased from 2,244 to 22,654 tokens because cache reuse fell. Neither Run completed normally. In local SWE SAC confirmation, 34,454 of 35,598 output tokens (96.8%) were recap output. Cloud SAC likewise spent half the 64-call allowance on summaries in three capped trials. Shorter context alone therefore does not demonstrate lower total work, monetary savings or faster successful completion. Local electricity, amortized hardware cost and comparable end-to-end energy were not measured; local cost must not be treated as zero.
+
+The combined conclusion is to retain suffix as the current baseline and EoCC/SAC as experimental alternatives. EoCC now has positive real-task lifecycle evidence; SAC needs targeted investigation of recap validity and cadence. Neither the paper's truth nor a universal ranking of models or compaction methods follows from this evidence. The paper's model snapshots, prompts, complete task splits and throughput/cost methodology have not been reproduced.
+
 ## Incomplete coverage and interruptions
 
 There are **24 fully accounted, officially graded conditions** out of 160: 12 OpenAI and 12 Anthropic. Six native passes are all Anthropic conditions; OpenAI has zero passes in its 12 observed conditions. Beyond the primary two blocks, eight complete conditions belong to partially completed Sphinx and DB recovery blocks. They are retained as supplementary evidence, not pooled into a representative success rate. Only 11 task/arm cells have complete results for both providers, so the two 12-condition totals are not matched samples.
@@ -89,3 +110,27 @@ For a separately approved follow-up:
 6. Estimate later costs by suite, provider and arm, including failed and capped runs, summary overhead and interruption contingency. Estimate paired task discordance before proposing a powered quality study; repetitions do not replace independent tasks. No precise sample-size or general superiority claim is supported here.
 
 The current evidence supports retaining EoCC/SAC as opt-in experimental alternatives. It does not establish a new default, reproduce the paper's model snapshots or throughput estimates, or prove the paper correct or incorrect.
+
+## Outstanding verification and restart conditions
+
+Issue #22 remains open. The following work is outstanding, not approved paid work:
+
+| Workstream                       | Remaining question or evidence                                                                                                   | Completion criterion                                                                                                                                                                                    |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Original 20-task calibration     | 68 OpenAI conditions are unstarted; 66 Anthropic conditions are unstarted and two Anthropic SAC conditions were user-interrupted | If this exact protocol is resumed, preserve the 24 complete conditions and all historical attempts; identify every remaining disposition without replacing failed model outcomes                        |
+| EoCC versus suffix               | Quality and cost after naturally triggered, committed resets on more distinct tasks                                              | Predeclared matched task/model comparisons, native grading, trigger/commit/continuation counts, summary cost and paired task-level uncertainty; report no-trigger runs separately without dropping them |
+| SAC diagnosis                    | Invalid summaries/source references, recap-heavy outputs and exhaustion of shared call allowance                                 | Offline trace analysis and deterministic regression cases first; separately declared small live tests only after approval; retained fidelity and useful task progress, not just smaller histories       |
+| Cost controls and cache behavior | Per-request input growth, expensive FHA replay and absent Anthropic cache reads in this configuration                            | Tested provider/trial spending guards and complete cache-write/read accounting; measured savings under a new controlled protocol rather than assumed savings                                            |
+| Full evaluation design           | Number of independent tasks and meaningful quality margin                                                                        | Select the estimand and minimum relevant difference, estimate paired discordance, plan power and multiplicity, and obtain approval for the resulting task count and cost envelope                       |
+| Paper-faithful reproduction      | Different models, prompts, thresholds, splits and serving setup; selective reading not evaluated                                 | Separate protocol with pinned author materials and explicitly reproducible metrics; task success alone cannot validate reported serving throughput or modeled retail cost                               |
+
+A restart requires all of the following:
+
+1. **Fresh explicit user authorization after the cost stop**, naming providers, models, arms, task scope and an incremental spending limit. Prior credit replenishment, the old $300 threshold, or PR approval does not authorize more API calls. OpenAI-only continuation is also paused until requested.
+2. **A declared protocol choice:** either complete the existing frozen matrix or start a separately labeled experiment. Changing models, summary prompts, cache policy, common context caps, arms or worker/summary budgets creates a new condition; do not pool it silently with the existing results.
+3. **Cost controls verified before launch:** agree per-provider and per-trial limits, input/output allowances, concurrency and the first review checkpoint. Include failed attempts and summary calls. A between-request or between-trial guard is not a hard provider bill cap; disclose the maximum in-flight exposure and unknown usage. Use a provider-side spending limit where available, without treating credit balance as a sufficient evaluation budget control.
+4. **Evidence and environment checks:** preserve immutable stopped-ledger snapshots and artifact hashes; validate the runtime fingerprint, task/harness/image identities, native controls and isolated credentials. If artifacts or environment identity cannot be recovered, document the gap instead of claiming exact continuation. Do not launch a credit-check inference before paid execution is authorized.
+5. **Explicit recovery bookkeeping:** completed conditions are not rerun for better outcomes. External interruptions may receive separately numbered recovery attempts under the agreed policy; original costs and unknown final usage remain visible. Keep algorithm failures distinct from credit, infrastructure and user interruptions.
+6. **Small-stage review before expansion:** review full usage, native outcomes, committed compaction and observed costs at the agreed checkpoint. Stop new dispatch on incomplete accounting, credit errors or spending limits. Re-estimate the next stage before seeking further approval; do not automatically reinstate the earlier 80-task, three-repeat proposal.
+
+All paid execution remains stopped. These follow-up items preserve the path to further evidence without committing to additional expenditure or a default-algorithm change.
