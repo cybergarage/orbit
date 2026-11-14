@@ -164,48 +164,38 @@ export function categoryForEventType(eventType: string): LogCategory {
   return LogCategory.Runtime
 }
 
+/** Validate shared structure; retain the historical tag only to disambiguate extension collisions. */
 export function normalizeLogRecord(value: unknown): LogRecord {
   if (!isRecord(value)) throw new Error('Log record must be an object.')
-  if (value.version === 2) return validateCurrentLogRecord(value)
-  if (value.version === 1) return upgradeLegacyLogRecord(value)
-  throw new Error('Unsupported log record version.')
-}
-
-function validateCurrentLogRecord(value: Record<string, unknown>): LogRecord {
-  if (
-    typeof value.id !== 'string' ||
-    typeof value.timestamp !== 'string' ||
-    typeof value.level !== 'string' ||
-    typeof value.eventType !== 'string' ||
-    typeof value.message !== 'string' ||
-    !isRecord(value.correlation) ||
-    !isRecord(value.fields) ||
-    typeof value.category !== 'string' ||
-    !LOG_CATEGORIES.has(value.category as LogCategory)
-  ) {
-    throw new Error('Invalid version 2 log record.')
-  }
-
-  return value as unknown as LogRecord
-}
-
-function upgradeLegacyLogRecord(value: Record<string, unknown>): LogRecord {
   if (
     typeof value.id !== 'string' ||
     typeof value.timestamp !== 'string' ||
     typeof value.level !== 'string' ||
     typeof value.message !== 'string' ||
     !isRecord(value.fields)
-  ) {
-    throw new Error('Invalid version 1 log record.')
+  )
+    throw new Error('Invalid log record.')
+
+  // A partial current record is corrupt, not a historical record to repair.
+  const hasCurrentFields = ['category', 'correlation', 'eventType'].some((key) => key in value)
+  if (hasCurrentFields && value.version !== 1) {
+    validateLogIdentifier(value, 2)
+    if (!isLogCategory(value.category) || typeof value.eventType !== 'string' || !isRecord(value.correlation))
+      throw new Error('Invalid current log structure.')
+    return {...value, version: 2} as unknown as LogRecord
   }
 
+  validateLogIdentifier(value, 1)
   const fields = {...value.fields} as LogFields
   const eventType = typeof fields.eventType === 'string' ? fields.eventType : eventTypeFromMessage(value.message)
   delete fields.eventType
+  // Historical tags resolve ambiguous field names. Preserve the original collision
+  // under fields instead of discarding it when canonical fields are projected.
+  if (hasCurrentFields || (value.fields.eventType !== undefined && typeof value.fields.eventType !== 'string'))
+    fields.historicalRecord = value as LogFields
   return {
+    ...value,
     category: categoryForEventType(eventType),
-    ...(typeof value.component === 'string' ? {component: value.component} : {}),
     correlation: {
       ...(typeof value.iteration === 'number' ? {iteration: value.iteration} : {}),
       ...(typeof value.runId === 'string' ? {runId: value.runId, turnId: value.runId} : {}),
@@ -214,12 +204,13 @@ function upgradeLegacyLogRecord(value: Record<string, unknown>): LogRecord {
     },
     eventType,
     fields,
-    id: value.id,
-    level: value.level as LogLevel,
-    message: value.message,
-    timestamp: value.timestamp,
     version: 2,
-  }
+  } as unknown as LogRecord
+}
+
+/** Refuse unknown identifiers and prevent damaged current records from using the historical projection. */
+function validateLogIdentifier(value: Record<string, unknown>, identifier: 1 | 2): void {
+  if ('version' in value && value.version !== identifier) throw new Error('Unsupported or inconsistent log identifier.')
 }
 
 export function eventTypeFromMessage(message: string): string {

@@ -27,8 +27,12 @@ Retain unknown fields and nested JSON without interpreting them as authority.
 
 Keep current writes and normalized public records at the existing fixed `version: 2`.
 Tagged historical records retain their established `1` identifier. Tags are optional
-on read, but explicit unknown or structure-inconsistent tags are errors. The tag
-validates the recognized structure; it does not select a different implementation.
+on read. Explicit unknown tags reject; a `2` tag cannot use historical fallback.
+A historical `1` tag is retained to disambiguate legacy extensions named category,
+correlation or eventType. Those names cannot distinguish damaged current data from
+historical extensions by structure alone. Preserve such original records under
+`fields.historicalRecord` while projecting canonical fields. This narrow ambiguity
+rule is necessary for backward compatibility; do not claim all tag checks removed.
 Do not rewrite, reset, back up or automatically migrate files.
 
 ## Consequences
@@ -36,8 +40,8 @@ Do not rewrite, reset, back up or automatically migrate files.
 Mixed existing partitions and opaque cursor positions remain usable. Tagless
 additive records become readable. Malformed current records remain errors rather
 than acquiring fabricated correlation or event types through a historical fallback.
-Unknown fields survive normalization; the reader no longer discards historical
-extensions. Flat historical correlation remains supported as a small compatibility
+Noncolliding unknown fields survive normalization; historical collisions are retained
+in the original-record extension instead of being discarded. Flat historical correlation remains supported as a small compatibility
 projection, not as a second independently validated numbered schema.
 
 ## Context and Problem Statement
@@ -80,7 +84,12 @@ validated reader with a structural projection preserves both data and fixed writ
 ## Implementation and Confirmation
 
 Accepted on 2026-11-14 after reviewing mixed-partition failure and unchanged
-write semantics. Pending implementation and validation. The author's explicit request authorizes implementation of this bounded
+write semantics. The first independent review found that stricter optional usage validation rejected
+values emitted by the unchanged writer, and structural name collisions rejected
+previously readable tagged historical records. Preserve the existing optional-field
+acceptance contract, add a real writer-to-file-to-reader regression and retain the
+historical tag for that ambiguity. Current required-field validation remains intact.
+Pending implementation validation. The author's explicit request authorizes implementation of this bounded
 backward-compatible alternative.
 
 ## Follow-up Work
