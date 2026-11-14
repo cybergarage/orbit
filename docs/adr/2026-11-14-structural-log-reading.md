@@ -6,6 +6,7 @@ implementation-status: completed
 implementation-completed-date: 2026-11-14
 implementation-commits:
   - 57499b88016886212aa32a4d864ba6bf3ecd69c0
+  - 492a330dcb4a5728fa69f32a74cbfaeacceb8c4e
 superseded-by: []
 ---
 
@@ -121,3 +122,9 @@ previous historical projection and retains unknown top-level source fields under
 and untagged historical records must not enter successful-outcome results merely
 because their opaque source extension contains that string. The regression covers
 real mixed-file filtering, source byte preservation and repeat normalization.
+
+Correction implementation `492a330dcb4a5728fa69f32a74cbfaeacceb8c4e` passed
+headers and build, 17 targeted log tests and the full 1,331-test suite in five
+minutes. Format/lint reported 0 errors and 117 warnings. Independent re-review
+found no remaining blocker. The two added regressions exercise opaque historical
+outcome/timing/usage and actual mixed-file outcome filtering without changing bytes.
