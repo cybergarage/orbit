@@ -10,6 +10,7 @@ as a product contract.
 - Build your first application with [Building an agent](building-agents.md)
   and the [runnable consumer example](../examples/agent/README.md).
 - Read [Versioning](versioning.md) for 0.x compatibility and release milestones.
+- Read [Internal formats](internal-formats.md) for additive persistence contracts and compatibility boundaries.
 
 - Read [Concept Overview](concepts/overview.md) for Orbit's purpose and design
   principles.

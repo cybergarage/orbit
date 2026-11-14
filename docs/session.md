@@ -641,7 +641,7 @@ information and Thread snapshots expose the same title and title revision.
 provider's default session label. Renaming leaves transcript bytes, IDs,
 conversation activity timestamps, archive and Project membership unchanged.
 
-The registered session coordination directory holds a versioned title sidecar.
+The registered session coordination directory holds a bounded title sidecar.
 Session deletion removes this title metadata under the same writer claim,
 including retries after an interrupted deletion.
 Updates acquire the same writer claim as archive and inspect transcript identity
@@ -677,3 +677,12 @@ The capability-protected `GET /api/sessions/:id` returns saved information;
 Validation fails with 400, missing sessions with 404 and stale edits with 409.
 The existing writer/integrity failures remain storage errors. Cancel and reopen
 the editor after a conflict to load the latest name and revision.
+
+## Additive sidecar metadata
+
+Archive, selected model and title metadata use the current validated fields without
+a required numeric version. Existing tagged records remain readable. Unknown saved
+fields survive updates; unknown explicit version tags and malformed records fail
+closed. Missing records retain the original active/model/title defaults. New writes
+may be rejected by older Orbit releases. See [Internal formats](internal-formats.md)
+for the unchanged transcript and execution evidence compatibility boundaries.

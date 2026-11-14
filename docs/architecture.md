@@ -405,3 +405,8 @@ Conversation model selection flows through `OrbitApplicationService.selectThread
 and `ThreadManager.selectModel`. Session-owned durable selection metadata overrides
 the original header on resume, while the Agent queues a validated adapter for the
 next admission. GUI default selection is separate from conversation state.
+
+Session archive, model selection and title sidecars validate their current structure
+without a mandatory numeric schema tag. Updates preserve unknown metadata fields
+within the existing bounded durable write path. See [Internal formats](internal-formats.md)
+for the contract and retained evidence-format identifiers.
