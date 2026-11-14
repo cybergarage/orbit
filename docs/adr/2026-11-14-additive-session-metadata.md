@@ -1,8 +1,8 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-11-14
-decision-date: null
-implementation-status: not-started
+decision-date: 2026-11-14
+implementation-status: in-progress
 implementation-completed-date: null
 implementation-commits: []
 superseded-by: []
@@ -74,7 +74,8 @@ with structural validation provides compatibility without multiple implementatio
 
 ## Implementation and Confirmation
 
-Pending implementation and compatibility checks. The author explicitly requested
+Accepted on 2026-11-14 under the author’s explicit implementation request after
+reviewing the destructive boundaries above. Pending implementation and compatibility checks. The author explicitly requested
 implementation; that request authorizes this bounded decision.
 
 ## Follow-up Work
