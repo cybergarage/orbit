@@ -410,3 +410,8 @@ Session archive, model selection and title sidecars validate their current struc
 without a mandatory numeric schema tag. Updates preserve unknown metadata fields
 within the existing bounded durable write path. See [Internal formats](internal-formats.md)
 for the contract and retained evidence-format identifiers.
+
+Operational log reading uses shared validation and structural normalization of
+historical flat correlation. Current writes retain their fixed identifier, and
+reading mixed partitions preserves file bytes and opaque cursor positions.
+See [Session logging](logging.md#record-format).

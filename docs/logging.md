@@ -56,8 +56,26 @@ interface LogRecord {
 }
 ```
 
-The file reader upgrades version 1 records in memory, so existing partitions
-remain queryable. New writes always use version 2.
+The file reader validates common fields once and recognizes historical flat
+correlation or current category/correlation/eventType structure. Historical records
+are projected in memory, so mixed existing partitions remain queryable. New writes
+and normalized records still use the fixed version 2 identifier. The reader also
+accepts untagged records with a complete recognized structure; explicit unknown or
+inconsistent current identifiers reject. The historical `1` tag disambiguates old
+extensions named category/correlation/eventType; their original record is preserved
+under `fields.historicalRecord` when canonical fields are projected.
+
+A partial current structure without an explicit historical tag is an error and
+never falls back to the historical projection. Unknown fields survive normalization,
+including unknown status values inside extension fields. Unknown top-level fields
+of historical records are retained only under `fields.historicalRecord`; a historical
+`outcome`, duration or usage extension never becomes a canonical observation.
+Current records keep their existing interpretation. Missing outcome remains absent.
+Optional fields retain their existing acceptance contract, including numeric usage
+values emitted by the current writer; the reader
+does not reinterpret them as success or positive resource measurements. Reading
+never changes saved bytes or cursor positions. See the
+[decision](adr/2026-11-14-structural-log-reading.md).
 
 The default metadata event catalog includes session, turn, model-request,
 tool-call, and MCP-connection lifecycle events. Successful runs therefore have
