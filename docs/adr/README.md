@@ -288,6 +288,8 @@ its own final hash in a tracked file.
 
 ## Decision index
 
+[Structural log reading](2026-11-14-structural-log-reading.md) preserves historical partitions through a shared validated reader.
+
 [Additive session metadata](2026-11-14-additive-session-metadata.md) records the bounded sidecar cleanup and deferred destructive compatibility boundaries.
 
 | Proposed   | Status     | Implementation | Decision                                                                                        |
