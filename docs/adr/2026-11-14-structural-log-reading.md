@@ -41,8 +41,10 @@ Do not rewrite, reset, back up or automatically migrate files.
 Mixed existing partitions and opaque cursor positions remain usable. Tagless
 additive records become readable. Malformed current records remain errors rather
 than acquiring fabricated correlation or event types through a historical fallback.
-Noncolliding unknown fields survive normalization; historical collisions are retained
-in the original-record extension instead of being discarded. Flat historical correlation remains supported as a small compatibility
+Historical unknown top-level fields survive only in the original-record extension,
+not as canonical outcome, timing or usage observations. Current-record extensions
+retain their existing interpretation. Historical normalization preserves the exact
+previous canonical projection and never promotes an extension to observed success. Flat historical correlation remains supported as a small compatibility
 projection, not as a second independently validated numbered schema.
 
 ## Context and Problem Statement
@@ -107,3 +109,15 @@ not a substitute for additive evolution. Storage binding authority must remain i
 
 - [Internal formats](../internal-formats.md)
 - [Session logging](../logging.md)
+
+## Historical extension review correction
+
+A subsequent independent review identified that spreading the complete historical
+record into the canonical output promoted a previously ignored top-level
+`outcome: succeeded` extension into a successful observation. That changed outcome
+filters despite preserving the raw value. The correction explicitly constructs the
+previous historical projection and retains unknown top-level source fields under
+`fields.historicalRecord`. The same boundary applies to duration and usage. Tagged
+and untagged historical records must not enter successful-outcome results merely
+because their opaque source extension contains that string. The regression covers
+real mixed-file filtering, source byte preservation and repeat normalization.

@@ -67,7 +67,10 @@ under `fields.historicalRecord` when canonical fields are projected.
 
 A partial current structure without an explicit historical tag is an error and
 never falls back to the historical projection. Unknown fields survive normalization,
-including unknown status values inside extension fields. Missing outcome remains absent.
+including unknown status values inside extension fields. Unknown top-level fields
+of historical records are retained only under `fields.historicalRecord`; a historical
+`outcome`, duration or usage extension never becomes a canonical observation.
+Current records keep their existing interpretation. Missing outcome remains absent.
 Optional fields retain their existing acceptance contract, including numeric usage
 values emitted by the current writer; the reader
 does not reinterpret them as success or positive resource measurements. Reading

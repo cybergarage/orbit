@@ -47,7 +47,8 @@ this change performs no reset, conversion or user-data migration. See the
 The [structural log reader](adr/2026-11-14-structural-log-reading.md) implements
 common validation and a read-only historical projection. A historical tag remains
 necessary to disambiguate legacy extensions whose names overlap current fields;
-collisions are preserved under `fields.historicalRecord`. Current writes remain
+unknown historical top-level fields are preserved opaquely under
+`fields.historicalRecord` and never promoted to canonical outcome/timing/usage. Current writes remain
 unchanged. This replaces numbered validator dispatch without removing access to
 old partitions or introducing a data migration.
 

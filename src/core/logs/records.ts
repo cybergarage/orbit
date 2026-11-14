@@ -164,6 +164,20 @@ export function categoryForEventType(eventType: string): LogCategory {
   return LogCategory.Runtime
 }
 
+const HISTORICAL_LOG_KEYS = new Set([
+  'component',
+  'fields',
+  'id',
+  'iteration',
+  'level',
+  'message',
+  'runId',
+  'sessionId',
+  'threadId',
+  'timestamp',
+  'version',
+])
+
 /** Validate shared structure; retain the historical tag only to disambiguate extension collisions. */
 export function normalizeLogRecord(value: unknown): LogRecord {
   if (!isRecord(value)) throw new Error('Log record must be an object.')
@@ -189,13 +203,20 @@ export function normalizeLogRecord(value: unknown): LogRecord {
   const fields = {...value.fields} as LogFields
   const eventType = typeof fields.eventType === 'string' ? fields.eventType : eventTypeFromMessage(value.message)
   delete fields.eventType
-  // Historical tags resolve ambiguous field names. Preserve the original collision
-  // under fields instead of discarding it when canonical fields are projected.
-  if (hasCurrentFields || (value.fields.eventType !== undefined && typeof value.fields.eventType !== 'string'))
+  // Extensions of historical records are opaque source data. In particular,
+  // an old top-level outcome must never become an observed canonical outcome.
+  if (
+    Object.keys(value).some((key) => !HISTORICAL_LOG_KEYS.has(key)) ||
+    (value.fields.eventType !== undefined && typeof value.fields.eventType !== 'string') ||
+    (value.iteration !== undefined && typeof value.iteration !== 'number') ||
+    ['component', 'runId', 'sessionId', 'threadId'].some(
+      (key) => value[key] !== undefined && typeof value[key] !== 'string',
+    )
+  )
     fields.historicalRecord = value as LogFields
   return {
-    ...value,
     category: categoryForEventType(eventType),
+    ...(typeof value.component === 'string' ? {component: value.component} : {}),
     correlation: {
       ...(typeof value.iteration === 'number' ? {iteration: value.iteration} : {}),
       ...(typeof value.runId === 'string' ? {runId: value.runId, turnId: value.runId} : {}),
@@ -204,8 +225,12 @@ export function normalizeLogRecord(value: unknown): LogRecord {
     },
     eventType,
     fields,
+    id: value.id,
+    level: value.level as LogLevel,
+    message: value.message,
+    timestamp: value.timestamp,
     version: 2,
-  } as unknown as LogRecord
+  }
 }
 
 /** Refuse unknown identifiers and prevent damaged current records from using the historical projection. */

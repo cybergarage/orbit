@@ -7,7 +7,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {FileSessionLogStore} from '../../src/core/logs/file-store.js'
-import {normalizeLogRecord} from '../../src/core/logs/records.js'
+import {matchesLogQuery, normalizeLogRecord} from '../../src/core/logs/records.js'
 import {StoreSessionLoggerFactory} from '../../src/core/logs/session-logger.js'
 
 const historical = () => ({
@@ -40,10 +40,53 @@ describe('Structural log compatibility', () => {
       const record = normalizeLogRecord(value)
       expect(record).include({category: 'lifecycle', eventType: 'turn.started', version: 2})
       expect(record.correlation).deep.equals({iteration: 0, runId: 'run-1', sessionId: 'session-1', turnId: 'run-1'})
-      expect(record).property('extra').deep.equals(extra)
-      expect(record.fields).deep.equals({status: 'unknown'})
+      expect(record).not.have.property('extra')
+      expect(record.fields).deep.equals({historicalRecord: value, status: 'unknown'})
       expect(record).not.have.property('outcome')
       expect(JSON.stringify(value)).equals(bytes)
+    }
+  })
+
+  it('keeps historical outcome, timing and usage extensions opaque for tagged and untagged records', () => {
+    for (const tag of [{}, {version: 1}]) {
+      const value = {...historical(), ...tag, durationMs: 42, outcome: 'succeeded', usage: {inputTokens: 7}}
+      const record = normalizeLogRecord(value)
+      for (const key of ['outcome', 'durationMs', 'usage']) expect(record).not.have.property(key)
+      expect(record.fields.historicalRecord).deep.equals(value)
+      expect(matchesLogQuery(record, {outcomes: ['succeeded']})).equals(false)
+      expect(matchesLogQuery(record, {outcomes: ['denied']})).equals(false)
+      expect(normalizeLogRecord(record)).deep.equals(record)
+    }
+
+    const record = normalizeLogRecord({...current(), outcome: 'succeeded', version: 2})
+    expect(matchesLogQuery(record, {outcomes: ['succeeded']})).equals(true)
+  })
+
+  it('filters mixed partitions by observed outcomes without promoting historical extensions', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-outcome-logs-'))
+    const directory = path.join(root, 'session-1')
+    const file = path.join(directory, 'events.jsonl')
+    await fs.mkdir(directory)
+    const records = [
+      {...historical(), outcome: 'succeeded', version: 1},
+      {...historical(), id: 'untagged', outcome: 'succeeded'},
+      {...current(), outcome: 'succeeded', version: 2},
+    ]
+    const raw = records.map((record) => JSON.stringify(record) + '\n').join('')
+    await fs.writeFile(file, raw)
+    const store = new FileSessionLogStore({rootDir: root})
+    try {
+      expect((await store.list('session-1', {outcomes: ['succeeded']})).data.map((record) => record.id)).deep.equals([
+        'current',
+      ])
+      const all = (await store.list('session-1')).data
+      expect(all).length(3)
+      expect(all[0].fields.historicalRecord).deep.equals(records[0])
+      expect(all[1].fields.historicalRecord).deep.equals(records[1])
+      expect(await fs.readFile(file, 'utf8')).equals(raw)
+    } finally {
+      await store.close()
+      await fs.rm(root, {force: true, recursive: true})
     }
   })
 
