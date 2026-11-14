@@ -10,6 +10,7 @@ import type {SessionScope} from './coordination.js'
 
 import {canonicalStoragePath, validateSessionId} from './coordination.js'
 import {syncSupportedDirectory} from './durability.js'
+import {encodeMetadataRecord, validateMetadataRecord} from './metadata.js'
 
 export const modelSelectionSchema = z
   .object({
@@ -25,31 +26,44 @@ function selectionPath(root: string, id: string) {
   return path.join(root, '.coordination', validateSessionId(id) + '.model.json')
 }
 
-export function readModelSelection(root: string, id: string): ModelSelection | undefined {
+function readSelectionRecord(root: string, id: string) {
   const file = selectionPath(root, id)
   try {
     const stat = fs.lstatSync(file)
     if (!stat.isFile() || stat.nlink !== 1 || stat.size > 4096 || fs.realpathSync(file) !== file)
       throw new Error('Invalid model selection metadata')
     const record = JSON.parse(fs.readFileSync(file, 'utf8'))
-    if (record.version !== 1 || record.sessionId !== id) throw new Error('Invalid model selection metadata')
-    return modelSelectionSchema.parse(record.selection)
+    validateMetadataRecord(record)
+    if (record.sessionId !== id) throw new Error('Invalid model selection metadata')
+    return {...record, selection: modelSelectionSchema.loose().parse(record.selection)}
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
     throw error
   }
 }
 
+export function readModelSelection(root: string, id: string): ModelSelection | undefined {
+  const record = readSelectionRecord(root, id)
+  return record
+    ? modelSelectionSchema.parse({model: record.selection.model, provider: record.selection.provider})
+    : undefined
+}
+
 /** Caller holds the registered writer claim. Original transcript and turn context remain immutable. */
 export function writeModelSelection(scope: SessionScope, selection: ModelSelection): void {
   const value = modelSelectionSchema.parse(selection)
-  readModelSelection(scope.sessionRoot, scope.sessionId)
+  const before = readSelectionRecord(scope.sessionRoot, scope.sessionId)
+  const encoded = encodeMetadataRecord({
+    ...before,
+    selection: {...before?.selection, ...value},
+    sessionId: scope.sessionId,
+  })
   const file = selectionPath(scope.sessionRoot, scope.sessionId)
   const temporary = file + '.' + randomUUID() + '.tmp'
   try {
     const fd = fs.openSync(temporary, 'wx', 0o600)
     try {
-      fs.writeFileSync(fd, JSON.stringify({selection: value, sessionId: scope.sessionId, version: 1}) + '\n')
+      fs.writeFileSync(fd, encoded)
       fs.fsyncSync(fd)
     } finally {
       fs.closeSync(fd)

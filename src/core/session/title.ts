@@ -12,6 +12,7 @@ import {displayNameSchema} from '../display-name.js'
 import {ProjectStoreError} from '../projects/types.js'
 import {validateSessionId} from './coordination.js'
 import {syncSupportedDirectory} from './durability.js'
+import {encodeMetadataRecord, validateMetadataRecord} from './metadata.js'
 
 export const sessionRenameSchema = z
   .object({
@@ -29,11 +30,12 @@ export interface SessionTitle {
   title?: string
   titleRevision: number
 }
-const recordSchema = sessionRenameSchema.extend({
-  revision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
-  sessionId: z.string(),
-  version: z.literal(1),
-})
+const recordSchema = sessionRenameSchema
+  .extend({
+    revision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    sessionId: z.string(),
+  })
+  .loose()
 
 function titlePath(root: string, id: string): string {
   return path.join(root, '.coordination', validateSessionId(id) + '.title.json')
@@ -45,7 +47,9 @@ function readRecord(root: string, id: string) {
     const stat = fs.lstatSync(file)
     if (!stat.isFile() || stat.nlink !== 1 || stat.size > 4096 || fs.realpathSync(file) !== file)
       throw new Error('Invalid session title metadata')
-    const record = recordSchema.parse(JSON.parse(fs.readFileSync(file, 'utf8')))
+    const value: unknown = JSON.parse(fs.readFileSync(file, 'utf8'))
+    validateMetadataRecord(value)
+    const record = recordSchema.parse(value)
     if (record.sessionId !== id || record.revision !== record.expectedRevision + 1)
       throw new Error('Invalid session title metadata')
     return record
@@ -73,13 +77,14 @@ export function writeSessionTitle(scope: SessionScope, options: SessionRenameOpt
     throw new ProjectStoreError('conflict', 'Session title revision changed; refresh before renaming')
   }
 
-  const record = {...input, revision: input.expectedRevision + 1, sessionId: scope.sessionId, version: 1}
+  const record = {...before, ...input, revision: input.expectedRevision + 1, sessionId: scope.sessionId}
+  const encoded = encodeMetadataRecord(record)
   const file = titlePath(scope.sessionRoot, scope.sessionId)
   const temporary = file + '.' + randomUUID() + '.tmp'
   try {
     const fd = fs.openSync(temporary, 'wx', 0o600)
     try {
-      fs.writeFileSync(fd, JSON.stringify(record) + '\n')
+      fs.writeFileSync(fd, encoded)
       fs.fsyncSync(fd)
     } finally {
       fs.closeSync(fd)
