@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-11-14
 decision-date: 2026-11-14
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-11-14
+implementation-commits:
+  - f17f87aa62427b6b1b335f3ecda4deab62dc9d78
 superseded-by: []
 ---
 
@@ -74,9 +75,16 @@ with structural validation provides compatibility without multiple implementatio
 
 ## Implementation and Confirmation
 
-Accepted on 2026-11-14 under the author’s explicit implementation request after
-reviewing the destructive boundaries above. Pending implementation and compatibility checks. The author explicitly requested
-implementation; that request authorizes this bounded decision.
+Accepted on 2026-11-14 under the author's explicit implementation request after
+reviewing the destructive boundaries above. The bounded sidecar implementation is
+`f17f87aa62427b6b1b335f3ecda4deab62dc9d78`. Headers and build passed; related
+metadata/archive/model/selection tests passed 85 tests. The complete `npm test`
+retry passed 1,321 tests; format/lint reported 0 errors and 117 warnings. The first
+full run exited 1 during SQLite extraction without a summary or explicit error;
+the isolated extraction file passed 2 tests, and the complete retry passed.
+An independent reviewer found no blocking correctness issue; its stale title
+wording finding was corrected. These checks complete only this ADR's three-sidecar
+scope, not the broader compatibility removals deferred in the inventory.
 
 ## Follow-up Work
 
