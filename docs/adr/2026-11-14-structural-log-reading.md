@@ -1,8 +1,8 @@
 ---
-status: proposed
+status: accepted
 proposed-date: 2026-11-14
-decision-date: null
-implementation-status: not-started
+decision-date: 2026-11-14
+implementation-status: in-progress
 implementation-completed-date: null
 implementation-commits: []
 superseded-by: []
@@ -79,7 +79,8 @@ validated reader with a structural projection preserves both data and fixed writ
 
 ## Implementation and Confirmation
 
-Pending. The author's explicit request authorizes implementation of this bounded
+Accepted on 2026-11-14 after reviewing mixed-partition failure and unchanged
+write semantics. Pending implementation and validation. The author's explicit request authorizes implementation of this bounded
 backward-compatible alternative.
 
 ## Follow-up Work
