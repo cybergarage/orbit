@@ -67,7 +67,7 @@ SQLite already migrates v1 to v2 transactionally by adding automation/extraction
 tables while preserving catalog rows. Keep that backward-compatible upgrade.
 Structural table discovery could replace numeric dispatch in a separate change,
 but must check partial/corrupt schemas, constraints and indexes rather than merely
-testing table existence. No automatic catalog migration is run by this review.
+testing table existence. No user catalog is opened or migrated by this review.
 
 Retain storage pair IDs and ownership markers: unlike descriptive log extensions,
 unknown or missing authority cannot receive permissive defaults. None of these

@@ -66,9 +66,10 @@ extensions named category/correlation/eventType; their original record is preser
 under `fields.historicalRecord` when canonical fields are projected.
 
 A partial current structure without an explicit historical tag is an error and
-never falls back to the historical projection. Unknown fields survive normalization, including unknown status values
-inside extension fields. Missing outcome remains absent. Optional fields retain their existing acceptance
-contract, including numeric usage values emitted by the current writer; the reader
+never falls back to the historical projection. Unknown fields survive normalization,
+including unknown status values inside extension fields. Missing outcome remains absent.
+Optional fields retain their existing acceptance contract, including numeric usage
+values emitted by the current writer; the reader
 does not reinterpret them as success or positive resource measurements. Reading
 never changes saved bytes or cursor positions. See the
 [decision](adr/2026-11-14-structural-log-reading.md).

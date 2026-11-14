@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-11-14
 decision-date: 2026-11-14
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-11-14
+implementation-commits:
+  - 57499b88016886212aa32a4d864ba6bf3ecd69c0
 superseded-by: []
 ---
 
@@ -12,8 +13,8 @@ superseded-by: []
 
 ## Purpose
 
-Preserve existing log partitions while replacing numbered reader dispatch with a
-shared structural reader. The author requested backward-compatible alternatives
+Preserve existing log partitions while replacing separate numbered validators with
+shared validation and structural normalization. The author requested backward-compatible alternatives
 following the merged additive sidecar work. This scope does not migrate user data.
 
 ## Decision
@@ -89,7 +90,11 @@ values emitted by the unchanged writer, and structural name collisions rejected
 previously readable tagged historical records. Preserve the existing optional-field
 acceptance contract, add a real writer-to-file-to-reader regression and retain the
 historical tag for that ambiguity. Current required-field validation remains intact.
-Pending implementation validation. The author's explicit request authorizes implementation of this bounded
+Implementation `57499b88016886212aa32a4d864ba6bf3ecd69c0` completes this
+bounded log-reader scope. Headers and build passed. The full `npm test` run passed
+1,329 tests in six minutes, including 15 targeted log tests; format/lint reported
+0 errors and 117 warnings. Independent re-review found no remaining blocking issue.
+No user data was opened or migrated. The author's explicit request authorizes implementation of this bounded
 backward-compatible alternative.
 
 ## Follow-up Work
