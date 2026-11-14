@@ -288,6 +288,8 @@ its own final hash in a tracked file.
 
 ## Decision index
 
+[Additive session metadata](2026-11-14-additive-session-metadata.md) records the bounded sidecar cleanup and deferred destructive compatibility boundaries.
+
 | Proposed   | Status     | Implementation | Decision                                                                                        |
 | ---------- | ---------- | -------------- | ----------------------------------------------------------------------------------------------- |
 | 2026-11-11 | accepted | partial | [Selectable Session Compaction](2026-11-11-selectable-session-compaction.md) |
