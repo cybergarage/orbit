@@ -125,6 +125,6 @@ real mixed-file filtering, source byte preservation and repeat normalization.
 
 Correction implementation `492a330dcb4a5728fa69f32a74cbfaeacceb8c4e` passed
 headers and build, 17 targeted log tests and the full 1,331-test suite in five
-minutes. Format/lint reported 0 errors and 117 warnings. Independent re-review
+minutes. Format/lint reported 0 errors and 118 warnings. Independent re-review
 found no remaining blocker. The two added regressions exercise opaque historical
 outcome/timing/usage and actual mixed-file outcome filtering without changing bytes.
