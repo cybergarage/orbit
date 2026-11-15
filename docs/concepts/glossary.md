@@ -286,3 +286,9 @@ See [Input budgets and compaction](../context-compaction.md#source-derived-tool-
 - **Job receipt**: the event-to-job identity binding returned by admission.
   Scheduled jobs use the existing persisted scheduled run and attempt lifecycle.
   See [Durable event inbox](../event-inbox.md).
+
+- **Job priority**: explicit owner-supplied high/normal/low selection metadata,
+  separate from payload and operation authorization. Missing means normal.
+- **Eligible bypass**: one selection opportunity lost by a ready independent
+  key head to a higher-base-priority selection. Persisted bypass credits provide non-preemptive aging; blocked work
+  does not gain credits. See [Job priority](../job-priority.md).

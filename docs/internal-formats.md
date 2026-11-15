@@ -97,3 +97,9 @@ accepted. This bounded event change does not remove transcript, journal, log,
 metadata or catalog compatibility, and does not implement a general schema-version
 manager. PRs #35 and #36 retain their own validated metadata/log behavior. See the
 [event admission decision](adr/2026-11-14-durable-timer-inbox.md).
+
+Job priority and bypass counters are optional additive scheduling metadata in the
+existing task contract. Missing priority is normal, and missing counters start
+empty; present values remain validated. This does not increment the fixed task
+identifier, relabel unknown outcomes or change the public WorkState v1 snapshot.
+See [Job priority](job-priority.md).

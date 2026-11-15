@@ -42,6 +42,66 @@ describe('local GUI scheduling host (synthetic only)', () => {
     return host
   }
 
+  it('dispatches explicit independent schedule priorities through the persisted claim', async () => {
+    const store = new DurableWorkStore(path.join(root, 'work.json'))
+    const payload = (name: string) => ({
+      ...input(root).task,
+      creation: {input: 'synthetic priority', operationId: randomUUID()},
+      name,
+    })
+    store.schedule({effect: 'read', next: 1000, payload: payload('low'), priority: 'low'})
+    store.schedule({effect: 'read', next: 1000, payload: payload('normal')})
+    store.schedule({effect: 'read', next: 1000, payload: payload('high'), priority: 'high'})
+    const order: string[] = []
+    host = new LocalScheduler(store, async (task) => {
+      order.push(task.name)
+      return {result: 'synthetic', status: 'succeeded'}
+    })
+    await host.tick(1000)
+    await host.tick(1000)
+    await host.tick(1000)
+    expect(order).deep.equal(['high', 'normal', 'low'])
+    expect(host.snapshot().attempts).length(3)
+  })
+
+  it('does not abort active work when a higher priority schedule arrives', async () => {
+    let release!: () => void
+    let admitted!: () => void
+    const started = new Promise<void>((resolve) => {
+      admitted = resolve
+    })
+    const done = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const store = new DurableWorkStore(path.join(root, 'work.json'))
+    const payload = (name: string) => ({
+      ...input(root).task,
+      creation: {input: 'synthetic priority', operationId: randomUUID()},
+      name,
+    })
+    store.schedule({effect: 'read', next: 1000, payload: payload('low'), priority: 'low'})
+    const order: string[] = []
+    host = new LocalScheduler(store, async (task, _request, signal) => {
+      order.push(task.name)
+      if (task.name === 'low') {
+        admitted()
+        await done
+        expect(signal.aborted).equal(false)
+      }
+
+      return {result: 'synthetic', status: 'succeeded'}
+    })
+    const ticking = host.tick(1000)
+    await started
+    store.schedule({effect: 'read', next: 1000, payload: payload('high'), priority: 'high'})
+    expect(host.tick(1000)).equal(ticking)
+    expect(order).deep.equal(['low'])
+    release()
+    await ticking
+    await host.tick(1000)
+    expect(order).deep.equal(['low', 'high'])
+  })
+
   it('deletes schedules durably while allowing admitted work to settle and retaining files', async () => {
     let release!: () => void
     let admitted!: () => void

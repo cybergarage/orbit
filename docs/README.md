@@ -83,6 +83,8 @@ routing contract belongs in an ADR, and its implemented structure appears in
 
 - [Single-host durable event inbox](event-inbox.md): task-independent event acceptance, consumer delivery and atomic job admission.
 
+- [Job priority](job-priority.md): non-preemptive selection, same-key order and durable bypass aging.
+
 - [Durable scheduled work](scheduled-work.md): single-owner host schedules, stable request IDs and interrupted-attempt recovery.
 
 - [Explicit Skill selection](skills.md): source-identified, one-Run instructions and historical snapshots.

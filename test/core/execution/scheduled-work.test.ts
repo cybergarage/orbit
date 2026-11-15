@@ -218,7 +218,7 @@ describe('Durable scheduled work', () => {
 
       const bytes = JSON.stringify(state)
       fs.writeFileSync(file, bytes)
-      expect(() => new DurableWorkStore(file)).to.throw()
+      expect(() => new DurableWorkStore(file)).to.throw(/Corrupt|Orphaned|Conflicting|Unacknowledged/)
       expect(fs.readFileSync(file, 'utf8')).equal(bytes)
     })
 

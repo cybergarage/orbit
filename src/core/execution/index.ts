@@ -14,6 +14,9 @@ export {admitEvents, deliverEvent} from './event-inbox.js'
 export type {EventDelivery, InboxEvent, JobReceipt} from './event-inbox.js'
 export {EventStore} from './event-store.js'
 export type {EventInboxState, EventStoreOptions, EventStoreState} from './event-store.js'
+export {JOB_AGING_INTERVAL, resolveJobPriority, selectReadyJob, validateJobSchedulingState} from './job-priority.js'
+export type {JobPriority, JobSchedulingState, ReadyJobCandidate} from './job-priority.js'
+
 export {canonicalJSON, FileExecutionJournal, MemoryExecutionJournal} from './journal.js'
 export type {
   ExecutionJournal,

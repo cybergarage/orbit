@@ -39,6 +39,9 @@ try {
     'dist/core/execution/event-inbox.d.ts',
     'dist/core/execution/event-store.js',
     'dist/core/execution/event-store.d.ts',
+    'dist/core/execution/job-priority.js',
+    'dist/core/execution/job-priority.d.ts',
+    'docs/job-priority.md',
     'docs/event-inbox.md',
     'dist/core/model-catalog.js',
     'dist/core/model-gateway.js',
@@ -109,11 +112,18 @@ export function executionApi(run: RunContext, managed: ManagedToolOptions, execu
 // SPDX-License-Identifier: Apache-2.0
 import assert from 'node:assert/strict'
 import path from 'node:path'
-import {admitEvents, deliverEvent, DurableWorkStore, EventStore} from '@cybergarage/orbit'
-import type {EventDelivery, EventStoreState, InboxEvent, JobReceipt, WorkState} from '@cybergarage/orbit'
+import {admitEvents, deliverEvent, DurableWorkStore, EventStore, selectReadyJob} from '@cybergarage/orbit'
+import type {EventDelivery, EventStoreState, InboxEvent, JobReceipt, JobSchedulingState, ReadyJobCandidate, WorkClaim, WorkEnqueueOptions, WorkState} from '@cybergarage/orbit'
 
 assert.equal(typeof admitEvents, 'function')
 assert.equal(typeof deliverEvent, 'function')
+const scheduling: JobSchedulingState = {waiting: []}
+const candidates: ReadyJobCandidate[] = [
+  {id: 'low', key: 'low', sequence: 1, ready: true, priority: 'low'},
+  {id: 'high', key: 'high', sequence: 2, ready: true, priority: 'high'},
+]
+assert.equal(selectReadyJob(candidates, scheduling), 'high')
+assert.deepEqual(scheduling.waiting, [{id: 'low', bypasses: 1}])
 const file = path.resolve('event-store-consumer.json')
 let store = new EventStore(file)
 try {
@@ -139,6 +149,11 @@ try {
   const snapshot: WorkState = tasks.snapshot()
   assert.equal(snapshot.version, 1)
   assert.equal(snapshot.attempts.length, 0)
+  const options: WorkEnqueueOptions = {priority: 'high'}
+  tasks.enqueue('package-high', {}, 'read', undefined, options)
+  const claim: WorkClaim | undefined = tasks.claimNext()
+  assert.equal(claim?.run.id, 'package-high')
+  tasks.finish(claim!.run.id, claim!.attempt.id, 'succeeded', 'Synthetic result; no operation executed')
 } finally {tasks.close()}
 console.log('Package event consumer verified: public declarations, durable admission and task compatibility; no execution.')
 `,
