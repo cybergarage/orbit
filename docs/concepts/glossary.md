@@ -278,3 +278,11 @@ See [Input budgets and compaction](../context-compaction.md#source-derived-tool-
 
 - **Scheduled occurrence**: one materialized due timestamp associated with one stable request ID. A missed fixed interval coalesces to the latest due occurrence.
 - **Scheduled attempt**: one host dispatch attempt for a persisted scheduled run; distinct from its stable retry identity and from model/tool operation intents.
+
+- **Inbox event**: an immutable ingress fact with stable identity, source, type
+  and key-local sequence. The task-independent single-host EventStore currently supports timer ingress through its task adapter.
+- **Event delivery**: one consumer's durable admission state for an inbox event.
+  Acknowledged means a job was atomically admitted, not that execution succeeded.
+- **Job receipt**: the event-to-job identity binding returned by admission.
+  Scheduled jobs use the existing persisted scheduled run and attempt lifecycle.
+  See [Durable event inbox](../event-inbox.md).

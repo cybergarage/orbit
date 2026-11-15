@@ -35,6 +35,11 @@ try {
   for (const required of [
     'dist/index.js',
     'dist/index.d.ts',
+    'dist/core/execution/event-inbox.js',
+    'dist/core/execution/event-inbox.d.ts',
+    'dist/core/execution/event-store.js',
+    'dist/core/execution/event-store.d.ts',
+    'docs/event-inbox.md',
     'dist/core/model-catalog.js',
     'dist/core/model-gateway.js',
     'dist/core/session/model-selection.js',
@@ -96,6 +101,46 @@ export function executionApi(run: RunContext, managed: ManagedToolOptions, execu
   const prepared: PreparedExecutionOptions = {deferPluginStartupFailure: false}
   return {ModelCatalog, ModelGateway, modelSelectionSchema, executor: new OperationExecutor(run, managed), executeManagedTool, executePrepared, options, prepared}
 }
+`,
+  )
+  await writeFile(
+    path.join(consumer, 'src/event-store-api-probe.ts'),
+    `// Copyright (c) 2026 The Orbit Authors
+// SPDX-License-Identifier: Apache-2.0
+import assert from 'node:assert/strict'
+import path from 'node:path'
+import {admitEvents, deliverEvent, DurableWorkStore, EventStore} from '@cybergarage/orbit'
+import type {EventDelivery, EventStoreState, InboxEvent, JobReceipt, WorkState} from '@cybergarage/orbit'
+
+assert.equal(typeof admitEvents, 'function')
+assert.equal(typeof deliverEvent, 'function')
+const file = path.resolve('event-store-consumer.json')
+let store = new EventStore(file)
+try {
+  const event: Omit<InboxEvent, 'sequence'> = {id: 'consumer-event', key: 'entity', source: 'synthetic', type: 'input', payload: {value: 1}}
+  store.accept(event, 'worker', (state) => {state.data.cursor = 1})
+  const receipts: JobReceipt[] = store.admit('worker', (fact, state) => {
+    state.data.job = {eventId: fact.id, status: 'queued'}
+    return 'consumer-job'
+  })
+  assert.deepEqual(receipts, [{eventId: event.id, jobId: 'consumer-job'}])
+  store.close()
+  store = new EventStore(file)
+  const state: EventStoreState = store.snapshot()
+  const delivery: EventDelivery = state.deliveries[0]!
+  assert.equal(delivery.status, 'acknowledged')
+  assert.equal(state.data.cursor, 1)
+  assert.deepEqual(store.admit('worker', () => {throw new Error('Duplicate consumer admission')}), [])
+} finally {store.close()}
+const tasks = new DurableWorkStore(path.resolve('task-store-consumer.json'))
+try {
+  tasks.schedule({effect: 'opaque', next: 1000, payload: {synthetic: true}})
+  assert.equal(tasks.materialize(1000).length, 1)
+  const snapshot: WorkState = tasks.snapshot()
+  assert.equal(snapshot.version, 1)
+  assert.equal(snapshot.attempts.length, 0)
+} finally {tasks.close()}
+console.log('Package event consumer verified: public declarations, durable admission and task compatibility; no execution.')
 `,
   )
   await writeFile(
@@ -234,6 +279,10 @@ console.log('Package initialization consumer verified: public types, all scopes,
   )
   runNpm(['run', 'build'], consumer)
   runNpm(['test'], consumer)
+  execFileSync(process.execPath, [path.join(consumer, 'dist/event-store-api-probe.js')], {
+    cwd: consumer,
+    stdio: 'inherit',
+  })
   execFileSync(process.execPath, [path.join(consumer, 'dist/rename-api-probe.js')], {cwd: consumer, stdio: 'inherit'})
   execFileSync(process.execPath, [path.join(consumer, 'dist/initialization-api-probe.js')], {
     cwd: consumer,

@@ -9,7 +9,9 @@ missing evidence.
 
 ## Inventory and disposition
 
-This inventory was checked at `4a36fd5606a9d3a0a07d18a1d746d1a41ee44ed3`.
+The original inventory was checked at `4a36fd5606a9d3a0a07d18a1d746d1a41ee44ed3`.
+The event/scheduled-work row below was updated against the event-foundation work
+integrated with `464adc14ff2dec9679dd4941f3d58d446b3e8892`.
 
 | Family                                                                                                              | Disposition                                                           | Reason                                                                                                                                                                                                                                                                                                               |
 | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -20,7 +22,7 @@ This inventory was checked at `4a36fd5606a9d3a0a07d18a1d746d1a41ee44ed3`.
 | Storage bindings v1/v2, registration attempts; ownership/deletion/recovery markers                                  | Retain pending coordinated design                                     | Pair identity, incomplete registration and exclusive ownership protect filesystem authority. Removing legacy binding interpretation can strand registered stores.                                                                                                                                                    |
 | SQLite project catalog user_version 0/1/2                                                                           | Deferred, destructive boundary                                        | v1 lacks current catalog additions; removing its upgrade makes existing project membership inaccessible. Empty database initialization is distinct from accepting an unversioned nonempty database.                                                                                                                  |
 | Log records and opaque pagination cursor                                                                            | Shared structural reader; retain current writes and fixed identifiers | Shared required validation projects historical flat records in memory; a historical tag resolves extension collisions, and damaged current records reject. Unknown extensions and saved bytes survive. Cursor positions remain unchanged.                                                                            |
-| Scheduled-work state and GUI task payload `1`                                                                       | Retain pending dedicated validation review                            | Persisted retries, claims, permissions and unknown occurrence results must survive; do not combine with the separately in-progress EventStore/timer work.                                                                                                                                                            |
+| Event inbox, scheduled-work state and GUI task payload | Retain fixed evidence-contract identifiers | Standalone inbox `1`, legacy task `1`, event-backed task `2` and GUI payload `1` have separate contracts. Legacy task import preserves records; present event evidence cannot be discarded by relabelling as legacy. Required identities, fields, ownership, permissions and unknown outcomes remain validated. |
 | Authorization snapshots, budget continuation, observation provenance, project context, skills, evaluation artifacts | Retain fixed identifiers                                              | Evidence and contract identifiers protect authority, provenance, immutable digests and typed interpretation. Additive evolution must preserve their validation and unknown states.                                                                                                                                   |
 | Context-summary `1`, algorithm/schema IDs and literal tool-output encodings                                         | Retain fixed identifiers                                              | Differentiate evidence-bearing summary and escaped output contracts; never treat missing test outcome as passed.                                                                                                                                                                                                     |
 | Diagnostic reports and runtime metadata                                                                             | Retain fixed identifiers                                              | Exported consumer contracts; no alternate historical implementation to remove in this change.                                                                                                                                                                                                                        |
@@ -74,3 +76,24 @@ Retain storage pair IDs and ownership markers: unlike descriptive log extensions
 unknown or missing authority cannot receive permissive defaults. None of these
 alternatives requires deleting or resetting user data. Further consolidation is
 possible, but cannot safely infer historical execution guarantees from absent data.
+
+## Event and task evidence contracts
+
+The [single-host event inbox](event-inbox.md) uses one fixed current structure
+with required facts, consumer deliveries and application data. Adding optional
+application data or independent extensions does not require an incremented
+identifier. Current required fields remain mandatory even with a recognized tag.
+
+The [task adapter](scheduled-work.md) retains the legacy reader for task-state
+`1` and writes event-backed task-state `2`. The latter requires event and delivery
+evidence; missing evidence is not interpreted as an empty inbox. A record tagged
+`1` that contains those reserved event fields is ambiguous and rejects unchanged,
+rather than dropping pending deliveries or manufacturing acknowledgements.
+Ordinary legacy task histories import without altering IDs or application data.
+The public task snapshot and GUI payload contracts remain unchanged.
+
+New saved task state need not be readable by older binaries, as the user has
+accepted. This bounded event change does not remove transcript, journal, log,
+metadata or catalog compatibility, and does not implement a general schema-version
+manager. PRs #35 and #36 retain their own validated metadata/log behavior. See the
+[event admission decision](adr/2026-11-14-durable-timer-inbox.md).

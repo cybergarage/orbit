@@ -10,6 +10,10 @@ export type {
   PreparedExecutionOptions,
   PreparedOperation,
 } from './authorization.js'
+export {admitEvents, deliverEvent} from './event-inbox.js'
+export type {EventDelivery, InboxEvent, JobReceipt} from './event-inbox.js'
+export {EventStore} from './event-store.js'
+export type {EventInboxState, EventStoreOptions, EventStoreState} from './event-store.js'
 export {canonicalJSON, FileExecutionJournal, MemoryExecutionJournal} from './journal.js'
 export type {
   ExecutionJournal,
@@ -18,6 +22,7 @@ export type {
   JournalLevel,
   JournalRecord,
 } from './journal.js'
+
 export {parseBudgetReason, parseRunLimits} from './limits.js'
 export type {BudgetExhaustion, ExecutionLimit} from './limits.js'
 
