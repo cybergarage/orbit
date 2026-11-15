@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-11-15
 decision-date: 2026-11-15
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-11-15
+implementation-commits:
+  - 81a9730aee770858164d2ef8b9821aa398c9652d
 superseded-by: []
 ---
 
@@ -117,8 +118,8 @@ ordering, with no sleeping or test clocks.
 
 The user authorized design and implementation, then independent review and PR
 publication. The proposal was reviewed against the safety requirements and accepted on
-2026-11-15 before source implementation; retain
-formal completion until implementation commits and validation exist. Tests must
+2026-11-15 before source implementation. The later completion record below
+identifies the implementation commit after validation and independent review. Tests must
 cover sustained urgent arrivals, blocked heads, restart fairness, default FIFO,
 explicit metadata/payload separation, atomic failure and unchanged interruption,
 terminal cancellation and unknown-effect behavior.
@@ -147,6 +148,13 @@ unknown-effect, no-preemption, same-key and atomic-failure tests pass. Touched
 timer capture/validation paths were split into focused helpers, and the relevant
 corruption test now asserts semantic exception messages. Unrelated #37 style
 findings are not claimed resolved. No workflow/dependency/budget change is made.
+
+Implementation completed on 2026-11-15 in
+`81a9730aee770858164d2ef8b9821aa398c9652d`, after the separately committed
+accepted decision. This later documentation commit records completion evidence.
+Publication is authorized; merge and deployment are not. Current-head CI results
+are recorded in the PR and are distinct from the successful local checks above.
+The remaining items below are outside this decision's completed scope.
 
 ## Follow-up Work
 
