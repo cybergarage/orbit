@@ -2,9 +2,10 @@
 status: accepted
 proposed-date: 2026-11-14
 decision-date: 2026-11-14
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-11-15
+implementation-commits:
+  - bf65eec840574049c8c8436fa36e3deb08ca61ec
 superseded-by: []
 ---
 
@@ -166,8 +167,7 @@ before result recording; the latter remains unknown without redispatch.
 Existing timer migration, cancellation and interrupted-attempt tests continue
 to pass over the extracted store. No live provider calls were used. Windows,
 physical power loss and distributed behavior are not qualified by these local
-checks. Formal implementation completion remains unset until authorized
-implementation and later documentation commits exist.
+checks. Formal completion is recorded below after the authorized implementation commit.
 
 Integrated confirmation on 2026-11-15 at base
 `464adc14ff2dec9679dd4941f3d58d446b3e8892`: headers and build passed;
@@ -185,7 +185,20 @@ before publication. Failed owner release remains closed to writes and can be
 retried without removing a replacement owner's lock. The implementation of PRs
 #35 and #36 remains unchanged in the patch; only the event-specific inventory
 entry and policy links were added. All state tests use isolated temporary data.
-No backup, stash, commit, push, PR merge, deployment or CI-budget change was made.
+Pre-publication validation used no backup or stash and made no commits, pushes,
+PR merges, deployments or CI-budget changes.
+
+### Implementation completion — 2026-11-15
+
+Implementation commit `bf65eec840574049c8c8436fa36e3deb08ca61ec` completes the
+defined single-host event-store, task compatibility and timer intake stage.
+The accepted decision was committed separately before the implementation commit.
+This later documentation commit records that implementation hash, the local
+validation evidence above and the remaining excluded phases. Publication is
+authorized; merge and deployment remain outside the request. Existing push CI
+runs under its unchanged configuration; current-head results are reported in the
+pull request rather than inferred from local checks. Windows, physical power
+loss and distributed guarantees remain unqualified.
 
 The first-stage completion boundary is the independently usable local EventStore,
 its shared-transaction task adapter and timer intake. Application execution still
