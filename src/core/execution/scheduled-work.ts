@@ -6,6 +6,13 @@ import {createHash, randomUUID} from 'node:crypto'
 import {canonicalJSON} from './canonical-json.js'
 import {admitEvents, deliverEvent, type EventDelivery, type InboxEvent} from './event-inbox.js'
 import {EventStore} from './event-store.js'
+import {
+  type JobPriority,
+  type JobSchedulingState,
+  resolveJobPriority,
+  selectReadyJob,
+  validateJobSchedulingState,
+} from './job-priority.js'
 
 export type WorkStatus = 'approval' | 'cancelled' | 'failed' | 'queued' | 'running' | 'succeeded' | 'unknown'
 export interface WorkSchedule {
@@ -15,6 +22,7 @@ export interface WorkSchedule {
   next: number
   paused: boolean
   payload: unknown
+  priority?: JobPriority
 }
 export interface WorkOccurrence {
   due: number
@@ -35,10 +43,23 @@ export interface ScheduledRun {
   id: string
   occurrenceId: string
   payload: unknown
+  priority?: JobPriority
   requestId: string
   result?: string
   status: WorkStatus
 }
+export interface WorkEnqueueOptions {
+  priority?: JobPriority
+}
+export interface WorkClaim {
+  attempt: WorkAttempt
+  run: ScheduledRun
+}
+interface WorkInsertion extends Pick<ScheduledRun, 'effect' | 'id' | 'payload' | 'priority'> {
+  due: number
+  scheduleId?: string
+}
+
 export interface WorkState {
   attempts: WorkAttempt[]
   data: Record<string, unknown>
@@ -54,6 +75,7 @@ interface TimerEvent extends InboxEvent {
   id: string
   occurrenceId: string
   payload: unknown
+  priority?: JobPriority
   scheduleId: string
   type: 'timer'
 }
@@ -61,6 +83,7 @@ interface TimerEvent extends InboxEvent {
 interface EventWorkState extends Omit<WorkState, 'version'> {
   deliveries: EventDelivery[]
   events: TimerEvent[]
+  jobScheduling?: JobSchedulingState
   version: 2
 }
 
@@ -111,6 +134,14 @@ export class DurableWorkStore {
           )
         )
           throw new Error('Corrupt work identities or state')
+        for (const run of state.runs) resolveJobPriority(run.priority)
+        for (const schedule of state.schedules) resolveJobPriority(schedule.priority)
+        if (state.jobScheduling !== undefined) {
+          validateJobSchedulingState(state.jobScheduling)
+          if (state.jobScheduling.waiting.some((entry) => !state.runs.some((run) => run.id === entry.id)))
+            throw new Error('Corrupt scheduling job identity')
+        }
+
         // Import only after validating the legacy identities, retaining all application data.
         if (Number(state.version) === 1) {
           if (Object.hasOwn(state, 'events') || Object.hasOwn(state, 'deliveries'))
@@ -169,13 +200,33 @@ export class DurableWorkStore {
   }
 
   claim(id: string): WorkAttempt {
+    return this.change((state) => this.insertAttempt(state, id))
+  }
+
+  claimNext(): undefined | WorkClaim {
     return this.change((state) => {
-      const run = state.runs.find((r) => r.id === id)
-      if (!run || run.status !== 'queued') throw new Error('Run not queued')
-      run.status = 'running'
-      const attempt: WorkAttempt = {id: randomUUID(), runId: id, started: Date.now(), status: 'running'}
-      state.attempts.push(attempt)
-      return attempt
+      // Preserve the single-owner execution boundary and conservative unknown-effect stop.
+      if (state.runs.some((run) => run.status === 'running' || run.status === 'unknown')) return
+      const jobs = state.runs.flatMap((run, index) => {
+        if (!['approval', 'queued'].includes(run.status)) return []
+        const occurrence = state.occurrences.find((value) => value.id === run.occurrenceId)!
+        const key = occurrence.scheduleId === undefined ? ['request', run.id] : ['schedule', occurrence.scheduleId]
+        return [
+          {
+            id: run.id,
+            key: JSON.stringify(key),
+            priority: run.priority,
+            ready: run.status === 'queued',
+            sequence: index + 1,
+          },
+        ]
+      })
+      const scheduling = state.jobScheduling ?? {waiting: []}
+      const id = selectReadyJob(jobs, scheduling)
+      if (!id) return
+      state.jobScheduling = scheduling
+      const attempt = this.insertAttempt(state, id)
+      return {attempt, run: state.runs.find((run) => run.id === id)!}
     })
   }
 
@@ -183,8 +234,23 @@ export class DurableWorkStore {
     this.backend.close()
   }
 
-  enqueue(id: string, payload: unknown, effect: 'opaque' | 'read' = 'read', approval?: string): string {
+  enqueue(
+    id: string,
+    payload: unknown,
+    effect: 'opaque' | 'read' = 'read',
+    approval?: string,
+    options?: WorkEnqueueOptions,
+  ): string {
     if (!id || id.length > 200 || !['opaque', 'read'].includes(effect)) throw new Error('Invalid request')
+    if (
+      options !== undefined &&
+      (!options ||
+        typeof options !== 'object' ||
+        Array.isArray(options) ||
+        Object.keys(options).some((key) => key !== 'priority'))
+    )
+      throw new Error('Invalid enqueue options')
+    const priority = resolveJobPriority(options?.priority)
     return this.change((state) => {
       if (state.events.some((event) => event.occurrenceId === id)) throw new Error('Conflicting request ID')
       const existing = state.runs.find((r) => r.occurrenceId === id)
@@ -193,13 +259,20 @@ export class DurableWorkStore {
           state.occurrences.find((o) => o.id === id)?.scheduleId !== undefined ||
           canonicalJSON(existing.payload) !== canonicalJSON(payload) ||
           existing.effect !== effect ||
+          resolveJobPriority(existing.priority) !== priority ||
           existing.approval?.preview !== approval
         )
           throw new Error('Conflicting request ID')
         return existing.id
       }
 
-      const run = this.insert(state, id, payload, effect, Date.now())
+      const run = this.insert(state, {
+        due: Date.now(),
+        effect,
+        id,
+        payload,
+        ...(options?.priority === undefined ? {} : {priority}),
+      })
       if (approval !== undefined) {
         run.status = 'approval'
         run.approval = {preview: approval}
@@ -242,7 +315,7 @@ export class DurableWorkStore {
         state.events,
         state.deliveries,
         'scheduled-work',
-        (event) => this.insert(state, event.occurrenceId, event.payload, event.effect, event.due, event.scheduleId).id,
+        (event) => this.insert(state, this.timerWork(event)).id,
       ).map((receipt) => receipt.jobId),
     )
   }
@@ -299,10 +372,12 @@ export class DurableWorkStore {
       (input.interval !== undefined && (!Number.isSafeInteger(input.interval) || input.interval < 1000))
     )
       throw new Error('Invalid timestamp or interval')
+    resolveJobPriority(input.priority)
     if (!['opaque', 'read'].includes(input.effect)) throw new Error('Invalid effect')
     return this.change((state) => {
       const id = randomUUID()
-      state.schedules.push({...input, id, paused: false})
+      const {priority, ...schedule} = input
+      state.schedules.push({...schedule, id, paused: false, ...(priority === undefined ? {} : {priority})})
       return id
     })
   }
@@ -332,39 +407,34 @@ export class DurableWorkStore {
       if (ids.has(run.id) && (run.status === 'queued' || run.status === 'approval')) run.status = 'cancelled'
   }
 
+  private captureTimer(state: EventWorkState, schedule: WorkSchedule, now: number): void {
+    const due = schedule.interval
+      ? schedule.next + Math.floor((now - schedule.next) / schedule.interval) * schedule.interval
+      : schedule.next
+    const next = schedule.interval ? due + schedule.interval : due
+    if (!Number.isSafeInteger(due) || !Number.isSafeInteger(next)) throw new Error('Schedule timestamp overflow')
+    const event: Omit<TimerEvent, 'sequence'> = {
+      due,
+      effect: schedule.effect,
+      id: JSON.stringify(['timer', schedule.id, due]),
+      key: schedule.id,
+      occurrenceId: `${schedule.id}:${due}`,
+      payload: schedule.payload,
+      scheduleId: schedule.id,
+      source: 'schedule',
+      type: 'timer',
+      ...(schedule.priority === undefined ? {} : {priority: schedule.priority}),
+    }
+    this.matchOccurrence(state, this.timerWork(event))
+    deliverEvent(state.events, state.deliveries, event, 'scheduled-work')
+    if (schedule.interval) schedule.next = next
+    else schedule.paused = true
+  }
+
   private captureTimers(now: number): void {
     this.change((state) => {
       for (const schedule of state.schedules)
-        if (!schedule.paused && schedule.next <= now) {
-          const due = schedule.interval
-            ? schedule.next + Math.floor((now - schedule.next) / schedule.interval) * schedule.interval
-            : schedule.next
-          const next = schedule.interval ? due + schedule.interval : due
-          if (!Number.isSafeInteger(due) || !Number.isSafeInteger(next)) throw new Error('Schedule timestamp overflow')
-          const id = JSON.stringify(['timer', schedule.id, due])
-          const occurrenceId = `${schedule.id}:${due}`
-          // Check legacy/public collisions before committing the cursor.
-          this.matchOccurrence(state, occurrenceId, schedule.payload, schedule.effect, due, schedule.id)
-          deliverEvent(
-            state.events,
-            state.deliveries,
-            {
-              due,
-              effect: schedule.effect,
-              id,
-              key: schedule.id,
-              occurrenceId,
-              payload: schedule.payload,
-              scheduleId: schedule.id,
-              source: 'schedule',
-              type: 'timer',
-            },
-            'scheduled-work',
-          )
-
-          if (schedule.interval) schedule.next = next
-          else schedule.paused = true
-        }
+        if (!schedule.paused && schedule.next <= now) this.captureTimer(state, schedule, now)
     })
   }
 
@@ -372,44 +442,60 @@ export class DurableWorkStore {
     return this.backend.transact(update)
   }
 
-  private insert(
-    state: EventWorkState,
-    id: string,
-    payload: unknown,
-    effect: 'opaque' | 'read',
-    due: number,
-    scheduleId?: string,
-  ): ScheduledRun {
-    const existing = this.matchOccurrence(state, id, payload, effect, due, scheduleId)
+  private insert(state: EventWorkState, input: WorkInsertion): ScheduledRun {
+    const existing = this.matchOccurrence(state, input)
     if (existing) return existing
-    const run: ScheduledRun = {effect, id, occurrenceId: id, payload, requestId: stableRequestId(id), status: 'queued'}
+    const {due, effect, id, payload, priority, scheduleId} = input
+    const run: ScheduledRun = {
+      effect,
+      id,
+      occurrenceId: id,
+      payload,
+      requestId: stableRequestId(id),
+      status: 'queued',
+      ...(priority === undefined ? {} : {priority}),
+    }
     state.occurrences.push({due, id, runId: id, ...(scheduleId ? {scheduleId} : {})})
     state.runs.push(run)
     return run
   }
 
-  private matchOccurrence(
-    state: EventWorkState,
-    id: string,
-    payload: unknown,
-    effect: 'opaque' | 'read',
-    due: number,
-    scheduleId?: string,
-  ): ScheduledRun | undefined {
+  private insertAttempt(state: EventWorkState, id: string): WorkAttempt {
+    const run = state.runs.find((value) => value.id === id)
+    if (!run || run.status !== 'queued') throw new Error('Run not queued')
+    run.status = 'running'
+    const attempt: WorkAttempt = {id: randomUUID(), runId: id, started: Date.now(), status: 'running'}
+    state.attempts.push(attempt)
+    return attempt
+  }
+
+  private matchOccurrence(state: EventWorkState, input: WorkInsertion): ScheduledRun | undefined {
+    const {due, effect, id, payload, priority, scheduleId} = input
     const existing = state.runs.find((run) => run.id === id || run.occurrenceId === id)
     if (!existing) return undefined
     const occurrence = state.occurrences.find((value) => value.id === id)
     if (
-      !occurrence ||
-      occurrence.runId !== existing.id ||
+      occurrence?.runId !== existing.id ||
       occurrence.scheduleId !== scheduleId ||
       (scheduleId !== undefined && occurrence.due !== due) ||
       existing.effect !== effect ||
+      resolveJobPriority(existing.priority) !== resolveJobPriority(priority) ||
       canonicalJSON(existing.payload) !== canonicalJSON(payload) ||
       existing.approval !== undefined
     )
       throw new Error('Conflicting occurrence ID')
     return existing
+  }
+
+  private timerWork(event: Omit<TimerEvent, 'sequence'>): WorkInsertion {
+    return {
+      due: event.due,
+      effect: event.effect,
+      id: event.occurrenceId,
+      payload: event.payload,
+      scheduleId: event.scheduleId,
+      ...(event.priority === undefined ? {} : {priority: event.priority}),
+    }
   }
 
   private validateEvents(state: EventWorkState): void {
@@ -419,54 +505,59 @@ export class DurableWorkStore {
     const seen = new Set<string>()
     const positions = new Set<string>()
     for (const event of state.events) {
-      if (
-        !event ||
-        event.type !== 'timer' ||
-        event.source !== 'schedule' ||
-        event.key !== event.scheduleId ||
-        !Number.isSafeInteger(event.sequence) ||
-        event.sequence <= 0 ||
-        typeof event.scheduleId !== 'string' ||
-        !event.scheduleId ||
-        !Number.isSafeInteger(event.due) ||
-        event.due < 0 ||
-        !['opaque', 'read'].includes(event.effect) ||
-        event.id !== JSON.stringify(['timer', event.scheduleId, event.due]) ||
-        seen.has(event.id) ||
-        event.occurrenceId !== `${event.scheduleId}:${event.due}`
-      )
-        throw new Error('Corrupt timer inbox')
+      this.validateTimerIdentity(event)
       const position = JSON.stringify([event.key, event.sequence])
-      if (positions.has(position)) throw new Error('Corrupt event sequence')
+      if (seen.has(event.id) || positions.has(position)) throw new Error('Corrupt event sequence')
       positions.add(position)
       seen.add(event.id)
-      const run = this.matchOccurrence(
-        state,
-        event.occurrenceId,
-        event.payload,
-        event.effect,
-        event.due,
-        event.scheduleId,
-      )
-      const deliveries = state.deliveries.filter((delivery) => delivery.eventId === event.id)
-      if (
-        deliveries.length !== 1 ||
-        deliveries[0].consumer !== 'scheduled-work' ||
-        !['acknowledged', 'cancelled', 'pending'].includes(deliveries[0].status)
-      )
-        throw new Error('Corrupt event delivery')
-      const delivery = deliveries[0]
-      if (delivery.status === 'acknowledged' && (!run || delivery.jobId !== run.id))
-        throw new Error('Corrupt timer acknowledgement')
-      if (delivery.status !== 'acknowledged' && delivery.jobId !== undefined)
-        throw new Error('Unacknowledged delivery has job identity')
-      if (delivery.status === 'pending') {
-        const schedule = state.schedules.find((value) => value.id === event.scheduleId)
-        if (!schedule) throw new Error('Orphaned pending timer')
-        if (schedule.effect !== event.effect || canonicalJSON(schedule.payload) !== canonicalJSON(event.payload))
-          throw new Error('Conflicting pending timer source')
-      }
+      resolveJobPriority(event.priority)
+      const run = this.matchOccurrence(state, this.timerWork(event))
+      this.validateTimerDelivery(state, event, run)
     }
+  }
+
+  private validateTimerDelivery(state: EventWorkState, event: TimerEvent, run?: ScheduledRun): void {
+    const deliveries = state.deliveries.filter((delivery) => delivery.eventId === event.id)
+    if (
+      deliveries.length !== 1 ||
+      deliveries[0].consumer !== 'scheduled-work' ||
+      !['acknowledged', 'cancelled', 'pending'].includes(deliveries[0].status)
+    )
+      throw new Error('Corrupt event delivery')
+    const delivery = deliveries[0]
+    if (delivery.status === 'acknowledged' && (!run || delivery.jobId !== run.id))
+      throw new Error('Corrupt timer acknowledgement')
+    if (delivery.status !== 'acknowledged' && delivery.jobId !== undefined)
+      throw new Error('Unacknowledged delivery has job identity')
+    if (delivery.status === 'pending') {
+      const schedule = state.schedules.find((value) => value.id === event.scheduleId)
+      if (!schedule) throw new Error('Orphaned pending timer')
+      if (
+        schedule.effect !== event.effect ||
+        resolveJobPriority(schedule.priority) !== resolveJobPriority(event.priority) ||
+        canonicalJSON(schedule.payload) !== canonicalJSON(event.payload)
+      )
+        throw new Error('Conflicting pending timer source')
+    }
+  }
+
+  private validateTimerIdentity(event: TimerEvent): void {
+    if (
+      !event ||
+      event.type !== 'timer' ||
+      event.source !== 'schedule' ||
+      event.key !== event.scheduleId ||
+      !Number.isSafeInteger(event.sequence) ||
+      event.sequence <= 0 ||
+      typeof event.scheduleId !== 'string' ||
+      !event.scheduleId ||
+      !Number.isSafeInteger(event.due) ||
+      event.due < 0 ||
+      !['opaque', 'read'].includes(event.effect) ||
+      event.id !== JSON.stringify(['timer', event.scheduleId, event.due]) ||
+      event.occurrenceId !== `${event.scheduleId}:${event.due}`
+    )
+      throw new Error('Corrupt timer inbox')
   }
 }
 

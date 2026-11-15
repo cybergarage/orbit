@@ -294,6 +294,7 @@ its own final hash in a tracked file.
 
 | Proposed   | Status     | Implementation | Decision                                                                                        |
 | ---------- | ---------- | -------------- | ----------------------------------------------------------------------------------------------- |
+| 2026-11-15 | accepted | completed | [Job priority and bounded aging](2026-11-15-job-priority.md) |
 | 2026-11-14 | accepted | completed | [Durable timer inbox](2026-11-14-durable-timer-inbox.md) |
 | 2026-11-11 | accepted | partial | [Selectable Session Compaction](2026-11-11-selectable-session-compaction.md) |
 | 2026-10-23 | accepted | completed | [Automatic Project Knowledge](2026-10-23-automatic-project-knowledge.md) |

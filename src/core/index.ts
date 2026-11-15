@@ -85,6 +85,8 @@ export {DurableWorkStore} from './execution/scheduled-work.js'
 export type {
   ScheduledRun,
   WorkAttempt,
+  WorkClaim,
+  WorkEnqueueOptions,
   WorkOccurrence,
   WorkSchedule,
   WorkState,

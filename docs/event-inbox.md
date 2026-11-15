@@ -111,3 +111,9 @@ payloads, consumer progress and the default application-data structure validate
 on writes and reopening. Independent unknown fields are preserved. See
 [Internal formats](internal-formats.md) for alignment with the separate metadata
 and historical-log compatibility work.
+
+Application-owned jobs can use the public `selectReadyJob` helper inside an
+EventStore transaction to claim a job and persist `JobSchedulingState` together.
+This does not reorder event admission or reinterpret event payload fields as
+execution priority. See [Job priority](job-priority.md) for the complete unfinished
+candidate set, same-key blocking and fairness requirements.

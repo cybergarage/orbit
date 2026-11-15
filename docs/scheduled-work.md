@@ -44,3 +44,10 @@ so job creation and delivery acknowledgement cannot split across stores. See
 [Single-host durable event inbox](event-inbox.md) for direct usage without tasks,
 consumer ordering, and the generic persistence contract. Messages,
 approval-answer ingress and outgoing notifications remain later stages.
+
+`enqueue()` and `schedule()` accept optional explicit job priority; missing means
+normal. `claimNext()` atomically selects an eligible independent job, persists
+fairness progress and claims one attempt. The bundled host uses it without
+preempting active work. The existing explicit `claim(id)` API remains available.
+See [Job priority](job-priority.md) for the per-key ordering, bounded aging,
+metadata placement and backward compatibility contract.

@@ -9,7 +9,13 @@ import path from 'node:path'
 import {pathToFileURL} from 'node:url'
 import {stub} from 'sinon'
 
-import {EventStore, type EventStoreState} from '../../../src/index.js'
+import {
+  EventStore,
+  type EventStoreState,
+  type JobSchedulingState,
+  type ReadyJobCandidate,
+  selectReadyJob,
+} from '../../../src/index.js'
 
 const fact = {id: 'first', key: 'entity', payload: {value: 1}, source: 'synthetic', type: 'input'}
 
@@ -22,6 +28,48 @@ describe('Task-independent durable event store', () => {
 
   afterEach(() => {
     fs.rmSync(root, {force: true, recursive: true})
+  })
+
+  it('keeps owner-defined priority claims and aging in the same durable transaction', () => {
+    interface QueueState extends EventStoreState {
+      jobs: ReadyJobCandidate[]
+      scheduling: JobSchedulingState
+    }
+    const file = path.join(root, 'priority.json')
+    const store = new EventStore<QueueState>(file, {
+      initialState: {
+        data: {},
+        deliveries: [],
+        events: [],
+        jobs: [],
+        scheduling: {waiting: []},
+        version: 1,
+      },
+    })
+    store.accept(fact, 'worker')
+    store.admit('worker', (event, state) => {
+      state.jobs.push({id: event.id, key: 'low', priority: 'low', ready: true, sequence: 1}, {id: 'high', key: 'high', priority: 'high', ready: true, sequence: 2})
+      return event.id
+    })
+    expect(() =>
+      store.transact((state) => {
+        selectReadyJob(state.jobs, state.scheduling)
+        throw new Error('Rejected synthetic claim')
+      }),
+    ).to.throw('Rejected synthetic claim')
+    expect(store.snapshot().scheduling.waiting).deep.equal([])
+    const id = store.transact((state) => {
+      const selected = selectReadyJob(state.jobs, state.scheduling)!
+      state.jobs.find((job) => job.id === selected)!.ready = false
+      return selected
+    })
+    expect(id).equal('high')
+    store.close()
+    const reopened = new EventStore<QueueState>(file)
+    expect(reopened.snapshot().scheduling.waiting).deep.equal([{bypasses: 1, id: 'first'}])
+    expect(reopened.snapshot().jobs[1].ready).equal(false)
+    expect(reopened.snapshot().deliveries[0].status).equal('acknowledged')
+    reopened.close()
   })
 
   it('persists facts, independent consumers and atomic job admission without task APIs', () => {

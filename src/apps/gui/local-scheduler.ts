@@ -6,7 +6,7 @@ import path from 'node:path'
 import {z} from 'zod'
 
 import {ExecutionRequestError} from '../../core/execution/run.js'
-import {DurableWorkStore, type ScheduledRun} from '../../core/execution/scheduled-work.js'
+import {DurableWorkStore, type WorkClaim} from '../../core/execution/scheduled-work.js'
 
 export const taskSchema = z
   .object({
@@ -218,11 +218,11 @@ export class LocalScheduler {
     if (this.active) return
     if (this.store.snapshot().runs.some((run) => run.status === 'unknown')) return
     this.store.materialize(now)
-    const run = this.store.snapshot().runs.find((value) => value.status === 'queued')
-    if (!run) return
+    const claim = this.store.claimNext()
+    if (!claim) return
     const controller = new AbortController()
-    const done = this.run(run, controller)
-    this.active = {controller, done, id: run.id}
+    const done = this.run(claim, controller)
+    this.active = {controller, done, id: claim.run.id}
     try {
       await done
     } finally {
@@ -230,8 +230,7 @@ export class LocalScheduler {
     }
   }
 
-  private async run(run: ScheduledRun, controller: AbortController): Promise<void> {
-    const attempt = this.store.claim(run.id)
+  private async run({attempt, run}: WorkClaim, controller: AbortController): Promise<void> {
     let outcome: LocalTaskResult
     try {
       const task = savedTaskSchema.parse(run.payload)

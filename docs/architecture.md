@@ -355,6 +355,13 @@ no global FIFO guarantee. Internal v2 persistence imports validated v1 history;
 public WorkState snapshots remain v1 projections. Pending deliveries survive
 restart and are cancelled by task controls. Fixed intervals coalesce missed runs. Interrupted read attempts become queued with their original request identity; opaque attempts become unknown. Persistent approvals gate queued dispatch, and cancellation rejects stale completion. Hosts supply scoped execution; this primitive does not execute model tools or replace RunSupervisor operation journals. See [scheduled work](scheduled-work.md).
 
+`execution/job-priority.ts` selects only eligible heads of independent job keys.
+Explicit high/normal/low metadata defaults to normal and uses persisted bounded
+bypass aging. `DurableWorkStore.claimNext()` commits selection, fairness state
+and one attempt together; LocalScheduler retains one active execution and its
+unknown-outcome stop. Inbox admission/acknowledgement remains separate and
+unchanged. See [Job priority](job-priority.md).
+
 The optional `apple` model adapter uses an explicitly compiled local Swift helper over bounded JSON stdin/stdout. It supports text conversations only and owns a fresh child process per request. See [Apple Foundation Models](apple-foundation-models.md) for platform prerequisites and capability limits.
 
 Core lifecycle uses the project catalog transaction for empty-project deletion
