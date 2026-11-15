@@ -2,7 +2,7 @@
 
 Import DurableWorkStore from @cybergarage/orbit. Supply an app-owned local state filename. One writer owns the file until close(); another live writer is refused. Dead owners can be recovered; a leftover recovery guard requires manual inspection. Do not use network shares. Corrupt state is preserved and rejected.
 
-Persist a schedule with a next timestamp, optional interval (at least 1000 ms), payload and effect read or opaque. materialize(now) coalesces missed fixed intervals to the latest due time and atomically queues the occurrence while advancing the cursor. One-shot schedules pause after materialization. Calendar/DST/timezone recurrence is not implemented.
+Persist a schedule with a next timestamp, optional interval (at least 1000 ms), payload and effect read or opaque. materialize(now) coalesces missed fixed intervals to the latest due time and uses two durable boundaries: accept the timer event together with its next cursor, then atomically queue its occurrence and acknowledge consumer delivery. Recovery between these boundaries admits the pending event once without advancing its cursor again. One-shot schedules pause when their timer event is accepted. Calendar/DST/timezone recurrence is not implemented.
 
 Each queued occurrence owns one stable run/request ID. claim() records a distinct attempt before dispatch. finish() requires the current live attempt and commits one bounded result; cancellation prevents a stale finish. enqueue() binds an explicit retry ID to canonical payload, effect and approval preview and rejects conflicting retries. Persistent approval changes a run from approval to queued or cancelled.
 
@@ -17,3 +17,30 @@ Transport request IDs are stable SHA-256-derived UUID-shaped values, separate fr
 The bundled GUI Tasks page offers Enable, Disable, and a confirmed Delete for the selected schedule. Deletion preserves chats and workspace files. Expired or consumed one-time schedules cannot be enabled; create a new task with a future time. Operation errors stay visible and may be retried.
 
 Disabling or deleting does not revoke already admitted execution. Its existing recovery contract still applies: an interrupted read run can be retried on reopening with its stable request ID, even after its schedule is deleted. No new occurrences are created for a deleted schedule.
+
+The internal snapshot format is version 2. Valid version-1 state is imported
+under the existing owner lock on opening, preserving IDs, application data and
+recovery status rules. No backup copies are created. `snapshot(): WorkState`
+remains a detached version-1 compatibility projection with the same fields;
+internal events and deliveries are not added to the public task snapshot. Older
+binaries reject the version-2 file, which the user accepts; automatic downgrade
+is not provided. A legacy-tagged record containing reserved event/delivery fields
+is rejected unchanged instead of discarding event evidence. See
+[Internal formats](internal-formats.md) for the fixed-contract policy.
+
+Timer facts have a tuple-encoded event ID separate from arbitrary legacy
+occurrence IDs. Duplicate delivery preserves the existing fact, consumer
+acknowledgement and job identity. Payload, effect and source collisions are
+rejected before advancing the cursor. Acknowledgement means durable job
+admission, not job success. It creates no execution attempt. Pause, removal and
+cancellation also cancel pending deliveries, including across reopening.
+
+The task adapter uses the public, task-independent `EventStore` in
+`execution/event-store.ts`. The store owns persistence, exclusive ownership,
+validation, transactions and restart; `execution/event-inbox.ts` supplies its
+queue reducers. Task-specific legacy decoding and interrupted-attempt recovery
+remain in DurableWorkStore. Both layers use one physical file and transaction,
+so job creation and delivery acknowledgement cannot split across stores. See
+[Single-host durable event inbox](event-inbox.md) for direct usage without tasks,
+consumer ordering, and the generic persistence contract. Messages,
+approval-answer ingress and outgoing notifications remain later stages.

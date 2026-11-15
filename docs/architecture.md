@@ -341,7 +341,19 @@ See [the feature contract](context-compaction.md#source-derived-tool-observation
 
 ## Durable scheduled work
 
-`DurableWorkStore` in `src/core/execution/scheduled-work.ts` provides single-owner local scheduling snapshots. It persists schedules, occurrences, runs and attempts separately and atomically creates queued occurrences with their next scheduling cursor. Fixed intervals coalesce missed runs. Interrupted read attempts become queued with their original request identity; opaque attempts become unknown. Persistent approvals gate queued dispatch, and cancellation rejects stale completion. Hosts supply scoped execution; this primitive does not execute model tools or replace RunSupervisor operation journals. See [scheduled work](scheduled-work.md).
+`DurableWorkStore` in `src/core/execution/scheduled-work.ts` provides single-owner local scheduling snapshots. It persists schedules, occurrences, runs and attempts separately as an adapter
+of the public, task-independent `EventStore` in `execution/event-store.ts`.
+EventStore owns the shared file lock, bounded atomic snapshot, validation,
+transactions and restart; the adapter supplies legacy decoding and task recovery.
+`execution/event-inbox.ts` provides the queue reducers. The generic store is
+directly usable without task APIs; see [Event inbox](event-inbox.md).
+Immutable events, consumer-specific delivery acknowledgements, task/job state,
+and managed execution have separate identities and lifecycles. Timer intake
+atomically records an event and next cursor; admission atomically queues its
+occurrence and acknowledges delivery. Per-key sequences govern admission, with
+no global FIFO guarantee. Internal v2 persistence imports validated v1 history;
+public WorkState snapshots remain v1 projections. Pending deliveries survive
+restart and are cancelled by task controls. Fixed intervals coalesce missed runs. Interrupted read attempts become queued with their original request identity; opaque attempts become unknown. Persistent approvals gate queued dispatch, and cancellation rejects stale completion. Hosts supply scoped execution; this primitive does not execute model tools or replace RunSupervisor operation journals. See [scheduled work](scheduled-work.md).
 
 The optional `apple` model adapter uses an explicitly compiled local Swift helper over bounded JSON stdin/stdout. It supports text conversations only and owns a fresh child process per request. See [Apple Foundation Models](apple-foundation-models.md) for platform prerequisites and capability limits.
 
