@@ -12,6 +12,7 @@ import {Anthropic} from '@anthropic-ai/sdk'
 import {performance} from 'node:perf_hooks'
 
 import type {Message} from '../../message/index.js'
+import type {ModelCapabilities, ModelCapabilityOptions} from '../capabilities.js'
 import type {ModelContextInfo} from '../context-capacity.js'
 import type {
   Model,
@@ -25,20 +26,25 @@ import type {Provider, ProviderName} from '../provider.js'
 import {ContextOverflowError} from '../../errors/index.js'
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
+import {readCapabilityMetadata, unknownModelCapabilities} from '../capabilities.js'
 import {metadataRecord, positiveTokenLimit, readModelMetadata, unknownModelContextInfo} from '../context-capacity.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
 import {freezeModelRequest} from '../prepared.js'
 import {splitSystemPrompt} from '../prompt.js'
 import {redactProviderAuthenticationError} from '../provider-errors.js'
 import {Role} from '../role.js'
+import {nativeCapabilityRoute, supportsAnthropicClientTools} from './provider-capabilities.js'
 import {getToolCalls, getToolResult, isToolResultError, stringifyToolOutput} from './tools.js'
 
 export interface AnthropicAgentOptions {
-  client?: Partial<Pick<Anthropic, 'models'>> & Pick<Anthropic, 'messages'>
+  client?: Partial<Pick<Anthropic, 'baseURL'>> & Partial<Pick<Anthropic, 'models'>> & Pick<Anthropic, 'messages'>
 }
 
 export class AnthropicAgent implements Model {
-  private client: (Partial<Pick<Anthropic, 'models'>> & Pick<Anthropic, 'messages'>) | undefined
+  private client:
+    | (Partial<Pick<Anthropic, 'baseURL'>> & Partial<Pick<Anthropic, 'models'>> & Pick<Anthropic, 'messages'>)
+    | undefined
+  private readonly hasInjectedClient: boolean
 
   constructor(
     private readonly model: string,
@@ -46,6 +52,36 @@ export class AnthropicAgent implements Model {
     options: AnthropicAgentOptions = {},
   ) {
     this.client = options.client
+    this.hasInjectedClient = options.client !== undefined
+  }
+
+  async getCapabilities(options: ModelCapabilityOptions = {}): Promise<ModelCapabilities> {
+    options.signal?.throwIfAborted()
+    if (
+      !nativeCapabilityRoute({
+        client: this.client,
+        environment: process.env.ANTHROPIC_BASE_URL,
+        host: this.provider.getHost(),
+        injected: this.hasInjectedClient,
+        nativeURL: 'https://api.anthropic.com',
+      })
+    )
+      return unknownModelCapabilities()
+    const metadata = metadataRecord(
+      await readCapabilityMetadata(
+        async (signal) =>
+          this.getClient().models?.retrieve(this.model, undefined, {
+            headers: {'anthropic-version': '2026-10-21'},
+            maxRetries: 0,
+            signal,
+            timeout: 5000,
+          }),
+        options.signal,
+      ),
+    )
+    return metadata.id === this.model && supportsAnthropicClientTools(metadata)
+      ? {source: 'api', tools: 'supported'}
+      : unknownModelCapabilities()
   }
 
   async getContextInfo(options: {signal?: AbortSignal} = {}): Promise<ModelContextInfo> {
@@ -195,7 +231,9 @@ export class AnthropicAgent implements Model {
     }
   }
 
-  private getClient(): Partial<Pick<Anthropic, 'models'>> & Pick<Anthropic, 'messages'> {
+  private getClient(): Partial<Pick<Anthropic, 'baseURL'>> &
+    Partial<Pick<Anthropic, 'models'>> &
+    Pick<Anthropic, 'messages'> {
     this.client ??= new Anthropic({...createAnthropicOptions(this.provider), logLevel: 'off', maxRetries: 0})
     return this.client
   }

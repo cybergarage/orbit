@@ -13,6 +13,7 @@ import type {WorkspaceSettings} from './settings.js'
 import {createAnthropicOptions} from './models/adapters/anthropic.js'
 import {supportsOpenAIChatTools} from './models/adapters/openai-capabilities.js'
 import {createOpenAIOptions} from './models/adapters/openai.js'
+import {ollamaToolCapability, supportsAnthropicClientTools} from './models/adapters/provider-capabilities.js'
 import {createProvider} from './models/provider.js'
 
 export type CodingProvider = 'anthropic' | 'ollama' | 'openai'
@@ -177,7 +178,7 @@ export class ModelCatalog {
             if (provider === 'openai') return supportsOpenAIChatTools(record.id)
             // The active Claude Models API contract covers text output and client tool use.
             // Unknown legacy records are excluded rather than inferring capability from an ID prefix.
-            return record.lifecycle === 'active' && record.type === 'model'
+            return supportsAnthropicClientTools(record)
           })
           .map((record) => ({
             label: typeof record.display_name === 'string' ? record.display_name : (record.id as string),
@@ -231,7 +232,7 @@ export class ModelCatalog {
           })
           if (!shown.ok) throw new Error('Local capability discovery failed')
           const details = (await shown.json()) as {capabilities?: string[]}
-          return details.capabilities?.includes('tools')
+          return ollamaToolCapability(details) === 'supported'
             ? {label: entry.name, model: entry.name, provider: 'ollama' as const, tools: true as const}
             : undefined
         }),

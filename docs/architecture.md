@@ -434,3 +434,10 @@ Operational log reading uses shared validation and structural normalization of
 historical flat correlation. Current writes retain their fixed identifier, and
 reading mixed partitions preserves file bytes and opaque cursor positions.
 See [Session logging](logging.md#record-format).
+
+Runtime model capability observation is optional and separate from catalog
+eligibility and execution permissions. The resolver preserves supported,
+unsupported and unknown, with bounded metadata-only discovery; the common tool
+information policy excludes only explicit unsupported observations. See
+[Model capabilities](model-capabilities.md). It does not wire Project memory or
+change existing invocation/tool authorization.

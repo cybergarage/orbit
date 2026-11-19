@@ -8,6 +8,7 @@ import {Ollama} from 'ollama'
 import {Agent as HttpAgent, fetch as undiciFetch} from 'undici'
 
 import type {Message} from '../../message/index.js'
+import type {ModelCapabilities, ModelCapabilityOptions} from '../capabilities.js'
 import type {ModelContextInfo} from '../context-capacity.js'
 import type {
   Model,
@@ -22,9 +23,11 @@ import type {Provider, ProviderName} from '../provider.js'
 import {ContextOverflowError, IncompleteModelResponseError} from '../../errors/index.js'
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
+import {readCapabilityMetadata} from '../capabilities.js'
 import {metadataRecord, positiveTokenLimit, readModelMetadata, unknownModelContextInfo} from '../context-capacity.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
 import {freezeModelRequest} from '../prepared.js'
+import {ollamaToolCapability} from './provider-capabilities.js'
 import {getModelOutputParts, getToolCalls, getToolResult, getToolResultImages, stringifyToolResult} from './tools.js'
 
 export interface OllamaAgentOptions {
@@ -62,19 +65,17 @@ export class OllamaAgent implements Model {
     this.client = options.client ?? new Ollama({...createOllamaOptions(provider), fetch: ollamaFetch})
   }
 
+  async getCapabilities(options: ModelCapabilityOptions = {}): Promise<ModelCapabilities> {
+    const value = await readCapabilityMetadata(
+      async (signal) => this.metadataClient(signal).show?.({model: this.model}),
+      options.signal,
+    )
+    const tools = ollamaToolCapability(value)
+    return {source: tools === 'unknown' ? 'unknown' : 'api', tools}
+  }
+
   async getContextInfo(options: {signal?: AbortSignal} = {}): Promise<ModelContextInfo> {
-    const client = this.hasInjectedClient
-      ? this.client
-      : new Ollama({
-          ...createOllamaOptions(this.provider),
-          // Node 20 provides fetch; its experimental label does not affect this supported API.
-          fetch: (input, init) =>
-            // eslint-disable-next-line n/no-unsupported-features/node-builtins
-            globalThis.fetch(input, {
-              ...init,
-              signal: AbortSignal.any([AbortSignal.timeout(5000), ...(options.signal ? [options.signal] : [])]),
-            }),
-        })
+    const client = this.metadataClient(options.signal)
     const [shown, running] = await Promise.all([
       readModelMetadata(async () => client.show?.({model: this.model}), options.signal),
       readModelMetadata(async () => client.ps?.(), options.signal),
@@ -236,6 +237,21 @@ export class OllamaAgent implements Model {
       request,
     }
   }
+
+  private metadataClient(signal?: AbortSignal): NonNullable<OllamaAgentOptions['client']> {
+    return this.hasInjectedClient
+      ? this.client
+      : new Ollama({
+          ...createOllamaOptions(this.provider),
+          // Node 20 provides fetch; its experimental label does not affect this supported API.
+          fetch: (input, init) =>
+            // eslint-disable-next-line n/no-unsupported-features/node-builtins
+            globalThis.fetch(input, {
+              ...init,
+              signal: AbortSignal.any([AbortSignal.timeout(5000), ...(signal ? [signal] : [])]),
+            }),
+        })
+  }
 }
 
 export function createOllamaOptions(provider: Provider): Partial<Config> {
@@ -294,7 +310,7 @@ function installedModelName(model: {model: string; name: string}): string {
 async function supportsTools(client: Pick<Ollama, 'show'>, model: string): Promise<boolean> {
   try {
     const details = await client.show({model})
-    return details.capabilities?.includes('tools') === true
+    return ollamaToolCapability(details) === 'supported'
   } catch {
     // A broken model entry must not prevent Orbit from checking the remaining installed models.
     return false

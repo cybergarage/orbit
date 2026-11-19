@@ -6,6 +6,7 @@ import type {ExecutionLimit} from '../execution/limits.js'
 import type {Message} from '../message/index.js'
 import type {Operator, OperatorOptions} from '../processor/index.js'
 import type {ModelToolSpec, ToolResult} from '../tools/index.js'
+import type {ModelCapabilities, ModelCapabilityOptions} from './capabilities.js'
 import type {ModelContextInfo} from './context-capacity.js'
 import type {ProviderName} from './provider.js'
 
@@ -98,6 +99,7 @@ export interface PreparedModelInvocation {
 }
 
 export interface Model extends Operator<Message[], Message, ModelInvokeOptions> {
+  getCapabilities?(options?: ModelCapabilityOptions): Promise<ModelCapabilities>
   getContextInfo?(options?: {signal?: AbortSignal}): Promise<ModelContextInfo>
   getModel(): string
   getName(suffix?: string): string

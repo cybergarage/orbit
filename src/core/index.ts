@@ -161,6 +161,13 @@ export {ModelGateway, modelGatewayRoutes} from './model-gateway.js'
 export type {ModelGatewayOptions} from './model-gateway.js'
 export {AppleFoundationModelsAgent, AppleHelperClient} from './models/adapters/apple.js'
 export type {AppleAvailability, AppleFoundationModelsOptions, AppleHelperTransport} from './models/adapters/apple.js'
+export {canIncludeModelTools, resolveModelCapabilities} from './models/capabilities.js'
+export type {
+  ModelCapabilities,
+  ModelCapabilityOptions,
+  ModelCapabilitySupport,
+  ResolvedModelCapabilities,
+} from './models/capabilities.js'
 export {resolveModelContextCapacity} from './models/context-capacity.js'
 export type {ModelContextCapacity, ModelContextInfo, ModelContextOptions} from './models/context-capacity.js'
 export {DEFAULT_MODELS, getModel, getModelRegistry, ModelRegistry, registerModelProvider} from './models/factory.js'
@@ -204,7 +211,9 @@ export type {
   GraphValue,
 } from './processor/index.js'
 export {OperatorSequence, ProcessorRegistry} from './processor/index.js'
+
 export {OperatorType} from './processor/index.js'
+
 export type {
   Operator,
   OperatorInput,
@@ -216,12 +225,10 @@ export type {
   ProcessorOutput,
   ProcessorType,
 } from './processor/index.js'
-
 export * from './projects/index.js'
 
 export * from './selection/index.js'
 export {createModelContextPolicy} from './session/context-policy.js'
-
 export {
   createSessionInformation,
   encodeSessionEntry,
@@ -239,6 +246,7 @@ export {
   SessionRepository,
   TurnPhase,
 } from './session/index.js'
+
 export type {
   AppendMessageOptions,
   CreateSessionOptions,
@@ -286,13 +294,13 @@ export type {
   SessionWriterLease,
   StorageRegistrationInspection,
 } from './session/index.js'
+
 export {
   ContextBudgetError,
   estimateJSONRequest,
   migrateSessionTranscript,
   validateContextProfile,
 } from './session/index.js'
-
 export type {
   ContextPolicy,
   ContextPreparationEvent,
@@ -312,8 +320,8 @@ export {
   parseInterruptionPolicy,
   VerifiedContextError,
 } from './session/index.js'
-export type {ContextProjectionEntry, InterruptionPolicy} from './session/index.js'
 
+export type {ContextProjectionEntry, InterruptionPolicy} from './session/index.js'
 export type {TranscriptMigrationInspection} from './session/index.js'
 
 export {modelSelectionSchema} from './session/model-selection.js'
@@ -363,7 +371,6 @@ export type {
   ThreadToolStartedEvent,
   ThreadToolUpdatedEvent,
 } from './thread.js'
-
 export {GptTokenizer} from './tokenizer/index.js'
 export type {Tokenizer} from './tokenizer/index.js'
 export {
@@ -411,5 +418,6 @@ export type {
   ToolSource,
   WriteToolInput,
 } from './tools/index.js'
+
 export {LocalWorkspaceLocator} from './workspace.js'
 export type {LocalWorkspaceLocatorOptions, WorkspaceLocator} from './workspace.js'
