@@ -458,3 +458,6 @@ in c17fc5a3170f6a5dbe800da6522e38870b513e1a with 832 passing tests.
 embedded GUI, with explicit settings selection and offline permanent deletion.
 
 [Conversation model selection](2026-10-28-conversation-model-selection.md) records the requested persisted next-turn model and independent GUI-default contract.
+
+[Runtime model capabilities](2026-11-19-runtime-model-capabilities.md) records the
+optional three-state contract and permissive unknown tool-information policy.
