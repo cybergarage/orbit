@@ -2,9 +2,9 @@
 status: accepted
 proposed-date: 2026-11-19
 decision-date: 2026-11-19
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-11-19
+implementation-commits: [74110e9018a8b17f9e9916b6211ba4516ba5e0bd]
 superseded-by: []
 ---
 
@@ -66,11 +66,31 @@ simulation of native tool execution. Keep the old helper for compatibility.
 
 ## Implementation and Confirmation
 
-Pending protocol, package, complete repository and real-device verification.
+Implementation commit 74110e9018a8b17f9e9916b6211ba4516ba5e0bd delivered
+the separate adapter/helper, public exports, protocol and Core integration tests,
+maintained architecture and feature guide. Header checks, build, all 1,421 tests,
+and the 526-file independent package consumer passed on 2026-11-19.
+
+The production Swift helper compiled with Swift 6.4.2 targeting macOS 26 on macOS
+27.2.1/Apple silicon. The real separate-session synthetic E2E passed without
+memory or answer pre-injection: one native Tool call, one ordinary Core dispatch,
+matching canonical entry/source IDs, one SDK transcript tool output and a grounded
+answer. SDK arguments matched IPC dispatch arguments; only counts/booleans were
+published. This is local model evidence, not a quality benchmark.
+
+A distinct ORBIT_PROTOCOL_TEST native build, invoking no model, passed two
+concurrent calls with different arguments and reversed result arrival. Deterministic
+TypeScript tests cover malformed/foreign calls, correlation, cancellation and late
+results, the old EOF-only helper deadline, bounded output, and a real Core membership
+change that feeds no result to Swift. The full suite also retains #40's Project
+isolation, correction, tombstone and scope controls. See the
+[reproduction and limits](../apple-project-memory.md).
 
 ## Follow-up Work
 
 General tool support, durable continuation and Nest integration remain out of scope.
+Other Apple hardware/OS releases and CI do not establish native-model coverage;
+the explicit real-device command remains separate from mock tests.
 
 ## References
 
