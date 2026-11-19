@@ -125,3 +125,5 @@ repository adopts a dedicated specification lifecycle.
   setting selection and offline permanent deletion without user-work removal.
 
 - [Provider and model catalog](model-catalog.md): credential-aware coding eligibility, read-only discovery and host-only worker transport.
+
+[Apple Project memory bridge](apple-project-memory.md) documents the explicit fixed-tool native route.
