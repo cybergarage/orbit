@@ -7,7 +7,7 @@ Orbit checkout after building. No provider is called by the deterministic tests.
 ```sh
 npm run build
 TS_NODE_PROJECT=tsconfig.test.json npx mocha --forbid-only test/core/projects/memory-search.test.ts
-node --test test/evaluation/project-memory-pilot.test.mjs
+npx mocha --forbid-only test/evaluation/project-memory-pilot.test.mjs
 node bin/project-memory-pilot.mjs --smoke --mock
 node bin/project-memory-pilot.mjs --smoke --model gemma4:12b
 ```
@@ -32,8 +32,8 @@ The harness verifies that checksum before selecting cases.
 ```sh
 mkdir -p tmp
 curl -fL https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/98d7416c24c778c2fee6e6f3006e7a073259d48f/longmemeval_s_cleaned.json -o tmp/longmemeval_s_cleaned.json
-node bin/project-memory-pilot.mjs --dataset tmp/longmemeval_s_cleaned.json --output tmp/orbit-memory-mock.json --mock
-node bin/project-memory-pilot.mjs --dataset tmp/longmemeval_s_cleaned.json --output tmp/orbit-memory-live.json --model gemma4:12b
+node bin/project-memory-pilot.mjs --dataset tmp/longmemeval_s_cleaned.json --output tmp/orbit-memory-mock.json --commit "$(git rev-parse HEAD)" --mock
+node bin/project-memory-pilot.mjs --dataset tmp/longmemeval_s_cleaned.json --output tmp/orbit-memory-live.json --commit "$(git rev-parse HEAD)" --model gemma4:12b
 ```
 
 Use an already installed, explicitly authorized local Ollama model. The harness
@@ -124,3 +124,8 @@ case. It never retries an unfavorable valid score and never reruns answering,
 ingestion or retrieval. The current grader constrains its output to exactly three
 booleans and retains usage even when parsing fails. The recorded initial run
 predates that telemetry fix; its four invalid initial calls have unknown usage.
+
+Commit provenance is supplied explicitly with optional `--commit <full-sha>`.
+Without it, `baselineCommit` is null; implementation file hashes remain recorded.
+The harness never launches Git or any executable resolved through PATH. Historical
+reports and grading/ingestion limitations are unchanged.

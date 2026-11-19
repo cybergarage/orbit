@@ -5,7 +5,6 @@
 
 // Public-data evaluation only. Never reads workspace settings or the user's saved sessions.
 import assert from 'node:assert/strict'
-import {execFileSync} from 'node:child_process'
 import {createHash, randomUUID} from 'node:crypto'
 import fs from 'node:fs/promises'
 import os from 'node:os'
@@ -45,13 +44,15 @@ const normalize = (text) =>
 const isAbstention = (text) => /INSUFFICIENT_EVIDENCE/i.test(text)
 export function selectCases(rows) {
   // Selection may use category/abstention strata; neither is passed to ingestion or generation.
-  return [...new Set(rows.map((row) => row.question_type))].sort().flatMap((category) => {
-    const group = rows
-      .filter((row) => row.question_type === category)
-      .sort((a, b) => hash(`orbit-pilot-v1:${a.question_id}`).localeCompare(hash(`orbit-pilot-v1:${b.question_id}`)))
-    const abstention = group.find((row) => row.question_id.endsWith('_abs'))
-    return [...(abstention ? [abstention] : []), ...group.filter((row) => row !== abstention)].slice(0, 5)
-  })
+  return [...new Set(rows.map((row) => row.question_type))]
+    .sort((a, b) => a.localeCompare(b, 'en'))
+    .flatMap((category) => {
+      const group = rows
+        .filter((row) => row.question_type === category)
+        .sort((a, b) => hash(`orbit-pilot-v1:${a.question_id}`).localeCompare(hash(`orbit-pilot-v1:${b.question_id}`)))
+      const abstention = group.find((row) => row.question_id.endsWith('_abs'))
+      return [...(abstention ? [abstention] : []), ...group.filter((row) => row !== abstention)].slice(0, 5)
+    })
 }
 
 export function historyOnly(row) {
@@ -83,44 +84,51 @@ export function evidenceCoverage(row, ingested, retrieved) {
   }
 }
 
+function emptySummary() {
+  return {
+    abstained: 0,
+    abstentionCases: 0,
+    correct: 0,
+    correctAbstentions: 0,
+    dispatches: 0,
+    evidenceDenominator: 0,
+    evidenceNumerator: 0,
+    failures: {answer: 0, ingestion: 0, provider: 0, retrieval: 0},
+    gradedN: 0,
+    inputTokens: 0,
+    latencyMs: 0,
+    n: 0,
+    outputTokens: 0,
+    proxyCorrect: 0,
+  }
+}
+
+function accumulateSummary(g, row) {
+  g.n++
+  g.gradedN += Number(row.judgedCorrect !== null)
+  g.correct += Number(row.judgedCorrect === true)
+  g.proxyCorrect += Number(Boolean(row.proxyCorrect))
+  g.abstained += Number(Boolean(row.abstained))
+  g.abstentionCases += Number(Boolean(row.unanswerable))
+  g.correctAbstentions += Number(Boolean(row.unanswerable && row.abstained))
+  g.dispatches += Number(row.dispatches > 0)
+  g.inputTokens += row.inputTokens
+  g.outputTokens += row.outputTokens
+  g.latencyMs += row.latencyMs
+  if (!row.unanswerable) {
+    g.evidenceNumerator += row.evidence.retrieved
+    g.evidenceDenominator += row.evidence.denominator
+  }
+
+  if (row.failure) g.failures[row.failure]++
+}
+
 export function summarize(records) {
   const groups = {}
   for (const row of records) {
     for (const key of [`${row.arm}/all`, `${row.arm}/${row.category}`]) {
-      groups[key] ??= {
-        abstained: 0,
-        abstentionCases: 0,
-        correct: 0,
-        correctAbstentions: 0,
-        dispatches: 0,
-        evidenceDenominator: 0,
-        evidenceNumerator: 0,
-        failures: {answer: 0, ingestion: 0, provider: 0, retrieval: 0},
-        gradedN: 0,
-        inputTokens: 0,
-        latencyMs: 0,
-        n: 0,
-        outputTokens: 0,
-        proxyCorrect: 0,
-      }
-      const g = groups[key]
-      g.n++
-      g.gradedN += row.judgedCorrect === null ? 0 : 1
-      g.correct += row.judgedCorrect === true ? 1 : 0
-      g.proxyCorrect += row.proxyCorrect ? 1 : 0
-      g.abstained += row.abstained ? 1 : 0
-      g.abstentionCases += row.unanswerable ? 1 : 0
-      g.correctAbstentions += row.unanswerable && row.abstained ? 1 : 0
-      g.dispatches += row.dispatches > 0 ? 1 : 0
-      g.inputTokens += row.inputTokens
-      g.outputTokens += row.outputTokens
-      g.latencyMs += row.latencyMs
-      if (!row.unanswerable) {
-        g.evidenceNumerator += row.evidence.retrieved
-        g.evidenceDenominator += row.evidence.denominator
-      }
-
-      if (row.failure) g.failures[row.failure]++
+      groups[key] ??= emptySummary()
+      accumulateSummary(groups[key], row)
     }
   }
 
@@ -386,6 +394,95 @@ async function smoke(modelName, mock) {
   }
 }
 
+export function pilotCommit(args) {
+  const index = args.indexOf('--commit')
+  if (index === -1) return null
+  const value = args[index + 1]
+  assert(typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value), '--commit requires a full lowercase Git SHA')
+  return value
+}
+
+async function localModelMetadata(modelName) {
+  const client = new Ollama({host: 'http://127.0.0.1:11434'})
+  try {
+    const catalog = await client.list()
+    const selected = catalog.models.find((item) => item.name === modelName || item.model === modelName)
+    assert(selected, 'Select an installed local model; no download is performed')
+    return {modelDetails: selected.details, modelDigest: selected.digest}
+  } finally {
+    client.abort()
+  }
+}
+
+export function evaluatePilotRecord(row, ingested, result, judgedCorrect) {
+  const unanswerable = row.question_id.endsWith('_abs')
+  const evidence = evidenceCoverage(row, ingested, result.retrieved.slice(0, 6))
+  const abstained = isAbstention(result.answer)
+  const proxyCorrect = unanswerable ? abstained : normalize(result.answer).includes(normalize(row.answer))
+  // Evidence annotation inspection is evaluation-only, never ingestion/generation input.
+  const retainedEvidence = row.haystack_sessions.some((messages, originalIndex) => {
+    const item = ingested.find((x) => x.originalIndex === originalIndex)
+    return messages.some((m) => m.has_answer && item?.excerpt.includes(m.content))
+  })
+  const failure = classifyFailure({...result, evidence, judgedCorrect, retainedEvidence, unanswerable})
+
+  return {
+    category: row.question_type,
+    id: row.question_id,
+    ...result,
+    abstained,
+    entryCount: ingested.length,
+    evidence,
+    failure,
+    judgedCorrect,
+    proxyCorrect,
+    retainedEvidence,
+    unanswerable,
+  }
+}
+
+async function evaluateCase({env, ingested, judgments, mock, modelName, row}) {
+  const arms = []
+  // Generation receives only question/date and stored history. Ground truth stays below this boundary.
+  for (const arm of ['none', 'pre', 'tool']) {
+    try {
+      arms.push({
+        arm,
+        ...(await answer(env, `Current date: ${row.question_date}\n${row.question}`, arm, modelName, mock)),
+      })
+    } catch (error) {
+      arms.push({
+        answer: '',
+        arm,
+        dispatches: 0,
+        error: String(error),
+        inputTokens: 0,
+        latencyMs: 0,
+        modelCalls: 0,
+        outcome: 'provider-error',
+        outputTokens: 0,
+        retrieved: [],
+      })
+    }
+  }
+
+  let grading
+  if (!mock) {
+    try {
+      grading = await gradePilotAnswers(
+        row,
+        arms.map((r) => r.answer),
+        modelName,
+      )
+      judgments.push({id: row.question_id, ...grading})
+    } catch (error) {
+      judgments.push({error: String(error), id: row.question_id})
+    }
+  }
+
+  return arms.map((result, index) => evaluatePilotRecord(row, ingested, result, grading?.correct?.[index] ?? null))
+}
+
 async function main() {
   const args = process.argv.slice(2)
   const modelName = args.includes('--model') ? args[args.indexOf('--model') + 1] : 'gemma4:12b'
@@ -403,19 +500,7 @@ async function main() {
   assert.equal(selected.length, 30)
   const judgments = []
   const records = []
-  const localMetadata = mock
-    ? {}
-    : await (async () => {
-        const client = new Ollama({host: 'http://127.0.0.1:11434'})
-        try {
-          const catalog = await client.list()
-          const selectedModel = catalog.models.find((item) => item.name === modelName || item.model === modelName)
-          assert(selectedModel, 'Select an installed local model; no download is performed')
-          return {modelDetails: selectedModel.details, modelDigest: selectedModel.digest}
-        } finally {
-          client.abort()
-        }
-      })()
+  const localMetadata = mock ? {} : await localModelMetadata(modelName)
   const implementationFiles = [
     'src/core/projects/memory-context.ts',
     'src/core/projects/memory-service.ts',
@@ -426,7 +511,7 @@ async function main() {
     await Promise.all(implementationFiles.map(async (sourceFile) => [sourceFile, hash(await fs.readFile(sourceFile))])),
   )
   const manifest = {
-    baselineCommit: execFileSync('git', ['rev-parse', 'HEAD'], {encoding: 'utf8'}).trim(),
+    baselineCommit: pilotCommit(args),
     environment: {arch: process.arch, node: process.version, osRelease: os.release(), platform: process.platform},
     implementationSha256,
     ...localMetadata,
@@ -447,71 +532,7 @@ async function main() {
     const env = await environment()
     try {
       const ingested = await ingest(env, historyOnly(row))
-      const arms = []
-      // Generation receives only question/date and stored history. Ground truth stays below this boundary.
-      for (const arm of ['none', 'pre', 'tool']) {
-        try {
-          arms.push({
-            arm,
-            ...(await answer(env, `Current date: ${row.question_date}\n${row.question}`, arm, modelName, mock)),
-          })
-        } catch (error) {
-          arms.push({
-            answer: '',
-            arm,
-            dispatches: 0,
-            error: String(error),
-            inputTokens: 0,
-            latencyMs: 0,
-            modelCalls: 0,
-            outcome: 'provider-error',
-            outputTokens: 0,
-            retrieved: [],
-          })
-        }
-      }
-
-      let grading
-      if (!mock) {
-        try {
-          grading = await gradePilotAnswers(
-            row,
-            arms.map((r) => r.answer),
-            modelName,
-          )
-          judgments.push({id: row.question_id, ...grading})
-        } catch (error) {
-          judgments.push({error: String(error), id: row.question_id})
-        }
-      }
-
-      for (const [index, result] of arms.entries()) {
-        const unanswerable = row.question_id.endsWith('_abs')
-        const evidence = evidenceCoverage(row, ingested, result.retrieved.slice(0, 6))
-        const abstained = isAbstention(result.answer)
-        const proxyCorrect = unanswerable ? abstained : normalize(result.answer).includes(normalize(row.answer))
-        // Evidence annotation inspection is evaluation-only, never ingestion/generation input.
-        const retainedEvidence = row.haystack_sessions.some((messages, originalIndex) => {
-          const item = ingested.find((x) => x.originalIndex === originalIndex)
-          return messages.some((m) => m.has_answer && item?.excerpt.includes(m.content))
-        })
-        const judgedCorrect = grading?.correct?.[index] ?? null
-        const failure = classifyFailure({...result, evidence, judgedCorrect, retainedEvidence, unanswerable})
-
-        records.push({
-          category: row.question_type,
-          id: row.question_id,
-          ...result,
-          abstained,
-          entryCount: ingested.length,
-          evidence,
-          failure,
-          judgedCorrect,
-          proxyCorrect,
-          retainedEvidence,
-          unanswerable,
-        })
-      }
+      records.push(...(await evaluateCase({env, ingested, judgments, mock, modelName, row})))
 
       if (records.length === selected.length * 3) manifest.completedAt = new Date().toISOString()
       const report = {judgments, manifest, records, summary: summarize(records)}
