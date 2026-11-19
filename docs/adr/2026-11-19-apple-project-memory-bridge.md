@@ -2,8 +2,8 @@
 status: accepted
 proposed-date: 2026-11-19
 decision-date: 2026-11-19
-implementation-status: completed
-implementation-completed-date: 2026-11-19
+implementation-status: in-progress
+implementation-completed-date: null
 implementation-commits: [74110e9018a8b17f9e9916b6211ba4516ba5e0bd]
 superseded-by: []
 ---
@@ -98,3 +98,15 @@ the explicit real-device command remains separate from mock tests.
 - https://github.com/cybergarage/orbit/pull/40
 - https://github.com/cybergarage/orbit/pull/41
 - [Search decision](2026-11-19-project-memory-search-tool.md)
+
+## Accepted capability clarification — 2026-11-19
+
+After #41 merged, the user explicitly requested that Core's optional
+`ModelCapabilities.namedTools` preserve bounded adapter-declared names through the
+shared resolver. Normalize and copy a valid name list; omit malformed observations.
+This does not enable arbitrary tools, select a Project, or grant permissions.
+Identity changes during discovery discard named observations together with the
+rest of the result; there is no cross-model cache. Extend the existing fixed-tool
+decision with this additive contract and verify it through public/package APIs.
+This clarification is accepted before implementation. Prior native-device evidence
+above remains historical; no new inference is necessary for metadata normalization.
