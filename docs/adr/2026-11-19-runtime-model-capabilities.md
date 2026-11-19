@@ -2,9 +2,9 @@
 status: accepted
 proposed-date: 2026-11-19
 decision-date: 2026-11-19
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-11-19
+implementation-commits: [037d6d80c9b5e75f16c5158cd708e52fe42ca371]
 superseded-by: []
 ---
 
@@ -95,3 +95,16 @@ merge or change to the Project-memory PR is authorized by this record.
 - https://docs.ollama.com/api-reference/show-model-details
 - https://developers.openai.com/api/docs/models/gpt-4o
 - https://platform.claude.com/docs/en/api/models/retrieve
+
+## Implementation confirmation — 2026-11-19
+
+Implementation commit 037d6d80c9b5e75f16c5158cd708e52fe42ca371 adds the optional
+contract, resolver/policy, conservative route-aware built-ins and shared catalog
+parsers. Headers/build pass, all 1,408 tests pass, and the installed-package probe
+compiles and executes legacy/three-state public API checks. The targeted metadata,
+context, catalog and selection run passes 42 tests. A separate metadata-only read
+of the existing local Ollama model reports tools supported; no inference/load or
+model download was requested. Remote API behavior is verified with deterministic
+fixtures and official contracts, not live credentialed calls. Apple helper/model
+inference, Nest/App integration and automatic tool/memory attachment remain out
+of scope. The Project-memory branch and its evaluation conditions are unchanged.
