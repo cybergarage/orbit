@@ -72,7 +72,10 @@
     "examples/agent/tsconfig.json",
     "examples/agent/README.md",
     "native/apple-foundation-models/main.swift",
-    "bin/test-apple-foundation-models.mjs"
+    "bin/test-apple-foundation-models.mjs",
+    "native/apple-project-memory/main.swift",
+    "bin/test-apple-project-memory.mjs",
+    "bin/test-apple-memory-protocol.mjs"
   ],
   "homepage": "https://github.com/cybergarage/orbit",
   "keywords": [

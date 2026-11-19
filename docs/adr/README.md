@@ -464,3 +464,6 @@ optional three-state contract and permissive unknown tool-information policy.
 
 [Opt-in Project memory search](2026-11-19-project-memory-search-tool.md) records
 the explicitly requested Core-only search contract and independent evaluation.
+
+[Native Apple Project memory bridge](2026-11-19-apple-project-memory-bridge.md)
+records the explicitly selected fixed-tool IPC route.

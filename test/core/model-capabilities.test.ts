@@ -181,6 +181,100 @@ describe('Runtime model capabilities', () => {
     expect(calls).equals(1)
   })
 
+  it('normalizes copied bounded named observations independently of general support', async () => {
+    const names = ['project_memory_search', 'project_memory_search']
+    const model = {
+      ...legacy(),
+      async getCapabilities(): Promise<ModelCapabilities> {
+        return {namedTools: names, source: 'adapter', tools: 'unsupported'}
+      },
+    }
+    const info = await resolveModelCapabilities(model)
+    expect(info.namedTools).deep.equals(['project_memory_search'])
+    expect(canIncludeModelTools(info)).equals(false)
+    names.push('later_change')
+    expect(info.namedTools).deep.equals(['project_memory_search'])
+    for (const namedTools of [
+      null,
+      'project_memory_search',
+      [null],
+      [''],
+      ['scope/tool'],
+      ['x'.repeat(65)],
+      Array.from({length: 65}, () => 'valid'),
+    ]) {
+      const invalid = {
+        ...legacy(),
+        async getCapabilities() {
+          return {namedTools, source: 'adapter', tools: 'unknown'} as ModelCapabilities
+        },
+      }
+      const result = await resolveModelCapabilities(invalid)
+      expect(result).not.have.property('namedTools')
+      expect(result.tools).equals('unknown')
+      expect(canIncludeModelTools(result)).equals(true)
+    }
+
+    expect(
+      (
+        await resolveModelCapabilities({
+          ...legacy(),
+          async getCapabilities() {
+            return {namedTools: [], source: 'adapter' as const, tools: 'unsupported' as const}
+          },
+        })
+      ).namedTools,
+    ).deep.equals([])
+  })
+
+  for (const field of ['model', 'provider'] as const)
+    it(`discards named observations after ${field} identity drift`, async () => {
+      const identity = {model: 'before', provider: 'apple'}
+      const model = {
+        ...legacy(),
+        async getCapabilities() {
+          identity[field] = 'after'
+          return {namedTools: ['project_memory_search'], source: 'adapter' as const, tools: 'unsupported' as const}
+        },
+        getModel: () => identity.model,
+        getProvider: () => identity.provider,
+      }
+      const result = await resolveModelCapabilities(model)
+      expect(result).not.have.property('namedTools')
+      expect(result.tools).equals('unknown')
+      expect(result[field]).equals('after')
+    })
+
+  it('does not retain names across subsequent model/provider selections or errors', async () => {
+    let selected = false
+    const model = {
+      ...legacy(),
+      async getCapabilities() {
+        return selected
+          ? (undefined as unknown as ModelCapabilities)
+          : {namedTools: ['project_memory_search'], source: 'adapter' as const, tools: 'unsupported' as const}
+      },
+      getModel: () => (selected ? 'new' : 'system'),
+      getProvider: () => (selected ? 'custom' : 'apple'),
+    }
+    expect((await resolveModelCapabilities(model)).namedTools).deep.equals(['project_memory_search'])
+    selected = true
+    expect(await resolveModelCapabilities(model)).deep.equals({
+      model: 'new',
+      provider: 'custom',
+      source: 'unknown',
+      tools: 'unknown',
+    })
+    expect(
+      await resolveModelCapabilities({
+        ...model,
+        async getCapabilities(): Promise<ModelCapabilities> {
+          throw new Error('private')
+        },
+      }),
+    ).not.have.property('namedTools')
+  })
+
   it('bounds non-cooperative discovery and aborts its metadata signal at the deadline', async () => {
     const clock = useFakeTimers()
     try {

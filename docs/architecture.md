@@ -447,3 +447,9 @@ over canonical Project memory. It reuses membership/source validation and lexica
 selection without persisting a preparation capture or enabling extraction. No
 search tool is registered by default. See [Projects](projects.md#opt-in-model-callable-search)
 and [Core memory evaluation](project-memory-evaluation.md).
+
+The explicitly selected `AppleProjectMemoryAgent` bridges only native
+`project_memory_search` calls through the ordinary Core ToolRuntime. Its separate
+Swift v2 helper receives text and authorized results over bounded duplex IPC; it
+never opens Project storage. The original Apple adapter remains text-only. See
+[the bridge contract](apple-project-memory.md).

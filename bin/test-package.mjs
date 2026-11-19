@@ -59,6 +59,12 @@ try {
     'dist/core/maintenance/initialization.d.ts',
     'dist/apps/cli/initialize.js',
     'docs/initialization.md',
+    'native/apple-project-memory/main.swift',
+    'dist/core/models/adapters/apple-memory.js',
+    'dist/core/models/adapters/apple-memory.d.ts',
+    'dist/core/models/adapters/apple-memory-ipc.js',
+    'bin/test-apple-project-memory.mjs',
+    'bin/test-apple-memory-protocol.mjs',
     'native/apple-foundation-models/main.swift',
     'bin/test-apple-foundation-models.mjs',
     'dist/apps/gui/public/client.js',
@@ -317,9 +323,37 @@ assert.equal((await resolveModelCapabilities({...legacy, async getCapabilities()
 console.log('Package capability consumer verified: optional legacy contract, tri-state resolver and tool-information policy; no inference.')
 `,
   )
+  await writeFile(
+    path.join(consumer, 'src/apple-memory-api-probe.ts'),
+    `
+import assert from 'node:assert/strict'
+import {AppleProjectMemoryAgent, createProvider, createAppleMemoryChannel, resolveModelCapabilities, canIncludeModelTools} from '@cybergarage/orbit'
+import type {Model, AppleMemoryChannelFactory, AppleProjectMemoryOptions} from '@cybergarage/orbit'
+const channelFactory: AppleMemoryChannelFactory = () => {throw new Error('Must not invoke helper')}
+const options: AppleProjectMemoryOptions = {channelFactory, maxCalls: 2}
+const native = new AppleProjectMemoryAgent(createProvider('apple'), options)
+const model: Model = native
+assert.equal(model.getProvider(), 'apple')
+assert.equal(typeof createAppleMemoryChannel, 'function')
+assert.deepEqual(await native.getCapabilities(), {source: 'adapter', tools: 'unsupported', namedTools: ['project_memory_search']})
+const resolved = await resolveModelCapabilities(native)
+const names: readonly string[] | undefined = resolved.namedTools
+assert.deepEqual(names, ['project_memory_search'])
+assert.equal(canIncludeModelTools(resolved), false)
+native.close()
+console.log('Package Apple memory consumer verified: public declarations and fixed capability; no inference.')
+`,
+  )
   runNpm(['run', 'build'], consumer)
   runNpm(['test'], consumer)
-  execFileSync(process.execPath, [path.join(consumer, 'dist/model-capability-api-probe.js')], {cwd: consumer, stdio: 'inherit'})
+  execFileSync(process.execPath, [path.join(consumer, 'dist/model-capability-api-probe.js')], {
+    cwd: consumer,
+    stdio: 'inherit',
+  })
+  execFileSync(process.execPath, [path.join(consumer, 'dist/apple-memory-api-probe.js')], {
+    cwd: consumer,
+    stdio: 'inherit',
+  })
   execFileSync(process.execPath, [path.join(consumer, 'dist/event-store-api-probe.js')], {
     cwd: consumer,
     stdio: 'inherit',
