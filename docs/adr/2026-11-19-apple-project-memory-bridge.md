@@ -4,7 +4,7 @@ proposed-date: 2026-11-19
 decision-date: 2026-11-19
 implementation-status: completed
 implementation-completed-date: 2026-11-19
-implementation-commits: [97fb817609204be22618a1c1fd9d5439a86983c6, a4220ac78eb5927af12e2ed0faa51f1a56da04a9]
+implementation-commits: [ed5d92f67dd0d6edba2010aca2a6caf270d86d15, 1e0c8ca0291980420d4997e034ec24cef8dad2c8]
 superseded-by: []
 ---
 
