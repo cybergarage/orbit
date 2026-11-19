@@ -327,7 +327,7 @@ console.log('Package capability consumer verified: optional legacy contract, tri
     path.join(consumer, 'src/apple-memory-api-probe.ts'),
     `
 import assert from 'node:assert/strict'
-import {AppleProjectMemoryAgent, createProvider, createAppleMemoryChannel} from '@cybergarage/orbit'
+import {AppleProjectMemoryAgent, createProvider, createAppleMemoryChannel, resolveModelCapabilities, canIncludeModelTools} from '@cybergarage/orbit'
 import type {Model, AppleMemoryChannelFactory, AppleProjectMemoryOptions} from '@cybergarage/orbit'
 const channelFactory: AppleMemoryChannelFactory = () => {throw new Error('Must not invoke helper')}
 const options: AppleProjectMemoryOptions = {channelFactory, maxCalls: 2}
@@ -336,13 +336,20 @@ const model: Model = native
 assert.equal(model.getProvider(), 'apple')
 assert.equal(typeof createAppleMemoryChannel, 'function')
 assert.deepEqual(await native.getCapabilities(), {source: 'adapter', tools: 'unsupported', namedTools: ['project_memory_search']})
+const resolved = await resolveModelCapabilities(native)
+const names: readonly string[] | undefined = resolved.namedTools
+assert.deepEqual(names, ['project_memory_search'])
+assert.equal(canIncludeModelTools(resolved), false)
 native.close()
 console.log('Package Apple memory consumer verified: public declarations and fixed capability; no inference.')
 `,
   )
   runNpm(['run', 'build'], consumer)
   runNpm(['test'], consumer)
-  execFileSync(process.execPath, [path.join(consumer, 'dist/model-capability-api-probe.js')], {cwd: consumer, stdio: 'inherit'})
+  execFileSync(process.execPath, [path.join(consumer, 'dist/model-capability-api-probe.js')], {
+    cwd: consumer,
+    stdio: 'inherit',
+  })
   execFileSync(process.execPath, [path.join(consumer, 'dist/apple-memory-api-probe.js')], {
     cwd: consumer,
     stdio: 'inherit',

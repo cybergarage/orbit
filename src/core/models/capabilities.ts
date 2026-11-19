@@ -10,6 +10,8 @@ export interface ModelCapabilityOptions {
   signal?: AbortSignal
 }
 export interface ModelCapabilities {
+  /** Observed supported names only; never general tool support or execution permission. */
+  namedTools?: readonly string[]
   source: 'adapter' | 'api' | 'catalog' | 'unknown'
   tools: ModelCapabilitySupport
 }
@@ -45,7 +47,15 @@ export async function resolveModelCapabilities(
   const tools = info.tools === 'supported' || info.tools === 'unsupported' ? info.tools : 'unknown'
   const source =
     info.source === 'adapter' || info.source === 'api' || info.source === 'catalog' ? info.source : 'unknown'
-  return {...identity, source, tools}
+  const namedTools = normalizeNamedTools(info.namedTools)
+  return {...identity, ...(namedTools === undefined ? {} : {namedTools}), source, tools}
+}
+
+/** Reject the whole malformed observation rather than claiming a partially valid list. */
+function normalizeNamedTools(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || value.length > 64) return undefined
+  if (value.some((name) => typeof name !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/u.test(name))) return undefined
+  return [...new Set(value)]
 }
 
 /** Optional metadata has its own deadline and never cancels a shared generation client. */

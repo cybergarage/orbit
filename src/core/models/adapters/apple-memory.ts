@@ -5,6 +5,7 @@ import {createHash} from 'node:crypto'
 import {z} from 'zod'
 
 import type {Message} from '../../message/index.js'
+import type {ModelCapabilities} from '../capabilities.js'
 import type {Model, ModelInvokeOptions, PreparedModelInvocation} from '../model.js'
 import type {Provider} from '../provider.js'
 import type {AppleMemoryChannel, AppleMemoryChannelFactory, AppleMemoryFrame} from './apple-memory-ipc.js'
@@ -62,7 +63,7 @@ export class AppleProjectMemoryAgent implements Model {
     this.active = undefined
   }
 
-  async getCapabilities(options: {signal?: AbortSignal} = {}) {
+  async getCapabilities(options: {signal?: AbortSignal} = {}): Promise<ModelCapabilities> {
     options.signal?.throwIfAborted()
     // This is deliberately not general-purpose tool support.
     return {namedTools: [TOOL], source: 'adapter' as const, tools: 'unsupported' as const}

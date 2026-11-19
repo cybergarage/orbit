@@ -7,9 +7,8 @@ Nothing is registered automatically; Nest and App paths are unchanged.
 
 ## Dependencies and selection
 
-This change is stacked on Project memory search PR #40. Capability contract PR
-#41 is independent: `getCapabilities()` is structurally compatible with its
-optional API, and returns `tools: 'unsupported'` plus
+This change is stacked on Project memory search PR #40. Merged capability contract PR
+#41 supplies the optional API. The common resolver preserves `namedTools`, and the adapter returns `tools: 'unsupported'` plus
 `namedTools: ['project_memory_search']`. The common arbitrary-tool helper therefore
 excludes this adapter. A host must explicitly select this named route and register
 only `createProjectMemorySearchTool(memory, {projectId, sessionId})` with an Agent
@@ -119,3 +118,8 @@ See the [decision](adr/2026-11-19-apple-project-memory-bridge.md) and
 The final local checkout also passed 1,421 repository tests, header checks, build,
 and the 526-file independent package consumer, including public adapter types and
 named capability without inference.
+
+The current follow-up rebases onto the updated #40 and tests named capability
+normalization through the common resolver and installed-package API. Historical
+real-device evidence above is separate; this metadata-only update performs no new
+model inference and changes no native Tool/search/authorization behavior.

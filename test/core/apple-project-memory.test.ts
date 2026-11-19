@@ -5,7 +5,7 @@ import {expect} from 'chai'
 
 import type {AppleMemoryChannel, AppleMemoryFrame} from '../../src/core/models/adapters/apple-memory-ipc.js'
 
-import {AppleProjectMemoryAgent, createProvider, Message, MessageType} from '../../src/core/index.js'
+import {AppleProjectMemoryAgent, canIncludeModelTools, createProvider, Message, MessageType, resolveModelCapabilities} from '../../src/core/index.js'
 import {getToolCalls} from '../../src/core/models/adapters/tools.js'
 import {textToolResult} from '../../src/core/tools/definition.js'
 
@@ -42,6 +42,9 @@ describe('Apple fixed Project memory bridge', () => {
     const f = fixture()
     expect((await import('../../src/index.js')).AppleProjectMemoryAgent).equals(AppleProjectMemoryAgent)
     expect(await f.model.getCapabilities()).deep.equals({namedTools: [spec.name], source: 'adapter', tools: 'unsupported'})
+    const resolved = await resolveModelCapabilities(f.model)
+    expect(resolved.namedTools).deep.equals([spec.name])
+    expect(canIncludeModelTools(resolved)).equals(false)
   })
 
   it('round-trips actual calls and results without passing Project scope to Swift', async () => {

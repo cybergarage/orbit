@@ -99,3 +99,15 @@ Sources: [Ollama show](https://docs.ollama.com/api-reference/show-model-details)
 [OpenAI GPT-4o specification](https://developers.openai.com/api/docs/models/gpt-4o),
 [Anthropic Models API](https://platform.claude.com/docs/en/api/models/retrieve),
 and the [existing model catalog](model-catalog.md).
+
+## Named observations
+
+`ModelCapabilities.namedTools?: readonly string[]` optionally reports specific
+supported names without enabling general tools or granting execution permission.
+The shared resolver returns a fresh deduplicated list only when all names match
+`[A-Za-z0-9_-]{1,64}` and at most 64 names are supplied. Malformed lists are omitted;
+an explicit empty list is preserved. Missing observations remain absent. Identity
+changes, failed discovery and older adapters do not inherit previous names.
+The general `supported`/`unknown` inclusion and `unsupported` exclusion policy is
+unchanged. The explicit Apple memory route reports general `unsupported` plus
+only `project_memory_search`; hosts must opt into that named route.
