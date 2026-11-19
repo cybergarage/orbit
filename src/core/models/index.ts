@@ -76,6 +76,13 @@ export {tool, Tool, ToolProfile} from '../tools/index.js'
 export type {ToolConfig, ToolContext, ToolHandler, ToolInput, ToolOptions, ToolOutput} from '../tools/index.js'
 export {AppleFoundationModelsAgent, AppleHelperClient} from './adapters/apple.js'
 export type {AppleAvailability, AppleFoundationModelsOptions, AppleHelperTransport} from './adapters/apple.js'
+export {canIncludeModelTools, resolveModelCapabilities} from './capabilities.js'
+export type {
+  ModelCapabilities,
+  ModelCapabilityOptions,
+  ModelCapabilitySupport,
+  ResolvedModelCapabilities,
+} from './capabilities.js'
 export {resolveModelContextCapacity} from './context-capacity.js'
 export type {ModelContextCapacity, ModelContextInfo, ModelContextOptions} from './context-capacity.js'
 export {DEFAULT_MODELS, getModel, getModelRegistry, ModelRegistry, registerModelProvider} from './factory.js'
@@ -92,9 +99,10 @@ export type {
   ModelToolResultPayload,
 } from './model.js'
 export type {PreparedModelInvocation} from './model.js'
-export type {Prompt} from './prompt.js'
-export {splitSystemPrompt} from './prompt.js'
 
+export type {Prompt} from './prompt.js'
+
+export {splitSystemPrompt} from './prompt.js'
 export type {Provider, ProviderName} from './provider.js'
 
 export {createProvider, getProvider, getProviderNames, isProvider, isProviderName} from './provider.js'

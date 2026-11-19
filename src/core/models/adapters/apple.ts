@@ -8,6 +8,7 @@ import {isAbsolute} from 'node:path'
 import {performance} from 'node:perf_hooks'
 
 import type {Message} from '../../message/index.js'
+import type {ModelCapabilities, ModelCapabilityOptions} from '../capabilities.js'
 import type {Model, ModelInvokeOptions, PreparedModelInvocation} from '../model.js'
 import type {Provider} from '../provider.js'
 
@@ -118,6 +119,11 @@ export class AppleFoundationModelsAgent implements Model {
     if (model !== 'system') throw new Error('Apple Foundation Models supports only the system model')
     if (provider.getHost() !== undefined) throw new Error('Apple Foundation Models does not use a host URL')
     this.options = {...options}
+  }
+
+  async getCapabilities(options: ModelCapabilityOptions = {}): Promise<ModelCapabilities> {
+    options.signal?.throwIfAborted()
+    return {source: 'adapter', tools: 'unsupported'}
   }
 
   getModel(): string {

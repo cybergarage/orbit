@@ -44,6 +44,9 @@ try {
     'docs/job-priority.md',
     'docs/event-inbox.md',
     'dist/core/model-catalog.js',
+    'dist/core/models/capabilities.js',
+    'dist/core/models/capabilities.d.ts',
+    'docs/model-capabilities.md',
     'dist/core/model-gateway.js',
     'dist/core/session/model-selection.js',
     'dist/core/session/title.js',
@@ -292,8 +295,31 @@ for (const mode of modes) {
 console.log('Package initialization consumer verified: public types, all scopes, consent and retained workspace.')
 `,
   )
+  await writeFile(
+    path.join(consumer, 'src/model-capability-api-probe.ts'),
+    `// Copyright (c) 2026 The Orbit Authors
+// SPDX-License-Identifier: Apache-2.0
+import assert from 'node:assert/strict'
+import {canIncludeModelTools, resolveModelCapabilities} from '@cybergarage/orbit'
+import type {Model, ModelCapabilities, ModelCapabilityOptions, ModelCapabilitySupport, ResolvedModelCapabilities} from '@cybergarage/orbit'
+const legacy: Model = {
+  getModel: () => 'legacy-fixture', getName: () => 'fixture', getProvider: () => 'custom',
+  async invoke() {throw new Error('No inference in package capability check')},
+}
+const options: ModelCapabilityOptions = {}
+const resolved: ResolvedModelCapabilities = await resolveModelCapabilities(legacy, options)
+const state: ModelCapabilitySupport = resolved.tools
+assert.equal(state, 'unknown')
+assert.equal(canIncludeModelTools(resolved), true)
+const restricted: ModelCapabilities = {source: 'adapter', tools: 'unsupported'}
+assert.equal(canIncludeModelTools(restricted), false)
+assert.equal((await resolveModelCapabilities({...legacy, async getCapabilities() {return restricted}})).tools, 'unsupported')
+console.log('Package capability consumer verified: optional legacy contract, tri-state resolver and tool-information policy; no inference.')
+`,
+  )
   runNpm(['run', 'build'], consumer)
   runNpm(['test'], consumer)
+  execFileSync(process.execPath, [path.join(consumer, 'dist/model-capability-api-probe.js')], {cwd: consumer, stdio: 'inherit'})
   execFileSync(process.execPath, [path.join(consumer, 'dist/event-store-api-probe.js')], {
     cwd: consumer,
     stdio: 'inherit',

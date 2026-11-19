@@ -13,6 +13,7 @@ import {performance} from 'node:perf_hooks'
 import {OpenAI} from 'openai'
 
 import type {Message} from '../../message/index.js'
+import type {ModelCapabilities, ModelCapabilityOptions} from '../capabilities.js'
 import type {ModelContextInfo} from '../context-capacity.js'
 import type {
   Model,
@@ -27,19 +28,23 @@ import type {Provider, ProviderName} from '../provider.js'
 import {ContextOverflowError} from '../../errors/index.js'
 import {Message as CoreMessage, MessageType} from '../../message/index.js'
 import {formatOperatorName, OperatorType} from '../../processor/index.js'
+import {unknownModelCapabilities} from '../capabilities.js'
 import {metadataRecord} from '../context-capacity.js'
 import {emitModelFailure, emitModelRequest, emitModelResponse} from '../diagnostics.js'
 import {freezeModelRequest} from '../prepared.js'
 import {redactProviderAuthenticationError} from '../provider-errors.js'
+import {supportsOpenAIChatTools} from './openai-capabilities.js'
 import {openAIContextInfo} from './openai-context.js'
+import {nativeCapabilityRoute} from './provider-capabilities.js'
 import {getToolCalls, getToolResult, stringifyToolResult} from './tools.js'
 
 export interface OpenAIAgentOptions {
-  client?: Pick<OpenAI, 'chat'>
+  client?: Partial<Pick<OpenAI, 'baseURL'>> & Pick<OpenAI, 'chat'>
 }
 
 export class OpenAIAgent implements Model {
-  private client: Pick<OpenAI, 'chat'> | undefined
+  private client: (Partial<Pick<OpenAI, 'baseURL'>> & Pick<OpenAI, 'chat'>) | undefined
+  private readonly hasInjectedClient: boolean
 
   constructor(
     private readonly model: string,
@@ -47,6 +52,21 @@ export class OpenAIAgent implements Model {
     options: OpenAIAgentOptions = {},
   ) {
     this.client = options.client
+    this.hasInjectedClient = options.client !== undefined
+  }
+
+  async getCapabilities(options: ModelCapabilityOptions = {}): Promise<ModelCapabilities> {
+    options.signal?.throwIfAborted()
+    const native = nativeCapabilityRoute({
+      client: this.client,
+      environment: process.env.OPENAI_BASE_URL,
+      host: this.provider.getHost(),
+      injected: this.hasInjectedClient,
+      nativeURL: 'https://api.openai.com/v1',
+    })
+    return native && supportsOpenAIChatTools(this.model)
+      ? {source: 'catalog', tools: 'supported'}
+      : unknownModelCapabilities()
   }
 
   async getContextInfo(): Promise<ModelContextInfo> {
