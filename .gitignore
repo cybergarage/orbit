@@ -29,3 +29,7 @@ PROMPT.md
 # Local test credentials (share only .env.test.example with fake values)
 /.env.test.local
 /.env.test.*.local
+
+# Keep per-case memory benchmark predictions and source traces local.
+/test/evaluation/results/*.json
+!/test/evaluation/results/*-summary.json

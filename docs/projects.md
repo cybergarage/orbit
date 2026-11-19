@@ -364,3 +364,46 @@ hold candidates with different titles. This is conservative uncertainty handling
 not a semantic contradiction oracle: vocabulary changes can miss conflicts and
 generic overlap can hold compatible entries. A user need not supply an old ID;
 the extractor receives related IDs or leaves an uncertain correction pending.
+
+## Opt-in model-callable search
+
+Embedded hosts may explicitly construct `createProjectMemorySearchTool(memory,
+{projectId, sessionId})` and pass it in `AgentOptions.toolDefinitions`, with
+`toolProfile: 'none'` when unrelated tools are unwanted. The host supplies stable
+IDs from trusted application state; the model may supply only `query` (1–512
+characters) and optional `limit` (1–16, default 6). No tool is registered by
+default. A tool-capable adapter is required; the Apple text-only adapter rejects
+tool specifications.
+
+```ts
+const search = createProjectMemorySearchTool(memory, {
+  projectId: selectedProject.id,
+  sessionId: destinationSession.getId(),
+})
+const agent = new Agent({
+  state: new State(destinationSession),
+  toolProfile: 'none',
+  toolDefinitions: [search],
+  // Supply the host's explicitly selected model and normal execution policy.
+})
+```
+
+For host pre-retrieval, call `memory.search(sessionId, projectId, {query, limit},
+signal)` directly. Both routes use the same canonical entries and source
+validation as memory preparation, recheck the Project/Session binding, suppress
+zero-overlap matches, and return stable entry IDs, revisions, available provenance,
+and the observed Project generation. Results are historical, untrusted evidence;
+they grant no permissions. Search does not load MEMORY.md, search arbitrary
+files/transcripts, activate extraction, or persist a context-capture record.
+It does acquire existing source ownership/validation leases, and can refuse busy
+sources. Corrections and retirement tombstones are read on subsequent calls;
+already emitted results are not retroactively rewritten.
+
+Ranking reuses NFKC-normalized English terms and Japanese bigrams, not semantic
+similarity. Whole entries must fit the existing 16-entry/2,048-token preparation
+budget; the serialized JSON result also fits 2,048 GPT tokenizer tokens. The
+host must account for the complete model request, tool definitions and prior
+rounds separately. An empty result does not establish that the fact never existed.
+
+See [Core memory evaluation](project-memory-evaluation.md) for isolated synthetic
+and public-data checks; the pilot is not a production ingestion policy.

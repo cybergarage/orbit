@@ -12,9 +12,10 @@ import type {ProjectExtractionJob, ProjectMemoryEntry, ProjectMemorySource, Proj
 import {inspectExecutionJournal} from '../execution/recovery.js'
 import {Message} from '../message/index.js'
 import {WriterClaim} from '../session/coordination.js'
+import {GptTokenizer} from '../tokenizer/index.js'
 import {AutomaticProjectMemory, containsMemorySecret, stableMemoryId} from './automatic-memory.js'
 import {catalogDigest} from './engine.js'
-import {parseProjectContext} from './memory-context.js'
+import {parseProjectContext, projectMemoryOverlap} from './memory-context.js'
 import {
   parseMemorySelection,
   type ProjectContextSnapshot,
@@ -29,6 +30,19 @@ export interface ProjectMemoryWrite {
   body: string
   operationId: string
   title: string
+}
+
+export interface ProjectMemorySearchInput {
+  limit?: number
+  query: string
+}
+
+export interface ProjectMemorySearchResult {
+  generation: number
+  projectId: string
+  results: ProjectMemoryEntry[]
+  truncated: boolean
+  trust: 'untrusted-memory-evidence'
 }
 
 export class ProjectMemoryService {
@@ -141,6 +155,7 @@ export class ProjectMemoryService {
       capture?: boolean
       contextPolicy?: ContextPolicy
       execution?: 'agent' | 'graph'
+      expectedProjectId?: string
       request?: string
       signal?: AbortSignal
     } = {},
@@ -150,6 +165,8 @@ export class ProjectMemoryService {
       throw new ProjectStoreError('invalid', 'Memory preparation requires curated mode')
     const membership = await this.projects.requireActive(sessionId)
     if (!membership?.projectId) throw new ProjectStoreError('missing', 'Curated memory requires a Project')
+    if (options.expectedProjectId !== undefined && membership.projectId !== options.expectedProjectId)
+      throw new ProjectStoreError('missing', 'Search Session is outside the bound Project')
     const catalog = await this.projects.store.query({
       kind: 'snapshot',
       pairId: membership.pairId,
@@ -378,6 +395,60 @@ export class ProjectMemoryService {
         0,
       )
     })
+  }
+
+  /** Host-bound, non-persisting retrieval; never selects unrelated entries to fill capacity. */
+  async search(
+    sessionId: string,
+    projectId: string,
+    input: ProjectMemorySearchInput,
+    signal?: AbortSignal,
+  ): Promise<ProjectMemorySearchResult> {
+    if (typeof input.query !== 'string' || !input.query.trim() || input.query.length > 512)
+      throw new ProjectStoreError('invalid', 'Search query must contain 1 to 512 characters')
+    const limit = input.limit ?? 6
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 16)
+      throw new ProjectStoreError('invalid', 'Search limit must be between 1 and 16')
+    const validate = async () => {
+      signal?.throwIfAborted()
+      const member = await this.projects.requireActive(sessionId)
+      if (member?.projectId !== projectId)
+        throw new ProjectStoreError('missing', 'Search Session is outside the bound Project')
+    }
+
+    await validate()
+    const snapshot = await this.prepare(
+      sessionId,
+      randomUUID(),
+      {mode: 'automatic'},
+      {
+        capture: false,
+        expectedProjectId: projectId,
+        request: input.query,
+        signal,
+      },
+    )
+    await validate()
+    if (snapshot.projectId !== projectId)
+      throw new ProjectStoreError('missing', 'Search Project changed during retrieval')
+    const matches = snapshot.entries.filter((entry) => projectMemoryOverlap(input.query, entry) > 0)
+    const result: ProjectMemorySearchResult = {
+      generation: snapshot.generation,
+      projectId,
+      results: [],
+      truncated: false,
+      trust: 'untrusted-memory-evidence',
+    }
+    const tokenizer = new GptTokenizer()
+    for (const entry of matches.slice(0, limit)) {
+      if (tokenizer.encode(JSON.stringify({...result, results: [...result.results, entry]})).length > 2048) break
+      result.results.push(entry)
+    }
+
+    result.truncated =
+      result.results.length < matches.length ||
+      snapshot.exclusions.some((entry) => entry.reason === 'entry-limit' || entry.reason === 'token-budget')
+    return result
   }
 
   startAutomatic(extract: KnowledgeExtractor): void {

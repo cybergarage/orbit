@@ -76,6 +76,7 @@ routing contract belongs in an ADR, and its implemented structure appears in
 - [Runtime model capabilities](model-capabilities.md): three-state observations for the selected adapter and permissive unknown tool-information policy.
 - [Projects](projects.md): explicit catalogs, registered session membership, curated memory and GUI navigation.
 
+- [Project memory evaluation](project-memory-evaluation.md): isolated Core search controls and a pinned public-data pilot.
 - [Workflow evaluation](workflow-evaluation.md): trusted plans, read-only evidence inspection, fixed denominators and missing-resource accounting.
 
 - [Managed Processor Graphs](processor-graphs.md): compilation, typed values, shared Run ownership and journal v2 migration.

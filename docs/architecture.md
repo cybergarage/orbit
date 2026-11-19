@@ -441,3 +441,9 @@ unsupported and unknown, with bounded metadata-only discovery; the common tool
 information policy excludes only explicit unsupported observations. See
 [Model capabilities](model-capabilities.md). It does not wire Project memory or
 change existing invocation/tool authorization.
+
+Embedded hosts can explicitly register a host-bound `project_memory_search` tool
+over canonical Project memory. It reuses membership/source validation and lexical
+selection without persisting a preparation capture or enabling extraction. No
+search tool is registered by default. See [Projects](projects.md#opt-in-model-callable-search)
+and [Core memory evaluation](project-memory-evaluation.md).
