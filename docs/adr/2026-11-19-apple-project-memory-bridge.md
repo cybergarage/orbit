@@ -2,9 +2,9 @@
 status: accepted
 proposed-date: 2026-11-19
 decision-date: 2026-11-19
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: [74110e9018a8b17f9e9916b6211ba4516ba5e0bd]
+implementation-status: completed
+implementation-completed-date: 2026-11-19
+implementation-commits: [97fb817609204be22618a1c1fd9d5439a86983c6, a4220ac78eb5927af12e2ed0faa51f1a56da04a9]
 superseded-by: []
 ---
 
@@ -110,3 +110,21 @@ rest of the result; there is no cross-model cache. Extend the existing fixed-too
 decision with this additive contract and verify it through public/package APIs.
 This clarification is accepted before implementation. Prior native-device evidence
 above remains historical; no new inference is necessary for metadata normalization.
+
+## Shared capability confirmation — 2026-11-19
+
+The stack is rebased on #40 head 6c0726fffae54a4d04d6c5a7ada6804ea34652fa,
+which includes merged #41 from main b3625abc7d1d0aaed57d642f87bad203a1a8f94d.
+The original bridge implementation is replayed as
+97fb817609204be22618a1c1fd9d5439a86983c6; original published commit references above
+remain historical evidence. Commit a4220ac78eb5927af12e2ed0faa51f1a56da04a9
+adds the typed optional named observation, bounded normalization, identity-drift
+and successive-selection controls, concrete Apple contract and installed-package
+checks. No generic tool inclusion rule or authorization code changed.
+
+Validation passed: headers, build, 1,455 full-suite tests, 61 targeted capability /
+Apple / search tests and the 531-file installed-package consumer. The original
+real-device evidence above predates this metadata-only follow-up; no new model
+inference or benchmark rerun was performed. Native Tool/search execution code is
+unchanged. Deterministic native actor IPC and final-head related/package checks
+remain separately reproducible through the feature guide.

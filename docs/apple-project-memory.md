@@ -115,7 +115,7 @@ mock evidence and must not be counted as model execution.
 See the [decision](adr/2026-11-19-apple-project-memory-bridge.md) and
 [Apple's tool-calling contract](https://developer.apple.com/documentation/foundationmodels/expanding-generation-with-tool-calling.md).
 
-The final local checkout also passed 1,421 repository tests, header checks, build,
+The initial implementation checkout also passed 1,421 repository tests, header checks, build,
 and the 526-file independent package consumer, including public adapter types and
 named capability without inference.
 
@@ -123,3 +123,7 @@ The current follow-up rebases onto the updated #40 and tests named capability
 normalization through the common resolver and installed-package API. Historical
 real-device evidence above is separate; this metadata-only update performs no new
 model inference and changes no native Tool/search/authorization behavior.
+
+The updated stack passed 1,455 full-suite tests, headers, build and the 531-file
+installed-package consumer, including common resolver visibility of the Apple
+named observation while general tool inclusion stays disabled.
