@@ -461,3 +461,6 @@ embedded GUI, with explicit settings selection and offline permanent deletion.
 
 [Runtime model capabilities](2026-11-19-runtime-model-capabilities.md) records the
 optional three-state contract and permissive unknown tool-information policy.
+
+[Opt-in Project memory search](2026-11-19-project-memory-search-tool.md) records
+the explicitly requested Core-only search contract and independent evaluation.

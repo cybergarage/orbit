@@ -112,7 +112,7 @@
     "postpack": "shx rm -f oclif.manifest.json",
     "prepack": "npm run build && oclif manifest",
     "pretest": "npm run format && npm run lint",
-    "test": "cross-env TS_NODE_PROJECT=tsconfig.test.json mocha --forbid-only \"test/**/*.test.ts\"",
+    "test": "cross-env TS_NODE_PROJECT=tsconfig.test.json mocha --forbid-only \"test/**/*.test.ts\" \"test/evaluation/*.test.mjs\"",
     "version": "npm run docs:commands && git add docs/cli.md",
     "docs:commands": "oclif manifest && oclif readme --readme-path docs/cli.md",
     "test:package": "node bin/test-package.mjs",

@@ -135,28 +135,8 @@ export function selectProjectMemory(
   for (const id of selectedIds)
     if (!catalog.entries.some((entry) => entry.id === id && !entry.retired))
       throw new ProjectStoreError('invalid', `Selected memory is unavailable: ${id}`)
-  const terms = (text: string): Set<string> => {
-    const normalized = text.normalize('NFKC').toLowerCase()
-    const tokens = normalized.match(/[a-z0-9_]+|[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]+/gu) ?? []
-    return new Set(
-      tokens.flatMap((token) =>
-        /^[a-z0-9_]+$/u.test(token)
-          ? [token]
-          : [...token].flatMap((_, index, chars) =>
-              index + 1 < chars.length ? [chars[index] + chars[index + 1]] : [chars[index]],
-            ),
-      ),
-    )
-  }
-
-  const query = terms(options.request ?? '')
-  const score = (entry: ProjectMemoryEntry): number => {
-    const words = terms(
-      `${entry.title} ${entry.body} ${entry.automatic?.condition ?? ''} ${entry.automatic?.evidence ?? ''}`,
-    )
-    const overlap = [...query].filter((word) => words.has(word)).length
-    return overlap * 10 + (entry.automatic?.importance ?? 1)
-  }
+  const score = (entry: ProjectMemoryEntry): number =>
+    projectMemoryOverlap(options.request ?? '', entry) * 10 + (entry.automatic?.importance ?? 1)
 
   const ordered = [...catalog.entries]
     .filter((entry) => !entry.retired)
@@ -204,4 +184,27 @@ export function selectProjectMemory(
     tokens,
   }
   return parseProjectContext({...body, digest: catalogDigest(body)})
+}
+
+/** Lexical overlap only; importance is not evidence of a query match. */
+export function projectMemoryOverlap(request: string, entry: ProjectMemoryEntry): number {
+  const query = projectMemoryTerms(request)
+  const words = projectMemoryTerms(
+    `${entry.title} ${entry.body} ${entry.automatic?.condition ?? ''} ${entry.automatic?.evidence ?? ''}`,
+  )
+  return [...query].filter((word) => words.has(word)).length
+}
+
+function projectMemoryTerms(text: string): Set<string> {
+  const normalized = text.normalize('NFKC').toLowerCase()
+  const tokens = normalized.match(/[a-z0-9_]+|[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]+/gu) ?? []
+  return new Set(
+    tokens.flatMap((token) =>
+      /^[a-z0-9_]+$/u.test(token)
+        ? [token]
+        : [...token].flatMap((_, index, chars) =>
+            index + 1 < chars.length ? [chars[index] + chars[index + 1]] : [chars[index]],
+          ),
+    ),
+  )
 }
