@@ -2,9 +2,9 @@
 status: accepted
 proposed-date: 2026-11-20
 decision-date: 2026-11-20
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-11-20
+implementation-commits: [5a9c32d585b86a742eec022cff45ee6fb47b8a53]
 superseded-by: []
 ---
 
@@ -78,7 +78,24 @@ A callback rather than a bare bool also supports revocation before dispatch.
 
 ## Implementation and Confirmation
 
-Pending implementation, full/package verification and deterministic boundary tests.
+Implementation commit 5a9c32d585b86a742eec022cff45ee6fb47b8a53 delivers the
+run-local Agent catalog/guards, trusted Core facade passthrough, public permission
+type, canonical live-binding lookup and the maintained feature/architecture guide.
+Headers/build and all 1,483 tests pass, including 28 new synthetic boundaries.
+The independent installed-package consumer passes (534 files), including public
+callback types at Agent/Thread/Application boundaries. The existing compiled Swift
+native actor protocol regression passes two distinct calls with reverse-order
+results, separately from model inference.
+
+The tests dispatch actual canonical search from Session B against source-backed
+memory saved in A without answer pre-injection. They cover supported/unknown/
+unsupported, immutable scope grants, default/denied/throwing permissions, foreign
+repositories and scope injection, current-model switches, changed membership,
+execution-policy denial, correction/retirement, per-run catalogs and collisions,
+permission-aware retry identity, revocation before provider dispatch and after
+retrieval, and paused native cleanup. No real user data, real-model inference,
+paid provider requests or benchmark rerun was used. Native persisted-history replay
+limits remain inherited; they are not qualified or expanded by these checks.
 
 ## Follow-up Work
 
