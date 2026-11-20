@@ -285,7 +285,8 @@ function uniqueSources(entries: ProjectMemoryEntry[]): SourceCandidate[] {
     }
   }
 
-  return [...byKey.keys()].sort().map((key) => byKey.get(key)!)
+  // Machine identities must use the same claim order regardless of the host locale.
+  return [...byKey.keys()].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)).map((key) => byKey.get(key)!)
 }
 
 export function sameSearchBinding(a: ProjectSearchBinding, b?: ProjectSearchBinding): boolean {
