@@ -807,8 +807,7 @@ export class ThreadManager {
       throw new InvalidInputError('Message content cannot be empty.')
     }
 
-    if (options.memorySearch !== undefined && typeof options.memorySearch !== 'function')
-      throw new InvalidInputError('Memory search requires a host permission callback')
+    assertMemorySearchPermission(options.memorySearch)
     const thread = this.requireThread(threadId)
     options = {
       ...options,
@@ -946,4 +945,9 @@ function prepareThreadModel(agent: ThreadAgent, options: AgentOptions): Promise<
 
 function assertRetryIdentity(previous: string, submitted: string, samePermission: boolean): void {
   if (previous !== submitted || !samePermission) throw new InvalidInputError('Conflicting request ID')
+}
+
+function assertMemorySearchPermission(permission: unknown): void {
+  if (permission !== undefined && typeof permission !== 'function')
+    throw new InvalidInputError('Memory search requires a host permission callback')
 }
