@@ -22,6 +22,7 @@ import type {
   WorkspaceExecutor,
 } from '../../../src/index.js'
 
+import {observationProvenance} from '../../../src/core/tools/observation-provenance.js'
 import {
   createBuiltinTools,
   createReadTool,
@@ -200,6 +201,114 @@ describe('public OperationExecutor', () => {
     expect(await fs.readFile(target, 'utf8')).equal('original fixture')
   })
 
+  it('routes only the frozen selection with the same approval and observation behavior', async () => {
+    const target = path.join(root, 'scoped.txt')
+    await fs.writeFile(target, 'local fixture')
+    const calls: string[] = []
+    const approvals: string[] = []
+    const toolNames: Array<PreparedWorkspaceOperation['name']> = ['write', 'edit']
+    const owner = start(
+      async (run) => {
+        const executor = new OperationExecutor(run, {
+          policy: {generation: 'scoped-fixture', profile: 'workspace-confirm', roots: [root]},
+          workspaceExecutor: {
+            async execute(operation) {
+              calls.push(operation.name)
+              expect(run.journal.records().at(-1)?.kind).equal('operation-intent')
+              return success
+            },
+            toolNames,
+          },
+        })
+        toolNames.splice(0, 2, 'read')
+        const context = {callId: 'fixture', cwd: root, emitUpdate() {}, groupId: 'group', signal: run.signal}
+        const fixtures: Array<[BuiltinToolName, object, string]> = [
+          ['read', {path: target}, 'local fixture'],
+          ['list', {}, 'scoped.txt'],
+          ['glob', {pattern: '*.txt'}, 'scoped.txt'],
+          ['grep', {pattern: 'local'}, 'local fixture'],
+          ['bash', {command: "printf '%s' 'local shell'"}, 'local shell'],
+        ]
+        for (const [name, input, expected] of fixtures) {
+          const [tool] = createBuiltinTools({include: [name]})
+          // Serialize calls so each intent/settlement is observable in order.
+          // eslint-disable-next-line no-await-in-loop
+          const result = await executor.executeTool(tool, input, {...context, callId: name})
+          expect(JSON.stringify(result.content)).includes(expected)
+          if (name === 'bash') expect(observationProvenance(result)?.adapter).equal('builtin-bash-v1')
+        }
+
+        const write = await executor.executeTool(
+          createWriteTool(),
+          {content: 'prepared fixture', path: target},
+          context,
+        )
+        expect(write).deep.equal(success)
+        expect(observationProvenance(write)).equal(undefined)
+        const [edit] = createBuiltinTools({include: ['edit']})
+        const edited = await executor.executeTool(edit, {newText: 'prepared', oldText: 'local', path: target}, context)
+        expect(edited).deep.equal(success)
+        expect(observationProvenance(edited)).equal(undefined)
+      },
+      {
+        async onApproval(request: Parameters<NonNullable<AgentExecutionOptions['onApproval']>>[0]) {
+          approvals.push(String(request.preview.name))
+          await owner.supervisor.replyApproval(request.runId, {
+            approve: true,
+            digest: request.digest,
+            requestId: request.id,
+            responderScope: 'owner',
+          })
+        },
+        responderScope: 'owner',
+      },
+    )
+    const finished = await (await owner.handle).finished
+    expect(finished.operations.map((operation) => operation.status)).deep.equal(Array.from({length: 7}).fill('succeeded'))
+    expect(approvals).deep.equal(['bash', 'write', 'edit'])
+    expect(calls).deep.equal(['write', 'edit'])
+    expect(await fs.readFile(target, 'utf8')).equal('local fixture')
+  })
+
+  it('an empty selection is the existing local-only route', async () => {
+    const target = path.join(root, 'local.txt')
+    const owner = start(async (run) => {
+      const executor = new OperationExecutor(run, {
+        policy,
+        workspaceExecutor: {
+          async execute() {
+            throw new Error('No managed tool is selected')
+          },
+          toolNames: [],
+        },
+      })
+      await executor.executeTool(
+        createWriteTool(),
+        {content: 'local', path: target},
+        {
+          callId: 'local',
+          cwd: root,
+          emitUpdate() {},
+          signal: run.signal,
+        },
+      )
+    })
+    expect((await (await owner.handle).finished).outcome).equal('completed')
+    expect(await fs.readFile(target, 'utf8')).equal('local')
+  })
+
+  it('rejects an invalid or duplicated trusted tool selection before dispatch', async () => {
+    const owner = start(async (run) => {
+      for (const toolNames of [['write', 'write'], ['unknown'], true]) {
+        const workspaceExecutor = {execute: async () => success, toolNames} as unknown as WorkspaceExecutor
+        expect(() => new OperationExecutor(run, {policy, workspaceExecutor})).to.throw(
+          'Invalid workspace executor tool names',
+        )
+      }
+    })
+    expect((await (await owner.handle).finished).outcome).equal('completed')
+  })
+
   it('does not dispatch denied or stale writes or out-of-scope reads to the workspace executor', async () => {
     const target = path.join(root, 'fixture.txt')
     await fs.writeFile(target, 'original fixture')
@@ -209,6 +318,7 @@ describe('public OperationExecutor', () => {
         calls++
         return success
       },
+      toolNames: ['read', 'write'],
     }
     const owner = start(
       async (run) => {
@@ -268,6 +378,7 @@ describe('public OperationExecutor', () => {
             calls++
             return success
           },
+          toolNames: ['read'],
         },
       })
       const local = new OperationExecutor(run, {policy})
@@ -290,6 +401,7 @@ describe('public OperationExecutor', () => {
             calls++
             throw new Error('Fixture settlement unavailable')
           },
+          toolNames: ['write'],
         },
       })
       const context = {callId: 'fixture', cwd: root, emitUpdate() {}, signal: run.signal}
