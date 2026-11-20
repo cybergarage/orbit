@@ -311,3 +311,40 @@ Windows and representative product trials remain separate verification work.
 ## Managed Graph Runs
 
 [Processor Graphs](processor-graphs.md) reuse this supervisor, authorization, ownership and storage service. Their v2 required records extend the journal with a bound definition and acknowledged visit/route evidence. Ordinary v1 Runs coexist in the same Session; all records within a Run keep one version. The Graph guide specifies transcript v2 migration, read-only inspection and the distinct final-value API.
+
+## Optional WorkspaceExecutor
+
+An embedding host may pass a trusted `WorkspaceExecutor` as
+`new Agent({execution: {workspaceExecutor}})`. It replaces only the final
+managed dispatch for the seven built-in coding tools. Tool schemas, prepared
+paths, authorization, approvals, resource ownership, journal ordering, and run
+lifecycle remain in Core. CLI, GUI, and Nest use the existing local handlers
+unless a host explicitly injects the dependency. Neither model arguments nor
+workspace settings select it. Non-built-in tools and unmanaged factory calls
+are unchanged.
+
+```ts
+import {Agent, type WorkspaceExecutor} from '@cybergarage/orbit'
+
+declare const workspaceExecutor: WorkspaceExecutor
+const agent = new Agent({execution: {workspaceExecutor}, toolProfile: 'coding'})
+```
+
+The executor receives a versioned, immutable `PreparedWorkspaceOperation` and
+the active run's abort signal. File tool paths and the target are canonical in
+the same workspace namespace as the Core host. For mutations, the executor
+must verify the prepared UTF-8 preimage SHA-256 (or absence for a null digest)
+and apply only the prepared mutation with the expected result digest. For Bash
+the backend selects its own shell and sanitized environment; Core does not
+send its process environment, provider credentials, Session metadata, Project
+memory, or approval callbacks. Core bounds each request and result to 1 MiB
+of JSON and expects regular built-in text tool results.
+
+An executor must honor the operation's established scope, honor cancellation,
+and return only when it knows the outcome. Return an error result for a known
+failure and reject on uncertain settlement. Core preserves its unknown-operation
+barrier and never retries the same call through the local handler. Injected
+results do not inherit the local adapter's trusted observation provenance.
+This interface is not a sandbox or enforcement of a backend's behavior. A
+remote backend, native sandbox, and automatic/Host selection are not supplied
+by this API.

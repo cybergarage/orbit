@@ -288,6 +288,10 @@ its own final hash in a tracked file.
 
 ## Decision index
 
+[Optional Workspace Executor](2026-11-20-workspace-executor.md) separates managed
+coding-tool dispatch from the Agent and Session lifecycle without changing
+default clients.
+
 [Structural log reading](2026-11-14-structural-log-reading.md) preserves historical partitions through a shared validated reader.
 
 [Additive session metadata](2026-11-14-additive-session-metadata.md) records the bounded sidecar cleanup and deferred destructive compatibility boundaries.

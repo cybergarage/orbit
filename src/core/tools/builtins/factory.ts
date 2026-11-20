@@ -5,6 +5,7 @@ import type {z} from 'zod'
 
 import type {ToolDefinition, ToolExecutionContext, ToolResult, ToolScheduling} from '../definition.js'
 
+import {markWorkspaceBuiltin} from '../../execution/workspace-executor.js'
 import {zodToolInput} from '../definition.js'
 import {markObservationAdapter} from '../observation-provenance.js'
 
@@ -28,5 +29,6 @@ export function defineBuiltinTool<Input, Details = unknown>(options: {
     },
   }
   markObservationAdapter(definition)
+  markWorkspaceBuiltin(definition)
   return definition
 }

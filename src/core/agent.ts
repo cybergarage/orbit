@@ -53,6 +53,7 @@ import {copyJSON, FileExecutionJournal, MemoryExecutionJournal} from './executio
 import {executionLimitValue, isExecutionLimit, parseRunLimits} from './execution/limits.js'
 import {isolateLogger} from './execution/observer.js'
 import {DEFAULT_RUN_LIMITS, RunExecutionError, RunStoppedError, RunSupervisor, until} from './execution/run.js'
+import {captureWorkspaceExecutor, type WorkspaceExecutor} from './execution/workspace-executor.js'
 import {
   FileSessionLogStore,
   LogEventType,
@@ -149,6 +150,7 @@ export interface AgentExecutionOptions {
   onApproval?: (request: ApprovalRequest) => Promise<void> | void
   policy?: ExecutionPolicy
   responderScope?: string
+  workspaceExecutor?: WorkspaceExecutor
 }
 
 export interface AgentOptions {
@@ -280,6 +282,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         options.execution?.actionMode ?? this.settings.executionActionMode ?? 'multiple',
       ),
       limits: {...this.settings.executionLimits, ...options.execution?.limits},
+      workspaceExecutor: captureWorkspaceExecutor(options.execution?.workspaceExecutor),
     }
     this.selectionProjector = options.selectionProjector ? Object.freeze({...options.selectionProjector}) : undefined
     this.mcpFactory =
@@ -616,6 +619,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
       allowLegacyTools: this.execution.allowLegacyTools,
       onToolSettled: (outcome: 'completed' | 'failed') => this.observeMetric(() => this.metrics?.toolCall(outcome)),
       policy,
+      workspaceExecutor: this.execution.workspaceExecutor,
     }
     const executor = new OperationExecutor(run, managed)
     const diagnostics = options?.diagnostics ?? this.diagnostics

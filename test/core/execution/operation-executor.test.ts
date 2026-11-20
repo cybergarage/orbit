@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {expect} from 'chai'
-import {randomUUID} from 'node:crypto'
+import {createHash, randomUUID} from 'node:crypto'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -10,21 +10,28 @@ import path from 'node:path'
 import type {
   AgentExecutionOptions,
   AgentOptions,
+  BuiltinToolName,
   ExecutionPolicy,
   OperationPreparation,
   PreparedOperation,
+  PreparedWorkspaceOperation,
   RunContext,
   ToolDefinition,
   ToolExecutionContext,
   ToolResult,
+  WorkspaceExecutor,
 } from '../../../src/index.js'
 
 import {
+  createBuiltinTools,
+  createReadTool,
+  createWriteTool,
   executeManagedTool,
   executePrepared,
   MemoryExecutionJournal,
   OperationExecutor,
   RunSupervisor,
+  ToolRegistry,
 } from '../../../src/index.js'
 
 const policy: ExecutionPolicy = {generation: 'test', profile: 'unrestricted', roots: []}
@@ -81,7 +88,7 @@ describe('public OperationExecutor', () => {
   const supervisors: RunSupervisor[] = []
 
   beforeEach(async () => {
-    root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-executor-'))
+    root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-executor-')))
   })
 
   afterEach(async () => {
@@ -115,6 +122,193 @@ describe('public OperationExecutor', () => {
     const execution: AgentExecutionOptions = {limits: {toolRequests: 3}, policy}
     const options: AgentOptions = {execution}
     expect(options.execution).equal(execution)
+  })
+
+  it('routes all managed coding tools through the injected executor with approved, bounded input', async () => {
+    const registry = new ToolRegistry()
+    for (const builtin of createBuiltinTools({profile: 'coding'})) registry.register(builtin)
+    const snapshot = registry.snapshot()
+    const target = path.join(root, 'fixture.txt')
+    await fs.writeFile(target, 'original fixture')
+    const calls: PreparedWorkspaceOperation[] = []
+    let approvals = 0
+    const workspaceExecutor: WorkspaceExecutor = {
+      async execute(operation, signal) {
+        calls.push(operation)
+        expect(Object.isFrozen(operation)).equal(true)
+        expect(Object.isFrozen(operation.input)).equal(true)
+        expect(operation.cwd).equal(root)
+        expect(signal.aborted).equal(false)
+        expect(operation).not.to.have.any.keys('environment', 'sessionId', 'authorization')
+        if (operation.name === 'glob' && Array.isArray(operation.input.pattern))
+          expect(Object.isFrozen(operation.input.pattern)).equal(true)
+        if (operation.effect === 'write') {
+          expect(operation.preimageSha256).equal(createHash('sha256').update('original fixture').digest('hex'))
+          expect(operation.resultSha256).equal(createHash('sha256').update('changed fixture').digest('hex'))
+        }
+
+        return success
+      },
+    }
+    const fixtures: Array<[BuiltinToolName, object]> = [
+      ['bash', {command: 'printf fixture'}],
+      ['read', {limit: 1, path: 'fixture.txt'}],
+      ['write', {content: 'changed fixture', path: 'fixture.txt'}],
+      ['edit', {newText: 'changed', oldText: 'original', path: 'fixture.txt'}],
+      ['list', {}],
+      ['glob', {pattern: ['*.txt']}],
+      ['grep', {pattern: 'fixture'}],
+    ]
+    const owner = start(
+      async (run) => {
+        const executor = new OperationExecutor(run, {
+          policy: {generation: 'inject-test', profile: 'workspace-confirm', roots: [root]},
+          workspaceExecutor,
+        })
+        for (const [name, input] of fixtures) {
+          // Exercise each prepared operation in one run, preserving mutation barriers.
+          // eslint-disable-next-line no-await-in-loop
+          const result = await executor.executeTool(snapshot.get(name)!, input, {
+            callId: name,
+            cwd: root,
+            emitUpdate() {},
+            signal: run.signal,
+          })
+          expect(result).deep.equal(success)
+        }
+      },
+      {
+        async onApproval(request: Parameters<NonNullable<AgentExecutionOptions['onApproval']>>[0]) {
+          approvals++
+          await owner.supervisor.replyApproval(request.runId, {
+            approve: true,
+            digest: request.digest,
+            requestId: request.id,
+            responderScope: 'owner',
+          })
+        },
+        responderScope: 'owner',
+      },
+    )
+    const run = await (await owner.handle).finished
+    expect(run.operations.map((op) => op.status)).deep.equal(Array.from({length: 7}, () => 'succeeded'))
+    expect(calls.map((call) => call.name)).deep.equal(fixtures.map(([name]) => name))
+    expect(calls.map((call) => call.target)).deep.equal([root, target, target, target, root, root, root])
+    expect(calls[1].input).deep.equal({limit: 1, path: target})
+    expect(approvals).equal(3)
+    expect(owner.journal.records().filter((record) => record.kind === 'operation-intent')).to.have.length(7)
+    expect(await fs.readFile(target, 'utf8')).equal('original fixture')
+  })
+
+  it('does not dispatch denied or stale writes or out-of-scope reads to the workspace executor', async () => {
+    const target = path.join(root, 'fixture.txt')
+    await fs.writeFile(target, 'original fixture')
+    let calls = 0
+    const workspaceExecutor: WorkspaceExecutor = {
+      async execute() {
+        calls++
+        return success
+      },
+    }
+    const owner = start(
+      async (run) => {
+        const executor = new OperationExecutor(run, {
+          policy: {generation: 'inject-test', profile: 'workspace-confirm', roots: [root]},
+          workspaceExecutor,
+        })
+        const context = {callId: 'fixture', cwd: root, emitUpdate() {}, signal: run.signal}
+        await executor.executeTool(createReadTool(), {path: path.dirname(root)}, context)
+        await executor.executeTool(createWriteTool(), {content: 'change', path: target}, context)
+        await executor.executeTool(createWriteTool(), {content: 'denied', path: target}, context)
+      },
+      {
+        async onApproval(request: Parameters<NonNullable<AgentExecutionOptions['onApproval']>>[0]) {
+          const approve = (await fs.readFile(target, 'utf8')) === 'original fixture'
+          if (approve) await fs.writeFile(target, 'owner changed fixture')
+          await owner.supervisor.replyApproval(request.runId, {
+            approve,
+            digest: request.digest,
+            requestId: request.id,
+            responderScope: 'owner',
+          })
+        },
+        responderScope: 'owner',
+      },
+    )
+    expect((await (await owner.handle).finished).operations.map((op) => op.status)).deep.equal([
+      'invalid',
+      'cancelled-before-start',
+      'denied',
+    ])
+    expect(calls).equal(0)
+    expect(await fs.readFile(target, 'utf8')).equal('owner changed fixture')
+  })
+
+  it('does not delegate similarly named custom tools or change the default handler', async () => {
+    let calls = 0
+    const file = path.join(root, 'original.txt')
+    await fs.writeFile(file, 'local file fixture')
+    const custom = definition(async () => ({
+      binding: {},
+      effect: 'read',
+      async execute() {
+        return success
+      },
+      preview: {},
+      revalidate: async () => true,
+      targets: [file],
+    }))
+    custom.spec.name = 'read'
+    const fixture = start(async (run) => {
+      const context = {callId: 'fixture', cwd: root, emitUpdate() {}, signal: run.signal}
+      const injected = new OperationExecutor(run, {
+        policy,
+        workspaceExecutor: {
+          async execute() {
+            calls++
+            return success
+          },
+        },
+      })
+      const local = new OperationExecutor(run, {policy})
+      expect(await injected.executeTool(custom, {}, context)).deep.equal(success)
+      const result = await local.executeTool(createReadTool(), {path: file}, context)
+      expect(result.content).deep.equal([{text: 'local file fixture', type: 'text'}])
+    })
+    expect((await (await fixture.handle).finished).outcome).equal('completed')
+    expect(calls).equal(0)
+  })
+
+  it('rejects oversized workspace requests before dispatch and treats uncertain dispatch as unknown without fallback', async () => {
+    const destination = path.join(root, 'not-created.txt')
+    let calls = 0
+    const fixture = start(async (run) => {
+      const executor = new OperationExecutor(run, {
+        policy,
+        workspaceExecutor: {
+          async execute() {
+            calls++
+            throw new Error('Fixture settlement unavailable')
+          },
+        },
+      })
+      const context = {callId: 'fixture', cwd: root, emitUpdate() {}, signal: run.signal}
+      await executor.executeTool(createWriteTool(), {content: 'a'.repeat(1024 * 1024), path: destination}, context)
+      await executor.executeTool(createWriteTool(), {content: 'fixture', path: destination}, context)
+    })
+    const handle = await fixture.handle
+    const result = await handle.finished
+    try {
+      expect(result.outcome).equal('incomplete')
+      expect(result.operations.map((op) => op.status)).deep.equal(['invalid', 'unknown'])
+      expect(calls).equal(1)
+      expect(await fs.stat(destination).catch(() => {})).equal(undefined)
+    } finally {
+      await fixture.supervisor.reconcileRun(handle.id, {
+        confirmedStopped: true,
+        operations: [{id: result.operations.at(-1)!.id, status: 'failed'}],
+      })
+    }
   })
 
   for (const legacy of [false, true]) {

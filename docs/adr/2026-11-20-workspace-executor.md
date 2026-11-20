@@ -90,4 +90,4 @@ preparation protocol, and concrete backend isolation are outside phase 1.
 ## References
 
 - [Current Core architecture](../architecture.md)
-- [Execution model](../concepts/execution-model.md)
+- [Execution model](../concepts/agent-runtime.md)

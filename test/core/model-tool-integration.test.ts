@@ -23,77 +23,96 @@ describe('model tool integration', () => {
     await fs.rm(root, {force: true, recursive: true})
   })
 
-  it('runs an OpenAI function call through a built-in tool and returns its result', async () => {
-    const requests: Array<{messages: Array<Record<string, unknown>>}> = []
-    const responses = [
-      {
-        choices: [
-          {
-            finish_reason: 'tool_calls',
-            message: {
-              content: null,
-              refusal: null,
-              role: 'assistant',
-              tool_calls: [
-                {
-                  function: {arguments: JSON.stringify({path: 'sample.txt'}), name: 'read'},
-                  id: 'call-read',
-                  type: 'function',
-                },
-              ],
+  for (const injected of [false, true]) {
+    it(`runs an OpenAI function call through the ${injected ? 'injected workspace executor' : 'default built-in'}`, async () => {
+      const requests: Array<{messages: Array<Record<string, unknown>>}> = []
+      const responses = [
+        {
+          choices: [
+            {
+              finish_reason: 'tool_calls',
+              message: {
+                content: null,
+                refusal: null,
+                role: 'assistant',
+                tool_calls: [
+                  {
+                    function: {arguments: JSON.stringify({path: 'sample.txt'}), name: 'read'},
+                    id: 'call-read',
+                    type: 'function',
+                  },
+                ],
+              },
+            },
+          ],
+          id: 'chatcmpl-tool',
+          model: 'gpt-test',
+        },
+        {
+          choices: [
+            {
+              finish_reason: 'stop',
+              message: {content: 'done', refusal: null, role: 'assistant'},
+            },
+          ],
+          id: 'chatcmpl-final',
+          model: 'gpt-test',
+        },
+      ]
+      const client = {
+        chat: {
+          completions: {
+            async create(request: unknown) {
+              requests.push(request as {messages: Array<Record<string, unknown>>})
+              return responses.shift()
             },
           },
-        ],
-        id: 'chatcmpl-tool',
-        model: 'gpt-test',
-      },
-      {
-        choices: [
+        },
+      }
+      const model = new OpenAIAgent('gpt-test', createProvider('openai'), {client: client as never})
+      const agent = new Agent({
+        cwd: root,
+        deps: {createModel: () => model},
+        ...(injected
+          ? {
+              execution: {
+                workspaceExecutor: {
+                  async execute(operation) {
+                    expect(operation.name).equal('read')
+                    expect(operation.target).equal(await fs.realpath(path.join(root, 'sample.txt')))
+                    return {content: [{text: 'from executor', type: 'text' as const}]}
+                  },
+                },
+              },
+            }
+          : {}),
+        settings: {tools: {include: ['read'], profile: ToolProfile.None}},
+      })
+
+      try {
+        const response = await agent.invoke([new Message(MessageType.User, {content: 'Read sample.txt'})])
+
+        expect(response.content).to.equal('done')
+        expect(requests).to.have.length(2)
+        const assistantMessage = requests[1].messages.find((message) => Array.isArray(message.tool_calls))
+        const toolMessage = requests[1].messages.find((message) => message.role === 'tool')
+        expect(assistantMessage?.tool_calls).to.deep.equal([
           {
-            finish_reason: 'stop',
-            message: {content: 'done', refusal: null, role: 'assistant'},
+            function: {arguments: JSON.stringify({path: 'sample.txt'}), name: 'read'},
+            id: 'call-read',
+            type: 'function',
           },
-        ],
-        id: 'chatcmpl-final',
-        model: 'gpt-test',
-      },
-    ]
-    const client = {
-      chat: {
-        completions: {
-          async create(request: unknown) {
-            requests.push(request as {messages: Array<Record<string, unknown>>})
-            return responses.shift()
-          },
-        },
-      },
-    }
-    const model = new OpenAIAgent('gpt-test', createProvider('openai'), {client: client as never})
-    const agent = new Agent({
-      cwd: root,
-      deps: {createModel: () => model},
-      settings: {tools: {include: ['read'], profile: ToolProfile.None}},
+        ])
+        expect(toolMessage).to.include({
+          content: injected ? 'from executor' : 'hello',
+          role: 'tool',
+          tool_call_id: 'call-read',
+        })
+      } finally {
+        await agent.close()
+      }
     })
-
-    try {
-      const response = await agent.invoke([new Message(MessageType.User, {content: 'Read sample.txt'})])
-
-      expect(response.content).to.equal('done')
-      expect(requests).to.have.length(2)
-      const assistantMessage = requests[1].messages.find((message) => Array.isArray(message.tool_calls))
-      const toolMessage = requests[1].messages.find((message) => message.role === 'tool')
-      expect(assistantMessage?.tool_calls).to.deep.equal([
-        {
-          function: {arguments: JSON.stringify({path: 'sample.txt'}), name: 'read'},
-          id: 'call-read',
-          type: 'function',
-        },
-      ])
-      expect(toolMessage).to.include({content: 'hello', role: 'tool', tool_call_id: 'call-read'})
-    } finally {
-      await agent.close()
-    }
-  })
+  }
 
   it('preserves OpenAI refusal output instead of returning an empty response', async () => {
     const client = {
