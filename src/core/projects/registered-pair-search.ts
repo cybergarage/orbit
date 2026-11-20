@@ -153,6 +153,8 @@ export class RegisteredPairSearch {
     claims: WriterClaim[],
   ): Promise<InspectedSource | undefined> {
     const {pairId, sessionId} = source
+    const isRequester = sessionId === binding.sessionId
+    if (isRequester && pairId !== binding.pairId) return undefined
     const registered = this.registered(sessionId)
     if (registered?.scope.pairId !== pairId) return undefined
     const member = await this.store.query({kind: 'membership', pairId, sessionId})
@@ -161,7 +163,7 @@ export class RegisteredPairSearch {
     if (repository.isArchived(sessionId)) return undefined
 
     // A peer claim is temporary and exclusive. Never close a host thread or acquire for the current Session.
-    if (sessionId !== binding.sessionId) {
+    if (!isRequester) {
       const thread = this.host.getThread(sessionId)
       if (thread?.status === 'running' || thread?.run?.quarantined)
         throw new ProjectStoreError('busy', 'Memory source has an active or quarantined writer')
