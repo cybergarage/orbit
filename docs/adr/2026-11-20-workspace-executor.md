@@ -2,9 +2,9 @@
 status: accepted
 proposed-date: 2026-11-20
 decision-date: 2026-11-20
-implementation-status: in-progress
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-11-20
+implementation-commits: [c3bc8b9b3e54e0cb0a5003e728555b135356dedd]
 superseded-by: []
 ---
 
@@ -76,10 +76,12 @@ Inspected 2026-11-20:
 
 ## Implementation and Confirmation
 
-The maintainer approved phase 1 implementation on 2026-11-20. Confirm each of the
-seven routing paths, scope and approval denial, stale preimage rejection,
-cancellation/unknown settlement, no fallback, and unchanged default behavior
-before finalizing this record.
+The maintainer approved phase 1 implementation on 2026-11-20. The cloud Linux
+validation passed the TypeScript/GUI build, 1,511 repository tests, and the
+independent package consumer. Fixtures cover the seven routing paths, scope and
+approval denial, stale preimage rejection, unknown settlement without fallback,
+and an unchanged default Agent tool round trip. No live model or OS sandbox was
+used to validate the new interface.
 
 ## Follow-up Work
 
