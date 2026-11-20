@@ -28,6 +28,31 @@ into higher total returned-turn coverage under the same limits. Partial
 passages and unannotated context can still be useful; all turns present is
 not proof the model could answer.
 
+## Any versus all evidence and source diversity
+
+"Any" counts a question with at least one fully retained annotated turn. "All"
+requires every annotated turn. Both columns use the same 26 answerable questions.
+
+| Stage | Prefix: any / all | Turn chunks: any / all |
+| --- | ---: | ---: |
+| Admitted to the catalog | 15 / 7 | 26 / 26 |
+| Before budgets, first six positive-overlap entries | 10 / 3 | 15 / 8 |
+| After budgets, returned entries | 9 / 2 | 10 / 5 |
+
+Six entries need not represent six different source Sessions. Match each selected
+entry ID to its original Session offset map, count distinct Session indices
+within the case, then sum the per-case counts across the same 30 pairs.
+
+| Replay stage | Prefix: entries / distinct sources | Turn chunks: entries / distinct sources |
+| --- | ---: | ---: |
+| Before budgets, first six positive-overlap entries | 180 / 180 | 180 / 135 |
+| After budgets, returned entries | 119 / 119 | 59 / 50 |
+
+The comparison keeps the entry limit, ranking and budgets fixed, rather than
+forcing the same number of distinct source Sessions. These counts identify a
+difference in evidence granularity and source variety; they do not alone prove
+why a particular fixed query missed a useful turn.
+
 ## Reproduction boundary
 
 The [study guide](../../../docs/project-memory-evaluation.md#paired-ingestion-study-and-private-tracing)
