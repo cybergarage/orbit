@@ -453,3 +453,11 @@ The explicitly selected `AppleProjectMemoryAgent` bridges only native
 Swift v2 helper receives text and authorized results over bounded duplex IPC; it
 never opens Project storage. The original Apple adapter remains text-only. See
 [the bridge contract](apple-project-memory.md).
+
+Ordinary Core managed runs can accept a trusted, revocable `memorySearch` callback.
+The run-local registry attaches canonical Project search only after deriving the
+leased Session's active binding and checking the actual model. Scope and permission
+are revalidated at generation and execution boundaries; the restricted Apple route
+uses a fixed-only catalog. Core Application/Thread APIs pass the callback through,
+while UI routes and default grants remain unchanged. See
+[Session memory search](session-memory-search.md).

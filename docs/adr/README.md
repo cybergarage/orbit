@@ -467,3 +467,6 @@ the explicitly requested Core-only search contract and independent evaluation.
 
 [Native Apple Project memory bridge](2026-11-19-apple-project-memory-bridge.md)
 records the explicitly selected fixed-tool IPC route.
+
+[Host-permitted Session search](2026-11-20-session-memory-search.md) records the
+run-local automatic tool attachment and live binding boundary.

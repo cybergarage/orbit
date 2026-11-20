@@ -11,6 +11,7 @@ import type {Message, MessagePayload, MessageType} from './message/index.js'
 import type {OperationalMetrics} from './metrics.js'
 import type {ModelToolCall, ProviderName, Role} from './models/index.js'
 import type {CompiledProcessorGraph, GraphJSON, GraphSnapshot, GraphValue} from './processor/index.js'
+import type {ProjectMemorySearchPermission} from './projects/session-memory-tool.js'
 import type {ContextPreparationEvent} from './session/context-policy.js'
 import type {SkillCatalog, SkillSelection} from './skills/catalog.js'
 import type {ToolResult} from './tools/index.js'
@@ -209,6 +210,7 @@ export interface ThreadRunOptions {
   continueFromRunId?: string
   limits?: AgentInvokeOptions['limits']
   memory?: ProjectMemorySelection
+  memorySearch?: ProjectMemorySearchPermission
   requestId?: string
   selection?: WorkflowSubmission
   signal?: AbortSignal
@@ -264,7 +266,11 @@ export class ThreadManager {
   private readonly sessionRepository?: SessionRepository
   private readonly submissions = new Map<
     string,
-    {content: string; handle: ThreadRunHandle<GraphValue | ThreadMessage>}
+    {
+      content: string
+      handle: ThreadRunHandle<GraphValue | ThreadMessage>
+      memorySearch?: ProjectMemorySearchPermission
+    }
   >()
   private readonly threads = new Map<string, ManagedThread>()
 
@@ -596,9 +602,12 @@ export class ThreadManager {
         signal: run.controller.signal,
         skills: options.skills,
         ...(options.memory ? {memory: options.memory} : {}),
+        ...(options.memorySearch ? {memorySearch: options.memorySearch} : {}),
         turnId: run.id,
       }
       let response: Message
+      if (options.memorySearch && !thread.agent.startRun)
+        throw new Error('Memory search requires managed Agent execution')
       if (options.memory && options.memory.mode !== 'off' && !thread.agent.startRun)
         throw new Error('Project memory requires managed Agent execution')
       if (options.graph && !thread.agent.startGraphRun) throw new Error('Agent does not support Graph execution')
@@ -798,6 +807,7 @@ export class ThreadManager {
       throw new InvalidInputError('Message content cannot be empty.')
     }
 
+    assertMemorySearchPermission(options.memorySearch)
     const thread = this.requireThread(threadId)
     options = {
       ...options,
@@ -819,11 +829,12 @@ export class ThreadManager {
       skillCatalog: options.skillCatalogRevision ?? thread.agent.skillCatalog?.configuration ?? null,
       skills: options.skills,
       ...(options.memory ? {memory: options.memory} : {}),
+      ...(options.memorySearch ? {memorySearchRequested: true} : {}),
     })
     const requestKey = options.requestId ? `${threadId}:${options.requestId}` : undefined
     const prior = requestKey ? this.submissions.get(requestKey) : undefined
     if (prior) {
-      if (prior.content !== submission) throw new InvalidInputError('Conflicting request ID')
+      assertRetryIdentity(prior.content, submission, prior.memorySearch === options.memorySearch)
       return prior.handle as ThreadRunHandle<T>
     }
 
@@ -845,7 +856,7 @@ export class ThreadManager {
       },
       threadId,
     }
-    if (requestKey) this.submissions.set(requestKey, {content: submission, handle})
+    if (requestKey) this.submissions.set(requestKey, {content: submission, handle, memorySearch: options.memorySearch})
     return handle
   }
 }
@@ -930,4 +941,13 @@ function prepareThreadModel(agent: ThreadAgent, options: AgentOptions): Promise<
     .then((commit) => commit())
   preparation.catch(() => {})
   return preparation
+}
+
+function assertRetryIdentity(previous: string, submitted: string, samePermission: boolean): void {
+  if (previous !== submitted || !samePermission) throw new InvalidInputError('Conflicting request ID')
+}
+
+function assertMemorySearchPermission(permission: unknown): void {
+  if (permission !== undefined && typeof permission !== 'function')
+    throw new InvalidInputError('Memory search requires a host permission callback')
 }

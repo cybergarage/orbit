@@ -59,6 +59,8 @@ try {
     'dist/core/maintenance/initialization.d.ts',
     'dist/apps/cli/initialize.js',
     'docs/initialization.md',
+    'dist/core/projects/session-memory-tool.js',
+    'dist/core/projects/session-memory-tool.d.ts',
     'native/apple-project-memory/main.swift',
     'dist/core/models/adapters/apple-memory.js',
     'dist/core/models/adapters/apple-memory.d.ts',
@@ -307,11 +309,18 @@ console.log('Package initialization consumer verified: public types, all scopes,
 // SPDX-License-Identifier: Apache-2.0
 import assert from 'node:assert/strict'
 import {canIncludeModelTools, resolveModelCapabilities} from '@cybergarage/orbit'
-import type {Model, ModelCapabilities, ModelCapabilityOptions, ModelCapabilitySupport, ResolvedModelCapabilities} from '@cybergarage/orbit'
+import type {Model, ModelCapabilities, ModelCapabilityOptions, ModelCapabilitySupport, ResolvedModelCapabilities, AgentInvokeOptions, ProjectMemorySearchPermission, ThreadRunOptions, OrbitApplicationService} from '@cybergarage/orbit'
 const legacy: Model = {
   getModel: () => 'legacy-fixture', getName: () => 'fixture', getProvider: () => 'custom',
   async invoke() {throw new Error('No inference in package capability check')},
 }
+const permission: ProjectMemorySearchPermission = (scope) => scope.projectId.length > 0 && scope.sessionId.length > 0
+const automatic: AgentInvokeOptions = {memorySearch: permission}
+const threaded: ThreadRunOptions = {memorySearch: permission}
+const application: Exclude<Parameters<OrbitApplicationService['startRun']>[2], string | undefined> = {memorySearch: permission}
+assert.equal(automatic.memorySearch, permission)
+assert.equal(threaded.memorySearch, permission)
+assert.equal(application.memorySearch, permission)
 const options: ModelCapabilityOptions = {}
 const resolved: ResolvedModelCapabilities = await resolveModelCapabilities(legacy, options)
 const state: ModelCapabilitySupport = resolved.tools

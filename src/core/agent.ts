@@ -29,6 +29,7 @@ import type {CompiledProcessorGraph, GraphJSON} from './processor/graph-definiti
 import type {GraphInvocation, GraphSnapshot, GraphValue} from './processor/graph-execution.js'
 import type {Operator, OperatorOptions} from './processor/index.js'
 import type {ProjectMemoryService} from './projects/memory-service.js'
+import type {ProjectMemorySearchPermission, SessionMemoryTool} from './projects/session-memory-tool.js'
 import type {WorkflowContextProjector, WorkflowExpectation, WorkflowSubmission} from './selection/binding.js'
 import type {CompactionComponents} from './session/compaction-components.js'
 import type {ContextPolicy} from './session/context-policy.js'
@@ -81,6 +82,7 @@ import {
   type ProjectContextSnapshot,
   type ProjectMemorySelection,
 } from './projects/memory-context.js'
+import {createSessionMemoryTool} from './projects/session-memory-tool.js'
 import {encodeWorkflowSubmission, parseWorkflowSubmission} from './selection/binding.js'
 import {immutable, selectionDigest} from './selection/validation.js'
 import {budgetToolResults, continueBudgetRun} from './session/budget-continuation.js'
@@ -109,6 +111,8 @@ export interface AgentInvokeOptions extends OperatorOptions {
   limits?: Partial<RunLimits>
   maxToolIterations?: ExecutionLimit
   memory?: ProjectMemorySelection
+  /** Trusted run-local host grant. Default deny; checked again before and after reads. */
+  memorySearch?: ProjectMemorySearchPermission
 
   onEvent?: AgentEventHandler
   onRunAdmitted?: () => void
@@ -199,6 +203,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
   private readonly graphSnapshots = new Map<string, GraphSnapshot>()
   private readonly journals = new Map<string, Promise<ExecutionJournal>>()
   private readonly mcpFactory: NonNullable<NonNullable<AgentOptions['deps']>['createMcpToolManager']>
+  private readonly memorySearchIdentities = new WeakMap<ProjectMemorySearchPermission, string>()
   private readonly metrics?: OperationalMetrics
   private model: Model
   private observerFailures = 0
@@ -616,6 +621,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     const diagnostics = options?.diagnostics ?? this.diagnostics
     const turnStartedAt = performance.now()
     let terminalRecorded = false
+    let memorySearch: SessionMemoryTool | undefined
     const recordTerminal = (phase: 'cancelled' | 'completed' | 'failed', error?: SessionError) => {
       if (terminalRecorded) return
       terminalRecorded = true
@@ -709,7 +715,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
 
       throwIfAborted(options?.signal)
       const tools = [...this.tools, ...mcpTools, ...(options?.tools ?? [])]
-      const registry = new ToolRegistry()
+      let registry = new ToolRegistry()
       for (const definition of this.toolDefinitions) {
         assertManagedTool(definition, managed)
         registry.register(definition)
@@ -719,6 +725,25 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         registry.register(
           adaptInvokableTool(availableTool, availableTool.source ?? {id: `agent:${index}`, kind: 'custom'}),
         )
+      }
+
+      if (options?.memorySearch && registry.snapshot().get('project_memory_search'))
+        throw new InvalidInputError('Automatic memory search conflicts with an explicitly registered tool')
+      memorySearch = options?.memorySearch
+        ? await run.wait(
+            'memory-search-attachment',
+            createSessionMemoryTool({
+              getModel: () => this.model,
+              memory: this.projectMemory,
+              permit: options?.memorySearch,
+              session,
+              signal: run.signal,
+            }),
+          )
+        : undefined
+      if (memorySearch) {
+        if (memorySearch.namedOnly) registry = new ToolRegistry()
+        registry.register(memorySearch.definition)
       }
 
       const toolSnapshot = registry.snapshot()
@@ -788,6 +813,8 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           const iteration = graph ? graphIteration++ : localIteration
           throwIfAborted(options?.signal)
           this.logger.debug({iteration, maxToolIterations}, 'agent model iteration started')
+          // eslint-disable-next-line no-await-in-loop -- Authority checks must precede and follow each generation.
+          if (memorySearch) await memorySearch.check(run.signal)
           emitAgentEvent(options?.onEvent, {iteration, type: AgentEventType.ModelStarted})
           const iterationOptions =
             modelOptions.diagnostics === undefined
@@ -865,6 +892,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
                 : undefined
             const invoke = async (): Promise<Message> => {
               if (verifiedContext) await reverifyInterruptedContext(session, run)
+              if (memorySearch) await memorySearch.check(run.signal)
               run.consume('modelCalls')
               try {
                 const response = await run.wait(
@@ -942,6 +970,8 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
             throw new InvalidInputError('Single-action mode rejects multiple tool calls before dispatch')
           }
 
+          // eslint-disable-next-line no-await-in-loop -- Authority checks must precede and follow each generation.
+          if (memorySearch) await memorySearch.check(run.signal)
           const [storedModelMessage] = session.appendMessages([modelMessage], {iteration, turnId})
           emitAgentEvent(options?.onEvent, {
             iteration,
@@ -1172,6 +1202,8 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         error,
       )
       throw error
+    } finally {
+      memorySearch?.close()
     }
   }
 
@@ -1198,6 +1230,7 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
         : {}),
       ...(skills.length > 0 ? {skillCatalog: this.skillCatalog?.configuration, skills} : {}),
       ...(options.memory ? {memory: parseMemorySelection(options.memory)} : {}),
+      ...(options.memorySearch ? {memorySearchPermission: this.memorySearchIdentity(options.memorySearch)} : {}),
       ...(this.interruptionPolicy.mode === 'verified-not-dispatched'
         ? {interruptionPolicy: this.interruptionPolicy}
         : {}),
@@ -1214,6 +1247,16 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
           tool.inputSchema ?? adaptInvokableTool(tool, tool.source ?? {id: tool.name, kind: 'custom'}).spec.inputSchema,
       })),
     }
+  }
+
+  private memorySearchIdentity(permission: ProjectMemorySearchPermission): string {
+    let identity = this.memorySearchIdentities.get(permission)
+    if (!identity) {
+      identity = uuidv7()
+      this.memorySearchIdentities.set(permission, identity)
+    }
+
+    return identity
   }
 
   // Session recording, tool iteration, and terminal-state handling intentionally share one lifecycle boundary.
@@ -1330,6 +1373,10 @@ export class Agent implements Operator<Message[], Message, AgentInvokeOptions> {
     session: Session,
     graph?: GraphInvocation,
   ): Promise<RunHandle<T>> {
+    if (options.memorySearch !== undefined && typeof options.memorySearch !== 'function')
+      throw new InvalidInputError('Memory search requires a host permission callback')
+    if (options.memorySearch && (graph || options.selection))
+      throw new InvalidInputError('Automatic memory search requires an ordinary unselected Agent run')
     const skills = normalizeSkillSelections(options.skills)
     if (skills.length > 0 && !this.skillCatalog) throw new Error('Skill catalog is not configured')
     if (options.continueFromRunId !== undefined) {
@@ -1636,6 +1683,7 @@ function serializeSessionError(error: unknown): SessionError {
 function toModelInvokeOptions(options: Partial<AgentInvokeOptions> | undefined): Partial<ModelInvokeOptions> {
   const result: Record<string, unknown> = {...options}
   delete result.memory
+  delete result.memorySearch
   delete result.projectContext
   delete result.graph
   delete result.actionMode

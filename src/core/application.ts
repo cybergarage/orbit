@@ -16,6 +16,7 @@ import type {LogPage, LogQuery, LogRecord, LogStoreHealth, SessionLoggerFactory,
 import type {ProviderName} from './models/index.js'
 import type {CompiledProcessorGraph, GraphJSON, GraphValue} from './processor/index.js'
 import type {KnowledgeExtractor} from './projects/automatic-memory.js'
+import type {ProjectMemorySearchPermission} from './projects/session-memory-tool.js'
 import type {ProjectStore} from './projects/types.js'
 import type {WorkflowExpectation} from './selection/binding.js'
 import type {WorkflowAuthority} from './selection/service.js'
@@ -856,13 +857,16 @@ export class OrbitApplicationService {
           continueFromRunId?: string
           limits?: Partial<import('./execution/limits.js').RunLimits>
           memory?: ProjectMemorySelection
+          memorySearch?: ProjectMemorySearchPermission
           requestId?: string
           skills?: SkillSelection[]
         },
   ): Promise<StartApplicationRunResult> {
     if (this.selectedScopes.has(threadId)) throw new Error('Thread requires its workflow selection coordinator')
-    const {continueFromRunId, limits, memory, requestId, skills} =
+    const {continueFromRunId, limits, memory, memorySearch, requestId, skills} =
       typeof request === 'string' ? {requestId: request} : (request ?? {})
+    if (memorySearch !== undefined && typeof memorySearch !== 'function')
+      throw new Error('Memory search requires a host permission callback')
     if (limits !== undefined) parseRunLimits(limits)
     if (continueFromRunId !== undefined && !/^[A-Za-z0-9_-]{1,160}$/u.test(continueFromRunId))
       throw new Error('Invalid continuation run ID')
@@ -924,6 +928,7 @@ export class OrbitApplicationService {
       continueFromRunId,
       limits,
       memory,
+      memorySearch,
       requestId,
       skillCatalogRevision: this.catalogForThread(threadId)?.configuration,
       skills,
