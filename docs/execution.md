@@ -330,6 +330,14 @@ declare const workspaceExecutor: WorkspaceExecutor
 const agent = new Agent({execution: {workspaceExecutor}, toolProfile: 'coding'})
 ```
 
+A host integrating a partial backend can set
+`workspaceExecutor.toolNames` (for example, `['write', 'edit']`). Core captures
+this trusted allowlist when the executor is configured, not from model input or
+workspace settings. An omitted list opts in to all seven managed built-ins as
+before. Tools outside an explicit list retain their original Core handler,
+approval behavior, and observation provenance. Selection happens before
+preparation, never as a fallback after a failed dispatch.
+
 The executor receives a versioned, immutable `PreparedWorkspaceOperation` and
 the active run's abort signal. File tool paths and the target are canonical in
 the same workspace namespace as the Core host. For mutations, the executor

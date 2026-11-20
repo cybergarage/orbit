@@ -256,7 +256,10 @@ export class OperationExecutor {
     const id = randomUUID()
     let preparation: OperationPreparation
     let parsed: unknown
-    const workspace = !definition.prepare && isWorkspaceBuiltin(definition) ? this.workspaceExecutor : undefined
+    const workspace =
+      !definition.prepare && isWorkspaceBuiltin(definition, this.workspaceExecutor?.toolNames)
+        ? this.workspaceExecutor
+        : undefined
     try {
       assertManagedTool(definition, options)
       parsed = copyJSON(definition.input.parse(copyJSON(input)))

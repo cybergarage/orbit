@@ -46,12 +46,20 @@ export type PreparedWorkspaceOperation = {
 /** Trusted application dependency; this is not a sandbox, policy, or tool catalog. */
 export interface WorkspaceExecutor {
   execute(operation: PreparedWorkspaceOperation, signal: AbortSignal): Promise<ToolResult>
+  /** Only these managed built-ins use this executor; omitted means all. */
+  readonly toolNames?: readonly PreparedWorkspaceOperation['name'][]
 }
 
 export function captureWorkspaceExecutor(value: undefined | WorkspaceExecutor): undefined | WorkspaceExecutor {
   if (value === undefined) return undefined
   if (typeof value?.execute !== 'function') throw new Error('Invalid workspace executor')
-  return Object.freeze({execute: value.execute.bind(value)})
+  const selected = value.toolNames
+  if (selected === undefined) return Object.freeze({execute: value.execute.bind(value)})
+  if (!Array.isArray(selected)) throw new Error('Invalid workspace executor tool names')
+  const toolNames = Object.freeze([...selected])
+  if (toolNames.some((name) => !names.has(name)) || new Set(toolNames).size !== toolNames.length)
+    throw new Error('Invalid workspace executor tool names')
+  return Object.freeze({execute: value.execute.bind(value), toolNames})
 }
 
 const names = new Set<string>(['bash', 'edit', 'glob', 'grep', 'list', 'read', 'write'])
@@ -68,9 +76,14 @@ export function copyWorkspaceBuiltin(source: ToolDefinition, target: ToolDefinit
   if (name !== undefined) registered.set(target, name)
 }
 
-export function isWorkspaceBuiltin(definition: ToolDefinition): boolean {
+export function isWorkspaceBuiltin(definition: ToolDefinition, toolNames?: WorkspaceExecutor['toolNames']): boolean {
   const name = registered.get(definition)
-  return name !== undefined && name === definition.spec.name && definition.source.kind === 'builtin'
+  return (
+    name !== undefined &&
+    name === definition.spec.name &&
+    definition.source.kind === 'builtin' &&
+    (toolNames === undefined || toolNames.includes(name))
+  )
 }
 
 export function boundWorkspaceOperation(value: PreparedWorkspaceOperation): PreparedWorkspaceOperation {
