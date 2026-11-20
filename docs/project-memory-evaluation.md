@@ -129,3 +129,8 @@ Commit provenance is supplied explicitly with optional `--commit <full-sha>`.
 Without it, `baselineCommit` is null; implementation file hashes remain recorded.
 The harness never launches Git or any executable resolved through PATH. Historical
 reports and grading/ingestion limitations are unchanged.
+
+For the independent read-only pilot audit, pinned official grading CLI, offline
+prediction exporter and result-completeness checks, see
+[Offline Project Memory Quality Evaluation](project-memory-official-evaluation.md).
+It does not convert the historical local-judge scores into official results.
