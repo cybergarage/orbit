@@ -2,9 +2,9 @@
 status: accepted
 proposed-date: 2026-11-20
 decision-date: 2026-11-20
-implementation-status: not-started
-implementation-completed-date: null
-implementation-commits: []
+implementation-status: completed
+implementation-completed-date: 2026-11-20
+implementation-commits: [39f2ce2b195e884d771b2c7c43b5a065d054fe19, 5e93b965598408cf195e2c3c2765c8729c4f6032]
 superseded-by: []
 ---
 
@@ -62,6 +62,18 @@ lesson is to keep persisted knowledge and the actual Session source distinct.
 Neither comparison supplies Orbit's specific registered-pair/current-catalog
 ownership protocol; this decision extends that existing Orbit protocol only.
 
+## Implementation and confirmation
+
+This decision is implemented in `39f2ce2b195e884d771b2c7c43b5a065d054fe19` with the requester-pair guard
+in `5e93b965598408cf195e2c3c2765c8729c4f6032`. Linux Node.js 24 passed the full offline suite
+(1520 tests) before that last guard. The final implementation passed
+37 focused tests and the independent installed-package consumer (539 files).
+Synthetic fixtures verify real run-local tool dispatch across two registered
+pairs, reciprocity with the requester's existing lease, absent and mismatched
+registrations, unchanged writer ownership, exact provenance, archive and missing
+sources, changed membership and late retirement. No live model, user data or
+App repository behavior was exercised by this change.
+
 ## Not implemented: post-move extraction
 
 Moving a Session retires existing entries linked to that source in the former
@@ -69,13 +81,20 @@ Project; live search does not transfer or re-enable them. Treat backfilling
 eligible historical turns as a separate proposal. A future implementation
 would need a trusted, idempotent transition receipt keyed by the original pair,
 Session, run and exact admitted Project/revision/digest plus the destination
-Project/revision. Verify the recorded completed run and exact original source
-messages; never rewrite historical admission. Revalidate the destination and
+Project/revision. The legacy App extractor key includes only the original
+pair, Session, Run and extractor version; it survives a move and cannot fence
+destination work. A future job and apply key must include destination
+Project/revision and respect durable deliberate retirement. Verify the recorded
+completed run and exact original source messages; never rewrite historical
+admission. Revalidate the destination and
 retire/revoke on a further move or deletion. Preserve tombstones, budgets and
 opt-outs. Use only explicitly eligible messages authored by the user in the
 moved Session, not former-Project peer messages, recalled Project knowledge,
-tool outputs, summaries or uncertified assistant context. This restriction is
-a candidate conservative starting point, not a new extraction policy.
+tool outputs, summaries or uncertified assistant context. Legacy App can persist
+a user-role prompt after adding former-Project guidance. Role alone is therefore
+not proof of authorship. Require a trusted raw-input boundary or omit ambiguous
+legacy content; do not infer that boundary from textual delimiters. This is a
+candidate conservative starting point, not a new extraction policy.
 
 The future test should move one Session between two registered pairs with
 different synthetic former-Project peer facts, then verify only its certified

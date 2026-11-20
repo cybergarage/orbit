@@ -474,3 +474,6 @@ records the explicitly selected fixed-tool IPC route.
 
 [Host-permitted Session search](2026-11-20-session-memory-search.md) records the
 run-local automatic tool attachment and live binding boundary.
+
+[Registered-pair live Project search](2026-11-20-registered-pair-project-search.md)
+records the trusted same-process resolver and the limits of the search-only change.
