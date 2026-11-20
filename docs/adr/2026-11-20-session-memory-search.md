@@ -4,7 +4,7 @@ proposed-date: 2026-11-20
 decision-date: 2026-11-20
 implementation-status: completed
 implementation-completed-date: 2026-11-20
-implementation-commits: [5a9c32d585b86a742eec022cff45ee6fb47b8a53]
+implementation-commits: [5a9c32d585b86a742eec022cff45ee6fb47b8a53, 3461d29a2e682427bed41d3952b8a8a807a52f94]
 superseded-by: []
 ---
 
@@ -62,7 +62,7 @@ scope argument, legacy compatibility and deterministic separate-session evidence
 ## External Implementation Research
 
 The accepted search/Apple decisions record Codex
-fdd89e78ac33f02e65dabe60567cdfeba2e954d4 (memories/write/src/phase1.rs)
+fdd89e78ac33f02e65dabe60567cdfeba2e954d4 (codex-rs/memories/write/src/phase1.rs)
 and Pi 95fbc04997eaee961eb673fa7923e9220609ebd5
 (packages/coding-agent/src/core/session-manager.ts). Retain the recorded separation
 between persisted knowledge and model context. Neither provides this Orbit
@@ -82,7 +82,9 @@ Implementation commit 5a9c32d585b86a742eec022cff45ee6fb47b8a53 delivers the
 run-local Agent catalog/guards, trusted Core facade passthrough, public permission
 type, canonical live-binding lookup and the maintained feature/architecture guide.
 Headers/build and all 1,483 tests pass, including 28 new synthetic boundaries.
-The independent installed-package consumer passes (534 files), including public
+Commit 3461d29a2e682427bed41d3952b8a8a807a52f94 clarifies the shared permission
+types and retry-identity assertion without changing policy or suppressing analysis.
+The same full suite passes after that refinement. The independent installed-package consumer passes (534 files), including public
 callback types at Agent/Thread/Application boundaries. The existing compiled Swift
 native actor protocol regression passes two distinct calls with reverse-order
 results, separately from model inference.
