@@ -17,13 +17,18 @@ choosing a Project ID. Keep the existing authorization and isolation boundaries.
 
 ## Decision
 
-Add a run-local `AgentInvokeOptions.memorySearch?: () => boolean` host permission.
-Absent, false or throwing callbacks deny automatic attachment. The Agent's already
+Add a run-local `AgentInvokeOptions.memorySearch?: ProjectMemorySearchPermission` host permission.
+The callback receives immutable Core-derived Project/Session IDs, never a scope
+selected by its return value. Absent, false or throwing callbacks deny attachment. The Agent's already
 configured ProjectMemoryService derives a binding from the leased live Session,
 its registered file and current active membership. Recheck the binding revision,
 host permission and actual model object/identity before declarations and execution,
 and after results. Core registers the existing read-only factory only in that
-run's ordinary tool snapshot. No persistent/default registry mutation occurs.
+run's ordinary tool snapshot. No persistent/default registry mutation occurs. Core Application/Thread facades
+only pass through the trusted callback; UI and transport routes do not grant it.
+Permission identity participates in request conflict detection. Apple's fixed path
+uses a search-only run catalog even when general defaults are configured, and
+Core closes that automatically attached native continuation when the run exits.
 
 General supported/unknown capabilities allow attachment; explicit unsupported
 does not. Apple requires the concrete dedicated AppleProjectMemoryAgent and its

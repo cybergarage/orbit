@@ -5,6 +5,7 @@ import {createHash, randomUUID} from 'node:crypto'
 
 import type {ContextPolicy} from '../session/context-policy.js'
 import type {SessionRepository} from '../session/repository.js'
+import type {Session} from '../session/session.js'
 import type {KnowledgeExtractor} from './automatic-memory.js'
 import type {ProjectSessionHost} from './service.js'
 import type {ProjectExtractionJob, ProjectMemoryEntry, ProjectMemorySource, ProjectMutation} from './types.js'
@@ -43,6 +44,13 @@ export interface ProjectMemorySearchResult {
   results: ProjectMemoryEntry[]
   truncated: boolean
   trust: 'untrusted-memory-evidence'
+}
+
+export interface ProjectSearchBinding {
+  pairId: string
+  projectId: string
+  revision: number
+  sessionId: string
 }
 
 export class ProjectMemoryService {
@@ -335,6 +343,23 @@ export class ProjectMemoryService {
     } while (after)
   }
 
+  /** Host-bound, non-persisting retrieval; never selects unrelated entries to fill capacity. */
+  /** Derive authority from a live registered Session, never caller/model scope IDs. */
+  async resolveSearchBinding(session: Session, signal?: AbortSignal): Promise<ProjectSearchBinding | undefined> {
+    signal?.throwIfAborted()
+    const sessionId = session.getId()
+    if (!session.hasManagedLease() || !session.getFile())
+      throw new ProjectStoreError('missing', 'Memory search requires a leased registered Session')
+    const registered = await this.projects.repository.findById(sessionId)
+    if (!registered || registered.file !== session.getFile() || registered.archived)
+      throw new ProjectStoreError('missing', 'Memory search Session is unavailable in this repository')
+    const membership = await this.projects.requireActive(sessionId)
+    signal?.throwIfAborted()
+    if (!session.hasManagedLease()) throw new ProjectStoreError('missing', 'Memory search Session lease changed')
+    if (!membership?.projectId) return undefined
+    return {pairId: membership.pairId, projectId: membership.projectId, revision: membership.revision, sessionId}
+  }
+
   async saveExcerpt(
     projectId: string,
     input: {body?: string; excerpt: string; messageId: string; operationId: string; sessionId: string; title: string},
@@ -397,7 +422,6 @@ export class ProjectMemoryService {
     })
   }
 
-  /** Host-bound, non-persisting retrieval; never selects unrelated entries to fill capacity. */
   async search(
     sessionId: string,
     projectId: string,

@@ -209,6 +209,7 @@ export interface ThreadRunOptions {
   continueFromRunId?: string
   limits?: AgentInvokeOptions['limits']
   memory?: ProjectMemorySelection
+  memorySearch?: AgentInvokeOptions['memorySearch']
   requestId?: string
   selection?: WorkflowSubmission
   signal?: AbortSignal
@@ -264,7 +265,11 @@ export class ThreadManager {
   private readonly sessionRepository?: SessionRepository
   private readonly submissions = new Map<
     string,
-    {content: string; handle: ThreadRunHandle<GraphValue | ThreadMessage>}
+    {
+      content: string
+      handle: ThreadRunHandle<GraphValue | ThreadMessage>
+      memorySearch?: AgentInvokeOptions['memorySearch']
+    }
   >()
   private readonly threads = new Map<string, ManagedThread>()
 
@@ -596,9 +601,12 @@ export class ThreadManager {
         signal: run.controller.signal,
         skills: options.skills,
         ...(options.memory ? {memory: options.memory} : {}),
+        ...(options.memorySearch ? {memorySearch: options.memorySearch} : {}),
         turnId: run.id,
       }
       let response: Message
+      if (options.memorySearch && !thread.agent.startRun)
+        throw new Error('Memory search requires managed Agent execution')
       if (options.memory && options.memory.mode !== 'off' && !thread.agent.startRun)
         throw new Error('Project memory requires managed Agent execution')
       if (options.graph && !thread.agent.startGraphRun) throw new Error('Agent does not support Graph execution')
@@ -798,6 +806,8 @@ export class ThreadManager {
       throw new InvalidInputError('Message content cannot be empty.')
     }
 
+    if (options.memorySearch !== undefined && typeof options.memorySearch !== 'function')
+      throw new InvalidInputError('Memory search requires a host permission callback')
     const thread = this.requireThread(threadId)
     options = {
       ...options,
@@ -819,11 +829,13 @@ export class ThreadManager {
       skillCatalog: options.skillCatalogRevision ?? thread.agent.skillCatalog?.configuration ?? null,
       skills: options.skills,
       ...(options.memory ? {memory: options.memory} : {}),
+      ...(options.memorySearch ? {memorySearchRequested: true} : {}),
     })
     const requestKey = options.requestId ? `${threadId}:${options.requestId}` : undefined
     const prior = requestKey ? this.submissions.get(requestKey) : undefined
     if (prior) {
-      if (prior.content !== submission) throw new InvalidInputError('Conflicting request ID')
+      if (prior.memorySearch !== options.memorySearch || prior.content !== submission)
+        throw new InvalidInputError('Conflicting request ID')
       return prior.handle as ThreadRunHandle<T>
     }
 
@@ -845,7 +857,7 @@ export class ThreadManager {
       },
       threadId,
     }
-    if (requestKey) this.submissions.set(requestKey, {content: submission, handle})
+    if (requestKey) this.submissions.set(requestKey, {content: submission, handle, memorySearch: options.memorySearch})
     return handle
   }
 }

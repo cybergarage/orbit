@@ -10,12 +10,14 @@ export type {ProjectContextSnapshot, ProjectMemorySelection} from './memory-cont
 
 export {createProjectMemorySearchTool} from './memory-search-tool.js'
 export {ProjectMemoryService} from './memory-service.js'
-export type {ProjectMemoryWrite} from './memory-service.js'
+export type {ProjectMemoryWrite, ProjectSearchBinding} from './memory-service.js'
 export type {ProjectMemorySearchInput, ProjectMemorySearchResult} from './memory-service.js'
 
 export {MemoryProjectStore} from './memory-store.js'
 export {ProjectService} from './service.js'
 export type {ProjectSessionHost} from './service.js'
+
+export type {ProjectMemorySearchPermission} from './session-memory-tool.js'
 
 export {ProjectSourceLease} from './source-lease.js'
 export type {ProjectSourceCapture} from './source-lease.js'

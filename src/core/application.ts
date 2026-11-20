@@ -856,13 +856,16 @@ export class OrbitApplicationService {
           continueFromRunId?: string
           limits?: Partial<import('./execution/limits.js').RunLimits>
           memory?: ProjectMemorySelection
+          memorySearch?: import('./agent.js').AgentInvokeOptions['memorySearch']
           requestId?: string
           skills?: SkillSelection[]
         },
   ): Promise<StartApplicationRunResult> {
     if (this.selectedScopes.has(threadId)) throw new Error('Thread requires its workflow selection coordinator')
-    const {continueFromRunId, limits, memory, requestId, skills} =
+    const {continueFromRunId, limits, memory, memorySearch, requestId, skills} =
       typeof request === 'string' ? {requestId: request} : (request ?? {})
+    if (memorySearch !== undefined && typeof memorySearch !== 'function')
+      throw new Error('Memory search requires a host permission callback')
     if (limits !== undefined) parseRunLimits(limits)
     if (continueFromRunId !== undefined && !/^[A-Za-z0-9_-]{1,160}$/u.test(continueFromRunId))
       throw new Error('Invalid continuation run ID')
@@ -924,6 +927,7 @@ export class OrbitApplicationService {
       continueFromRunId,
       limits,
       memory,
+      memorySearch,
       requestId,
       skillCatalogRevision: this.catalogForThread(threadId)?.configuration,
       skills,

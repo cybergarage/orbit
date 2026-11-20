@@ -127,3 +127,6 @@ repository adopts a dedicated specification lifecycle.
 - [Provider and model catalog](model-catalog.md): credential-aware coding eligibility, read-only discovery and host-only worker transport.
 
 [Apple Project memory bridge](apple-project-memory.md) documents the explicit fixed-tool native route.
+
+[Host-permitted Session memory search](session-memory-search.md) documents run-local
+automatic attachment through the Core APIs.
