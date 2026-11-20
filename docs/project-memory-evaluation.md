@@ -176,29 +176,51 @@ IDs and timestamps are deterministic; live ranking ties can differ. `mock`
 runs synthetic requests and the real local Core search without contacting a
 model. A mock wire record is not counted as provider delivery.
 
-Only use `--mode live` when explicitly running the local model comparison. It
-requires an already installed Ollama `gemma4:12b` at the historical digest
+Only use `--mode live` when explicitly running the local model comparison. The
+pinned JSON fixture and run directory must be direct, non-symlink children of this
+checkout's ignored `tmp/`. The dataset's exact size and SHA-256 are checked.
+Absolute paths and nested names are rejected. Live mode requires the historical
+Ollama `gemma4:12b` digest
 `4eb23ef187e2c5462566d6a1d3bbbc2f1346d0b4327cbb66d58fffbcc9b2b05c`
-on loopback; there is no model download or remote fallback. Both ingestion arms
-use fresh Sessions and the original no-search, host-search and model-search
-conditions. Answer limits, prompts, search, 8,192 context, 512 output,
-temperature zero and thinking-off are inherited unchanged. The same historical
-local judge uses a separate call per case/condition with an output cap of 128.
-It is not the official grader. Mode `live` plans 180 answer arms (at most 540
-answer calls) and up to 60 local judge calls, with no externally billed
-inference. It is not a quick smoke test. The condition order alternates by
-case, and neither order nor eligibility uses gold annotations.
+on loopback; there is no download or fallback.
 
-The private per-case files record source/turn offsets and chunk IDs, reconstructed
-rank from observed Core catalog data, actual selected and returned entry IDs,
-search queries, tool call IDs, terminal and provider stop information, and public
-benchmark annotation coverage applied after generation. Live delivery is recorded
-only when the serialized transport message matches the traced result and its
-Ollama request returns a response; a rejected call or missing result remains
-separate, and a reply does not show that the model used the evidence. The trace
-does not store raw prompts, result body text, or answers. The fresh directory and
-files use owner-only permissions on POSIX. Keep all per-case files private and
-publish only reviewed summary aggregates; `summary.json` omits case and raw
-source IDs. An interrupted run may have private case files without a summary.
-Live paired accuracy denominators count only a case with two completed, valid
-judgments in the same retrieval arm. Never treat a missing grade as incorrect.
+Use the same 30 ordered cases, ingestion policies, search and answer budgets,
+temperature zero and thinking-off. Each question has one shared no-search answer
+from an empty fixture, plus two host-prefetch and two model-search answers
+(one for each ingestion policy), for **150 unique answer slots**. Its no-search
+label is counted identically in both comparison rows. The judge gets only the
+question, reference, abstention flag and one saved hypothesis. It never sees
+the arm, other answers, or traces. It uses the same local model with an output
+cap of 128 and a 120-second local request timeout; this is not the official
+LongMemEval grader. There are up to 450
+local answer calls and 150 separate local judge calls.
+
+### Resume a checkpointed study
+
+Start a new `live` or `mock` run with a fresh `--output-dir tmp/NAME`. Reissue
+the same arguments with `--resume` to inspect and continue that directory.
+The protocol verifies the private run identity, exact manifest and ordered
+case IDs, source/build and dependency fingerprint, SDK/runtime versions,
+model and dataset identity, and prompt, rubric and budget settings before
+making inference calls. The optional resume is **not** available in offline
+replay mode. The prior partial 24-pair comparison used a different protocol
+and is not resumed, pooled or regraded here.
+
+Each exact answer and its trace are synced and published together before
+grading, without replacing a committed record. A second active writer is
+refused; ambiguous ownership or invalid/mismatched records fail closed.
+A completed answer is reused even if grading was interrupted. A judge failure
+or invalid grade remains pending and can be retried on resume. A recorded failed
+answer is explicit and is not automatically regenerated. If the process stopped
+before saving an answer, that slot may run again; this is not an exactly-once
+inference guarantee. Windows does not guarantee power-loss directory sync.
+
+Checkpoint files contain exact public-benchmark hypotheses, queries, trace
+metadata and identifiers. Keep them in the private, owner-only POSIX run
+directory and never commit or attach them. `summary.json` is a replaceable,
+aggregate-only view, not a resume input. Missing grades are never counted as
+incorrect, and paired denominators require valid completed judgments on both
+sides. The fully offline tests interrupt a child process after durable answer
+publication but before grading and verify that a resumed run preserves the
+answer and trace, grades without regenerating the answer, and matches the
+uninterrupted mocked results.

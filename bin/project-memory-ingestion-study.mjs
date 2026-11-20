@@ -5,6 +5,7 @@
 
 import assert from 'node:assert/strict'
 import {randomUUID} from 'node:crypto'
+import {constants} from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import {pathToFileURL} from 'node:url'
@@ -22,16 +23,21 @@ import {
 import {deliveredIds, digest, traceArm} from './project-memory-ingestion-study-trace.mjs'
 import {
   answer,
+  answerLimits,
+  answerSettings,
   dataset,
   environment,
-  gradePilotAnswers,
   ingest,
+  instruction,
   localModelMetadata,
   selectCases,
 } from './project-memory-pilot.mjs'
+import {answerSlots, openCheckpointRun, runSlots} from './project-memory-study-checkpoints.mjs'
+import {judgeOne, judgeSettings, judgeTimeoutMs, rubric} from './project-memory-study-judge.mjs'
 
 const model = 'gemma4:12b'
 const modelDigest = '4eb23ef187e2c5462566d6a1d3bbbc2f1346d0b4327cbb66d58fffbcc9b2b05c'
+const pinnedDatasetBytes = 277_383_467
 const conditions = ['prefix', 'turn-chunks']
 const arms = ['none', 'pre', 'tool']
 
@@ -39,17 +45,61 @@ function errorKind(error) {
   return error instanceof Error ? error.name : 'unknown'
 }
 
-export async function createStudyOutput(request, cwd = process.cwd()) {
-  const root = await fs.realpath(cwd)
-  const parent = path.join(root, 'tmp')
-  const output = path.resolve(root, request)
-  assert.equal(path.dirname(output), parent, 'Output must be a new direct child of the ignored tmp/ directory')
-  assert.equal(await fs.realpath(parent), parent, 'Output parent must not be a symbolic link')
-  await fs.mkdir(output, {mode: 0o700})
+async function privateTmp(cwd) {
+  const parent = path.join(await fs.realpath(cwd), 'tmp')
+  assert.equal(await fs.realpath(parent), parent, 'Evaluation tmp/ must not be a symbolic link')
+  return parent
+}
+
+export async function createStudyOutput(request, cwd = process.cwd(), {resume = false} = {}) {
+  const match = /^tmp\/([A-Za-z0-9][A-Za-z0-9_-]{0,63})$/u.exec(request)
+  assert(match, 'Output must be a named direct child of the ignored tmp/ directory')
+  const parent = await privateTmp(cwd)
+  const output = path.join(parent, match[1])
+  if (resume) assert.equal(await fs.realpath(output), output, 'Ambiguous resume directory')
+  else await fs.mkdir(output, {mode: 0o700})
   return output
 }
 
+export async function datasetFile(request, cwd = process.cwd()) {
+  const match = /^tmp\/([A-Za-z0-9][A-Za-z0-9_.-]{0,119}\.json)$/u.exec(request)
+  assert(match, 'Dataset must be a named JSON file directly under the ignored tmp/ directory')
+  const file = path.join(await privateTmp(cwd), match[1])
+  const stat = await fs.lstat(file)
+  assert(
+    stat.isFile() && stat.size === pinnedDatasetBytes && (await fs.realpath(file)) === file,
+    'Expected the pinned public dataset file',
+  )
+  return file
+}
+
+async function readDataset(request) {
+  const file = await datasetFile(request)
+  // Open once, do not follow a swapped symlink, and confirm the opened file is still the validated leaf.
+  const handle = await fs.open(file, constants.O_RDONLY + (constants.O_NOFOLLOW ?? 0))
+  try {
+    const opened = await handle.stat()
+    const leaf = await fs.lstat(file)
+    assert(
+      opened.isFile() &&
+        leaf.isFile() &&
+        opened.dev === leaf.dev &&
+        opened.ino === leaf.ino &&
+        opened.size === pinnedDatasetBytes &&
+        (await fs.realpath(file)) === file,
+      'Dataset changed before reading',
+    )
+    const bytes = await handle.readFile()
+    assert.equal(digest(bytes), dataset.sha256, 'Dataset checksum mismatch')
+    return bytes
+  } finally {
+    await handle.close()
+  }
+}
+
 async function write(output, file, value) {
+  assert(/^(?:manifest|summary|case-(?:0[1-9]|[12][0-9]|30))\.json$/u.test(file), 'Invalid replay artifact name')
+  assert.equal(await fs.realpath(output), output, 'Ambiguous replay directory')
   await fs.writeFile(path.join(output, file), JSON.stringify(value) + '\n', {flag: 'wx', mode: 0o600})
 }
 
@@ -141,28 +191,13 @@ async function runCondition(row, history, plan, {condition, mode}) {
     const mapping = await saveCondition(env, history, plan.admitted, condition)
     const results = []
     for (const arm of arms) results.push(await observedArm(env, question, arm, mode === 'mock'))
-    let grading
-    let gradeFailure
-    if (mode === 'live') {
-      try {
-        grading = await gradePilotAnswers(
-          row,
-          results.map((result) => result.answer),
-          model,
-        )
-      } catch (error) {
-        gradeFailure = errorKind(error)
-      }
-    }
-
     return {
-      gradeFailure,
       mapping,
-      observed: results.map(({answer: hypothesis, observed}, index) => ({
+      observed: results.map(({answer: hypothesis, observed}) => ({
         ...observed,
         answerHash: digest(hypothesis),
         coverage: attachedCoverage(row, history, mapping, observed),
-        judgedCorrect: observed.outcome === 'completed' && hypothesis ? (grading?.correct?.[index] ?? null) : null,
+        judgedCorrect: null,
       })),
     }
   } finally {
@@ -180,7 +215,7 @@ function omissionCounts(row, history, omitted) {
 }
 
 export async function evaluateStudyCase(row, index, mode) {
-  assert(['live', 'mock', 'replay'].includes(mode), 'Unknown evaluation mode')
+  assert(['mock', 'replay'].includes(mode), 'Live evaluation requires resumable checkpoints')
   const history = historyWithOffsets(row)
   const output = {}
   const order = index % 2 === 0 ? conditions : [...conditions].reverse()
@@ -233,7 +268,7 @@ function emptyArm() {
 }
 
 function accumulateCondition(counts, row) {
-  counts.completed++
+  counts.completed += Number(row.state === 'completed')
   counts.annotatedTurns += row.admitted.annotated
   counts.admittedAnnotatedTurns += row.admitted.complete
   counts.answerableQuestionsWithAnnotations += Number(row.admitted.annotated > 0)
@@ -288,19 +323,15 @@ export function studySummary(cases, mode, planned) {
     summary.conditions[condition] = counts
     for (const record of cases) {
       const row = record[condition]
-      if (row.state !== 'completed') {
-        counts.failed++
-        continue
-      }
-
+      if (row.state !== 'completed') counts.failed++
+      if (!row.admitted) continue
       accumulateCondition(counts, row)
     }
   }
 
   for (const record of cases) {
     const [a, b] = conditions.map((condition) => record[condition])
-    if (a.state !== 'completed' || b.state !== 'completed') continue
-    summary.pairedCompleted++
+    if (a.state === 'completed' && b.state === 'completed') summary.pairedCompleted++
     for (const arm of arms) {
       const x = a.observed?.find((r) => r.arm === arm)?.judgedCorrect
       const y = b.observed?.find((r) => r.arm === arm)?.judgedCorrect
@@ -315,6 +346,118 @@ export function studySummary(cases, mode, planned) {
   return summary
 }
 
+async function verifyCode() {
+  const files = [
+    'bin/project-memory-ingestion-study.mjs',
+    'bin/project-memory-ingestion-study-core.mjs',
+    'bin/project-memory-ingestion-study-trace.mjs',
+    'bin/project-memory-study-checkpoints.mjs',
+    'bin/project-memory-study-judge.mjs',
+    'bin/project-memory-pilot.mjs',
+    'package-lock.json',
+  ]
+  async function compiled(dir) {
+    const entries = await fs.readdir(new URL(`../${dir}`, import.meta.url), {withFileTypes: true})
+    for (const entry of entries) {
+      const relative = dir + entry.name
+      if (entry.isDirectory()) await compiled(relative + '/')
+      else if (entry.isFile() && relative.endsWith('.js')) files.push(relative)
+    }
+  }
+
+  await compiled('dist/core/')
+  const fingerprints = []
+  for (const file of files.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))) {
+    fingerprints.push([file, digest(await fs.readFile(new URL(`../${file}`, import.meta.url)))])
+  }
+
+  const sdk = JSON.parse(await fs.readFile(new URL('../node_modules/ollama/package.json', import.meta.url), 'utf8'))
+  return {codeDigest: digest(JSON.stringify(fingerprints)), node: process.version, ollamaSdk: sdk.version}
+}
+
+export async function runCheckpointCase(row, slots, store, mode) {
+  assert(['live', 'mock'].includes(mode), 'Checkpoint generation mode must be live or mock')
+  const history = historyWithOffsets(row)
+  const plans = Object.fromEntries(conditions.map((condition) => [condition, ingestionPlan(history, condition)]))
+  const environments = new Map()
+  const generate = async ({arm, condition}) => {
+    let source = environments.get(condition)
+    if (!source) {
+      const env = await environment()
+      source = {env, mapping: []}
+      environments.set(condition, source)
+      if (condition !== 'shared')
+        source.mapping = await saveCondition(env, history, plans[condition].admitted, condition)
+    }
+
+    const question = `Current date: ${row.question_date}\n${row.question}`
+    const {answer: hypothesis, observed} = await observedArm(source.env, question, arm, mode === 'mock')
+    return {
+      answer: hypothesis,
+      mapping: source.mapping,
+      trace: {...observed, coverage: attachedCoverage(row, history, source.mapping, observed)},
+    }
+  }
+
+  try {
+    await runSlots(store, slots, {
+      generate,
+      grade: mode === 'live' ? (_caseId, hypothesis) => judgeOne(row, hypothesis, model) : undefined,
+    })
+  } finally {
+    for (const source of environments.values()) await source.env.close()
+  }
+
+  return Object.fromEntries(
+    conditions.map((condition) => {
+      const plan = plans[condition]
+      const observed = slots
+        .filter((slot) => slot.condition === condition || slot.condition === 'shared')
+        .map((slot) => {
+          const answer = store.answers.get(slot.key)
+          return {...answer.trace, judgedCorrect: store.grades.get(slot.key)?.correct ?? null}
+        })
+      return [
+        condition,
+        {
+          admitted: annotationCoverage(row, history, plan.admitted),
+          observed,
+          omissions: omissionCounts(row, history, plan.omitted),
+          state: observed.every(({outcome}) => outcome === 'completed') ? 'completed' : 'incomplete',
+        },
+      ]
+    }),
+  )
+}
+
+async function checkpointStudy(output, manifest, selected, resume) {
+  const slots = answerSlots(manifest.questionIds)
+  const store = await openCheckpointRun(output, manifest, slots, {resume})
+  try {
+    const cases = []
+    for (const [index, row] of selected.entries()) {
+      const perCase = slots.filter((slot) => slot.caseId === row.question_id)
+      cases.push(await runCheckpointCase(row, perCase, store, manifest.mode))
+      console.log(`${manifest.mode}: ${index + 1}/30 visited`)
+    }
+
+    const publicManifest = {...manifest}
+    delete publicManifest.questionIds
+    const summary = {
+      ...studySummary(cases, manifest.mode, 30),
+      checkpointedAnswers: store.answers.size,
+      completedGrades: store.grades.size,
+      plannedUniqueAnswers: slots.length,
+      provenance: publicManifest,
+    }
+    await store.writeSummary(summary)
+    if (summary.pairedCompleted !== 30 || (manifest.mode === 'live' && store.grades.size !== slots.length))
+      process.exitCode = 1
+  } finally {
+    store.close()
+  }
+}
+
 async function main() {
   const {values} = parseArgs({
     options: {
@@ -322,17 +465,17 @@ async function main() {
       dataset: {type: 'string'},
       mode: {default: 'replay', type: 'string'},
       'output-dir': {type: 'string'},
+      resume: {type: 'boolean'},
     },
   })
-  const {commit, mode} = values
+  const {commit, mode, resume} = values
   assert(
     values.dataset && values['output-dir'],
-    'Use --dataset PATH --output-dir tmp/NAME [--mode replay|mock|live] --commit FULL_SHA',
+    'Use --dataset tmp/NAME.json --output-dir tmp/NAME [--mode replay|mock|live] [--resume] --commit FULL_SHA',
   )
   assert(['live', 'mock', 'replay'].includes(mode), 'Unknown evaluation mode')
   assert(/^[a-f0-9]{40}$/u.test(commit ?? ''), 'Supply the exact evaluation commit as --commit FULL_SHA')
-  const bytes = await fs.readFile(values.dataset)
-  assert.equal(digest(bytes), dataset.sha256, 'Dataset checksum mismatch')
+  const bytes = await readDataset(values.dataset)
   const selected = selectCases(JSON.parse(bytes))
   assert.equal(selected.length, 30)
   assert.equal(new Set(selected.map((row) => row.question_id)).size, 30)
@@ -341,7 +484,8 @@ async function main() {
     assert.equal(metadata.modelDigest, modelDigest, 'The installed Gemma model must match the historical digest')
   }
 
-  const output = await createStudyOutput(values['output-dir'])
+  assert(!resume || mode !== 'replay', 'Resume is for live or mock checkpoints; replay uses a new directory')
+  const output = await createStudyOutput(values['output-dir'], process.cwd(), {resume})
   const manifest = {
     commit,
     dataset,
@@ -353,6 +497,29 @@ async function main() {
       ? {judge: 'local same-model, not official', model, modelDigest, providerChargeUSD: 0}
       : {judge: 'not run'}),
   }
+  if (mode !== 'replay') {
+    return checkpointStudy(
+      output,
+      {
+        ...manifest,
+        ...(await verifyCode()),
+        answerLimits,
+        answerPromptDigest: digest(instruction),
+        answerSettings,
+        format: 2,
+        gradingProtocol: 'independent-single-answer-v1',
+        judgeDigest: mode === 'live' ? modelDigest : 'none',
+        judgeSettings,
+        judgeTimeoutMs,
+        questionIds: selected.map((row) => row.question_id),
+        rubricDigest: digest(rubric),
+        searchPolicy: {limit: 6, maxQueryUnits: 512, prepareTokens: 2048, resultTokens: 2048},
+      },
+      selected,
+      resume,
+    )
+  }
+
   await write(output, 'manifest.json', manifest)
   const cases = []
   for (const [index, row] of selected.entries()) {
