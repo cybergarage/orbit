@@ -120,7 +120,7 @@ describe('offline official Project memory evaluation input', () => {
   it('validates official results independently of row order', () => {
     const {references, report} = fixture()
     const p = exportPredictions(report, references).none
-    validateResults(results(p).reverse(), p)
+    assert.doesNotThrow(() => validateResults(results(p).reverse(), p))
   })
 
   for (const [name, mutate] of [

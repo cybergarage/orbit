@@ -18,18 +18,22 @@ export const officialEvaluation = Object.freeze({
 })
 const arms = ['none', 'pre', 'tool']
 
+function sortedStrings(values) {
+  return [...values].sort((a, b) => a.localeCompare(b))
+}
+
 function exactIds(rows, expected) {
   assert(Array.isArray(rows), 'Expected an array of rows')
   const ids = rows.map((row) => row?.question_id)
   assert.equal(ids.length, expected.length, 'Missing or extra rows')
   assert.equal(new Set(ids).size, ids.length, 'Duplicate IDs')
-  assert.deepEqual([...ids].sort(), [...expected].sort(), 'Missing or unknown IDs')
+  assert.deepEqual(sortedStrings(ids), sortedStrings(expected), 'Missing or unknown IDs')
 }
 
 export function validatePredictions(rows, expected) {
   exactIds(rows, expected)
   for (const row of rows) {
-    assert.deepEqual(Object.keys(row).sort(), ['hypothesis', 'question_id'], 'Unexpected prediction fields')
+    assert.deepEqual(sortedStrings(Object.keys(row)), ['hypothesis', 'question_id'], 'Unexpected prediction fields')
     assert(typeof row.hypothesis === 'string' && row.hypothesis.trim(), 'Expected a nonempty string hypothesis')
   }
 }
@@ -98,7 +102,7 @@ export async function writePredictions(output, predictions) {
   // Validate all arms before creating anything; require a fresh directory, including for symlinks.
   const expected = predictions.none?.map((row) => row.question_id)
   assert(expected?.length === 30, 'Expected 30 planned IDs')
-  assert.deepEqual(Object.keys(predictions).sort(), [...arms].sort(), 'Expected exactly three arms')
+  assert.deepEqual(sortedStrings(Object.keys(predictions)), sortedStrings(arms), 'Expected exactly three arms')
   for (const arm of arms) validatePredictions(predictions[arm], expected)
   await fs.mkdir(output, {mode: 0o700})
   await Promise.all(
