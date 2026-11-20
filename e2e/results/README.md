@@ -6,7 +6,7 @@ tracked, dated experiments, not leaderboard submissions or a ranking of models.
 | Research area | What is recorded | How to reproduce or inspect the protocol |
 | --- | --- | --- |
 | [Compaction](#compaction-transfer-study) | Local transfer study, cloud calibration, lifecycle checks, and replay/fidelity diagnostics | [Terminal-Bench and compaction guide](../../docs/e2e-evaluation.md#terminal-bench-and-compaction-comparisons), [cloud protocol](../../docs/e2e-evaluation.md#cloud-benchmark-runs) |
-| [LongMemEval](#longmemeval) | 30-case local model pilot, offline audit and official-grader preparation | [Pinned pilot](../../docs/project-memory-evaluation.md#pinned-public-data-pilot), [offline export and validation](../../docs/project-memory-official-evaluation.md#offline-export-and-validation) |
+| [LongMemEval](#longmemeval) | 30-case pilot, official-grader preparation, evidence replay, and local oracle diagnostic | [Pinned pilot](../../docs/project-memory-evaluation.md#pinned-public-data-pilot), [offline export and validation](../../docs/project-memory-official-evaluation.md#offline-export-and-validation) |
 | [SWE-bench](#swe-bench) and [Terminal-Bench](#terminal-bench) | Local runs on selected public tasks, including official harness dispositions where measured | [Coding E2E guide](../../docs/e2e-evaluation.md), [Terminal-Bench adapter](../terminal_bench/README.md) |
 
 Read the method and denominator before comparing rows:
@@ -69,11 +69,12 @@ selection algorithm.
 | 2026-11-19 | Local quality diagnostic | `gemma4:12b` (Q4_K_M), Ollama 0.40.16; none / host pre-retrieval / model-invoked search | Same-model local judge: **9/30 · 13/30 · 17/30**, respectively; 90 completed answers. The generic judge is not the official rubric. | [Pilot report](../../test/evaluation/results/README.md), [aggregate JSON](../../test/evaluation/results/2026-11-19-summary.json) |
 | 2026-11-19 | Pipeline mock / synthetic dispatch check | Mock 30-case pipeline; separate live synthetic Session A/B test | Pipeline and dispatch/provenance evidence only. No benchmark quality estimate from the mock or synthetic fixture. | [Pilot evidence](../../test/evaluation/results/README.md#evidence) |
 | 2026-11-20 | Offline audit / official-grader preparation | Same 90 recorded answers; no new generation or judge call in this audit | All 90 answers roundtripped unchanged; 15/26 answerable cases retained at least one full annotated answer turn. This did not update the historical grades. | [Read-only audit](../../docs/project-memory-official-evaluation.md#read-only-audit-of-the-existing-30-case-pilot), [exporter and pinned grading protocol](../../docs/project-memory-official-evaluation.md#pinned-evaluation-inputs) |
+| 2026-11-20 | Evidence replay and local oracle diagnostic | Same 30 pinned cases; deterministic replay and separate Gemma 4 12B same-model local judging | Full annotated-turn coverage fell from 47/47 in the histories to 25/47 after prefix ingestion, 13/47 at top six and 11/47 after the budget in replay. Local oracle is diagnostic, not a new official grade. | [Evidence audit and oracle report](../../test/evaluation/results/2026-11-20-longmemeval-evidence-audit.md) |
 
-The public history has no tracked official-method grade for these answers and no
-full 500-question Orbit score. The pinned protocol specifies `gpt-4o-2024-08-06`
-as the grader, not as the model that answered the local pilot. Keep judgments
-from different graders separate, and publish only reviewed aggregates.
+No full 500-question Orbit score is reported here. The pinned protocol specifies
+`gpt-4o-2024-08-06` as the official-method grader; it is not the model that
+answered the historical local pilot. Keep judgments from different graders
+separate, and publish only reviewed aggregates.
 
 ## Terminal-Bench
 
