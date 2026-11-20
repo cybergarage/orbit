@@ -7,6 +7,7 @@ import type {ContextPolicy} from '../session/context-policy.js'
 import type {SessionRepository} from '../session/repository.js'
 import type {Session} from '../session/session.js'
 import type {KnowledgeExtractor} from './automatic-memory.js'
+import type {ProjectSearchRepositoryResolver} from './registered-pair-search.js'
 import type {ProjectSessionHost} from './service.js'
 import type {ProjectExtractionJob, ProjectMemoryEntry, ProjectMemorySource, ProjectMutation} from './types.js'
 
@@ -23,9 +24,15 @@ import {
   type ProjectMemorySelection,
   selectProjectMemory,
 } from './memory-context.js'
+import {RegisteredPairSearch} from './registered-pair-search.js'
 import {ProjectService} from './service.js'
 import {readProjectSession} from './session-reader.js'
 import {ProjectStoreError} from './types.js'
+
+export interface ProjectMemoryServiceOptions {
+  /** Trusted same-process registry for live, run-local search only. No fallback on unknown IDs. */
+  resolveSearchRepository?: ProjectSearchRepositoryResolver
+}
 
 export interface ProjectMemoryWrite {
   body: string
@@ -57,13 +64,24 @@ export class ProjectMemoryService {
   private automaticStopped = false
   private automaticTimer?: ReturnType<typeof setInterval>
   private automaticWork?: Promise<void>
+  private readonly registeredPairSearch?: RegisteredPairSearch
+  private readonly resolveSource?: (sessionId: string) => SessionRepository | undefined
   private readonly retainedClaims = new Set<WriterClaim>()
 
   constructor(
     private readonly projects: ProjectService,
     private readonly host: ProjectSessionHost,
-    private readonly resolveSource?: (sessionId: string) => SessionRepository | undefined,
-  ) {}
+    options?: ((sessionId: string) => SessionRepository | undefined) | ProjectMemoryServiceOptions,
+  ) {
+    if (typeof options === 'function') this.resolveSource = options
+    else if (options?.resolveSearchRepository)
+      this.registeredPairSearch = new RegisteredPairSearch(
+        projects.store,
+        options.resolveSearchRepository,
+        this.retainedClaims,
+        host,
+      )
+  }
 
   async close(): Promise<void> {
     this.automaticStopped = true
@@ -343,9 +361,9 @@ export class ProjectMemoryService {
     } while (after)
   }
 
-  /** Host-bound, non-persisting retrieval; never selects unrelated entries to fill capacity. */
   /** Derive authority from a live registered Session, never caller/model scope IDs. */
   async resolveSearchBinding(session: Session, signal?: AbortSignal): Promise<ProjectSearchBinding | undefined> {
+    if (this.registeredPairSearch) return this.registeredPairSearch.resolve(session, signal)
     signal?.throwIfAborted()
     const sessionId = session.getId()
     if (!session.hasManagedLease() || !session.getFile())
@@ -428,11 +446,7 @@ export class ProjectMemoryService {
     input: ProjectMemorySearchInput,
     signal?: AbortSignal,
   ): Promise<ProjectMemorySearchResult> {
-    if (typeof input.query !== 'string' || !input.query.trim() || input.query.length > 512)
-      throw new ProjectStoreError('invalid', 'Search query must contain 1 to 512 characters')
-    const limit = input.limit ?? 6
-    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 16)
-      throw new ProjectStoreError('invalid', 'Search limit must be between 1 and 16')
+    const limit = searchLimit(input)
     const validate = async () => {
       signal?.throwIfAborted()
       const member = await this.projects.requireActive(sessionId)
@@ -455,24 +469,20 @@ export class ProjectMemoryService {
     await validate()
     if (snapshot.projectId !== projectId)
       throw new ProjectStoreError('missing', 'Search Project changed during retrieval')
-    const matches = snapshot.entries.filter((entry) => projectMemoryOverlap(input.query, entry) > 0)
-    const result: ProjectMemorySearchResult = {
-      generation: snapshot.generation,
-      projectId,
-      results: [],
-      truncated: false,
-      trust: 'untrusted-memory-evidence',
-    }
-    const tokenizer = new GptTokenizer()
-    for (const entry of matches.slice(0, limit)) {
-      if (tokenizer.encode(JSON.stringify({...result, results: [...result.results, entry]})).length > 2048) break
-      result.results.push(entry)
-    }
+    return searchResult(snapshot, input.query, limit)
+  }
 
-    result.truncated =
-      result.results.length < matches.length ||
-      snapshot.exclusions.some((entry) => entry.reason === 'entry-limit' || entry.reason === 'token-budget')
-    return result
+  /** Uses the already-held Session lease; the separate host resolver is never model input. */
+  async searchLeasedSession(
+    session: Session,
+    binding: ProjectSearchBinding,
+    input: ProjectMemorySearchInput,
+    signal?: AbortSignal,
+  ): Promise<ProjectMemorySearchResult> {
+    if (!this.registeredPairSearch) return this.search(binding.sessionId, binding.projectId, input, signal)
+    const limit = searchLimit(input)
+    const snapshot = await this.registeredPairSearch.search(session, binding, input.query, signal)
+    return searchResult(snapshot, input.query, limit)
   }
 
   startAutomatic(extract: KnowledgeExtractor): void {
@@ -670,4 +680,34 @@ export class ProjectMemoryService {
       kind: 'memory',
     })) as ProjectMemoryEntry
   }
+}
+
+function searchLimit(input: ProjectMemorySearchInput): number {
+  if (typeof input.query !== 'string' || !input.query.trim() || input.query.length > 512)
+    throw new ProjectStoreError('invalid', 'Search query must contain 1 to 512 characters')
+  const limit = input.limit ?? 6
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 16)
+    throw new ProjectStoreError('invalid', 'Search limit must be between 1 and 16')
+  return limit
+}
+
+function searchResult(snapshot: ProjectContextSnapshot, query: string, limit: number): ProjectMemorySearchResult {
+  const matches = snapshot.entries.filter((entry) => projectMemoryOverlap(query, entry) > 0)
+  const result: ProjectMemorySearchResult = {
+    generation: snapshot.generation,
+    projectId: snapshot.projectId,
+    results: [],
+    truncated: false,
+    trust: 'untrusted-memory-evidence',
+  }
+  const tokenizer = new GptTokenizer()
+  for (const entry of matches.slice(0, limit)) {
+    if (tokenizer.encode(JSON.stringify({...result, results: [...result.results, entry]})).length > 2048) break
+    result.results.push(entry)
+  }
+
+  result.truncated =
+    result.results.length < matches.length ||
+    snapshot.exclusions.some((entry) => entry.reason === 'entry-limit' || entry.reason === 'token-budget')
+  return result
 }

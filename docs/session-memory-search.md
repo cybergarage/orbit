@@ -47,6 +47,35 @@ injection and no new persistence format or context capture. Previously authorize
 tool messages remain ordinary Session history under existing retention rules;
 revocation stops new reads rather than erasing earlier transcript data.
 
+## Same-process hosts with multiple registered storage pairs
+
+A host embedding `Agent` directly can opt into live search across original
+registered `SessionRepository` pairs in one canonical Project catalog:
+
+```ts
+const memory = new ProjectMemoryService(projectService, threadHost, {
+  resolveSearchRepository: (sessionId) => originalRegisteredRepositories.get(sessionId),
+})
+const agent = new Agent({projectMemory: memory, state: new State(registeredSession)})
+// Still pass a revocable memorySearch permission on the individual run.
+```
+
+The host registry must map the requesting Session and each candidate source to
+its registered physical repository, including when a Session has moved to a
+different logical Project. The Agent requires its existing managed writer lease;
+Core does not open a second writer. Source evidence must match the canonical
+Project, original pair, live membership revision and exact stored message
+digest. Busy peer writers are not closed or replaced. Unknown sources are
+excluded instead of falling back to another repository. Changes detected during
+retrieval discard results before they can be used.
+
+Only automatic run-local search uses this option. Default Core application
+construction, direct `memory.search`, explicit tool registration, frozen
+snapshots, memory preparation and automatic extraction keep their existing
+routing. This is not an IPC or path-grant mechanism. No transcripts are moved,
+and memories retired in the former Project are not transferred or re-extracted.
+See the [registered-pair decision](adr/2026-11-20-registered-pair-project-search.md).
+
 ## Model and catalog selection
 
 General `supported` and `unknown` allow attachment when all other conditions hold;
@@ -82,7 +111,8 @@ Apple named-only protocol and the ordinary Core Application/Thread passthrough:
 ```sh
 npm run build
 TS_NODE_PROJECT=tsconfig.test.json npx mocha --forbid-only \
-  test/core/projects/session-memory-tool.test.ts
+  test/core/projects/session-memory-tool.test.ts \
+  test/core/projects/registered-pair-search.test.ts
 ```
 
 The [Apple protocol test](apple-project-memory.md#reproduction) independently checks
