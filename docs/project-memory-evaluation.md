@@ -154,15 +154,15 @@ compares two question-blind ingestion policies on the same pinned 30 cases:
   dataset source label, answer annotation, or reference enters ingestion.
 
 Build the checkout and place the SHA-256-pinned dataset from the guide above in
-ignored local storage. Each run requires a new direct child of the existing
-ignored `tmp/` directory:
+the fixed filename below under ignored local storage. The harness prints the
+new private directory it creates directly in the existing `tmp/` directory:
 
 ```sh
 npm ci
 npm run build
 mkdir -p tmp
 node bin/project-memory-ingestion-study.mjs --mode replay \
-  --dataset tmp/longmemeval_s_cleaned.json --output-dir tmp/ingestion-replay \
+  --dataset tmp/longmemeval_s_cleaned.json \
   --commit "$(git rev-parse HEAD)"
 TS_NODE_PROJECT=tsconfig.test.json npx mocha --forbid-only \
   'test/evaluation/project-memory-*.test.mjs'
@@ -177,9 +177,10 @@ runs synthetic requests and the real local Core search without contacting a
 model. A mock wire record is not counted as provider delivery.
 
 Only use `--mode live` when explicitly running the local model comparison. The
-pinned JSON fixture and run directory must be direct, non-symlink children of this
-checkout's ignored `tmp/`. The dataset's exact size and SHA-256 are checked.
-Absolute paths and nested names are rejected. Live mode requires the historical
+pinned JSON fixture uses the fixed name `tmp/longmemeval_s_cleaned.json`. Its
+exact size and SHA-256 are checked. Run directories have generated names; a
+resume argument only selects a known filesystem entry. Absolute paths, nested
+names and symlinks are rejected. Live mode requires the historical
 Ollama `gemma4:12b` digest
 `4eb23ef187e2c5462566d6a1d3bbbc2f1346d0b4327cbb66d58fffbcc9b2b05c`
 on loopback; there is no download or fallback.
@@ -197,8 +198,9 @@ local answer calls and 150 separate local judge calls.
 
 ### Resume a checkpointed study
 
-Start a new `live` or `mock` run with a fresh `--output-dir tmp/NAME`. Reissue
-the same arguments with `--resume` to inspect and continue that directory.
+Start a new `live` or `mock` run without an output argument. Keep the printed
+`Run directory` name. Reissue the same arguments with
+`--resume --output-dir tmp/ingestion-study-ID`, using that exact printed name.
 The protocol verifies the private run identity, exact manifest and ordered
 case IDs, source/build and dependency fingerprint, SDK/runtime versions,
 model and dataset identity, and prompt, rubric and budget settings before

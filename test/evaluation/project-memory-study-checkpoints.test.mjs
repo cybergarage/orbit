@@ -212,7 +212,7 @@ describe('Private LongMemEval answer and grade checkpoints', () => {
     const root = await temp()
     try {
       const parent = path.join(root, 'tmp')
-      const fixture = path.join(parent, 'public.json')
+      const fixture = path.join(parent, 'longmemeval_s_cleaned.json')
       await fs.mkdir(parent)
       const handle = await fs.open(fixture, 'wx', 0o600)
       try {
@@ -221,19 +221,20 @@ describe('Private LongMemEval answer and grade checkpoints', () => {
         await handle.close()
       }
 
-      assert.equal(await datasetFile('tmp/public.json', root), fixture)
-      await assert.rejects(datasetFile(fixture, root), /directly under/)
-      await assert.rejects(datasetFile('tmp/.private.json', root), /directly under/)
-      await assert.rejects(datasetFile('tmp/nested/private.json', root), /directly under/)
-      await fs.symlink(fixture, path.join(parent, 'alias.json'))
-      await assert.rejects(datasetFile('tmp/alias.json', root), /pinned public/)
-      await fs.symlink(parent, path.join(parent, 'alias'))
-      await assert.rejects(createStudyOutput('tmp/alias', root, {resume: true}), /Ambiguous/)
-      await assert.rejects(createStudyOutput(path.join(parent, 'absolute'), root), /named direct child/)
+      assert.equal(await datasetFile('tmp/longmemeval_s_cleaned.json', root), fixture)
+      await assert.rejects(datasetFile(fixture, root), /fixed pinned/)
+      await assert.rejects(datasetFile('tmp/.private.json', root), /fixed pinned/)
+      await assert.rejects(datasetFile('tmp/nested/longmemeval_s_cleaned.json', root), /fixed pinned/)
+      await fs.rename(fixture, path.join(parent, 'other.json'))
+      await fs.symlink(path.join(parent, 'other.json'), fixture)
+      await assert.rejects(datasetFile('tmp/longmemeval_s_cleaned.json', root), /pinned public/)
+      await fs.symlink(parent, path.join(parent, 'ingestion-study-abc123'))
+      await assert.rejects(createStudyOutput('tmp/ingestion-study-abc123', root, {resume: true}), /No matching/)
+      await assert.rejects(createStudyOutput(path.join(parent, 'absolute'), root, {resume: true}), /named existing/)
       await fs.rename(parent, path.join(root, 'real-tmp'))
       await fs.symlink(path.join(root, 'real-tmp'), parent)
-      await assert.rejects(datasetFile('tmp/public.json', root), /must not be a symbolic link/)
-      await assert.rejects(createStudyOutput('tmp/new-run', root), /must not be a symbolic link/)
+      await assert.rejects(datasetFile('tmp/longmemeval_s_cleaned.json', root), /must not be a symbolic link/)
+      await assert.rejects(createStudyOutput(undefined, root), /must not be a symbolic link/)
     } finally {
       await fs.rm(root, {force: true, recursive: true})
     }

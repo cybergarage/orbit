@@ -178,12 +178,15 @@ describe('Evaluation-only paired LongMemEval ingestion study', () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-ingestion-study-fixture-'))
     try {
       await fs.mkdir(path.join(root, 'tmp'))
-      const out = await createStudyOutput('tmp/traces', root)
-      assert.equal(await fs.realpath(out), path.join(await fs.realpath(root), 'tmp', 'traces'))
+      const out = await createStudyOutput(undefined, root)
+      assert.equal(path.dirname(out), path.join(await fs.realpath(root), 'tmp'))
+      assert.match(path.basename(out), /^ingestion-study-[A-Za-z0-9]{6}$/u)
       if (process.platform !== 'win32') assert.equal((await fs.stat(out)).mode % 0o100, 0)
-      await assert.rejects(() => createStudyOutput('tmp/traces', root))
-      await assert.rejects(() => createStudyOutput('../public', root))
-      await assert.rejects(() => createStudyOutput('tmp/traces/nested', root))
+      const name = `tmp/${path.basename(out)}`
+      assert.equal(await createStudyOutput(name, root, {resume: true}), out)
+      await assert.rejects(() => createStudyOutput(name, root))
+      await assert.rejects(() => createStudyOutput('../public', root, {resume: true}))
+      await assert.rejects(() => createStudyOutput('tmp/traces/nested', root, {resume: true}))
     } finally {
       await fs.rm(root, {force: true, recursive: true})
     }

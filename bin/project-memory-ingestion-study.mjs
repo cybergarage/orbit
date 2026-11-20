@@ -52,20 +52,30 @@ async function privateTmp(cwd) {
   return parent
 }
 
+const datasetName = 'longmemeval_s_cleaned.json'
+const runName = /^ingestion-study-[A-Za-z0-9]{6}$/u
+
 export async function createStudyOutput(request, cwd = process.cwd(), {resume = false} = {}) {
-  const match = /^tmp\/([A-Za-z0-9][A-Za-z0-9_-]{0,63})$/u.exec(request)
-  assert(match, 'Output must be a named direct child of the ignored tmp/ directory')
+  if (!resume)
+    assert(request === undefined, 'The runner creates its own output directory; use --output-dir only with --resume')
   const parent = await privateTmp(cwd)
-  const output = path.join(parent, match[1])
-  if (resume) assert.equal(await fs.realpath(output), output, 'Ambiguous resume directory')
-  else await fs.mkdir(output, {mode: 0o700})
+  if (!resume) return fs.mkdtemp(path.join(parent, 'ingestion-study-'))
+
+  const match = /^tmp\/(ingestion-study-[A-Za-z0-9]{6})$/u.exec(request)
+  assert(match, 'Resume requires a named existing private run directly under tmp/')
+  const entries = await fs.readdir(parent, {withFileTypes: true})
+  // The argument identifies an existing directory entry. It is never a path component.
+  const entry = entries.find((item) => item.isDirectory() && runName.test(item.name) && item.name === match[1])
+  assert(entry, 'No matching private run directory')
+  const output = path.join(parent, entry.name)
+  assert.equal(await fs.realpath(output), output, 'Ambiguous resume directory')
   return output
 }
 
 export async function datasetFile(request, cwd = process.cwd()) {
-  const match = /^tmp\/([A-Za-z0-9][A-Za-z0-9_.-]{0,119}\.json)$/u.exec(request)
-  assert(match, 'Dataset must be a named JSON file directly under the ignored tmp/ directory')
-  const file = path.join(await privateTmp(cwd), match[1])
+  assert(request === 'tmp/longmemeval_s_cleaned.json', 'Use the fixed pinned public dataset name under tmp/')
+  // The CLI value is an acknowledgement, not a filesystem path.
+  const file = path.join(await privateTmp(cwd), datasetName)
   const stat = await fs.lstat(file)
   assert(
     stat.isFile() && stat.size === pinnedDatasetBytes && (await fs.realpath(file)) === file,
@@ -99,7 +109,7 @@ async function readDataset(request) {
 }
 
 async function write(output, file, value) {
-  assert(/^(?:manifest|summary|case-(?:0[1-9]|[12][0-9]|30))\.json$/u.test(file), 'Invalid replay artifact name')
+  assert(/^(?:manifest|summary|case-(?:0[1-9]|[12]\d|30))\.json$/u.test(file), 'Invalid replay artifact name')
   assert.equal(await fs.realpath(output), output, 'Ambiguous replay directory')
   await fs.writeFile(path.join(output, file), JSON.stringify(value) + '\n', {flag: 'wx', mode: 0o600})
 }
@@ -339,8 +349,10 @@ export function studySummary(cases, mode, planned) {
       if (typeof x !== 'boolean' || typeof y !== 'boolean') continue
       const aggregate = summary.pairedEligibleByArm[arm]
       aggregate.eligible++
-      const key = x ? (y ? 'bothCorrect' : 'prefixOnly') : y ? 'turnChunksOnly' : 'bothWrong'
-      aggregate[key]++
+      if (x && y) aggregate.bothCorrect++
+      else if (x) aggregate.prefixOnly++
+      else if (y) aggregate.turnChunksOnly++
+      else aggregate.bothWrong++
     }
   }
 
@@ -472,8 +484,8 @@ async function main() {
   })
   const {commit, mode, resume} = values
   assert(
-    values.dataset && values['output-dir'],
-    'Use --dataset tmp/NAME.json --output-dir tmp/NAME [--mode replay|mock|live] [--resume] --commit FULL_SHA',
+    values.dataset && Boolean(values['output-dir']) === Boolean(resume),
+    'Use --dataset tmp/longmemeval_s_cleaned.json [--mode replay|mock|live] [--resume --output-dir tmp/ingestion-study-ID] --commit FULL_SHA',
   )
   assert(['live', 'mock', 'replay'].includes(mode), 'Unknown evaluation mode')
   assert(/^[a-f0-9]{40}$/u.test(commit ?? ''), 'Supply the exact evaluation commit as --commit FULL_SHA')
@@ -488,6 +500,7 @@ async function main() {
 
   assert(!resume || mode !== 'replay', 'Resume is for live or mock checkpoints; replay uses a new directory')
   const output = await createStudyOutput(values['output-dir'], process.cwd(), {resume})
+  console.log(`Run directory: tmp/${path.basename(output)}`)
   const manifest = {
     commit,
     dataset,
