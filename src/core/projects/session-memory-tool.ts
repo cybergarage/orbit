@@ -128,10 +128,6 @@ export async function createSessionMemoryTool(options: {
 
 function sameBinding(a: ProjectSearchBinding, b?: ProjectSearchBinding): boolean {
   return (
-    b !== undefined &&
-    a.projectId === b.projectId &&
-    a.pairId === b.pairId &&
-    a.sessionId === b.sessionId &&
-    a.revision === b.revision
+    a.projectId === b?.projectId && a.pairId === b?.pairId && a.sessionId === b?.sessionId && a.revision === b?.revision
   )
 }

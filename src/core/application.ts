@@ -16,6 +16,7 @@ import type {LogPage, LogQuery, LogRecord, LogStoreHealth, SessionLoggerFactory,
 import type {ProviderName} from './models/index.js'
 import type {CompiledProcessorGraph, GraphJSON, GraphValue} from './processor/index.js'
 import type {KnowledgeExtractor} from './projects/automatic-memory.js'
+import type {ProjectMemorySearchPermission} from './projects/session-memory-tool.js'
 import type {ProjectStore} from './projects/types.js'
 import type {WorkflowExpectation} from './selection/binding.js'
 import type {WorkflowAuthority} from './selection/service.js'
@@ -856,7 +857,7 @@ export class OrbitApplicationService {
           continueFromRunId?: string
           limits?: Partial<import('./execution/limits.js').RunLimits>
           memory?: ProjectMemorySelection
-          memorySearch?: import('./agent.js').AgentInvokeOptions['memorySearch']
+          memorySearch?: ProjectMemorySearchPermission
           requestId?: string
           skills?: SkillSelection[]
         },
