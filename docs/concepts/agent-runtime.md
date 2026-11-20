@@ -63,6 +63,11 @@ never grants tool permission. See [Explicit Skill selection](../skills.md).
 
 This is a fixed Agent loop, not a data-driven Processor Graph.
 
+An embedding host can inject a [workspace executor](../execution.md#optional-workspaceexecutor)
+for final dispatch of managed coding tools. The Agent keeps Session and model
+state, prepares and authorizes requests, and records outcomes. The optional
+executor supplies execution only; the default local path is unchanged.
+
 ## Directional Model
 
 The directional model decomposes the turn lifecycle into Processors such as

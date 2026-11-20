@@ -1,19 +1,26 @@
 // Copyright (c) 2026 The Orbit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {randomUUID} from 'node:crypto'
+import {createHash, randomUUID} from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 
 import type {ToolDefinition, ToolExecutionContext, ToolResult} from '../tools/definition.js'
 import type {RunContext} from './run.js'
+import type {PreparedWorkspaceOperation, WorkspaceExecutor} from './workspace-executor.js'
 
 import {resolveShell} from '../tools/builtins/bash.js'
 import {textToolResult} from '../tools/definition.js'
 import {bindObservationResult, observationAdapter} from '../tools/observation-provenance.js'
 import {copyJSON} from './journal.js'
 import {operationResources} from './resources.js'
+import {
+  boundWorkspaceOperation,
+  boundWorkspaceResult,
+  captureWorkspaceExecutor,
+  isWorkspaceBuiltin,
+} from './workspace-executor.js'
 
 export type OperationEffect = 'command' | 'mcp' | 'opaque' | 'read' | 'write'
 export interface PreparedOperation {
@@ -50,6 +57,7 @@ export interface ManagedToolOptions {
   allowLegacyTools?: boolean
   onToolSettled?: (outcome: 'completed' | 'failed') => void
   policy: ExecutionPolicy
+  workspaceExecutor?: WorkspaceExecutor
 }
 
 /** Options for trusted prepared operations such as managed MCP startup. */
@@ -98,10 +106,14 @@ export function assertManagedTool(definition: ToolDefinition, options: ManagedTo
  * All instances share the same in-process resource coordination domain.
  */
 export class OperationExecutor {
+  private readonly workspaceExecutor?: WorkspaceExecutor
+
   constructor(
     private readonly run: RunContext,
     private readonly options: ManagedToolOptions,
-  ) {}
+  ) {
+    this.workspaceExecutor = captureWorkspaceExecutor(options.workspaceExecutor)
+  }
 
   /** Execute an application-trusted preparation under this Run's policy. */
   async executePrepared(
@@ -244,12 +256,22 @@ export class OperationExecutor {
     const id = randomUUID()
     let preparation: OperationPreparation
     let parsed: unknown
+    const workspace = !definition.prepare && isWorkspaceBuiltin(definition) ? this.workspaceExecutor : undefined
     try {
       assertManagedTool(definition, options)
       parsed = copyJSON(definition.input.parse(copyJSON(input)))
       preparation = definition.prepare
         ? await run.wait('prepare', definition.prepare(parsed, context))
-        : await run.wait('prepare', prepareDefault(definition, parsed, context, options.policy))
+        : await run.wait(
+            'prepare',
+            prepareDefault(
+              definition,
+              parsed,
+              context,
+              options.policy,
+              workspace ? {executor: workspace, signal: run.signal} : undefined,
+            ),
+          )
     } catch (error) {
       if (run.signal.aborted) throw error
       run.operations.push({id, status: 'invalid'})
@@ -257,7 +279,7 @@ export class OperationExecutor {
       return textToolResult('Invalid or unauthorized operation preparation', {isError: true})
     }
 
-    const adapter = observationAdapter(definition)
+    const adapter = workspace ? undefined : observationAdapter(definition)
     const observation =
       adapter && typeof context.groupId === 'string'
         ? {adapter, groupId: context.groupId, inputDigest: run.journal.digest(input)}
@@ -343,6 +365,7 @@ async function prepareDefault(
   input: unknown,
   context: ToolExecutionContext,
   policy: ExecutionPolicy,
+  workspace?: {executor: WorkspaceExecutor; signal: AbortSignal},
 ): Promise<OperationPreparation> {
   const value =
     input !== null && typeof input === 'object' && !Array.isArray(input) ? (input as Record<string, unknown>) : {}
@@ -404,33 +427,53 @@ async function prepareDefault(
   }
 
   const frozenInput = freezeJSON(copyJSON(builtin ? {...value, ...(name === 'bash' ? {} : {path: target})} : input))
-  const shell = effect === 'command' ? resolveShell() : undefined
-  const environment =
-    effect === 'command'
-      ? Object.fromEntries(
-          Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
-        )
-      : undefined
+  const request = workspace
+    ? boundWorkspaceOperation({
+        cwd: preparedContext.cwd,
+        effect,
+        input: frozenInput,
+        name,
+        target,
+        version: 1,
+        ...(effect === 'write'
+          ? {preimageSha256: before === null ? null : textDigest(before), resultSha256: textDigest(after!)}
+          : {}),
+      } as PreparedWorkspaceOperation)
+    : undefined
+  const shell = effect === 'command' && !workspace ? resolveShell() : undefined
+  const environment = shell
+    ? Object.fromEntries(
+        Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
+      )
+    : undefined
   const binding = {
     target,
+    ...(request ? {workspaceExecutor: 'injected-v1'} : {}),
     ...(shell ? {environment: environment!, shell} : {}),
     ...(effect === 'write' ? {after: after!, before} : {}),
   }
   return {
     binding,
     effect,
-    execute: () =>
-      definition.execute(frozenInput, {
-        ...preparedContext,
-        ...(shell ? {preparedEnvironment: environment, preparedShell: shell} : {}),
-      }),
+    execute:
+      workspace && request
+        ? async () => boundWorkspaceResult(await workspace.executor.execute(request, workspace.signal))
+        : () =>
+            definition.execute(frozenInput, {
+              ...preparedContext,
+              ...(shell ? {preparedEnvironment: environment, preparedShell: shell} : {}),
+            }),
     preview: builtin
       ? {
           name,
           ...(frozenInput as Record<string, unknown>),
           ...(effect === 'write' ? {after: after!, before} : {}),
           ...(effect === 'command'
-            ? {warning: 'This command is not OS-sandboxed and may change files or access the network.'}
+            ? {
+                warning: workspace
+                  ? 'This command may change files or access the network. Core does not supply executor isolation.'
+                  : 'This command is not OS-sandboxed and may change files or access the network.',
+              }
             : {}),
         }
       : {
@@ -448,6 +491,10 @@ async function prepareDefault(
     },
     targets: [target],
   }
+}
+
+function textDigest(text: string): string {
+  return createHash('sha256').update(text).digest('hex')
 }
 
 async function readPreimage(file: string): Promise<null | string> {

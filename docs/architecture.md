@@ -108,7 +108,10 @@ remain compatibility delegates. `execution/resources.ts` encapsulates the
 shared in-process ownership Maps in an internal ResourceCoordinator, with
 release still controlled by RunContext. `AgentExecutionOptions` names the
 configuration accepted by Agent; it does not introduce a separate execution
-engine. ThreadManager and application surfaces project its snapshots. Model
+engine. Embedded hosts can optionally inject a WorkspaceExecutor for the seven
+managed coding tools. Core prepares, authorizes, and journals each operation;
+the injected executor replaces only final dispatch. With no injection the
+local handlers remain active. ThreadManager and application surfaces project its snapshots. Model
 iterations are sequential. Managed read/list/grep/glob calls may be batched;
 mutations, custom tools and MCP calls are serial barriers. See
 [Managed Execution](execution.md) for public APIs, ownership and migration.

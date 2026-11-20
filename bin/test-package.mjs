@@ -35,6 +35,8 @@ try {
   for (const required of [
     'dist/index.js',
     'dist/index.d.ts',
+    'dist/core/execution/workspace-executor.js',
+    'dist/core/execution/workspace-executor.d.ts',
     'dist/core/execution/event-inbox.js',
     'dist/core/execution/event-inbox.d.ts',
     'dist/core/execution/event-store.js',
@@ -109,9 +111,15 @@ try {
     path.join(consumer, 'src/execution-api-probe.ts'),
     `
 import {ModelCatalog, ModelGateway, modelSelectionSchema, OperationExecutor, executeManagedTool, executePrepared} from '@cybergarage/orbit'
-import type {AgentExecutionOptions, AgentOptions, ManagedToolOptions, PreparedExecutionOptions, RunContext} from '@cybergarage/orbit'
+import type {AgentExecutionOptions, AgentOptions, ManagedToolOptions, PreparedExecutionOptions, PreparedWorkspaceOperation, RunContext, WorkspaceExecutor} from '@cybergarage/orbit'
 export function executionApi(run: RunContext, managed: ManagedToolOptions, execution: AgentExecutionOptions) {
-  const options: AgentOptions = {execution}
+  const workspaceExecutor: WorkspaceExecutor = {
+    async execute(operation: PreparedWorkspaceOperation, signal: AbortSignal) {
+      if (signal.aborted) throw new Error('Synthetic executor cancelled')
+      return {content: [{type: 'text', text: operation.name}]}
+    },
+  }
+  const options: AgentOptions = {execution: {...execution, workspaceExecutor}}
   const prepared: PreparedExecutionOptions = {deferPluginStartupFailure: false}
   return {ModelCatalog, ModelGateway, modelSelectionSchema, executor: new OperationExecutor(run, managed), executeManagedTool, executePrepared, options, prepared}
 }
