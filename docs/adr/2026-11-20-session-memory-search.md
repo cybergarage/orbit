@@ -4,7 +4,7 @@ proposed-date: 2026-11-20
 decision-date: 2026-11-20
 implementation-status: completed
 implementation-completed-date: 2026-11-20
-implementation-commits: [5a9c32d585b86a742eec022cff45ee6fb47b8a53, 3461d29a2e682427bed41d3952b8a8a807a52f94]
+implementation-commits: [5a9c32d585b86a742eec022cff45ee6fb47b8a53, 3461d29a2e682427bed41d3952b8a8a807a52f94, 7affdb8cfbfa5d5e873670afcc676de771a2f57c]
 superseded-by: []
 ---
 
@@ -84,7 +84,9 @@ type, canonical live-binding lookup and the maintained feature/architecture guid
 Headers/build and all 1,483 tests pass, including 28 new synthetic boundaries.
 Commit 3461d29a2e682427bed41d3952b8a8a807a52f94 clarifies the shared permission
 types and retry-identity assertion without changing policy or suppressing analysis.
-The same full suite passes after that refinement. The independent installed-package consumer passes (534 files), including public
+Commit 7affdb8cfbfa5d5e873670afcc676de771a2f57c isolates the identical callback
+input check so the Thread orchestration stays within the analysis complexity bound.
+The same full suite passes after both refinements. The independent installed-package consumer passes (534 files), including public
 callback types at Agent/Thread/Application boundaries. The existing compiled Swift
 native actor protocol regression passes two distinct calls with reverse-order
 results, separately from model inference.
