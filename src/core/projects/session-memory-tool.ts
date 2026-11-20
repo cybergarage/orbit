@@ -10,7 +10,8 @@ import {AppleProjectMemoryAgent} from '../models/adapters/apple-memory.js'
 import {AppleFoundationModelsAgent} from '../models/adapters/apple.js'
 import {canIncludeModelTools, resolveModelCapabilities} from '../models/capabilities.js'
 import {textToolResult} from '../tools/definition.js'
-import {createProjectMemorySearchTool} from './memory-search-tool.js'
+import {createLeasedProjectMemorySearchTool} from './memory-search-tool.js'
+import {sameSearchBinding} from './registered-pair-search.js'
 
 const NAME = 'project_memory_search'
 
@@ -70,7 +71,7 @@ export async function createSessionMemoryTool(options: {
 
   const checkBinding = async (currentSignal: AbortSignal) => {
     const current = await memory.resolveSearchBinding(session, currentSignal)
-    if (!sameBinding(binding, current)) throw new Error('Automatic memory search membership changed')
+    if (!sameSearchBinding(binding, current)) throw new Error('Automatic memory search membership changed')
   }
 
   const check = async (currentSignal = signal) => {
@@ -83,7 +84,7 @@ export async function createSessionMemoryTool(options: {
   }
 
   await check()
-  const original = createProjectMemorySearchTool(memory, {projectId: binding.projectId, sessionId: binding.sessionId})
+  const original = createLeasedProjectMemorySearchTool(memory, session, binding)
   const guarded = async (execute: () => Promise<ToolResult>, currentSignal: AbortSignal) => {
     try {
       await check(currentSignal)
@@ -124,10 +125,4 @@ export async function createSessionMemoryTool(options: {
     definition,
     namedOnly: model instanceof AppleProjectMemoryAgent,
   }
-}
-
-function sameBinding(a: ProjectSearchBinding, b?: ProjectSearchBinding): boolean {
-  return (
-    a.projectId === b?.projectId && a.pairId === b?.pairId && a.sessionId === b?.sessionId && a.revision === b?.revision
-  )
 }

@@ -3,8 +3,9 @@
 
 import {z} from 'zod'
 
+import type {Session} from '../session/session.js'
 import type {ToolDefinition} from '../tools/definition.js'
-import type {ProjectMemorySearchInput} from './memory-service.js'
+import type {ProjectMemorySearchInput, ProjectMemorySearchResult, ProjectSearchBinding} from './memory-service.js'
 
 import {textToolResult, zodToolInput} from '../tools/definition.js'
 import {ProjectMemoryService} from './memory-service.js'
@@ -13,6 +14,28 @@ import {ProjectMemoryService} from './memory-service.js'
 export function createProjectMemorySearchTool(
   memory: ProjectMemoryService,
   scope: Readonly<{projectId: string; sessionId: string}>,
+): ToolDefinition<ProjectMemorySearchInput> {
+  return searchTool(scope, (bound, value, signal) => memory.search(bound.sessionId, bound.projectId, value, signal))
+}
+
+export function createLeasedProjectMemorySearchTool(
+  memory: ProjectMemoryService,
+  session: Session,
+  binding: ProjectSearchBinding,
+): ToolDefinition<ProjectMemorySearchInput> {
+  const admitted = Object.freeze({...binding})
+  return searchTool({projectId: admitted.projectId, sessionId: admitted.sessionId}, (_scope, value, signal) =>
+    memory.searchLeasedSession(session, admitted, value, signal),
+  )
+}
+
+function searchTool(
+  scope: Readonly<{projectId: string; sessionId: string}>,
+  search: (
+    scope: {projectId: string; sessionId: string},
+    input: ProjectMemorySearchInput,
+    signal: AbortSignal,
+  ) => Promise<ProjectMemorySearchResult>,
 ): ToolDefinition<ProjectMemorySearchInput> {
   const {projectId, sessionId} = z
     .object({projectId: z.uuid(), sessionId: z.string().regex(/^[A-Za-z0-9_-]{1,160}$/u)})
@@ -29,7 +52,7 @@ export function createProjectMemorySearchTool(
   return {
     async execute(value, context) {
       const parsed = input.parse(value)
-      const result = await memory.search(sessionId, projectId, parsed, context.signal)
+      const result = await search({projectId, sessionId}, parsed, context.signal)
       return textToolResult(JSON.stringify(result))
     },
     input,
@@ -39,7 +62,7 @@ export function createProjectMemorySearchTool(
         binding: {projectId, sessionId},
         effect: 'read',
         execute: async () =>
-          textToolResult(JSON.stringify(await memory.search(sessionId, projectId, parsed, context.signal))),
+          textToolResult(JSON.stringify(await search({projectId, sessionId}, parsed, context.signal))),
         preview: {projectId, query: parsed.query, sessionId},
         revalidate: async () => !context.signal.aborted,
         targets: [],

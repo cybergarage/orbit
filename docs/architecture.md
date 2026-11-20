@@ -464,3 +464,7 @@ are revalidated at generation and execution boundaries; the restricted Apple rou
 uses a fixed-only catalog. Core Application/Thread APIs pass the callback through,
 while UI routes and default grants remain unchanged. See
 [Session memory search](session-memory-search.md).
+A same-process `ProjectMemoryService` may opt into a trusted repository
+resolver for this run-local path. It uses the requester's existing lease and
+checks current membership and source evidence across original registered pairs.
+It does not alter default service routing, App wiring or post-move extraction.

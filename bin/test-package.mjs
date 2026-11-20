@@ -317,12 +317,15 @@ console.log('Package initialization consumer verified: public types, all scopes,
 // SPDX-License-Identifier: Apache-2.0
 import assert from 'node:assert/strict'
 import {canIncludeModelTools, resolveModelCapabilities} from '@cybergarage/orbit'
-import type {Model, ModelCapabilities, ModelCapabilityOptions, ModelCapabilitySupport, ResolvedModelCapabilities, AgentInvokeOptions, ProjectMemorySearchPermission, ThreadRunOptions, OrbitApplicationService} from '@cybergarage/orbit'
+import type {Model, ModelCapabilities, ModelCapabilityOptions, ModelCapabilitySupport, ResolvedModelCapabilities, AgentInvokeOptions, ProjectMemorySearchPermission, ProjectMemoryServiceOptions, ProjectSearchRepositoryResolver, ThreadRunOptions, OrbitApplicationService} from '@cybergarage/orbit'
 const legacy: Model = {
   getModel: () => 'legacy-fixture', getName: () => 'fixture', getProvider: () => 'custom',
   async invoke() {throw new Error('No inference in package capability check')},
 }
 const permission: ProjectMemorySearchPermission = (scope) => scope.projectId.length > 0 && scope.sessionId.length > 0
+const resolveSearchRepository: ProjectSearchRepositoryResolver = () => undefined
+const projectMemoryOptions: ProjectMemoryServiceOptions = {resolveSearchRepository}
+assert.equal(projectMemoryOptions.resolveSearchRepository?.('synthetic'), undefined)
 const automatic: AgentInvokeOptions = {memorySearch: permission}
 const threaded: ThreadRunOptions = {memorySearch: permission}
 const application: Exclude<Parameters<OrbitApplicationService['startRun']>[2], string | undefined> = {memorySearch: permission}

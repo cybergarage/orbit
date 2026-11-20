@@ -10,6 +10,7 @@ import type {Message} from '../message/index.js'
 import type {ProviderName} from '../models/provider.js'
 import type {SessionSkillEntry} from '../skills/record.js'
 import type {SessionCompactionEntry} from './compaction.js'
+import type {SessionScope} from './coordination.js'
 import type {
   PersistedMessage,
   SessionEntry,
@@ -297,6 +298,22 @@ export class Session {
 
   hasManagedLease(): boolean {
     return this.recorder?.hasManagedLease() ?? this.ephemeralLease
+  }
+
+  /** Checks the existing persistent lease without acquiring or exposing writer authority. */
+  hasManagedLeaseFor(scope: SessionScope): boolean {
+    const {recorder} = this
+    if (!recorder?.hasManagedLease() || this.closing) return false
+    const current = recorder.scope
+    if (
+      current.pairId !== scope.pairId ||
+      current.sessionId !== scope.sessionId ||
+      current.sessionRoot !== scope.sessionRoot ||
+      current.journalRoot !== scope.journalRoot
+    )
+      return false
+    recorder.assertWritable()
+    return true
   }
 
   hasMessage(id: string): boolean {
