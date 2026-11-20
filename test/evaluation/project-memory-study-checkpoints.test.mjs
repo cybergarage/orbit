@@ -238,4 +238,23 @@ describe('Private LongMemEval answer and grade checkpoints', () => {
       await fs.rm(root, {force: true, recursive: true})
     }
   })
+
+  it('bounds the actual SDK fetch and refuses redirects or any non-study origin before dispatch', async () => {
+    const {studyFetch} = await import('../../bin/project-memory-study-local.mjs')
+    const abort = new AbortController()
+    let captured
+    const forward = (url, options) => {
+      captured = {options, url}
+      return {}
+    }
+
+    studyFetch('http://127.0.0.1:11434/api/chat', {signal: abort.signal}, forward)
+    assert.equal(captured.options.redirect, 'error')
+    assert.equal(captured.options.signal.aborted, false)
+    abort.abort()
+    assert.equal(captured.options.signal.aborted, true)
+    const never = () => assert.fail('Unexpected dispatch')
+    assert.throws(() => studyFetch('https://example.test/api/chat', {}, never), /loopback/)
+    assert.throws(() => studyFetch('http://127.0.0.1:11434/api/pull', {}, never), /loopback/)
+  })
 })

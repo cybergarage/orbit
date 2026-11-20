@@ -33,7 +33,8 @@ import {
   selectCases,
 } from './project-memory-pilot.mjs'
 import {answerSlots, openCheckpointRun, runSlots} from './project-memory-study-checkpoints.mjs'
-import {judgeOne, judgeSettings, judgeTimeoutMs, rubric} from './project-memory-study-judge.mjs'
+import {judgeOne, judgeSettings, rubric} from './project-memory-study-judge.mjs'
+import {localRequestTimeoutMs, studyFetch} from './project-memory-study-local.mjs'
 
 const model = 'gemma4:12b'
 const modelDigest = '4eb23ef187e2c5462566d6a1d3bbbc2f1346d0b4327cbb66d58fffbcc9b2b05c'
@@ -148,7 +149,7 @@ async function saveCondition(env, history, planned, condition) {
 async function observedArm(env, question, arm, mock) {
   const observer = traceArm(env, arm)
   try {
-    const result = await answer(env, question, arm, {mock, modelName: model, trace: observer})
+    const result = await answer(env, question, arm, {localFetch: studyFetch, mock, modelName: model, trace: observer})
     return {answer: result.answer, observed: {arm, outcome: result.outcome, ...observer.result}}
   } catch (error) {
     return {answer: '', observed: {arm, failure: errorKind(error), outcome: 'provider-error', ...observer.result}}
@@ -353,6 +354,7 @@ async function verifyCode() {
     'bin/project-memory-ingestion-study-trace.mjs',
     'bin/project-memory-study-checkpoints.mjs',
     'bin/project-memory-study-judge.mjs',
+    'bin/project-memory-study-local.mjs',
     'bin/project-memory-pilot.mjs',
     'package-lock.json',
   ]
@@ -480,7 +482,7 @@ async function main() {
   assert.equal(selected.length, 30)
   assert.equal(new Set(selected.map((row) => row.question_id)).size, 30)
   if (mode === 'live') {
-    const metadata = await localModelMetadata(model)
+    const metadata = await localModelMetadata(model, studyFetch)
     assert.equal(metadata.modelDigest, modelDigest, 'The installed Gemma model must match the historical digest')
   }
 
@@ -510,7 +512,7 @@ async function main() {
         gradingProtocol: 'independent-single-answer-v1',
         judgeDigest: mode === 'live' ? modelDigest : 'none',
         judgeSettings,
-        judgeTimeoutMs,
+        localRequestTimeoutMs,
         questionIds: selected.map((row) => row.question_id),
         rubricDigest: digest(rubric),
         searchPolicy: {limit: 6, maxQueryUnits: 512, prepareTokens: 2048, resultTokens: 2048},

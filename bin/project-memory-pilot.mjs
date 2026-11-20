@@ -177,7 +177,7 @@ export const instruction =
 export const answerSettings = {contextWindow: 8192, maxOutputTokens: 512, temperature: 0, think: false}
 export const answerLimits = {elapsedMs: 120_000, modelCalls: 3, toolRequests: 4, toolRounds: 2}
 
-export async function answer(env, question, arm, {mock = false, modelName, trace}) {
+export async function answer(env, question, arm, {localFetch, mock = false, modelName, trace}) {
   const session = await env.projects.createSession(env.project.id, randomUUID(), async () => ({formatVersion: 3}))
   const tools =
     arm === 'tool'
@@ -221,7 +221,7 @@ export async function answer(env, question, arm, {mock = false, modelName, trace
       }
     },
   }))
-  const client = new Ollama({host: 'http://127.0.0.1:11434'})
+  const client = new Ollama({...(localFetch ? {fetch: localFetch} : {}), host: 'http://127.0.0.1:11434'})
   const delegate = new OllamaAgent(modelName, createProvider('ollama'), {
     client: {
       abort: () => client.abort(),
@@ -441,8 +441,8 @@ export function pilotCommit(args) {
   return value
 }
 
-export async function localModelMetadata(modelName) {
-  const client = new Ollama({host: 'http://127.0.0.1:11434'})
+export async function localModelMetadata(modelName, localFetch) {
+  const client = new Ollama({...(localFetch ? {fetch: localFetch} : {}), host: 'http://127.0.0.1:11434'})
   try {
     const catalog = await client.list()
     const selected = catalog.models.find((item) => item.name === modelName || item.model === modelName)
