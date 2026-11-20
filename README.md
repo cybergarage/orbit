@@ -116,7 +116,8 @@ See [Managed Execution](docs/execution.md) before changing execution policy.
 | Add explicit Skills or context budgets | [Skills](docs/skills.md) and [Compaction](docs/context-compaction.md) |
 | Understand versions and planned milestones | [Versioning](docs/versioning.md) |
 | Contribute or publish a release | [Development](docs/development.md) |
-| Evaluate local coding with Ollama and Docker | [Coding E2E evaluation](docs/e2e-evaluation.md) and [results](e2e/results/README.md) |
+| Review benchmark results for LongMemEval, SWE-bench, and compaction | [Evaluation history](e2e/results/README.md) |
+| Evaluate local coding with Ollama and Docker | [Coding E2E evaluation](docs/e2e-evaluation.md) |
 | Explore implementation and design evidence | [Documentation map](docs/README.md) and [Architecture](docs/architecture.md) |
 
 Licensed under [Apache-2.0](LICENSE).
