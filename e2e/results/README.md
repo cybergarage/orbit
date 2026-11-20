@@ -1,31 +1,97 @@
 # Coding E2E results
 
-These are dated **local diagnostic results**, not SWE-bench or Terminal-Bench leaderboard scores.
-The [evaluation guide](../../docs/e2e-evaluation.md) explains how to run and
-regrade the cases. Each linked report records the dataset and harness revision,
-target commits, model digest and settings, environment, and limitations. The
-tables below summarize observed attempts; they are not estimates of general
-model reliability.
+Start here for Orbit's published benchmark and diagnostic results. These are
+tracked, dated experiments, not leaderboard submissions or a ranking of models.
+
+| Research area | What is recorded | How to reproduce or inspect the protocol |
+| --- | --- | --- |
+| [Compaction](#compaction-transfer-study) | Local transfer study, cloud calibration, lifecycle checks, and replay/fidelity diagnostics | [Terminal-Bench and compaction guide](../../docs/e2e-evaluation.md#terminal-bench-and-compaction-comparisons), [cloud protocol](../../docs/e2e-evaluation.md#cloud-benchmark-runs) |
+| [LongMemEval](#longmemeval) | 30-case local model pilot, offline audit and official-grader preparation | [Pinned pilot](../../docs/project-memory-evaluation.md#pinned-public-data-pilot), [offline export and validation](../../docs/project-memory-official-evaluation.md#offline-export-and-validation) |
+| [SWE-bench](#swe-bench) and [Terminal-Bench](#terminal-bench) | Local runs on selected public tasks, including official harness dispositions where measured | [Coding E2E guide](../../docs/e2e-evaluation.md), [Terminal-Bench adapter](../terminal_bench/README.md) |
+
+Read the method and denominator before comparing rows:
+
+- **Official verifier or grading protocol:** names how the output was graded,
+  not how many benchmark cases were covered or whether the result is an official
+  leaderboard entry. Keep patch resolution, Agent completion, and independent
+  deliverable quality separate.
+- **Local diagnostic or calibration:** measures a specific model, harness,
+  configuration, or workflow. A mock verifies the pipeline, a reference or
+  oracle run checks the environment, and a fixed-history replay evaluates fidelity.
+  None substitutes for a benchmark solve.
+- **Missing, interrupted, or not run:** keep visible against the planned count.
+  Do not turn unknown judgments into incorrect answers, or treat an empty patch
+  whose tests were skipped as a tested failure or a success.
 
 ## Compaction transfer study
 
-The [2026-11-11 local comparison](../../docs/research/2026-11-11-local-compaction-transfer.md)
-and [result ledger](2026-11-11-local-compaction-transfer.json) cover pinned
-Terminal-Bench and SWE-bench tasks, independent strategy/algorithm combinations,
-recap overhead, cache accounting and fixed-history fidelity. The report separates
-official outcomes, Run completion and incomplete measurements; it does not
-qualify a default change or reproduce frontier-model results.
+Belcak et al., [*You don't need long context*, arXiv:2611.05306v1](https://arxiv.org/abs/2611.05306v1),
+studied End-of-Conversation Compaction (EoCC) and Single-Action Compaction (SAC).
+The following studies test **Orbit's adaptations**, not a paper-faithful
+reproduction. Orbit's prompts, summary validation, models, budgets, and task
+coverage differ. The paper's full benchmark and serving-throughput results
+were not reproduced.
 
-The [cloud EoCC lifecycle diagnostic](2026-11-11-cloud-eocc.md) checks real
-OpenAI/Anthropic compaction, durable save, resume and continuation separately
-from benchmark quality.
+| Date | Evidence type | Models and conditions | Observed result | Evidence |
+| --- | --- | --- | --- | --- |
+| 2026-11-11 | Local transfer, selected benchmark tasks | `ornith-1.5:9b`; Orbit suffix, EoCC/structured and SAC/structured; one confirmation task per benchmark, three seeds each | Terminal-Bench: 1/3 each. SWE-bench: suffix 1/3, EoCC 0/3, SAC 0/3. No EoCC checkpoint committed on the confirmation tasks; no general efficiency advantage shown. | [Local report](../../docs/research/2026-11-11-local-compaction-transfer.md), [ledger](2026-11-11-local-compaction-transfer.json) |
+| 2026-11-11 | Cloud benchmark calibration | `gpt-4o-2024-08-06` and `claude-opus-4-6`; FHA (full history), suffix, EoCC/structured, SAC/structured; one attempt per cell on two development tasks | All 16 planned trials officially graded under a 16-call cap. This was a calibration, not held-out evidence. | [Cloud pilot](2026-11-11-cloud-compaction-pilot.md), [ledger](2026-11-11-cloud-compaction-pilot.json) |
+| 2026-11-11 | Cloud interim, incomplete calibration | Same providers and four arms; 64-call cap; planned 20 tasks | 24/160 conditions officially graded with complete accounting; 134 unstarted and two user-interrupted. Two task blocks completed. One successful Opus EoCC run committed a reset and continued. | [Interim report](2026-11-11-cloud-compaction-interim.md), [ledger](2026-11-11-cloud-compaction-interim.json) |
+| 2026-11-11 | Synthetic lifecycle diagnostic | GPT-4o and Claude Opus 4.6; EoCC with structured or handoff summaries | 4/4 final fixtures saved, reopened and continued. This validates the lifecycle, not benchmark accuracy. | [Cloud EoCC report](2026-11-11-cloud-eocc.md), [ledger](2026-11-11-cloud-eocc.json) |
+| 2026-09-28–29 | Fixed-history replay and runtime fidelity | `ornith-1.5:9b`; same source histories or controlled recovery conditions | Valid checkpoint format does not guarantee faithful work-state or test claims. | [Replay table](#context-summary-replay), [runtime diagnostics](#runtime-observation-diagnostic) |
 
-The [64-call cloud interim evaluation](2026-11-11-cloud-compaction-interim.md)
-reports two complete task blocks, incomplete calibration coverage, and provider
-cost findings. Evaluation stopped at the user’s request; the report does not
-establish general superiority or authorize further paid runs.
+The cloud interim was stopped at the user's request; the counts distinguish
+interruption from algorithm failure. The [compaction publication analysis](../../docs/research/2026-11-11-local-compaction-transfer.md#publication-evidence)
+separates the paper's results from Orbit's findings. Shorter context alone
+does not establish lower total work or cost, and neither study establishes
+algorithm superiority or a new default.
+
+### Cloud compaction benchmark calibration
+
+The 16-call-cap pilot's complete recorded usage corresponds to a historical
+standard-list-price estimate of $3.4882425, not a current price or a charge for
+the separate 64-call-cap interim study. See the [pilot report](2026-11-11-cloud-compaction-pilot.md)
+for the model and arm settings and the distinction between task quality, Run
+completion and committed compactions.
+
+## LongMemEval
+
+Wu et al., [*LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory*](https://arxiv.org/abs/2410.10813),
+describes the 500-question benchmark. Orbit's public pilot uses the author's
+cleaned LongMemEval-S at revision `98d7416c24c778c2fee6e6f3006e7a073259d48f`:
+30 selected questions, five per category including four abstention cases, three
+retrieval conditions, the same question-blind session-prefix ingestion, and no
+automatic extraction. The linked methodology records the dataset hash and
+selection algorithm.
+
+| Date | Evidence type | Models and conditions | Observed result | Evidence |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Local quality diagnostic | `gemma4:12b` (Q4_K_M), Ollama 0.40.16; none / host pre-retrieval / model-invoked search | Same-model local judge: **9/30 · 13/30 · 17/30**, respectively; 90 completed answers. The generic judge is not the official rubric. | [Pilot report](../../test/evaluation/results/README.md), [aggregate JSON](../../test/evaluation/results/2026-11-19-summary.json) |
+| 2026-11-19 | Pipeline mock / synthetic dispatch check | Mock 30-case pipeline; separate live synthetic Session A/B test | Pipeline and dispatch/provenance evidence only. No benchmark quality estimate from the mock or synthetic fixture. | [Pilot evidence](../../test/evaluation/results/README.md#evidence) |
+| 2026-11-20 | Offline audit / official-grader preparation | Same 90 recorded answers; no new generation or judge call in this audit | All 90 answers roundtripped unchanged; 15/26 answerable cases retained at least one full annotated answer turn. This did not update the historical grades. | [Read-only audit](../../docs/project-memory-official-evaluation.md#read-only-audit-of-the-existing-30-case-pilot), [exporter and pinned grading protocol](../../docs/project-memory-official-evaluation.md#pinned-evaluation-inputs) |
+
+The public history has no tracked official-method grade for these answers and no
+full 500-question Orbit score. The pinned protocol specifies `gpt-4o-2024-08-06`
+as the grader, not as the model that answered the local pilot. Keep judgments
+from different graders separate, and publish only reviewed aggregates.
+
+## Terminal-Bench
+
+[The Terminal-Bench paper](https://arxiv.org/abs/2601.11868) describes the general
+terminal-task benchmark. Orbit's reports use the separately pinned
+[Terminal-Bench 2.1 adapter and task setup](../terminal_bench/README.md), not a
+full test of the paper's benchmark or a leaderboard submission. Its local and
+cloud task trials are listed under [Compaction](#compaction-transfer-study);
+oracle/no-op runs are environment controls, not Orbit solver results.
+
 
 ## SWE-bench
+
+Jimenez et al., [*SWE-bench: Can Language Models Resolve Real-World GitHub Issues?*](https://arxiv.org/abs/2310.06770),
+describes execution-based grading of patches against real repository issues.
+Orbit's local history below uses selected Lite and Verified instances, with
+pinned settings in each report, not the full split. The November compaction
+study's SWE-bench outcomes are indexed [above](#compaction-transfer-study).
 
 An official result describes the **submitted patch** under the pinned SWE-bench
 harness. Agent completion describes whether Orbit ended normally. Independent
@@ -54,9 +120,7 @@ Orbit success counts.
 | 2026-09-28 | Verified: pytest 10356 (trigger interval comparison) | `ornith-1.5:9b`, focused v1, budgeted context, 80% trigger; Orbit `d142e48` plus E2E-only ratio override | Unresolved; target 0/1, PASS_TO_PASS 0/79 | Runtime error at 900-second deadline; 51 model calls; 950-byte patch | Trigger at 22,047 tokens; 3 summary batches / 344 s; invalid summary JSON, compaction failed, three later skips | [Report](2026-09-28-context-trigger-interval.md), [JSON](2026-09-28-context-trigger-interval.json), [prediction](2026-09-28-context-trigger-interval-predictions.jsonl) |
 | 2026-09-28 | Verified: pytest 10356 (summary stability follow-up) | `ornith-1.5:9b`, JSON-constrained summaries; 80% and 65% trigger before batching, then 65% with smaller initial batches; Orbit `55d74e3` / `02ff86a` | 0/3 resolved; 80% empty patch skipped, two 65% patches unresolved | All reached deadline/budget stop; latest completed 49 model calls | No invalid JSON/schema failures; latest first compaction completed in 500.7 s (17,842→4,588 tokens), but 21 tool errors and PASS_TO_PASS 0/79 | [Report](2026-09-28-context-summary-stability-followup.md), [JSON](2026-09-28-context-summary-stability-followup.json), [80% prediction](2026-09-28-context-json-80-predictions.jsonl), [65% prediction](2026-09-28-context-json-65-predictions.jsonl), [batched 65% prediction](2026-09-28-context-batched-65-predictions.jsonl), [tool-error classification](2026-09-28-tool-error-classification.json) |
 | 2026-09-28 | Verified: pytest 10356 (semantic-evaluation continuation) | `ornith-1.5:9b`, focused v1, budgeted 65%, Orbit `b48e590` | Empty patch; official harness skipped tests, 0 resolved | Incomplete at 900 s; unresolved summary operation | 0 accepted checkpoints; malformed JSON keys rejected; 146 tool errors; fixed-case replay separately fails unsupported-success check | [Report](2026-09-28-context-semantic-evaluation.md), [JSON](2026-09-28-context-semantic-evaluation.json), [prediction](2026-09-28-context-semantic-swe-predictions.jsonl) |
-
 | 2026-09-29 | Verified: pytest 10356 (structured-observation integration / proof-free summary input) | `ornith-1.5:9b`, budgeted context, no round cap; core `7f979eb` / `912e210` | Both unresolved; target 0/1, PASS_TO_PASS 79/79 each | Both runtime failures after invalid summaries; quiescent | Quality failed due generated caches; no checkpoint, projection not exercised; separate reopened diagnostic passed 2/2 saves | [Report](2026-09-29-core-observations-swe.md), [JSON](2026-09-29-core-observations-swe.json), [initial prediction](2026-09-29-core-observations-before-predictions.jsonl), [latest prediction](2026-09-29-core-observations-fixed-predictions.jsonl) |
-
 | 2026-09-29 | Verified: pytest 10356 (empty/incomplete summary recovery) | `ornith-1.5:9b`, same focused v1 and budgeted settings; core `fb63aaa` | Empty patch; official grading skipped tests | Incomplete at 900-second deadline during compaction; 8 summary requests | One natural missing-field correction, three output-length detections; no accepted checkpoint; separate live fault trials all passed | [Report](2026-09-29-summary-validation-recovery-swe.md), [JSON](2026-09-29-summary-validation-recovery-swe.json), [prediction](2026-09-29-summary-validation-recovery-predictions.jsonl) |
 | 2026-09-29 | Verified: pytest 10356 (expanded allowance recovery) | `ornith-1.5:9b`, same focused v1 and budgeted settings; core `f7d7fe4` | Unresolved; target 0/1, existing tests 0/79 | Incomplete at 900 seconds; 6 summary requests / 617.46 s | No checkpoint; expanded correction not naturally exercised; reference 1/1 and 79/79; controlled retry passed 2/2 saves | [Report](2026-09-29-summary-output-allowance-swe.md), [JSON](2026-09-29-summary-output-allowance-swe.json), [prediction](2026-09-29-summary-output-allowance-predictions.jsonl) |
 | 2026-09-29 | Verified: pytest 10356 (smaller sources / cumulative summaries) | `ornith-1.5:9b`, same focused v1 and generation settings; core `08097e5`, Docker 29.8.1 | Empty patch; official harness skipped tests | Incomplete at deadline, host timeout; 11 summary requests / 686.58 s | Nine valid intermediate batches, one exact item merged; no checkpoint; time reduction not demonstrated; reference 1/1 and 79/79 | [Report](2026-09-29-compact-batches-swe.md), [JSON](2026-09-29-compact-batches-swe.json), [prediction](2026-09-29-compact-batches-predictions.jsonl) |
@@ -129,7 +193,15 @@ The [2026-09-29 report](2026-09-29-summary-output-allowance-live.md) and [JSON](
 
 ## Recording another evaluation
 
-Add a dated report and its compact machine-readable summary here, then add one
+Add an entry to the relevant section with the date, protocol, model, conditions,
+planned and measured denominators, and a tracked report or reviewed aggregate.
+Keep grading, controls, interruptions and missing results separate. For
+LongMemEval, include the dataset revision, selection and ingestion policy,
+answer model, retrieval arms, judge snapshot and exact graded counts. Keep
+individual benchmark prompts, hypotheses, source identifiers and raw grader
+output local; see the [memory evaluation guide](../../docs/project-memory-evaluation.md).
+
+For coding and compaction, add a dated report and its compact machine-readable summary here, then add one
 row per distinct dataset, instance set, model and strategy. Preserve failed and
 empty-patch attempts in the denominator. Record the dataset split and revision,
 official harness revision, instance IDs and base commits, model digest and
@@ -145,7 +217,3 @@ datasets, hidden grading material and logs under ignored `tmp/e2e/`; this
 repository does not distribute them. A saved prediction can be regraded after
 preparing the matching dataset and official image as described in the
 [evaluation guide](../../docs/e2e-evaluation.md).
-
-## Cloud compaction benchmark calibration
-
-The [2026-11-11 cloud pilot](2026-11-11-cloud-compaction-pilot.md) and [ledger](2026-11-11-cloud-compaction-pilot.json) record 16 bounded OpenAI/Anthropic trials across two previously used tasks and four arms. All trials have official grades and complete usage; the observed standard-list-price estimate is $3.4882425. The report separates task quality, Run termination and compaction commits, and proposes a larger calibration before held-out evaluation. It does not establish algorithm superiority or reproduce the paper's model results.
