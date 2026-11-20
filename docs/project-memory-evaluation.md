@@ -134,3 +134,71 @@ For the independent read-only pilot audit, pinned official grading CLI, offline
 prediction exporter and result-completeness checks, see
 [Offline Project Memory Quality Evaluation](project-memory-official-evaluation.md).
 It does not convert the historical local-judge scores into official results.
+
+## Paired ingestion study and private tracing
+
+The [paired replay report](../test/evaluation/results/2026-11-20-ingestion-replay.md)
+compares two question-blind ingestion policies on the same pinned 30 cases:
+
+- **Prefix:** the unchanged historical path. It stores the first 1,200
+  JavaScript UTF-16 code units from each rendered source Session, exactly as
+  before. It does not use the question or annotations.
+- **Turn chunks:** pack adjacent complete rendered turns within each source
+  Session into contiguous excerpts targeting 4,096 UTF-8 bytes. A larger
+  single turn can occupy an entry by itself up to the Core cap of 8,192
+  bytes; a turn larger than that is omitted, not silently split. Admission
+  gives each chronological Session one chunk before taking its second, and
+  so on; admitted excerpts are then saved in original chronological order.
+  The 128-entry and 1 MiB body caps are unchanged. Record cap omissions by
+  reason separately from ranking and return-budget omissions. No question,
+  dataset source label, answer annotation, or reference enters ingestion.
+
+Build the checkout and place the SHA-256-pinned dataset from the guide above in
+ignored local storage. Each run requires a new direct child of the existing
+ignored `tmp/` directory:
+
+```sh
+npm ci
+npm run build
+mkdir -p tmp
+node bin/project-memory-ingestion-study.mjs --mode replay \
+  --dataset tmp/longmemeval_s_cleaned.json --output-dir tmp/ingestion-replay \
+  --commit "$(git rev-parse HEAD)"
+TS_NODE_PROJECT=tsconfig.test.json npx mocha --forbid-only \
+  'test/evaluation/project-memory-*.test.mjs'
+```
+
+`replay` is the default and makes no inference calls. Both policies use the
+same historical host query (first 512 code units of the date and question).
+It reports question and turn coverage before retrieval, at six positive-overlap
+candidates, and after the existing preparation/result budgets. Fixture source
+IDs and timestamps are deterministic; live ranking ties can differ. `mock`
+runs synthetic requests and the real local Core search without contacting a
+model. A mock wire record is not counted as provider delivery.
+
+Only use `--mode live` when explicitly running the local model comparison. It
+requires an already installed Ollama `gemma4:12b` at the historical digest
+`4eb23ef187e2c5462566d6a1d3bbbc2f1346d0b4327cbb66d58fffbcc9b2b05c`
+on loopback; there is no model download or remote fallback. Both ingestion arms
+use fresh Sessions and the original no-search, host-search and model-search
+conditions. Answer limits, prompts, search, 8,192 context, 512 output,
+temperature zero and thinking-off are inherited unchanged. The same historical
+local judge uses a separate call per case/condition with an output cap of 128.
+It is not the official grader. Mode `live` plans 180 answer arms (at most 540
+answer calls) and up to 60 local judge calls, with no externally billed
+inference. It is not a quick smoke test. The condition order alternates by
+case, and neither order nor eligibility uses gold annotations.
+
+The private per-case files record source/turn offsets and chunk IDs, reconstructed
+rank from observed Core catalog data, actual selected and returned entry IDs,
+search queries, tool call IDs, terminal and provider stop information, and public
+benchmark annotation coverage applied after generation. Live delivery is recorded
+only when the serialized transport message matches the traced result and its
+Ollama request returns a response; a rejected call or missing result remains
+separate, and a reply does not show that the model used the evidence. The trace
+does not store raw prompts, result body text, or answers. The fresh directory and
+files use owner-only permissions on POSIX. Keep all per-case files private and
+publish only reviewed summary aggregates; `summary.json` omits case and raw
+source IDs. An interrupted run may have private case files without a summary.
+Live paired accuracy denominators count only a case with two completed, valid
+judgments in the same retrieval arm. Never treat a missing grade as incorrect.
