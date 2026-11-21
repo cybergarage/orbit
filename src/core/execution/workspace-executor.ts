@@ -43,8 +43,47 @@ export type PreparedWorkspaceOperation = {
   }
 }[Name]
 
+/** Host-owned, network-disabled command authority, not a tool input. */
+export interface WorkspaceCommandProfile {
+  readonly backend: string
+  readonly id: string
+  readonly maxResultBytes: number
+  readonly network: 'none'
+  /** Immutable backend artifact identity, not a mutable tag. */
+  readonly revision: string
+  readonly timeoutMs: number
+  readonly workspace: 'read-only' | 'read-write'
+}
+
+export type PreparedWorkspaceCommand = Omit<Extract<PreparedWorkspaceOperation, {name: 'bash'}>, 'input'> & {
+  readonly input: {readonly command: string; readonly timeoutSeconds: number}
+  readonly profile: WorkspaceCommandProfile
+  readonly timeoutMs: number
+}
+
+export type WorkspaceCommandOutcome =
+  | {
+      readonly exitCode: number
+      readonly status: 'exited'
+      readonly stderr: string
+      readonly stdout: string
+      readonly text: string
+      readonly truncated?: boolean
+    }
+  | {readonly status: 'unknown'}
+
+export interface WorkspaceCommandAdapter {
+  /** Report an exited command only after the backend confirms its settlement. */
+  execute(operation: PreparedWorkspaceCommand, signal: AbortSignal): Promise<WorkspaceCommandOutcome>
+  readonly profile: WorkspaceCommandProfile
+  /** Recheck authority and identity without starting a process or changing files. */
+  revalidate(operation: PreparedWorkspaceCommand, signal: AbortSignal): boolean | Promise<boolean>
+}
+
 /** Trusted application dependency; this is not a sandbox, policy, or tool catalog. */
 export interface WorkspaceExecutor {
+  /** Requires explicit selection of bash; never selected by model input. */
+  readonly command?: WorkspaceCommandAdapter
   execute(operation: PreparedWorkspaceOperation, signal: AbortSignal): Promise<ToolResult>
   /** Only these managed built-ins use this executor; omitted means all. */
   readonly toolNames?: readonly PreparedWorkspaceOperation['name'][]
@@ -54,12 +93,96 @@ export function captureWorkspaceExecutor(value: undefined | WorkspaceExecutor): 
   if (value === undefined) return undefined
   if (typeof value?.execute !== 'function') throw new Error('Invalid workspace executor')
   const selected = value.toolNames
+  const {command} = value
+  if (command !== undefined && (!Array.isArray(selected) || !selected.includes('bash')))
+    throw new Error('Workspace command adapter requires explicit Bash selection')
   if (selected === undefined) return Object.freeze({execute: value.execute.bind(value)})
   if (!Array.isArray(selected)) throw new Error('Invalid workspace executor tool names')
   const toolNames = Object.freeze([...selected])
   if (toolNames.some((name) => !names.has(name)) || new Set(toolNames).size !== toolNames.length)
     throw new Error('Invalid workspace executor tool names')
-  return Object.freeze({execute: value.execute.bind(value), toolNames})
+  return Object.freeze({
+    execute: value.execute.bind(value),
+    toolNames,
+    ...(command === undefined ? {} : {command: captureCommandAdapter(command)}),
+  })
+}
+
+function profileIdentifier(value: unknown): boolean {
+  return typeof value === 'string' && /^[a-z0-9][a-z0-9._-]{0,63}$/.test(value)
+}
+
+function captureCommandAdapter(adapter: WorkspaceCommandAdapter): WorkspaceCommandAdapter {
+  const profile = adapter?.profile
+  if (!profile || typeof adapter.execute !== 'function' || typeof adapter.revalidate !== 'function')
+    throw new Error('Invalid workspace command adapter')
+  const {backend, id, maxResultBytes, network, revision, timeoutMs, workspace} = profile
+  if (
+    !profileIdentifier(id) ||
+    !profileIdentifier(backend) ||
+    typeof revision !== 'string' ||
+    !/^sha256:[a-f0-9]{64}$/.test(revision) ||
+    network !== 'none' ||
+    (workspace !== 'read-only' && workspace !== 'read-write') ||
+    !Number.isSafeInteger(timeoutMs) ||
+    timeoutMs < 1 ||
+    timeoutMs > 300_000 ||
+    !Number.isSafeInteger(maxResultBytes) ||
+    maxResultBytes < 256 ||
+    maxResultBytes > MAX_BYTES
+  )
+    throw new Error('Invalid workspace command profile')
+  return Object.freeze({
+    execute: adapter.execute.bind(adapter),
+    profile: Object.freeze({backend, id, maxResultBytes, network, revision, timeoutMs, workspace}),
+    revalidate: adapter.revalidate.bind(adapter),
+  })
+}
+
+export function prepareWorkspaceCommand(
+  request: Extract<PreparedWorkspaceOperation, {name: 'bash'}>,
+  profile: WorkspaceCommandProfile,
+): PreparedWorkspaceCommand {
+  const requested = request.input.timeoutSeconds
+  const timeoutMs = requested === undefined ? profile.timeoutMs : Math.round(requested * 1000)
+  if (
+    request.cwd !== request.target ||
+    (requested !== undefined && requested !== timeoutMs / 1000) ||
+    timeoutMs < 1 ||
+    timeoutMs > profile.timeoutMs ||
+    request.input.command.includes('\0')
+  )
+    throw new Error('Workspace command exceeds its configured limits')
+  const input = Object.freeze({command: request.input.command, timeoutSeconds: timeoutMs / 1000})
+  return Object.freeze({...request, input, profile, timeoutMs})
+}
+
+export function workspaceCommandResult(outcome: WorkspaceCommandOutcome, profile: WorkspaceCommandProfile): ToolResult {
+  if (
+    outcome?.status !== 'exited' ||
+    !Number.isSafeInteger(outcome.exitCode) ||
+    outcome.exitCode < 0 ||
+    outcome.exitCode > 255 ||
+    typeof outcome.text !== 'string' ||
+    typeof outcome.stdout !== 'string' ||
+    typeof outcome.stderr !== 'string' ||
+    (outcome.truncated !== undefined && typeof outcome.truncated !== 'boolean')
+  )
+    throw new Error('Workspace command outcome is unknown; do not replay')
+  return boundWorkspaceResult(
+    {
+      content: [{text: outcome.text, type: 'text'}],
+      details: {
+        exitCode: outcome.exitCode,
+        stderr: outcome.stderr,
+        stdout: outcome.stdout,
+        timedOut: false,
+        truncated: outcome.truncated === true,
+      },
+      isError: outcome.exitCode !== 0,
+    },
+    profile.maxResultBytes,
+  )
 }
 
 const names = new Set<string>(['bash', 'edit', 'glob', 'grep', 'list', 'read', 'write'])
@@ -92,13 +215,13 @@ export function boundWorkspaceOperation(value: PreparedWorkspaceOperation): Prep
 }
 
 /** Detach trusted backend output before it is journaled or exposed to the model. */
-export function boundWorkspaceResult(value: ToolResult): ToolResult {
+export function boundWorkspaceResult(value: ToolResult, maxBytes = MAX_BYTES): ToolResult {
   const result = copyJSON(value)
   if (
     !Array.isArray(result.content) ||
     result.content.some((part) => part.type !== 'text' || typeof part.text !== 'string') ||
     (result.isError !== undefined && typeof result.isError !== 'boolean') ||
-    Buffer.byteLength(JSON.stringify(result)) > MAX_BYTES
+    Buffer.byteLength(JSON.stringify(result)) > maxBytes
   )
     throw new Error('Invalid workspace execution result')
   return result

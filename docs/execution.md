@@ -338,6 +338,34 @@ before. Tools outside an explicit list retain their original Core handler,
 approval behavior, and observation provenance. Selection happens before
 preparation, never as a fallback after a failed dispatch.
 
+### Explicitly bound hosted Bash
+
+For a new hosted Bash integration, include `bash` in `toolNames` and provide
+the trusted `WorkspaceExecutor.command` adapter. Its host-only profile fixes a
+backend ID, immutable SHA-256 artifact identity, read-only or read-write
+workspace access, no-network policy, a maximum duration, and a serialized
+result limit. Core captures the profile at configuration time; tools and
+workspace settings cannot choose it. A request specifies only Bash text and an
+optional shorter timeout in whole milliseconds.
+
+Core includes the exact command, canonical working directory, effective
+timeout, and profile in the approval digest. The approval preview identifies
+the declared access and limits. Even an otherwise permissive application
+policy requires approval; denial and revocation still win. Core rechecks the
+directory identity and calls the host's non-mutating revalidation before and
+after the durable intent record. The host must admit that exact backend at
+dispatch and enforce its declared mount and network restrictions. Core does
+not verify a container or perform backend teardown.
+
+The adapter receives an abort signal bounded by both the command and its Run.
+Report a checked exit only after the host confirms settlement; Core records
+nonzero exit as a tool error and marks known command observations separately
+from built-in local Bash. Missing, invalid, late or uncertain settlement is
+never replayed or sent to a fallback. Core retains the existing unknown-effect
+recovery behavior. This opt-in returns bounded final output, not live Bash
+streaming. It does not change the default Bash handler or earlier generic
+executor compatibility behavior. No product backend is activated.
+
 The executor receives a versioned, immutable `PreparedWorkspaceOperation` and
 the active run's abort signal. File tool paths and the target are canonical in
 the same workspace namespace as the Core host. For mutations, the executor
