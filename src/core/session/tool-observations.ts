@@ -77,7 +77,9 @@ export async function collectToolObservations(
           r.kind === 'operation-result' &&
           r.data.operationId === provenance.operationId,
       )
-      const recognized = ['builtin-bash-v1', 'builtin-edit-v1', 'builtin-write-v1'].includes(String(adapter))
+      const recognized =
+        (adapter === `builtin-${payload.name}-v1` && ['bash', 'edit', 'write'].includes(payload.name)) ||
+        (adapter === 'workspace-command-bash-v1' && payload.name === 'bash')
       const origin = {
         kind: 'builtin',
         observation: {adapter, groupId: provenance.groupId, inputDigest: provenance.inputDigest},
@@ -90,7 +92,6 @@ export async function collectToolObservations(
         completed.has(key) ||
         provenance.groupId !== parent?.id ||
         provenance.callId !== payload.toolCallId ||
-        adapter !== `builtin-${payload.name}-v1` ||
         entry?.type !== 'message' ||
         entry.turnId !== provenance.runId ||
         intents.length !== 1 ||

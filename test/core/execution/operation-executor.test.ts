@@ -14,14 +14,18 @@ import type {
   ExecutionPolicy,
   OperationPreparation,
   PreparedOperation,
+  PreparedWorkspaceCommand,
   PreparedWorkspaceOperation,
   RunContext,
   ToolDefinition,
   ToolExecutionContext,
   ToolResult,
+  WorkspaceCommandOutcome,
+  WorkspaceCommandProfile,
   WorkspaceExecutor,
 } from '../../../src/index.js'
 
+import {recoveredRunSnapshot} from '../../../src/core/execution/run.js'
 import {observationProvenance} from '../../../src/core/tools/observation-provenance.js'
 import {
   createBuiltinTools,
@@ -84,6 +88,16 @@ function definition(prepare: NonNullable<ToolDefinition['prepare']>): ToolDefini
   }
 }
 
+const commandProfile = (): WorkspaceCommandProfile => ({
+  backend: 'synthetic-runner',
+  id: 'read-only-fixture',
+  maxResultBytes: 2048,
+  network: 'none',
+  revision: `sha256:${'a'.repeat(64)}`,
+  timeoutMs: 5000,
+  workspace: 'read-only',
+})
+
 describe('public OperationExecutor', () => {
   let root: string
   const supervisors: RunSupervisor[] = []
@@ -124,6 +138,219 @@ describe('public OperationExecutor', () => {
     const options: AgentOptions = {execution}
     expect(options.execution).equal(execution)
   })
+
+  it('binds the trusted command profile and exact budget, requires approval and records checked nonzero exit', async () => {
+    const configured = commandProfile()
+    const checks: PreparedWorkspaceCommand[] = []
+    const calls: PreparedWorkspaceCommand[] = []
+    const decisions: Readonly<PreparedOperation>[] = []
+    const previews: Array<Record<string, unknown>> = []
+    const [bash] = createBuiltinTools({include: ['bash']})
+    const owner = start(
+      async (run) => {
+        const executor = new OperationExecutor(run, {
+          policy: {
+            ...policy,
+            decide(operation) {
+              decisions.push(operation)
+              return 'allow'
+            },
+          },
+          workspaceExecutor: {
+            command: {
+              async execute(prepared, signal) {
+                expect(run.journal.records().at(-1)?.kind).equal('operation-intent')
+                expect(signal.aborted).equal(false)
+                calls.push(prepared)
+                return {exitCode: 4, status: 'exited', stderr: 'fixture', stdout: '', text: 'checked exit'}
+              },
+              profile: configured,
+              revalidate(prepared) {
+                checks.push(prepared)
+                return true
+              },
+            },
+            async execute() {
+              throw new Error('Generic dispatch must not run')
+            },
+            toolNames: ['bash'],
+          },
+        })
+        Object.assign(configured, {timeoutMs: 1, workspace: 'read-write'})
+        const result = await executor.executeTool(
+          bash,
+          {command: "printf 'fixture'", profile: {workspace: 'read-write'}, timeoutSeconds: 1.001},
+          {callId: 'fixture', cwd: root, emitUpdate() {}, groupId: 'group', signal: run.signal},
+        )
+        expect(result.isError).equal(true)
+        expect(result.details).include({exitCode: 4, timedOut: false})
+        expect(observationProvenance(result)?.adapter).equal('workspace-command-bash-v1')
+      },
+      {
+        async onApproval(request: Parameters<NonNullable<AgentExecutionOptions['onApproval']>>[0]) {
+          previews.push(request.preview)
+          await owner.supervisor.replyApproval(request.runId, {
+            approve: true,
+            digest: request.digest,
+            requestId: request.id,
+            responderScope: 'owner',
+          })
+        },
+        responderScope: 'owner',
+      },
+    )
+    const finished = await (await owner.handle).finished
+    expect(finished.operations.map((entry) => entry.status)).deep.equal(['failed'])
+    expect(checks.length).equal(2)
+    expect(calls).deep.equal([checks[0]])
+    const prepared = calls[0]
+    expect(prepared).include({cwd: root, effect: 'command', target: root, timeoutMs: 1001})
+    expect(prepared.input).deep.equal({command: "printf 'fixture'", timeoutSeconds: 1.001})
+    expect(Object.isFrozen(prepared)).equal(true)
+    expect(Object.isFrozen(prepared.profile)).equal(true)
+    expect(previews[0]).include({cwd: root, timeoutSeconds: 1.001})
+    expect(previews[0].commandProfile).deep.equal(commandProfile())
+    expect(decisions[0].binding.command).deep.equal(prepared)
+    expect(owner.journal.records().find((record) => record.kind === 'authorization-decided')?.data.digest).equal(
+      owner.journal.records().find((record) => record.kind === 'operation-intent')?.data.digest,
+    )
+  })
+
+  it('refuses stale, denied and over-budget command requests before dispatch, without fallback', async () => {
+    const [bash] = createBuiltinTools({include: ['bash']})
+    let checks = 0
+    let approvals = 0
+    let dispatches = 0
+    const owner = start(
+      async (run) => {
+        const executor = new OperationExecutor(run, {
+          policy,
+          workspaceExecutor: {
+            command: {
+              async execute() {
+                dispatches++
+                return {status: 'unknown'}
+              },
+              profile: commandProfile(),
+              revalidate() {
+                return ++checks === 1
+              },
+            },
+            async execute() {
+              dispatches++
+              return success
+            },
+            toolNames: ['bash'],
+          },
+        })
+        const context = {callId: 'fixture', cwd: root, emitUpdate() {}, signal: run.signal}
+        expect(
+          (await executor.executeTool(bash, {command: 'printf fixture', timeoutSeconds: 6}, context)).isError,
+        ).equal(true)
+        expect((await executor.executeTool(bash, {command: 'printf fixture'}, context)).isError).equal(true)
+        expect((await executor.executeTool(bash, {command: 'printf fixture'}, context)).isError).equal(true)
+      },
+      {
+        async onApproval(request: Parameters<NonNullable<AgentExecutionOptions['onApproval']>>[0]) {
+          await owner.supervisor.replyApproval(request.runId, {
+            approve: ++approvals === 1,
+            digest: request.digest,
+            requestId: request.id,
+            responderScope: 'owner',
+          })
+        },
+        responderScope: 'owner',
+      },
+    )
+    expect((await (await owner.handle).finished).operations.map((entry) => entry.status)).deep.equal([
+      'invalid',
+      'cancelled-before-start',
+      'denied',
+    ])
+    expect(checks).equal(2)
+    expect(dispatches).equal(0)
+    expect(owner.journal.records().filter((record) => record.kind === 'operation-intent').length).equal(1)
+  })
+
+  it('retains unknown status on command timeout, and recovery does not execute it again', async () => {
+    const [bash] = createBuiltinTools({include: ['bash']})
+    let count = 0
+    let signalSeen: AbortSignal | undefined
+    const late = deferred<WorkspaceCommandOutcome>()
+    const requestId = randomUUID()
+    const owner = start(
+      async (run) => {
+        const executor = new OperationExecutor(run, {
+          policy,
+          workspaceExecutor: {
+            command: {
+              execute(_operation, signal) {
+                count++
+                signalSeen = signal
+                return late.promise
+              },
+              profile: {...commandProfile(), timeoutMs: 20},
+              revalidate: () => true,
+            },
+            async execute() {
+              throw new Error('Do not fall back')
+            },
+            toolNames: ['bash'],
+          },
+        })
+        return executor.executeTool(
+          bash,
+          {command: 'printf fixture'},
+          {
+            callId: 'fixture',
+            cwd: root,
+            emitUpdate() {},
+            signal: run.signal,
+          },
+        )
+      },
+      {
+        limits: {cleanupMs: 100},
+        async onApproval(request: Parameters<NonNullable<AgentExecutionOptions['onApproval']>>[0]) {
+          await owner.supervisor.replyApproval(request.runId, {
+            approve: true,
+            digest: request.digest,
+            requestId: request.id,
+            responderScope: 'owner',
+          })
+        },
+        requestId,
+        responderScope: 'owner',
+      },
+    )
+    try {
+      const handle = await owner.handle
+      const result = await handle.finished
+      expect(result.operations.map((entry) => entry.status)).deep.equal(['unknown'])
+      expect(signalSeen?.aborted).equal(true)
+      expect(
+        recoveredRunSnapshot(result.runId, result.sessionId, owner.journal.records(), {level: 'memory', mode: 'memory'})
+          .result?.operations[0]?.status,
+      ).equal('unknown')
+      const recoveredSupervisor = new RunSupervisor()
+      supervisors.push(recoveredSupervisor)
+      const recovered = await recoveredSupervisor.startRun({
+        configuration: {},
+        async execute() {
+          count++
+          throw new Error('Recovery must not dispatch')
+        },
+        input: {},
+        journal: async () => owner.journal,
+        requestId,
+        sessionId: result.sessionId,
+      })
+      expect((await recovered.finished).operations[0]?.status).equal('unknown')
+      expect(count).equal(1)
+    } finally {
+      late.resolve({exitCode: 0, status: 'exited', stderr: '', stdout: '', text: 'too late'})
+    }
+  }).timeout(10_000)
 
   it('routes all managed coding tools through the injected executor with approved, bounded input', async () => {
     const registry = new ToolRegistry()
@@ -264,7 +491,9 @@ describe('public OperationExecutor', () => {
       },
     )
     const finished = await (await owner.handle).finished
-    expect(finished.operations.map((operation) => operation.status)).deep.equal(Array.from({length: 7}).fill('succeeded'))
+    expect(finished.operations.map((operation) => operation.status)).deep.equal(
+      Array.from({length: 7}).fill('succeeded'),
+    )
     expect(approvals).deep.equal(['bash', 'write', 'edit'])
     expect(calls).deep.equal(['write', 'edit'])
     expect(await fs.readFile(target, 'utf8')).equal('local fixture')

@@ -8,18 +8,21 @@ import process from 'node:process'
 
 import type {ToolDefinition, ToolExecutionContext, ToolResult} from '../tools/definition.js'
 import type {RunContext} from './run.js'
-import type {PreparedWorkspaceOperation, WorkspaceExecutor} from './workspace-executor.js'
+import type {PreparedWorkspaceOperation, WorkspaceCommandAdapter, WorkspaceExecutor} from './workspace-executor.js'
 
 import {resolveShell} from '../tools/builtins/bash.js'
 import {textToolResult} from '../tools/definition.js'
 import {bindObservationResult, observationAdapter} from '../tools/observation-provenance.js'
 import {copyJSON} from './journal.js'
 import {operationResources} from './resources.js'
+import {until} from './run.js'
 import {
   boundWorkspaceOperation,
   boundWorkspaceResult,
   captureWorkspaceExecutor,
   isWorkspaceBuiltin,
+  prepareWorkspaceCommand,
+  workspaceCommandResult,
 } from './workspace-executor.js'
 
 export type OperationEffect = 'command' | 'mcp' | 'opaque' | 'read' | 'write'
@@ -42,6 +45,7 @@ export interface OperationPreparation {
   effect: OperationEffect
   execute(): Promise<ToolResult>
   preview: Record<string, unknown>
+  requiresApproval?: true
   revalidate(): Promise<boolean>
   targets: string[]
 }
@@ -141,6 +145,7 @@ export class OperationExecutor {
       }
     }
 
+    if (decision !== 'deny' && preparation.requiresApproval) decision = 'ask'
     let expiresAt = Infinity
     let authorization: string = randomUUID()
     if (decision === 'ask' && operation.effect === 'opaque' && !('input' in operation.preview)) decision = 'deny'
@@ -272,7 +277,7 @@ export class OperationExecutor {
               parsed,
               context,
               options.policy,
-              workspace ? {executor: workspace, signal: run.signal} : undefined,
+              workspace ? {executor: workspace, run} : undefined,
             ),
           )
     } catch (error) {
@@ -282,7 +287,11 @@ export class OperationExecutor {
       return textToolResult('Invalid or unauthorized operation preparation', {isError: true})
     }
 
-    const adapter = workspace ? undefined : observationAdapter(definition)
+    const adapter = workspace
+      ? workspace.command && definition.spec.name === 'bash'
+        ? 'workspace-command-bash-v1'
+        : undefined
+      : observationAdapter(definition)
     const observation =
       adapter && typeof context.groupId === 'string'
         ? {adapter, groupId: context.groupId, inputDigest: run.journal.digest(input)}
@@ -368,7 +377,7 @@ async function prepareDefault(
   input: unknown,
   context: ToolExecutionContext,
   policy: ExecutionPolicy,
-  workspace?: {executor: WorkspaceExecutor; signal: AbortSignal},
+  workspace?: {executor: WorkspaceExecutor; run: RunContext},
 ): Promise<OperationPreparation> {
   const value =
     input !== null && typeof input === 'object' && !Array.isArray(input) ? (input as Record<string, unknown>) : {}
@@ -443,6 +452,15 @@ async function prepareDefault(
           : {}),
       } as PreparedWorkspaceOperation)
     : undefined
+  if (workspace?.executor.command && request?.name === 'bash') {
+    return prepareBoundCommand({
+      adapter: workspace.executor.command,
+      originalCwd: context.cwd,
+      request,
+      run: workspace.run,
+    })
+  }
+
   const shell = effect === 'command' && !workspace ? resolveShell() : undefined
   const environment = shell
     ? Object.fromEntries(
@@ -460,7 +478,7 @@ async function prepareDefault(
     effect,
     execute:
       workspace && request
-        ? async () => boundWorkspaceResult(await workspace.executor.execute(request, workspace.signal))
+        ? async () => boundWorkspaceResult(await workspace.executor.execute(request, workspace.run.signal))
         : () =>
             definition.execute(frozenInput, {
               ...preparedContext,
@@ -493,6 +511,65 @@ async function prepareDefault(
       return effect !== 'write' || (await readPreimage(target)) === before
     },
     targets: [target],
+  }
+}
+
+async function prepareBoundCommand(options: {
+  adapter: WorkspaceCommandAdapter
+  originalCwd: string
+  request: Extract<PreparedWorkspaceOperation, {name: 'bash'}>
+  run: RunContext
+}): Promise<OperationPreparation> {
+  const {adapter, originalCwd, request, run} = options
+  const command = prepareWorkspaceCommand(request, adapter.profile)
+  const directory = await fs.stat(command.cwd, {bigint: true})
+  if (!directory.isDirectory()) throw new Error('Workspace command requires a directory')
+  return {
+    binding: {
+      command,
+      target: command.target,
+      workspaceExecutor: 'command-v1',
+      workspaceIdentity: {device: String(directory.dev), inode: String(directory.ino)},
+    },
+    effect: 'command',
+    async execute() {
+      const signal = AbortSignal.any([run.signal, AbortSignal.timeout(command.timeoutMs)])
+      const deadline = performance.now() + command.timeoutMs
+      const pending = run.track('workspace-command-backend', adapter.execute(command, signal))
+      const outcome = await until(pending, deadline, signal)
+      if (signal.aborted || performance.now() >= deadline)
+        throw new Error('Workspace command outcome is unknown; do not replay')
+      return workspaceCommandResult(outcome, command.profile)
+    },
+    preview: {
+      command: command.input.command,
+      commandProfile: command.profile,
+      cwd: command.cwd,
+      name: command.name,
+      timeoutSeconds: command.input.timeoutSeconds,
+      warning: 'Host-declared command isolation. Core does not enforce network, mount or process teardown.',
+    },
+    requiresApproval: true,
+    async revalidate() {
+      try {
+        if ((await canonicalPath(originalCwd)) !== command.cwd) return false
+        const available = await run.wait(
+          'workspace-command-revalidate',
+          Promise.resolve(adapter.revalidate(command, run.signal)),
+        )
+        if (available !== true) return false
+        const current = await fs.stat(command.cwd, {bigint: true})
+        return (
+          current.isDirectory() &&
+          current.dev === directory.dev &&
+          current.ino === directory.ino &&
+          (await canonicalPath(originalCwd)) === command.cwd
+        )
+      } catch {
+        return false
+      }
+    },
+    targets: [command.target],
   }
 }
 

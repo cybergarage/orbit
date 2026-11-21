@@ -115,6 +115,9 @@ local handlers remain active. ThreadManager and application surfaces project its
 iterations are sequential. Managed read/list/grep/glob calls may be batched;
 mutations, custom tools and MCP calls are serial barriers. See
 [Managed Execution](execution.md) for public APIs, ownership and migration.
+For explicitly bound hosted Bash, Core also binds the trusted backend and
+limits to approval; its host remains responsible for isolation and settlement.
+See [hosted Bash](execution.md#explicitly-bound-hosted-bash).
 
 This is a fixed, bounded model/tool loop. The runtime does not currently
 interpret a general execution graph or change its topology between turns.

@@ -92,7 +92,14 @@ export type {
   WorkState,
   WorkStatus,
 } from './execution/scheduled-work.js'
-export type {PreparedWorkspaceOperation, WorkspaceExecutor} from './execution/workspace-executor.js'
+export type {
+  PreparedWorkspaceCommand,
+  PreparedWorkspaceOperation,
+  WorkspaceCommandAdapter,
+  WorkspaceCommandOutcome,
+  WorkspaceCommandProfile,
+  WorkspaceExecutor,
+} from './execution/workspace-executor.js'
 export {runInteractiveSession} from './interactive.js'
 export type {
   InteractiveAgentClass,

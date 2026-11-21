@@ -15,7 +15,7 @@ import {createWriteTool} from '../../../src/core/tools/builtins/write.js'
 import {observationAdapter} from '../../../src/core/tools/observation-provenance.js'
 import {ToolRegistry} from '../../../src/core/tools/registry.js'
 
-async function fixture(withCommand = false) {
+async function fixture(withCommand = false, boundCommand = false) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'orbit-observations-'))
   const session = new Session()
   const journal = new MemoryExecutionJournal(session.getId())
@@ -44,6 +44,46 @@ async function fixture(withCommand = false) {
     execution: {
       journalFactory: async () => journal,
       policy: {generation: 'test', profile: 'unrestricted', roots: [root]},
+      ...(boundCommand
+        ? {
+            async onApproval(request) {
+              await agent.replyApproval(request.runId, {
+                approve: true,
+                digest: request.digest,
+                requestId: request.id,
+                responderScope: 'owner',
+              })
+            },
+            responderScope: 'owner',
+            workspaceExecutor: {
+              command: {
+                async execute() {
+                  return {
+                    exitCode: 5,
+                    status: 'exited' as const,
+                    stderr: 'checked synthetic exit',
+                    stdout: '',
+                    text: 'exit 5',
+                  }
+                },
+                profile: {
+                  backend: 'synthetic-runner',
+                  id: 'fixture',
+                  maxResultBytes: 2048,
+                  network: 'none' as const,
+                  revision: `sha256:${'b'.repeat(64)}`,
+                  timeoutMs: 5000,
+                  workspace: 'read-only' as const,
+                },
+                revalidate: () => true,
+              },
+              async execute() {
+                throw new Error('No generic hosted execution expected')
+              },
+              toolNames: ['bash'] as const,
+            },
+          }
+        : {}),
     },
     logStore: store,
     settings: {model: 'fixture', provider: 'ollama', tools: {profile: 'coding'}},
@@ -263,6 +303,23 @@ describe('source-derived tool observations', () => {
           .filter((record) => record.kind === 'file-write')
           .every((record) => record.savedAtOperation === true),
       ).to.equal(true)
+    } finally {
+      await f.close()
+    }
+  })
+
+  it('projects a checked hosted Bash observation without claiming local execution or verification', async () => {
+    const f = await fixture(true, true)
+    try {
+      const view = await collectToolObservations(f.session, f.run, f.session.getConversationMessages())
+      expect(view.records.find((record) => record.kind === 'command')).to.include({
+        adapter: 'workspace-command-bash-v1',
+        exitCode: 5,
+        verificationCoverage: 'unknown',
+        workspaceRevision: null,
+      })
+      expect(await fs.readFile(path.join(f.root, 'saved.txt'), 'utf8')).to.equal('2')
+      expect(view.unknownResults).to.equal(0)
     } finally {
       await f.close()
     }
