@@ -75,6 +75,7 @@ selection algorithm.
 | 2026-11-22 | Exact-turn redundancy and evidence loss | Same 30 cases; absolute rank; no content emitted | No exact duplicates. Whole-chunk preparation lost 37/47 marked turns; an evidence-bearing candidate could fit alone in every miss. | [Evidence-loss report](../../test/evaluation/results/2026-11-22-longmemeval-evidence-loss.md) |
 | 2026-11-22 | Document-frequency-weighted lexical rank | Same 30 cases; fixed positive gate, budgets, renderers, and packing policies | Whole-chunk serialized coverage rose 10 → 12/47; packed rose 10 → 14/47. Full evidence was unchanged in both chunk arms. | [Weighted-ranking report](../../test/evaluation/results/2026-11-22-longmemeval-df-ranking.md) |
 | 2026-11-22 | Held-out document-frequency ranking | 100 disjoint questions in six strata; same caps and scoring as the pilot | Whole-chunk full evidence rose 25 → 34/92 (10 improved, one regressed); packed rose 28 → 38/92. | [Held-out ranking report](../../test/evaluation/results/2026-11-22-longmemeval-heldout-ranking.md) |
+| 2026-11-22 | Turn anchors and immediate context | Same frozen 100 cases; fixed anchor rank and equal caps across two window sizes | Neighbors changed full evidence 25 → 26/92 against anchor-only (4 gains, 3 losses), with 51/162 serialized turns, equal to baseline chunks. | [Turn-neighbor report](../../test/evaluation/results/2026-11-22-longmemeval-turn-neighbors.md) |
 
 No full 500-question Orbit score is reported here. The pinned protocol specifies
 `gpt-4o-2024-08-06` as the official-method grader; it is not the model that
