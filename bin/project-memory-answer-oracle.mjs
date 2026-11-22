@@ -109,7 +109,7 @@ function oracleContext(row, history, ordinaryGeneration) {
   }
 }
 
-export function evidenceContexts(row) {
+export function evidenceContexts(row, {includeOracle = true} = {}) {
   const history = historyWithOffsets(row)
   const {admitted} = ingestionPlan(history, 'turn-chunks')
   const question = `Current date: ${row.question_date}\n${row.question}`
@@ -117,7 +117,7 @@ export function evidenceContexts(row) {
   const baseline = packingReplay(admitted, history, query, 'whole')
   const weighted = packingReplay(admitted, history, query, 'whole', (ranked) => weightedRank(ranked, query))
   const arms = {baseline, weighted}
-  if (!isAbs(row)) arms.oracle = oracleContext(row, history, admitted.length)
+  if (includeOracle && !isAbs(row)) arms.oracle = oracleContext(row, history, admitted.length)
   return Object.fromEntries(
     Object.entries(arms).map(([arm, evidence]) => {
       const prepared = evidence.stages.prepared.map(({item}) => item)
@@ -148,11 +148,19 @@ export function answerMessages(row, wire) {
 
 async function generate(row, context, arm) {
   const {wire, ...metadata} = context
-  const trace = {arm, ...metadata, outcome: 'failed', wireRequests: []}
+  const messages = answerMessages(row, wire)
+  const trace = {
+    arm,
+    ...metadata,
+    contextDigest: digest(wire),
+    outcome: 'failed',
+    promptDigest: digest(JSON.stringify(messages)),
+    wireRequests: [],
+  }
   try {
     const response = await studyFetch(studyHost + '/api/chat', {
       body: JSON.stringify({
-        messages: answerMessages(row, wire),
+        messages,
         model,
         options: answerSettings,
         stream: false,
@@ -180,9 +188,9 @@ async function generate(row, context, arm) {
   }
 }
 
-export function randomizedSlots(rows) {
+export function randomizedSlots(rows, {includeOracle = true} = {}) {
   return rows.flatMap((row, index) => {
-    const arms = isAbs(row) ? ['baseline', 'weighted'] : ['baseline', 'weighted', 'oracle']
+    const arms = !includeOracle || isAbs(row) ? ['baseline', 'weighted'] : ['baseline', 'weighted', 'oracle']
     return arms
       .map((arm) => ({arm, caseId: row.question_id, key: `${index + 1}-diagnostic-${arm}`}))
       .sort((a, b) => digest(`oracle-order-v1:${a.key}`).localeCompare(digest(`oracle-order-v1:${b.key}`)))
@@ -229,6 +237,23 @@ function summarize(rows, slots, store) {
       weighted: pair(answerable, 'baseline', 'weighted'),
     },
     answers: store.answers.size,
+    byType: Object.fromEntries(
+      [...new Set(records.map(({type}) => type))].map((type) => [
+        type,
+        {
+          abstention: pair(
+            abstentions.filter((r) => r.type === type),
+            'baseline',
+            'weighted',
+          ),
+          answerable: pair(
+            answerable.filter((r) => r.type === type),
+            'baseline',
+            'weighted',
+          ),
+        },
+      ]),
+    ),
     grades: store.grades.size,
     plannedSlots: slots.length,
     records: records.map((row, index) => ({ordinal: index + 1, ...row})),
@@ -253,14 +278,18 @@ async function live(rows, selectedSha, options) {
   await requireLocalPin()
   const output = await createStudyOutput(options.resume, process.cwd(), {resume})
   console.log(`Run directory: tmp/${path.basename(output)}`)
-  const slots = randomizedSlots(rows)
-  assert.equal(slots.length, 50)
+  const includeOracle = !options.full
+  const slots = randomizedSlots(rows, {includeOracle})
+  assert.equal(slots.length, options.full ? 200 : 50)
+  const limit = options.batch ? Number(options.batch) : rows.length
+  assert(Number.isInteger(limit) && limit > 0 && limit <= rows.length, 'Invalid batch size')
   const identity = {
     ...(await verifyCode(fingerprintFiles)),
     answerPromptDigest: digest(answerInstruction),
     answerSettings,
     caps,
     commit: options.commit,
+    includeOracle,
     judgeDigest: modelDigest,
     judgeSettings,
     localRequestTimeoutMs,
@@ -281,12 +310,13 @@ async function live(rows, selectedSha, options) {
           grade: (_id, answer) => judgeOne(row, answer, model),
         },
       )
+      await store.writeSummary(summarize(rows, slots, store))
       console.log(`Case ${index + 1}/${rows.length}: ${store.answers.size} answers, ${store.grades.size} grades`)
     }
 
     await requireLocalPin()
     await store.writeSummary(summarize(rows, slots, store))
-    if (store.grades.size !== slots.length) process.exitCode = 1
+    if (store.grades.size !== slots.length && !options.batch) process.exitCode = 1
   } finally {
     store.close()
   }
@@ -295,24 +325,27 @@ async function live(rows, selectedSha, options) {
 async function main() {
   const {values} = parseArgs({
     options: {
+      batch: {type: 'string'},
       commit: {type: 'string'},
+      full: {type: 'boolean'},
       resume: {type: 'string'},
       run: {type: 'boolean'},
     },
   })
-  assert(values.run || (!values.commit && !values.resume))
+  assert(values.run || (!values.batch && !values.commit && !values.resume))
   const input = JSON.parse(await readPinnedDataset(process.stdin))
   const pilot = selectCases(input)
   const holdout = selectHoldout(input, new Set(pilot.map((row) => row.question_id)))
   const frozen = manifest(holdout, pilot)
   assert.equal(frozen.orderedHoldoutSha256, 'f2b6da344cac943c6e01ae05b33df7714e42e0c062cb4fd1060fe8378e937d1b')
-  const rows = diagnosticSample(holdout)
-  assert.equal(rows.length, 18)
-  assert.equal(rows.filter((row) => isAbs(row)).length, 4)
+  const rows = values.full ? holdout : diagnosticSample(holdout)
+  const abstention = values.full ? 8 : 4
+  assert.equal(rows.length, values.full ? 100 : 18)
+  assert.equal(rows.filter((row) => isAbs(row)).length, abstention)
   const selectedSha = digest(JSON.stringify(rows.map((row) => row.question_id)))
-  assert.equal(selectedSha, requiredSample)
+  assert.equal(selectedSha, values.full ? frozen.orderedHoldoutSha256 : requiredSample)
   if (values.run) await live(rows, selectedSha, values)
-  else console.log(JSON.stringify({abstention: 4, selectedSha, subjects: rows.length}))
+  else console.log(JSON.stringify({abstention, selectedSha, subjects: rows.length}))
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) await main()
