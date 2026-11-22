@@ -47,16 +47,17 @@ export function admit(candidates, {cap, limit, measure, mode, stopOnMiss = false
   return included
 }
 
-export function packingReplay(admitted, baselineHistory, query, arm) {
+export function packingReplay(admitted, baselineHistory, query, arm, order = (ranked) => ranked) {
   const tokenizer = new GptTokenizer()
   assert(arms.includes(arm), 'Unknown packing arm')
   const catalog = replayFixture(admitted)
   const index = new Map(catalog.entries.map((entry, i) => [entry.id, admitted[i]]))
   const history = new Map(baselineHistory.map(({originalIndex, text, turns}) => [originalIndex, {text, turns}]))
-  const candidates = rankCandidates(catalog.entries, query).map(({entry, overlap}) => {
+  const ranked = rankCandidates(catalog.entries, query).map(({entry, overlap}) => {
     const item = index.get(entry.id)
     return {entry, item, overlap, prefixes: completePrefixes(item, history)}
   })
+  const candidates = order(ranked)
   const prepTokens = (items) =>
     tokenizer.encode(
       renderProjectMemory(
@@ -145,15 +146,20 @@ export async function readPinnedDataset(stream) {
 
 const entryIds = (cs) => cs.map((r) => r.entry.id)
 
+export async function readPinnedCases(stream) {
+  const rows = selectCases(JSON.parse(await readPinnedDataset(stream)))
+  assert.equal(rows.length, 30)
+  assert.equal(digest(JSON.stringify(rows.map((r) => r.question_id))), queryDigest)
+  return rows
+}
+
 async function main() {
   assert.equal(
     process.argv.length,
     2,
     'Usage: node bin/project-memory-turn-packing.mjs < /path/to/longmemeval_s_cleaned.json',
   )
-  const rows = selectCases(JSON.parse(await readPinnedDataset(process.stdin)))
-  assert.equal(rows.length, 30)
-  assert.equal(digest(JSON.stringify(rows.map((r) => r.question_id))), queryDigest)
+  const rows = await readPinnedCases(process.stdin)
   const outputs = {}
   for (const condition of ['prefix', 'turn-chunks']) {
     const measures = Object.fromEntries(
