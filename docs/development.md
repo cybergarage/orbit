@@ -320,11 +320,15 @@ workflows require an explicit manual dispatch.
 3. Run `npm run docs:commands` after building to regenerate the oclif
    sections in `docs/cli.md`. Review all generated changes and run `git diff --check`.
 4. Commit the reviewed change and create/push `v<package-version>` for that
-   commit. Run the `Create GitHub release` workflow with that existing tag.
-5. Run `Publish npm package` with the same released tag and the exact confirmation
-   `publish`. Configure the repository's `NPM_TOKEN` with current npm publishing
-   permissions. The workflow checks the version, tag, release, test suite and
-   independent package consumer before publishing.
+   commit. From the default branch, run the `Create GitHub release` workflow with
+   that existing tag. The supported formats are `vX.Y.Z` (stable) and
+   `vX.Y.Z-next.N` (prerelease). The latter creates a GitHub prerelease without
+   marking it as the latest GitHub release.
+5. From the default branch, run `Publish npm package` with the same released tag
+   and the exact confirmation `publish`. Configure the repository's `NPM_TOKEN`
+   with current npm publishing permissions. The workflow checks the version, tag,
+   published release metadata, test suite and independent consumer. It explicitly
+   publishes stable versions to npm's `latest` and prereleases to `next` only.
 
 `prepack` always builds the runtime and GUI and generates the CLI manifest.
 It does not regenerate tracked documentation. `files` limits the tarball to
@@ -335,11 +339,13 @@ For a maintainer publishing locally after the same release checks:
 
 ```sh
 ORBIT_RELEASE_DIR=/path/to/release-artifacts npm run test:package
-npm publish /path/to/release-artifacts/cybergarage-orbit-VERSION.tgz --access public
+npm publish /path/to/release-artifacts/cybergarage-orbit-VERSION.tgz --access public --tag DIST_TAG
 ```
 
-Inspect the packed file list before publishing; verify the registry version and
-GitHub tag afterward. A version that has been published must not be reused.
+Use `latest` for a stable version or `next` for an `X.Y.Z-next.N` prerelease;
+never omit the dist-tag. Inspect the packed file list before publishing. Verify
+the actual registry version, dist-tags, integrity and GitHub tag afterward.
+A prerelease must leave `latest` unchanged. Never reuse a published version.
 `ORBIT_RELEASE_DIR` retains the exact tested tarball; without it the temporary
 consumer and tarball are removed. On Windows, set that environment variable
 using your shell's syntax before running the check.
