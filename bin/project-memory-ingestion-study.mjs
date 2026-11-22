@@ -359,7 +359,7 @@ export function studySummary(cases, mode, planned) {
   return summary
 }
 
-async function verifyCode() {
+export async function verifyCode(additional = []) {
   const files = [
     'bin/project-memory-ingestion-study.mjs',
     'bin/project-memory-ingestion-study-core.mjs',
@@ -369,6 +369,7 @@ async function verifyCode() {
     'bin/project-memory-study-local.mjs',
     'bin/project-memory-pilot.mjs',
     'package-lock.json',
+    ...additional,
   ]
   async function compiled(dir) {
     const entries = await fs.readdir(new URL(`../${dir}`, import.meta.url), {withFileTypes: true})
