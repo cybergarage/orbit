@@ -10,7 +10,7 @@ const supportedVersion = new RegExp(String.raw`^${integer}\.${integer}\.${intege
 export function releaseChannel(manifest, tag, release) {
   if (manifest?.name !== '@cybergarage/orbit') throw new Error('Unexpected package name')
   if (manifest.publishConfig?.tag !== undefined) throw new Error('Package must not override the workflow dist-tag')
-  const version = manifest.version
+  const {version} = manifest
   const match = typeof version === 'string' ? supportedVersion.exec(version) : null
   if (!match || match[0] !== version || version === '0.0.0') {
     throw new Error('Expected a stable X.Y.Z or prerelease X.Y.Z-next.N version, not 0.0.0')
@@ -28,7 +28,7 @@ export function releaseChannel(manifest, tag, release) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [mode, tag] = process.argv.slice(2)
-  if (!['source', 'published'].includes(mode) || !tag || process.argv.length !== 4) {
+  if (!['published', 'source'].includes(mode) || !tag || process.argv.length !== 4) {
     throw new Error('Expected source or published mode and one GitHub tag')
   }
 
