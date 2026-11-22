@@ -76,6 +76,7 @@ selection algorithm.
 | 2026-11-22 | Document-frequency-weighted lexical rank | Same 30 cases; fixed positive gate, budgets, renderers, and packing policies | Whole-chunk serialized coverage rose 10 → 12/47; packed rose 10 → 14/47. Full evidence was unchanged in both chunk arms. | [Weighted-ranking report](../../test/evaluation/results/2026-11-22-longmemeval-df-ranking.md) |
 | 2026-11-22 | Held-out document-frequency ranking | 100 disjoint questions in six strata; same caps and scoring as the pilot | Whole-chunk full evidence rose 25 → 34/92 (10 improved, one regressed); packed rose 28 → 38/92. | [Held-out ranking report](../../test/evaluation/results/2026-11-22-longmemeval-heldout-ranking.md) |
 | 2026-11-22 | Local direct-answer evidence diagnostic | Fixed 18-case subset; local Gemma, blinded single-answer grading, separate abstentions | Judged correct on 14 answerable cases: 6 baseline, 8 weighted, 12 annotated-evidence oracle; small local diagnostic only. | [Local answer diagnostic](../../test/evaluation/results/2026-11-22-longmemeval-local-answer-diagnostic.md) |
+| 2026-11-22 | Full held-out local answer comparison | Frozen 100 cases, matched baseline/weighted wire, blinded local judging. | Answerable judged correct 48 → 56/92 (+9/−1); eight abstentions correct in both arms. | [Full local answer comparison](../../test/evaluation/results/2026-11-22-longmemeval-full-local-answers.md) |
 
 No full 500-question Orbit score is reported here. The pinned protocol specifies
 `gpt-4o-2024-08-06` as the official-method grader; it is not the model that

@@ -281,8 +281,6 @@ async function live(rows, selectedSha, options) {
   const includeOracle = !options.full
   const slots = randomizedSlots(rows, {includeOracle})
   assert.equal(slots.length, options.full ? 200 : 50)
-  const limit = options.batch ? Number(options.batch) : rows.length
-  assert(Number.isInteger(limit) && limit > 0 && limit <= rows.length, 'Invalid batch size')
   const identity = {
     ...(await verifyCode(fingerprintFiles)),
     answerPromptDigest: digest(answerInstruction),
@@ -301,22 +299,30 @@ async function live(rows, selectedSha, options) {
   try {
     for (const [index, row] of rows.entries()) {
       await requireLocalPin()
-      const contexts = evidenceContexts(row)
-      await runSlots(
-        store,
-        slots.filter(({caseId}) => caseId === row.question_id),
-        {
-          generate: ({arm}) => generate(row, contexts[arm], arm),
-          grade: (_id, answer) => judgeOne(row, answer, model),
-        },
-      )
+      const contexts = evidenceContexts(row, {includeOracle})
+      const caseSlots = slots.filter(({caseId}) => caseId === row.question_id)
+      for (const {arm, key} of caseSlots) {
+        const accepted = store.answers.get(key)
+        if (!accepted) continue
+        assert.equal(accepted.trace.contextDigest, digest(contexts[arm].wire), 'Resumed context digest differs')
+        assert.equal(
+          accepted.trace.promptDigest,
+          digest(JSON.stringify(answerMessages(row, contexts[arm].wire))),
+          'Resumed prompt digest differs',
+        )
+      }
+
+      await runSlots(store, caseSlots, {
+        generate: ({arm}) => generate(row, contexts[arm], arm),
+        grade: (_id, answer) => judgeOne(row, answer, model),
+      })
       await store.writeSummary(summarize(rows, slots, store))
       console.log(`Case ${index + 1}/${rows.length}: ${store.answers.size} answers, ${store.grades.size} grades`)
     }
 
     await requireLocalPin()
     await store.writeSummary(summarize(rows, slots, store))
-    if (store.grades.size !== slots.length && !options.batch) process.exitCode = 1
+    if (store.grades.size !== slots.length) process.exitCode = 1
   } finally {
     store.close()
   }
@@ -325,14 +331,13 @@ async function live(rows, selectedSha, options) {
 async function main() {
   const {values} = parseArgs({
     options: {
-      batch: {type: 'string'},
       commit: {type: 'string'},
       full: {type: 'boolean'},
       resume: {type: 'string'},
       run: {type: 'boolean'},
     },
   })
-  assert(values.run || (!values.batch && !values.commit && !values.resume))
+  assert(values.run || (!values.commit && !values.resume))
   const input = JSON.parse(await readPinnedDataset(process.stdin))
   const pilot = selectCases(input)
   const holdout = selectHoldout(input, new Set(pilot.map((row) => row.question_id)))

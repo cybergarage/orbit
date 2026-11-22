@@ -47,3 +47,56 @@ replaced atomically after each case. A failed generation is retained as
 a failure and not silently regenerated; missing grades can be retried
 on resume without generating a new answer. No raw benchmark evidence,
 questions, answers, or checkpoints are committed.
+
+## Results
+
+M4, Ollama 0.40.16, original runner commit
+`208de180ff3a86451e079570846cc9a604dc57a6`. A process interruption
+after three paired slots was resumed using its private checkpoints.
+After **59m30s** elapsed, all 200 answers and 200 blind grades had
+completed, with zero failed, truncated, or ungraded entries.
+Post-run verification reconstructed all **200** exact serialized
+contexts and answer prompts and matched their saved SHA-256 digests.
+Every request stayed within both renderer caps; model-input maxima
+were 2,687 (baseline) and 2,665 (weighted) tokens, and maximum
+output lengths were 114 and 127. External inference cost: **USD 0**.
+
+| Cohort (same cases per arm)                                     | Baseline correct | Weighted correct | Incorrect → correct | Correct → incorrect |
+| --------------------------------------------------------------- | ---------------: | ---------------: | ------------------: | ------------------: |
+| All answerable (92)                                             |               48 |               56 |                   9 |                   1 |
+| All abstentions (8)                                             |                8 |                8 |                   0 |                   0 |
+| Answerable excluding the earlier 18-case answer diagnostic (78) |               42 |               48 |                   7 |                   1 |
+| Abstentions excluding the earlier diagnostic (4)                |                4 |                4 |                   0 |                   0 |
+
+The full answerable cohort rose from **52.2% to 60.9%** (+8.7 percentage
+points). The 82-case sensitivity subset excludes the 18 questions
+previously used for direct-answer diagnosis, but stays inside the
+same 100-case retrieval holdout. Its results are descriptive and it is
+not an independent dataset.
+
+| Type                      | Answerable | Baseline → weighted correct | Gains / losses | Abstentions, both correct |
+| ------------------------- | ---------: | --------------------------: | -------------: | ------------------------: |
+| Knowledge update          |         15 |                       7 → 6 |          0 / 1 |                     2 / 2 |
+| Multi-session             |         15 |                       5 → 6 |          1 / 0 |                     2 / 2 |
+| Single-session assistant  |         17 |                     11 → 15 |          4 / 0 |                   0 cases |
+| Single-session preference |         17 |                     16 → 16 |          0 / 0 |                   0 cases |
+| Single-session user       |         14 |                      7 → 11 |          4 / 0 |                     2 / 2 |
+| Temporal reasoning        |         14 |                       2 → 2 |          0 / 0 |                     2 / 2 |
+
+| Retrieval usage                           |          Baseline |          Weighted |
+| ----------------------------------------- | ----------------: | ----------------: |
+| Full evidence (answerable)                |             25/92 |             34/92 |
+| Annotated turns on wire (answerable)      |            51/162 |            64/162 |
+| Prep / serialized tokens (answerable)     | 180,680 / 153,418 | 180,661 / 155,337 |
+| Wire slots (answerable)                   |               165 |               168 |
+| Model prompt / output tokens (answerable) |   196,467 / 2,340 |   198,402 / 2,421 |
+| Prep / serialized tokens (abstentions)    |   15,682 / 13,533 |   15,389 / 12,864 |
+| Wire slots (abstentions)                  |                16 |                14 |
+
+The evidence totals exactly reproduce the whole-chunk #57 replay.
+The improvement is concentrated in the two single-session strata, and
+knowledge update has one regression. Eight successful abstentions do
+not establish no regression in the broader dataset. Keep this a local
+same-model diagnostic: it is neither the official grade nor
+independent-model validation, and it does not establish that this
+ranking should be the runtime default.
