@@ -30,13 +30,15 @@ const isAbs = (row) => row.question_id.endsWith('_abs')
 const hash = (row) => digest(`orbit-local-answer-diagnostic-v1:${row.question_id}`)
 
 export function diagnosticSample(holdout) {
-  return [...new Set(holdout.map((row) => row.question_type))].sort().flatMap((type) => {
-    const group = holdout
-      .filter((row) => row.question_type === type)
-      .sort((a, b) => (hash(a) < hash(b) ? -1 : Number(hash(a) > hash(b))))
-    const abstentions = group.filter((row) => isAbs(row)).slice(0, 1)
-    return [...abstentions, ...group.filter((row) => !isAbs(row)).slice(0, 3 - abstentions.length)]
-  })
+  return [...new Set(holdout.map((row) => row.question_type))]
+    .sort((a, b) => (a < b ? -1 : Number(a > b)))
+    .flatMap((type) => {
+      const group = holdout
+        .filter((row) => row.question_type === type)
+        .sort((a, b) => (hash(a) < hash(b) ? -1 : Number(hash(a) > hash(b))))
+      const abstentions = group.filter((row) => isAbs(row)).slice(0, 1)
+      return [...abstentions, ...group.filter((row) => !isAbs(row)).slice(0, 3 - abstentions.length)]
+    })
 }
 
 const model = 'gemma4:12b'
