@@ -54,7 +54,7 @@ function pairStage(gold, before, after) {
   return {gained, lost, rank, weighted}
 }
 
-function compareCase(row, condition, mode) {
+export function compareCase(row, condition, mode) {
   const history = historyWithOffsets(row)
   const {admitted} = ingestionPlan(history, condition)
   const query = `Current date: ${row.question_date}\n${row.question}`.slice(0, 512)
@@ -102,7 +102,7 @@ function summarizeStage(pairs) {
   }
 }
 
-function summarize(rows) {
+export function summarize(rows) {
   const costs = (arm) =>
     Object.fromEntries(['preparation', 'serialization'].map((key) => [key, sum(rows, (r) => r.costs[arm][key])]))
   return {
