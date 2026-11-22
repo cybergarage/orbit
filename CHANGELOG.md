@@ -1,9 +1,15 @@
 # Changelog
 
-## 0.9.3 — Unreleased
+## 0.9.4-next.0 — Prerelease candidate
 
-Source preparation only. No v0.9.3 tag, GitHub release or npm publication has
-been created. The published npm version remains 0.9.2.
+- Prepare an exact npm dependency for Orbit App's Project memory and managed
+  workspace integration. The Core APIs for hosted command approval remain
+  opt-in; this candidate does not enable those commands in Orbit App.
+- Target the npm `next` channel only. Keep `latest` on stable 0.9.3.
+
+## 0.9.3 — 2026-10-17
+
+Published as the v0.9.3 GitHub release and to npm.
 
 ### Added
 
@@ -37,9 +43,7 @@ been created. The published npm version remains 0.9.2.
   failures before retrying. Working files, shared skills/context, plugin data,
   environment credentials, Docker and Ollama are retained. See
   [Initialization](docs/initialization.md) for scope and ownership constraints.
-- The source consumer example pins 0.9.3 for local tarball validation. Orbit App
-  remains pinned to published 0.9.2 with initialization disabled until 0.9.3 is
-  actually published and a separate adoption change is implemented and tested.
+- The release consumer example pinned 0.9.3 for independent tarball validation.
 
 ## 0.9.2 — 2026-10-16
 

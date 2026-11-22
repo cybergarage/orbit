@@ -168,7 +168,11 @@ export type {
 export {ModelGateway, modelGatewayRoutes} from './model-gateway.js'
 export type {ModelGatewayOptions} from './model-gateway.js'
 export {createAppleMemoryChannel} from './models/adapters/apple-memory-ipc.js'
-export type {AppleMemoryChannel, AppleMemoryChannelFactory, AppleMemoryFrame} from './models/adapters/apple-memory-ipc.js'
+export type {
+  AppleMemoryChannel,
+  AppleMemoryChannelFactory,
+  AppleMemoryFrame,
+} from './models/adapters/apple-memory-ipc.js'
 export {AppleProjectMemoryAgent} from './models/adapters/apple-memory.js'
 export type {AppleProjectMemoryOptions} from './models/adapters/apple-memory.js'
 export {AppleFoundationModelsAgent, AppleHelperClient} from './models/adapters/apple.js'
