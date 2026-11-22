@@ -21,42 +21,50 @@ concurrency:
 
 jobs:
   publish:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    defaults:
+      run:
+        working-directory: source
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - name: Check out reviewed release policy
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.workflow_sha }}
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+      - name: Check out release tag
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          ref: ${{ inputs.tag }}
+          ref: refs/tags/${{ inputs.tag }}
+          path: source
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           cache: npm
+          cache-dependency-path: source/package-lock.json
           node-version: 20.19.0
       - name: Validate publication request
+        id: policy
         env:
           CONFIRMATION: ${{ inputs.confirmation }}
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          package_version=$(node -p "require('./package.json').version")
-          expected_tag="v${package_version}"
-
           if [ "$CONFIRMATION" != "publish" ]; then
             echo "Publication confirmation must be exactly: publish" >&2
             exit 1
           fi
 
-          if [ "$package_version" = "0.0.0" ]; then
-            echo "Refusing to publish placeholder version 0.0.0" >&2
-            exit 1
-          fi
-
-          if [ "$RELEASE_TAG" != "$expected_tag" ]; then
-            echo "Release tag $RELEASE_TAG does not match package version $expected_tag" >&2
-            exit 1
-          fi
-
-          gh release view "$RELEASE_TAG" >/dev/null
+          source_commit=$(git rev-parse --verify HEAD)
+          tag_commit=$(git rev-parse --verify "refs/tags/${RELEASE_TAG}^{commit}")
+          test "$source_commit" = "$tag_commit"
+          node ../.github/scripts/npm-release-policy.mjs source "$RELEASE_TAG" >/dev/null
+          dist_tag=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json tagName,isDraft,isPrerelease \
+            | node ../.github/scripts/npm-release-policy.mjs published "$RELEASE_TAG")
+          printf 'dist_tag=%s\n' "$dist_tag" >> "$GITHUB_OUTPUT"
       - run: npm ci
       - run: npm run headers:check
       - run: npm run build
@@ -74,5 +82,12 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish to npm
         env:
+          DIST_TAG: ${{ steps.policy.outputs.dist_tag }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish
+        run: |
+          set -euo pipefail
+          case "$DIST_TAG" in
+            latest|next) ;;
+            *) echo "Missing or invalid npm dist-tag" >&2; exit 1 ;;
+          esac
+          npm publish --tag "$DIST_TAG"

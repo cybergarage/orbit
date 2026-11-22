@@ -36,6 +36,7 @@ jobs:
           cache: npm
           node-version: ${{ matrix.node_version }}
       - run: npm ci
+      - run: node --test .github/scripts/npm-release-policy.test.mjs
       - run: npm run test:package
   unit-tests:
     if: ${{ !inputs.coordination_only }}
