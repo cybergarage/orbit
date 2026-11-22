@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict'
+import {Readable} from 'node:stream'
 
 import {historyWithOffsets, ingestionPlan, replaySelection} from '../../bin/project-memory-ingestion-study-core.mjs'
-import {admit, completePrefixes, packingReplay} from '../../bin/project-memory-turn-packing.mjs'
+import {admit, completePrefixes, packingReplay, readPinnedDataset} from '../../bin/project-memory-turn-packing.mjs'
 
 /* eslint-disable camelcase -- The fixture uses upstream dataset field names. */
 
@@ -16,6 +17,11 @@ const candidate = (id, body, prefix = body) => ({
 const ids = (values) => values.map((v) => v.entry.id)
 
 describe('offline Project memory turn packing', () => {
+  it('rejects truncated or non-binary stdin before parsing any records', async () => {
+    await assert.rejects(readPinnedDataset(Readable.from([Buffer.from('[]')])), /Dataset size mismatch/u)
+    await assert.rejects(readPinnedDataset(Readable.from(['[]'])), /Expected binary streaming input/u)
+  })
+
   it('retains only complete prefix turns, excluding any final partial turn', () => {
     const history = new Map([
       [

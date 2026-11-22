@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict'
-import {constants} from 'node:fs'
-import fs from 'node:fs/promises'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 
@@ -129,20 +127,20 @@ function addStage(out, row, history, candidates) {
   out.sourceSessions += new Set(spans.map((item) => item.originalIndex)).size
 }
 
-async function readPinnedDataset(file) {
-  assert(file && path.basename(file) === dataset.file, 'Supply the local pinned dataset file')
-  const canonical = await fs.realpath(file)
-  assert(path.resolve(file) === canonical, 'Use the real dataset path, not a symbolic link')
-  const handle = await fs.open(canonical, constants.O_RDONLY + (constants.O_NOFOLLOW ?? 0))
-  try {
-    const stat = await handle.stat()
-    assert(stat.isFile() && stat.size === bytesPinned, 'Unexpected input file')
-    const bytes = await handle.readFile()
-    assert.equal(digest(bytes), dataset.sha256, 'Dataset checksum mismatch')
-    return bytes
-  } finally {
-    await handle.close()
+export async function readPinnedDataset(stream) {
+  const chunks = []
+  let count = 0
+  for await (const chunk of stream) {
+    assert(Buffer.isBuffer(chunk), 'Expected binary streaming input')
+    count += chunk.byteLength
+    assert(count <= bytesPinned, 'Dataset size mismatch')
+    chunks.push(chunk)
   }
+
+  assert.equal(count, bytesPinned, 'Dataset size mismatch')
+  const bytes = Buffer.concat(chunks, count)
+  assert.equal(digest(bytes), dataset.sha256, 'Dataset checksum mismatch')
+  return bytes
 }
 
 const entryIds = (cs) => cs.map((r) => r.entry.id)
@@ -150,10 +148,10 @@ const entryIds = (cs) => cs.map((r) => r.entry.id)
 async function main() {
   assert.equal(
     process.argv.length,
-    3,
-    'Usage: node bin/project-memory-turn-packing.mjs /path/to/longmemeval_s_cleaned.json',
+    2,
+    'Usage: node bin/project-memory-turn-packing.mjs < /path/to/longmemeval_s_cleaned.json',
   )
-  const rows = selectCases(JSON.parse(await readPinnedDataset(process.argv[2])))
+  const rows = selectCases(JSON.parse(await readPinnedDataset(process.stdin)))
   assert.equal(rows.length, 30)
   assert.equal(digest(JSON.stringify(rows.map((r) => r.question_id))), queryDigest)
   const outputs = {}

@@ -86,10 +86,12 @@ or score relevant complete turns with separately labeled ranking changes.
 ```sh
 npm ci
 npm run build
-node bin/project-memory-turn-packing.mjs /path/to/longmemeval_s_cleaned.json
+node bin/project-memory-turn-packing.mjs < /path/to/longmemeval_s_cleaned.json
 ```
 
-Use the pinned dataset and read its evidence locally. The script emits
+Use the pinned dataset and read its evidence locally. The program takes only
+a size-bounded, checksum-verified standard-input stream and does not open
+a filesystem path supplied at invocation. It emits
 aggregates only; it does not upload source histories, questions, traces,
 answers, or record IDs. The synthetic suite checks complete turn boundaries,
 stable metadata/rank, and canonical whole-entry baseline parity. This
