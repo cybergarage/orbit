@@ -51,7 +51,7 @@ async function syncDirectory(root) {
 async function publish(root, file, body, {claim, replace = false}) {
   claim.assertLive()
   assert(
-    /^(?:manifest|summary|(?:answer|grade)-[1-9]\d?-(?:shared-none|(?:prefix|turn-chunks)-(?:pre|tool)))\.json$/u.test(
+    /^(?:manifest|summary|(?:answer|grade)-[1-9]\d?-(?:shared-none|(?:prefix|turn-chunks)-(?:pre|tool)|diagnostic-(?:baseline|weighted|oracle)))\.json$/u.test(
       file,
     ),
     'Invalid checkpoint artifact name',

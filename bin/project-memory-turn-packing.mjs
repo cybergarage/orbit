@@ -47,6 +47,16 @@ export function admit(candidates, {cap, limit, measure, mode, stopOnMiss = false
   return included
 }
 
+export function serializeEvidence(project, items) {
+  return JSON.stringify({
+    generation: project.memoryGeneration,
+    projectId: project.id,
+    results: items.map((item) => item.entry),
+    truncated: false,
+    trust: 'untrusted-memory-evidence',
+  })
+}
+
 export function packingReplay(admitted, baselineHistory, query, arm, order = (ranked) => ranked) {
   const tokenizer = new GptTokenizer()
   assert(arms.includes(arm), 'Unknown packing arm')
@@ -65,16 +75,7 @@ export function packingReplay(admitted, baselineHistory, query, arm, order = (ra
         items.map((x) => x.entry),
       ),
     ).length
-  const wireTokens = (items) =>
-    tokenizer.encode(
-      JSON.stringify({
-        generation: catalog.project.memoryGeneration,
-        projectId: catalog.project.id,
-        results: items.map((x) => x.entry),
-        truncated: false,
-        trust: 'untrusted-memory-evidence',
-      }),
-    ).length
+  const wireTokens = (items) => tokenizer.encode(serializeEvidence(catalog.project, items)).length
   const prepared = admit(candidates, {
     cap: budget,
     limit: 16,
@@ -104,6 +105,7 @@ export function packingReplay(admitted, baselineHistory, query, arm, order = (ra
       rankedTopSix: candidates.filter((x) => x.overlap > 0).slice(0, 6),
       serialized,
     },
+    wire: serializeEvidence(catalog.project, serialized),
   }
 }
 
