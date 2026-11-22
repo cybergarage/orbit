@@ -157,8 +157,8 @@ function fixtureId(n) {
   return `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`
 }
 
-/** Fixed-query replay of canonical selected snapshots and the result budget; no provider or dispatch. */
-export function replaySelection(admitted, query) {
+/** Stable offline metadata; real catalog UUIDs and dates are not required for replay. */
+export function replayFixture(admitted) {
   const projectId = fixtureId(1)
   const entries = admitted.map((item, n) => {
     const timestamp = new Date(n).toISOString()
@@ -182,11 +182,20 @@ export function replaySelection(admitted, query) {
       updatedAt: timestamp,
     }
   })
-  const catalog = {
+  return {
     entries,
     membership: {pairId: fixtureId(2), projectId, revision: 1, sessionId: fixtureId(3), unavailable: false},
     project: {archived: false, id: projectId, memoryGeneration: entries.length},
   }
+}
+
+/** Fixed-query replay of canonical selected snapshots and the result budget; no provider or dispatch. */
+export function replaySelection(admitted, query) {
+  const catalog = replayFixture(admitted)
+  const {
+    entries,
+    project: {id: projectId},
+  } = catalog
   const snapshot = selectProjectMemory(catalog, {captureId: fixtureId(4), execution: 'agent', request: query})
   const ranked = rankCandidates(entries, query)
   const result = {
