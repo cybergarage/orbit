@@ -31,29 +31,26 @@ optional Apple text provider. See the [changelog](CHANGELOG.md) for additions
 and upgrade notes. To use the source checkout, follow
 [Development](docs/development.md).
 
-Version **0.9.2** is published with the coordination descriptor-lifetime fix
-for bind-mounted storage, alongside the Project/Session lifecycle, names and
-scheduling APIs from 0.9.1. The source checkout is preparing **0.9.3**, adding
-shared scoped initialization APIs and CLI/embedded-GUI workflows plus Logs panel
-refinements. Version 0.9.3 is not yet tagged, released or published. Validate
-its local tarball with `npm run test:package`; installation commands below use
-the published 0.9.2 release.
+Version **0.9.3** is the stable [GitHub release](https://github.com/cybergarage/orbit/releases/tag/v0.9.3)
+and [npm package](https://www.npmjs.com/package/@cybergarage/orbit/v/0.9.3). It
+includes the shared scoped initialization APIs and CLI/embedded-GUI workflows.
+See [Initialization](docs/initialization.md) for the maintenance contract.
 
-The [v0.9.2 GitHub source release](https://github.com/cybergarage/orbit/releases/tag/v0.9.2)
-and [npm package](https://www.npmjs.com/package/@cybergarage/orbit/v/0.9.2)
-are available. See [Initialization](docs/initialization.md) for the new source
-contract and the separate Orbit App adoption gate.
+This source prepares **0.9.4-next.0**, an opt-in prerelease for testing the Core
+dependency in Orbit App. Its intended npm channel is `next`, not `latest`.
+Before publishing, validate the local tarball with `npm run test:package`.
+The installation commands below continue to use stable 0.9.3.
 
 As an application dependency:
 
 ```sh
-npm install --save-exact @cybergarage/orbit@0.9.2
+npm install --save-exact @cybergarage/orbit@0.9.3
 ```
 
 Or as a command-line application:
 
 ```sh
-npm install --global @cybergarage/orbit@0.9.2
+npm install --global @cybergarage/orbit@0.9.3
 orbit --help
 ```
 

@@ -5,8 +5,9 @@ Use exact dependency versions and commit the application lockfile while the
 runtime is in its 0.x development series.
 
 Current maintainer direction is to keep releases in the **0.9.x** series.
-Version **0.9.3** is the next prepared release. Do not move to 0.10 or 1.0
-without a new explicit version decision; the 1.0 direction below is deferred.
+Version **0.9.3** is the stable release; **0.9.4-next.0** is the prerelease
+candidate. Do not move to 0.10 or 1.0 without a new explicit version decision;
+the 1.0 direction below is deferred.
 
 ## Release milestones
 
@@ -18,7 +19,8 @@ without a new explicit version decision; the 1.0 direction below is deferred.
 | `0.9.0` | Durable scheduled work, Windows file-flush acknowledgements and an optional Apple text provider |
 | `0.9.1` | Project/Session lifecycle and display names, local GUI scheduling and conversation/approval refinements |
 | `0.9.2` | Coordination descriptor ownership on bind mounts, with unchanged storage formats |
-| `0.9.3` (unreleased) | Shared scoped initialization API, CLI/embedded-GUI workflows and Logs panel refinements |
+| `0.9.3` | Shared scoped initialization API, CLI/embedded-GUI workflows and Logs panel refinements |
+| `0.9.4-next.0` (prerelease candidate) | Exact Core package for testing the Orbit App integration without changing the stable channel |
 | `1.0.0` (deferred) | Historical direction for a complete application and stable compatibility contract; not a current release target |
 
 Version 0.8.1 was published to npm on 2026-10-02. Its tarball matches the
@@ -53,15 +55,17 @@ Version 0.9.2 was published to npm and as a
 changing storage formats or relaxing identity checks. Existing retained guards
 require offline inspection; upgrading does not delete them.
 
-Version 0.9.3 is prepared in source and has not been tagged, released on GitHub
-or published to npm. It adds the public scoped initialization contract and shared
-CLI/embedded-GUI workflow, plus Logs presentation refinements. This compatible,
-opt-in addition stays in the 0.9.x series; no existing public API is removed or
-changed. Existing storage formats and `orbit storage reset` semantics do not change.
-The consumer example pins 0.9.3 for local tarball validation. The current
-published npm version remains 0.9.2. See the
-[unreleased changelog](../CHANGELOG.md#093--unreleased),
-[initialization guide](initialization.md) and
+Version 0.9.3 was published on 2026-10-17 as a
+[GitHub release](https://github.com/cybergarage/orbit/releases/tag/v0.9.3)
+and npm package. It adds the public scoped initialization contract and shared
+CLI/embedded-GUI workflow, plus Logs presentation refinements. Existing storage
+formats and `orbit storage reset` semantics do not change. See the
+[changelog](../CHANGELOG.md#093--2026-10-17) and
+[initialization guide](initialization.md).
+
+Version 0.9.4-next.0 targets the npm `next` channel only; stable installations
+continue to use 0.9.3. Applications that test the prerelease should pin the exact
+version, not the moving channel. See the
 [release procedure](development.md#releases-and-npm-packages).
 
 The deferred 1.0 milestone is not available functionality, a promised date or
