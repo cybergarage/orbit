@@ -296,6 +296,7 @@ export type {
 export {
   coordinationPaths,
   initializeSessionStorage,
+  inspectRestartRun,
   inspectSessionStorage,
   isSessionLocked,
   recoverSessionWriter,
@@ -306,6 +307,7 @@ export {
 export type {
   OfflineStorageConditions,
   RegistrationResumeOptions,
+  RestartRunInspection,
   SessionScope,
   SessionWriterLease,
   StorageRegistrationInspection,

@@ -297,6 +297,20 @@ not establish physical power-loss survival or untested Windows behavior. Initial
 limits remain adjustable product starting points; workload and platform coverage
 must be reported with any measurements.
 
+## Exact-run restart inspection
+
+`inspectRestartRun(repository.scope(sessionId), runId)` checks one journal in a
+registered storage pair without acquiring a writer, resuming a session, or
+modifying evidence. Its reduced report distinguishes missing, unverified,
+open, and terminal-recorded journals, lists operation intents without a
+recorded outcome, and indicates whether the session writer gate is still
+retained. Ordinary and Graph callers must not interpret this as transcript or
+external effect verification. Malformed, aliased, changing, or oversized
+evidence is reported as unverified. A terminal record, the absence of a writer,
+or a missing journal is not permission to unlock, reconcile, or replay. A
+desktop host must separately validate its durable operation, approval, and
+executor identity before relying on any external receipt.
+
 ## Guarded writer recovery
 
 SessionRecorder serializes all owner transitions with a stable Session-ID guard.

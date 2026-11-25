@@ -431,6 +431,120 @@ export function recoverSessionWriter(scope: SessionScope, conditions: OfflineSto
   }
 }
 
+export interface RestartRunInspection {
+  readonly journal: 'missing' | 'open' | 'terminal-recorded' | 'unverified'
+  readonly pairId: string
+  readonly runId: string
+  readonly sessionId: string
+  readonly unresolvedOperationIds: readonly string[]
+  readonly writerRetained: boolean
+}
+
+/**
+ * Inspect one exact Core run without acquiring a writer or resuming a session.
+ * This is diagnostic only: neither a recorded terminal nor an absent writer
+ * proves that an external effect is safe to reconcile or replay.
+ */
+export function inspectRestartRun(scope: SessionScope, runId: string): RestartRunInspection {
+  validateScope(scope)
+  validateSessionId(runId)
+  const session = path.join(scope.journalRoot, scope.sessionId)
+  const directory = path.join(session, runId)
+  const snapshot = (journal: RestartRunInspection['journal'], unresolvedOperationIds: readonly string[] = []) => ({
+    journal,
+    pairId: scope.pairId,
+    runId,
+    sessionId: scope.sessionId,
+    unresolvedOperationIds,
+    writerRetained: isSessionLocked(scope),
+  })
+  try {
+    if (
+      exists(migrationIntentPath(scope)) ||
+      exists(path.join(scope.journalRoot, 'deletions', scope.sessionId + '.json'))
+    )
+      return snapshot('unverified')
+    for (const candidate of [session, directory]) {
+      if (!exists(candidate)) return snapshot('missing')
+      if (!fs.lstatSync(candidate).isDirectory() || canonicalStoragePath(candidate) !== candidate)
+        return snapshot('unverified')
+    }
+
+    const keyFile = path.join(session, 'key')
+    const keyStat = fs.lstatSync(keyFile)
+    if (!keyStat.isFile() || keyStat.nlink !== 1 || keyStat.size !== 32) return snapshot('unverified')
+
+    const report = summarizeRestartJournal(readStableRestartJournal(path.join(directory, 'events.jsonl')), scope, runId)
+    validateScope(scope)
+    return snapshot(report.journal, report.unresolvedOperationIds)
+  } catch {
+    return snapshot('unverified')
+  }
+}
+
+function sameRestartFile(current: fs.Stats, expected: fs.Stats): boolean {
+  return (
+    current.isFile() &&
+    current.nlink === 1 &&
+    current.dev === expected.dev &&
+    current.ino === expected.ino &&
+    current.size === expected.size &&
+    current.mtimeMs === expected.mtimeMs &&
+    current.ctimeMs === expected.ctimeMs
+  )
+}
+
+function readStableRestartJournal(file: string): string {
+  const stat = fs.lstatSync(file)
+  if (!stat.isFile() || stat.nlink !== 1 || canonicalStoragePath(file) !== file || stat.size > 16 * 1024 * 1024)
+    throw new Error('Unsupported execution journal file')
+  // Avoid following a replaced symlink or waiting on a replaced FIFO.
+  // eslint-disable-next-line no-bitwise
+  const fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK | (fs.constants.O_NOFOLLOW ?? 0))
+  try {
+    if (!sameRestartFile(fs.fstatSync(fd), stat)) throw new Error('Execution journal identity changed')
+    const bytes = Buffer.alloc(stat.size + 1)
+    if (fs.readSync(fd, bytes, 0, bytes.length, 0) !== stat.size || !sameRestartFile(fs.lstatSync(file), stat))
+      throw new Error('Execution journal changed during inspection')
+    return new TextDecoder('utf8', {fatal: true}).decode(bytes.subarray(0, stat.size))
+  } finally {
+    fs.closeSync(fd)
+  }
+}
+
+function summarizeRestartJournal(source: string, scope: SessionScope, runId: string) {
+  if (!source.endsWith('\n')) throw new Error('Torn execution journal')
+  const records: JournalRecord[] = []
+  const unresolved = new Set<string>()
+  for (const line of source.slice(0, -1).split('\n')) {
+    const record = JSON.parse(line) as JournalRecord
+    if (record.sessionId !== scope.sessionId || record.runId !== runId)
+      throw new Error('Execution journal scope mismatch')
+    validateNext(records, record)
+    if (record.kind === 'operation-intent' || record.kind === 'operation-result') {
+      const id = record.data.operationId
+      if (typeof id !== 'string') throw new Error('Invalid operation identity')
+      if (record.kind === 'operation-intent' || record.data.status === 'unknown') unresolved.add(id)
+      else if (
+        typeof record.data.status === 'string' &&
+        ['cancelled-before-start', 'denied', 'failed', 'invalid', 'succeeded'].includes(record.data.status)
+      )
+        unresolved.delete(id)
+      else throw new Error('Invalid recorded operation outcome')
+    }
+
+    records.push(record)
+  }
+
+  // Ignore late-settlement entirely: this API never upgrades original evidence.
+  return {
+    journal: records.some((record) => record.kind === 'run-terminal')
+      ? ('terminal-recorded' as const)
+      : ('open' as const),
+    unresolvedOperationIds: [...unresolved],
+  }
+}
+
 export function inspectRecoveryEvidence(scope: SessionScope): void {
   const marker = path.join(scope.journalRoot, 'deletions', scope.sessionId + '.json')
   if (exists(marker)) {
