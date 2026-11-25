@@ -7,13 +7,13 @@ agent, not a messaging gateway or a complete autonomous product.
 
 ## Install and build
 
-This example pins the prepared 0.9.4-next.0 prerelease. Use Node.js 20.19 or
+This example pins the prepared 0.9.4-next.1 prerelease. Use Node.js 20.19 or
 newer and npm. Before publication, validate the exact local artifact with
 `npm run test:package` from the source checkout. After the matching source tag
 and npm version are published:
 
 ```sh
-git clone --branch v0.9.4-next.0 https://github.com/cybergarage/orbit.git
+git clone --branch v0.9.4-next.1 https://github.com/cybergarage/orbit.git
 cd orbit/examples/agent
 npm install
 npm run build

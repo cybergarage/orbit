@@ -1,6 +1,15 @@
 # Changelog
 
-## 0.9.4-next.0 — Prerelease candidate
+## 0.9.4-next.1 — Prerelease candidate
+
+- Export `inspectRestartRun(scope, runId)` so trusted hosts can inspect
+  exact-run interruption evidence for a registered storage pair without
+  mutating storage or acquiring writer access.
+- Diagnostic evidence does not authorize replay, recovery, or clearing any
+  retained coordination guard.
+- Target the npm `next` channel only. Keep `latest` on stable 0.9.3.
+
+## 0.9.4-next.0 — Prerelease
 
 - Prepare an exact npm dependency for Orbit App's Project memory and managed
   workspace integration. The Core APIs for hosted command approval remain
