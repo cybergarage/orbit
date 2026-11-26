@@ -7,7 +7,12 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {FileExecutionJournal} from '../../../src/core/execution/journal.js'
-import {coordinationPaths, inspectRestartRun, verifyRestartCommandApproval} from '../../../src/index.js'
+import {
+  coordinationPaths,
+  inspectRestartCommandResult,
+  inspectRestartRun,
+  verifyRestartCommandApproval,
+} from '../../../src/index.js'
 import {SessionRepository} from '../../session-storage-fixture.js'
 
 describe('Exact-run restart inspection', () => {
@@ -86,6 +91,7 @@ describe('Exact-run restart inspection', () => {
       }
       const response = {digest, operationId: 'op', policy: 'policy', requestId: 'approval', responderScope: 'host'}
       const intent = {authorization: 'approval', digest, effect: 'command', operationId: 'op', variant: 'tool-call'}
+      const success = {operationId: 'op', outputDigest: journal.digest({example: 'result'}), status: 'succeeded'}
       async function write(runId: string, variant = runId) {
         await journal.append(runId, 'run-admitted', {level, mode: 'file', requestId: 'request'})
         await journal.append(runId, 'run-ready', {})
@@ -96,6 +102,7 @@ describe('Exact-run restart inspection', () => {
             variant === 'expired' ? {...request, expiresAt: 0} : request,
           )
         if (variant === 'late') await journal.append(runId, 'operation-intent', intent)
+        if (variant === 'result-before-intent') await journal.append(runId, 'operation-result', success)
         await journal.append(
           runId,
           'authorization-decided',
@@ -112,12 +119,23 @@ describe('Exact-run restart inspection', () => {
                 ? {...intent, authorization: 'different'}
                 : intent,
           )
-        if (variant === 'settled' || variant === 'unknown')
-          await journal.append(runId, 'operation-result', {
-            operationId: 'op',
-            status: variant === 'unknown' ? 'unknown' : 'succeeded',
-          })
-        if (variant === 'unknown') await journal.append(runId, 'run-terminal', {outcome: 'incomplete'})
+        if (['mixed', 'settled', 'terminal'].includes(variant)) await journal.append(runId, 'operation-result', success)
+        if (variant === 'bad-output-digest')
+          await journal.append(runId, 'operation-result', {...success, outputDigest: 'invalid'})
+        if (variant === 'foreign-result') {
+          await journal.append(runId, 'operation-intent', {...intent, operationId: 'other'})
+          await journal.append(runId, 'operation-result', {...success, operationId: 'other'})
+        }
+
+        if (variant === 'failed') await journal.append(runId, 'operation-result', {...success, status: 'failed'})
+        if (variant === 'mixed') await journal.append(runId, 'operation-intent', {...intent, operationId: 'other'})
+        if (variant === 'unknown') {
+          await journal.append(runId, 'operation-result', {operationId: 'op', status: 'unknown'})
+          await journal.append(runId, 'run-terminal', {outcome: 'incomplete'})
+          await journal.append(runId, 'late-settlement', {operations: [{id: 'op', status: 'succeeded'}], settled: true})
+        }
+
+        if (variant === 'terminal') await journal.append(runId, 'run-terminal', {outcome: 'completed'})
         if (variant === 'multiple') await journal.append(runId, 'operation-intent', {...intent, operationId: 'other'})
       }
 
@@ -125,6 +143,7 @@ describe('Exact-run restart inspection', () => {
       const file = path.join(repository.journalRoot, 'chat', 'valid', 'events.jsonl')
       const owner = await fs.readFile(coordinationPaths(scope).owner)
       const bytes = await fs.readFile(file)
+      expect(inspectRestartCommandResult(scope, binding)).equals('approval-matched')
       expect(verifyRestartCommandApproval(scope, binding)).equals('matched')
       expect(verifyRestartCommandApproval(scope, binding)).equals('matched')
       expect(await fs.readFile(file)).deep.equals(bytes)
@@ -137,8 +156,11 @@ describe('Exact-run restart inspection', () => {
         {runId: '../valid'},
         {runId: 'missing'},
         {sessionId: 'wrong'},
-      ])
+      ]) {
         expect(verifyRestartCommandApproval(scope, {...binding, ...mismatch})).equals('unverified')
+        expect(inspectRestartCommandResult(scope, {...binding, ...mismatch})).equals('unverified')
+      }
+
       for (const runId of [
         'automatic',
         'denied',
@@ -146,21 +168,47 @@ describe('Exact-run restart inspection', () => {
         'expired',
         'late',
         'multiple',
-        'settled',
+        'bad-output-digest',
+        'failed',
+        'mixed',
+        'result-before-intent',
         'write',
         'wrong-intent',
       ]) {
         // eslint-disable-next-line no-await-in-loop -- The fixture shares one journal writer.
         await write(runId)
         expect(verifyRestartCommandApproval(scope, {...binding, runId}), runId).equals('unverified')
+        expect(inspectRestartCommandResult(scope, {...binding, runId}), runId).equals('unverified')
       }
 
+      await write('settled')
+      await write('terminal')
+      for (const runId of ['settled', 'terminal']) {
+        const settled = {...binding, runId}
+        const journalFile = path.join(repository.journalRoot, 'chat', runId, 'events.jsonl')
+        // eslint-disable-next-line no-await-in-loop -- Compare the same file before and after exact inspection.
+        const recorded = await fs.readFile(journalFile)
+        expect(inspectRestartCommandResult(scope, settled)).equals('result-recorded')
+        expect(verifyRestartCommandApproval(scope, settled)).equals('unverified')
+        expect(inspectRestartCommandResult(scope, {...settled, approvalId: 'wrong'})).equals('unverified')
+        // eslint-disable-next-line no-await-in-loop -- Compare the same file before and after exact inspection.
+        expect(await fs.readFile(journalFile)).deep.equals(recorded)
+      }
+
+      expect(await fs.readFile(coordinationPaths(scope).owner)).deep.equals(owner)
+
+      await write('foreign-result')
+      expect(inspectRestartCommandResult(scope, {...binding, runId: 'foreign-result'})).equals('approval-matched')
+
       await write('unknown')
+      expect(inspectRestartCommandResult(scope, {...binding, runId: 'unknown'})).equals('approval-matched')
       expect(verifyRestartCommandApproval(scope, {...binding, runId: 'unknown'})).equals('matched')
       await fs.appendFile(file, '{')
+      expect(inspectRestartCommandResult(scope, binding)).equals('unverified')
       expect(verifyRestartCommandApproval(scope, binding)).equals('unverified')
       await journal.close()
       await session.close()
+      expect(inspectRestartCommandResult(scope, {...binding, runId: 'settled'})).equals('unverified')
       expect(verifyRestartCommandApproval(scope, {...binding, runId: 'unknown'})).equals('unverified')
     } finally {
       await journal.close()

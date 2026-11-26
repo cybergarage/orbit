@@ -20,6 +20,7 @@ export type {
 export {
   coordinationPaths,
   initializeSessionStorage,
+  inspectRestartCommandResult,
   inspectRestartRun,
   inspectSessionStorage,
   isSessionLocked,
@@ -32,6 +33,7 @@ export type {
   OfflineStorageConditions,
   RegistrationResumeOptions,
   RestartCommandApprovalBinding,
+  RestartCommandResultInspection,
   RestartRunInspection,
   SessionScope,
   StorageRegistrationInspection,
