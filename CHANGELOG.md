@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.9.4-next.1 — Prerelease candidate
+## 0.9.4-next.2 — Prerelease candidate
+
+- Export `verifyRestartCommandApproval` to match a host receipt's binding
+  against a pending command and its explicit approval in the original Core journal.
+- The match is read-only. It neither verifies executor effects nor unlocks
+  the session or permits replay.
+- Target the npm `next` channel only. Keep `latest` on stable 0.9.3.
+
+## 0.9.4-next.1 — Prerelease
 
 - Export `inspectRestartRun(scope, runId)` so trusted hosts can inspect
   exact-run interruption evidence for a registered storage pair without

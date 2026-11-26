@@ -5,7 +5,7 @@ Use exact dependency versions and commit the application lockfile while the
 runtime is in its 0.x development series.
 
 Current maintainer direction is to keep releases in the **0.9.x** series.
-Version **0.9.3** is the stable release; **0.9.4-next.1** is the prerelease
+Version **0.9.3** is the stable release; **0.9.4-next.2** is the prerelease
 candidate. Do not move to 0.10 or 1.0 without a new explicit version decision;
 the 1.0 direction below is deferred.
 
@@ -20,7 +20,7 @@ the 1.0 direction below is deferred.
 | `0.9.1` | Project/Session lifecycle and display names, local GUI scheduling and conversation/approval refinements |
 | `0.9.2` | Coordination descriptor ownership on bind mounts, with unchanged storage formats |
 | `0.9.3` | Shared scoped initialization API, CLI/embedded-GUI workflows and Logs panel refinements |
-| `0.9.4-next.1` (prerelease candidate) | Exact Core package for testing the Orbit App integration without changing the stable channel |
+| `0.9.4-next.2` (prerelease candidate) | Exact Core package for testing the Orbit App integration without changing the stable channel |
 | `1.0.0` (deferred) | Historical direction for a complete application and stable compatibility contract; not a current release target |
 
 Version 0.8.1 was published to npm on 2026-10-02. Its tarball matches the
@@ -63,7 +63,7 @@ formats and `orbit storage reset` semantics do not change. See the
 [changelog](../CHANGELOG.md#093--2026-10-17) and
 [initialization guide](initialization.md).
 
-Version 0.9.4-next.1 targets the npm `next` channel only; stable installations
+Version 0.9.4-next.2 targets the npm `next` channel only; stable installations
 continue to use 0.9.3. Applications that test the prerelease should pin the exact
 version, not the moving channel. See the
 [release procedure](development.md#releases-and-npm-packages).
