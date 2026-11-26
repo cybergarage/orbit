@@ -26,10 +26,12 @@ export {
   recoverSessionWriter,
   resumeSessionStorage,
   retrySessionCleanup,
+  verifyRestartCommandApproval,
 } from './coordination.js'
 export type {
   OfflineStorageConditions,
   RegistrationResumeOptions,
+  RestartCommandApprovalBinding,
   RestartRunInspection,
   SessionScope,
   StorageRegistrationInspection,

@@ -311,6 +311,15 @@ or a missing journal is not permission to unlock, reconcile, or replay. A
 desktop host must separately validate its durable operation, approval, and
 executor identity before relying on any external receipt.
 
+For a host receipt, `verifyRestartCommandApproval(scope, binding)` checks the
+claimed storage pair, session, run, operation, approval ID, and digest against
+the original journal. `matched` requires the sole unresolved operation to be a
+command tool intent following the matching explicit approval request and grant,
+with the writer gate still retained. An original unknown outcome remains
+unknown. The host still owns validation of the executor identity, exact command
+profile, and reported outcome. This API does not verify a Docker child, settle
+an effect, release the writer, or authorize replay.
+
 ## Guarded writer recovery
 
 SessionRecorder serializes all owner transitions with a stable Session-ID guard.

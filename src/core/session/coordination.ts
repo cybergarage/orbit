@@ -440,12 +440,108 @@ export interface RestartRunInspection {
   readonly writerRetained: boolean
 }
 
+/** Core-owned portion of a host receipt. The executor facts must be checked by the host. */
+export interface RestartCommandApprovalBinding {
+  readonly approvalId: string
+  readonly digest: string
+  readonly operationId: string
+  readonly pairId: string
+  readonly runId: string
+  readonly sessionId: string
+}
+
+/**
+ * Check the host's claim against the original Core journal. A match only binds
+ * a pending command to its original explicit approval; it says nothing about
+ * the executor's receipt, external effects, or permission to recover.
+ */
+export function verifyRestartCommandApproval(
+  scope: SessionScope,
+  binding: RestartCommandApprovalBinding,
+): 'matched' | 'unverified' {
+  if (
+    !binding ||
+    binding.pairId !== scope.pairId ||
+    binding.sessionId !== scope.sessionId ||
+    typeof binding.runId !== 'string' ||
+    typeof binding.operationId !== 'string' ||
+    !binding.operationId ||
+    typeof binding.approvalId !== 'string' ||
+    !binding.approvalId ||
+    typeof binding.digest !== 'string' ||
+    !/^[a-f0-9]{64}$/u.test(binding.digest)
+  )
+    return 'unverified'
+  try {
+    let matched = false
+    const report = inspectRestartJournal(scope, binding.runId, (records) => {
+      matched = matchesRestartCommandApproval(records, binding)
+    })
+    return matched &&
+      report.writerRetained &&
+      report.unresolvedOperationIds.length === 1 &&
+      report.unresolvedOperationIds[0] === binding.operationId
+      ? 'matched'
+      : 'unverified'
+  } catch {
+    return 'unverified'
+  }
+}
+
+function matchesRestartCommandApproval(records: readonly JournalRecord[], binding: RestartCommandApprovalBinding) {
+  const admission = records[0].data
+  if (admission.mode !== 'file' || !['file-and-directory-sync', 'file-sync'].includes(String(admission.level)))
+    return false
+  const {approvalId, digest, operationId} = binding
+  const related = (record: JournalRecord) =>
+    record.data.operationId === operationId || record.data.requestId === approvalId
+  const requests = records.filter((r) => r.kind === 'approval-requested' && related(r))
+  const decisions = records.filter((r) => r.kind === 'authorization-decided' && related(r))
+  const intent = records.find((r) => r.kind === 'operation-intent' && r.data.operationId === operationId)
+  if (requests.length !== 1 || decisions.length !== 1 || !intent) return false
+  const [request] = requests
+  const [decision] = decisions
+  return (
+    request.sequence < decision.sequence &&
+    decision.sequence < intent.sequence &&
+    request.data.requestId === approvalId &&
+    decision.data.requestId === approvalId &&
+    request.data.operationId === operationId &&
+    decision.data.operationId === operationId &&
+    request.data.digest === digest &&
+    decision.data.digest === digest &&
+    decision.data.approve === true &&
+    decision.data.decision === undefined &&
+    typeof request.data.responderScope === 'string' &&
+    request.data.responderScope.length > 0 &&
+    decision.data.responderScope === request.data.responderScope &&
+    typeof request.data.policy === 'string' &&
+    decision.data.policy === request.data.policy &&
+    typeof request.data.expiresAt === 'number' &&
+    Number.isFinite(request.data.expiresAt) &&
+    Date.parse(decision.timestamp) < request.data.expiresAt &&
+    Date.parse(intent.timestamp) < request.data.expiresAt &&
+    intent.data.authorization === approvalId &&
+    intent.data.digest === digest &&
+    intent.data.variant === 'tool-call' &&
+    intent.data.effect === 'command'
+  )
+}
+
 /**
  * Inspect one exact Core run without acquiring a writer or resuming a session.
  * This is diagnostic only: neither a recorded terminal nor an absent writer
  * proves that an external effect is safe to reconcile or replay.
  */
 export function inspectRestartRun(scope: SessionScope, runId: string): RestartRunInspection {
+  return inspectRestartJournal(scope, runId)
+}
+
+function inspectRestartJournal(
+  scope: SessionScope,
+  runId: string,
+  inspect?: (records: readonly JournalRecord[]) => void,
+): RestartRunInspection {
   validateScope(scope)
   validateSessionId(runId)
   const session = path.join(scope.journalRoot, scope.sessionId)
@@ -476,6 +572,7 @@ export function inspectRestartRun(scope: SessionScope, runId: string): RestartRu
 
     const report = summarizeRestartJournal(readStableRestartJournal(path.join(directory, 'events.jsonl')), scope, runId)
     validateScope(scope)
+    inspect?.(report.records)
     return snapshot(report.journal, report.unresolvedOperationIds)
   } catch {
     return snapshot('unverified')
@@ -541,6 +638,7 @@ function summarizeRestartJournal(source: string, scope: SessionScope, runId: str
     journal: records.some((record) => record.kind === 'run-terminal')
       ? ('terminal-recorded' as const)
       : ('open' as const),
+    records,
     unresolvedOperationIds: [...unresolved],
   }
 }
