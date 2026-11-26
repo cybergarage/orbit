@@ -459,6 +459,21 @@ export function verifyRestartCommandApproval(
   scope: SessionScope,
   binding: RestartCommandApprovalBinding,
 ): 'matched' | 'unverified' {
+  return inspectRestartCommandResult(scope, binding) === 'approval-matched' ? 'matched' : 'unverified'
+}
+
+/** Read-only classification of the original Core journal, not executor evidence. */
+export type RestartCommandResultInspection = 'approval-matched' | 'result-recorded' | 'unverified'
+
+/**
+ * Match the same exact approval and command intent. Distinguish a pending
+ * approval from its original successful result, without changing the writer
+ * gate, validating an external effect, or permitting replay.
+ */
+export function inspectRestartCommandResult(
+  scope: SessionScope,
+  binding: RestartCommandApprovalBinding,
+): RestartCommandResultInspection {
   if (
     !binding ||
     binding.pairId !== scope.pairId ||
@@ -473,22 +488,41 @@ export function verifyRestartCommandApproval(
   )
     return 'unverified'
   try {
-    let matched = false
+    const evidence: {status: RestartCommandResultInspection} = {status: 'unverified'}
     const report = inspectRestartJournal(scope, binding.runId, (records) => {
-      matched = matchesRestartCommandApproval(records, binding)
+      const intent = records.find((r) => r.kind === 'operation-intent' && r.data.operationId === binding.operationId)
+      if (!intent || !matchesRestartCommandApproval(records, binding, intent)) return
+      const result = records.find((r) => r.kind === 'operation-result' && r.data.operationId === binding.operationId)
+      if (!result || (result.sequence > intent.sequence && result.data.status === 'unknown')) {
+        evidence.status = 'approval-matched'
+      } else if (
+        result.sequence > intent.sequence &&
+        result.data.status === 'succeeded' &&
+        typeof result.data.outputDigest === 'string' &&
+        /^[a-f0-9]{64}$/u.test(result.data.outputDigest)
+      ) {
+        evidence.status = 'result-recorded'
+      }
     })
-    return matched &&
-      report.writerRetained &&
+    if (!report.writerRetained) return 'unverified'
+    if (report.unresolvedOperationIds.length === 0 && evidence.status === 'result-recorded') return evidence.status
+    if (
       report.unresolvedOperationIds.length === 1 &&
-      report.unresolvedOperationIds[0] === binding.operationId
-      ? 'matched'
-      : 'unverified'
+      report.unresolvedOperationIds[0] === binding.operationId &&
+      evidence.status === 'approval-matched'
+    )
+      return evidence.status
+    return 'unverified'
   } catch {
     return 'unverified'
   }
 }
 
-function matchesRestartCommandApproval(records: readonly JournalRecord[], binding: RestartCommandApprovalBinding) {
+function matchesRestartCommandApproval(
+  records: readonly JournalRecord[],
+  binding: RestartCommandApprovalBinding,
+  intent: JournalRecord,
+) {
   const admission = records[0].data
   if (admission.mode !== 'file' || !['file-and-directory-sync', 'file-sync'].includes(String(admission.level)))
     return false
@@ -497,8 +531,7 @@ function matchesRestartCommandApproval(records: readonly JournalRecord[], bindin
     record.data.operationId === operationId || record.data.requestId === approvalId
   const requests = records.filter((r) => r.kind === 'approval-requested' && related(r))
   const decisions = records.filter((r) => r.kind === 'authorization-decided' && related(r))
-  const intent = records.find((r) => r.kind === 'operation-intent' && r.data.operationId === operationId)
-  if (requests.length !== 1 || decisions.length !== 1 || !intent) return false
+  if (requests.length !== 1 || decisions.length !== 1) return false
   const [request] = requests
   const [decision] = decisions
   return (

@@ -320,6 +320,14 @@ unknown. The host still owns validation of the executor identity, exact command
 profile, and reported outcome. This API does not verify a Docker child, settle
 an effect, release the writer, or authorize replay.
 
+For diagnostics after restart, use `inspectRestartCommandResult(scope, binding)`
+to also distinguish `result-recorded` from `approval-matched`. The former
+requires the original successful operation result with an output digest, after
+the exact matching approved command intent, and no unresolved operations in
+that run. Unknown results (including late settlement claims) never produce
+`result-recorded`. The writer must remain retained. This does not return tool
+output, compare it with the host receipt, or verify external effects.
+
 ## Guarded writer recovery
 
 SessionRecorder serializes all owner transitions with a stable Session-ID guard.
