@@ -36,7 +36,7 @@ and [npm package](https://www.npmjs.com/package/@cybergarage/orbit/v/0.9.3). It
 includes the shared scoped initialization APIs and CLI/embedded-GUI workflows.
 See [Initialization](docs/initialization.md) for the maintenance contract.
 
-This source prepares **0.9.4-next.1**, an opt-in prerelease for testing the Core
+This source prepares **0.9.4-next.2**, an opt-in prerelease for testing the Core
 dependency in Orbit App. Its intended npm channel is `next`, not `latest`.
 Before publishing, validate the local tarball with `npm run test:package`.
 The installation commands below continue to use stable 0.9.3.
