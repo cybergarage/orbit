@@ -302,11 +302,13 @@ export {
   recoverSessionWriter,
   resumeSessionStorage,
   retrySessionCleanup,
+  verifyRestartCommandApproval,
 } from './session/index.js'
 
 export type {
   OfflineStorageConditions,
   RegistrationResumeOptions,
+  RestartCommandApprovalBinding,
   RestartRunInspection,
   SessionScope,
   SessionWriterLease,
