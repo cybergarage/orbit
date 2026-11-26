@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.4-next.3 — Prerelease candidate
+
+- Export `inspectRestartCommandResult` to distinguish a matched restart
+  approval from the matching successful result already recorded by Core.
+- Keep the existing pending-only approval API and writer protection unchanged.
+  This diagnostic neither validates executor effects nor authorizes replay.
+- Target the npm `next` channel only. Keep `latest` on stable 0.9.3.
+
 ## 0.9.4-next.2 — Prerelease candidate
 
 - Export `verifyRestartCommandApproval` to match a host receipt's binding
