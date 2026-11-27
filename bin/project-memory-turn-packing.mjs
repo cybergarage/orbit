@@ -67,7 +67,12 @@ export function packingReplay(admitted, baselineHistory, query, arm, order = (ra
     const item = index.get(entry.id)
     return {entry, item, overlap, prefixes: completePrefixes(item, history)}
   })
-  const candidates = order(ranked)
+  const ranking = typeof order === 'function' ? {rank: order} : order
+  const candidates = ranking.rank(ranked)
+  const preparation = ranking.prepare ? ranking.prepare(candidates) : candidates
+  const rankIndex = new Map(candidates.map(({entry}, i) => [entry.id, i]))
+  const rankOrdered = (items) =>
+    ranking.prepare ? [...items].sort((a, b) => rankIndex.get(a.entry.id) - rankIndex.get(b.entry.id)) : items
   const prepTokens = (items) =>
     tokenizer.encode(
       renderProjectMemory(
@@ -76,12 +81,14 @@ export function packingReplay(admitted, baselineHistory, query, arm, order = (ra
       ),
     ).length
   const wireTokens = (items) => tokenizer.encode(serializeEvidence(catalog.project, items)).length
-  const prepared = admit(candidates, {
-    cap: budget,
-    limit: 16,
-    measure: prepTokens,
-    mode: arm === 'prepare' || arm === 'both' ? 'pack' : 'whole',
-  })
+  const prepared = rankOrdered(
+    admit(preparation, {
+      cap: budget,
+      limit: 16,
+      measure: (items) => prepTokens(rankOrdered(items)),
+      mode: arm === 'prepare' || arm === 'both' ? 'pack' : 'whole',
+    }),
+  )
   const preparedTopSix = prepared.filter((v) => v.overlap > 0).slice(0, 6)
   // Do not recover turns omitted by preparation or replace a lost slot with rank seven.
   const resultCandidates = preparedTopSix.map((v) => ({
